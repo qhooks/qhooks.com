@@ -1,0 +1,41 @@
+/* Studio: team tokens (the creator's supply outside the pool), before and after launch */
+.qxt-plan{margin:8px 0 22px;padding:18px 20px;border:1px dashed var(--qx-line-2);border-radius:16px}
+.qxt-plan h3,.qxt h3{font:600 17px/1.3 var(--qx-sans);color:var(--qx-ink);margin:0 0 6px}
+#launch-workspace .qxt{border-radius:0;margin:26px 0 0;padding:24px 0 0;border-top:1px solid var(--qx-line);font-family:var(--qx-sans);color:var(--qx-ink)}
+.qxt .qx-eyebrow{margin:0 0 8px}
+.qxt h3{font-family:var(--qx-serif);font-weight:400;font-size:clamp(26px,3vw,34px);line-height:1.05;letter-spacing:-.01em;margin:0 0 8px}
+.qxt-note{color:var(--qx-muted);font-size:14px;line-height:1.5;margin:0 0 14px;max-width:66ch}
+.qxt-fine{color:var(--qx-faint);font-size:12.5px;line-height:1.45;margin:10px 0 0}
+.qxt-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 16px}
+.qxt-stats div{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid var(--qx-line-2);border-radius:14px;background:var(--qx-panel);min-width:0}
+.qxt-stats span{font-size:12.5px;color:var(--qx-muted)}
+.qxt-stats b{font:600 18px/1.25 var(--qx-mono);color:var(--qx-brass);overflow-wrap:anywhere}
+.qxt-stats small{font-size:12px;color:var(--qx-faint)}
+.qxt-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 14px}
+#launch-workspace .qxt-choice{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:4px;padding:13px 15px;border:1px solid var(--qx-line-2);border-radius:16px;background:var(--qx-panel);transition:border-color .2s var(--qx-ease),background .2s var(--qx-ease)}
+.qxt-choice b{font-weight:600;font-size:14px;color:var(--qx-ink)}
+.qxt-choice span{color:var(--qx-muted);font-size:12.5px;line-height:1.35}
+#launch-workspace .qxt-choice:hover{border-color:var(--qx-brass-2)}
+#launch-workspace .qxt-choice[aria-checked="true"]{border-color:var(--qx-brass);background:color-mix(in srgb,var(--qx-brass) 9%,var(--qx-panel))}
+.qxt-choice:focus-visible,.qxt-max:focus-visible{outline:2px solid var(--qx-brass);outline-offset:2px}
+.qxt-plan .qxt-choices{margin:4px 0 0}
+.qxt-body{padding:16px 18px;border:1px solid var(--qx-line);border-radius:16px;background:var(--qx-bg-2)}
+.qxt-row{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr));gap:10px;margin:0 0 12px}
+.qxt-row-one{grid-template-columns:minmax(0,1fr);max-width:420px}
+.qxt-field{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--qx-muted);min-width:0}
+.qxt-field select{min-height:40px;border:1px solid var(--qx-line-2);border-radius:10px;background:var(--qx-panel);color:var(--qx-ink);padding:0 10px;font:500 14px var(--qx-sans);min-width:0}
+.qxt-input{display:flex;align-items:center;min-height:40px;border:1px solid var(--qx-line-2);border-radius:10px;background:var(--qx-panel);overflow:hidden}
+.qxt-input:focus-within{border-color:var(--qx-brass)}
+.qxt .qxt-input input{all:unset;box-sizing:border-box;flex:1;min-width:0;width:100%;padding:8px 10px;font:500 14px/1.2 var(--qx-mono);color:var(--qx-ink)}
+.qxt-input i{font-style:normal;color:var(--qx-faint);font-size:12px;padding:0 6px;white-space:nowrap}
+#launch-workspace .qxt-max{all:unset;cursor:pointer;margin-right:6px;padding:3px 9px;border:1px solid var(--qx-line-2);border-radius:99px;font-size:11.5px;color:var(--qx-ink)}
+#launch-workspace .qxt-max:hover{border-color:var(--qx-brass)}
+.qxt-confirm{display:flex;gap:10px;align-items:center;font-size:13.5px;color:var(--qx-ink);margin:0 0 12px;cursor:pointer}
+.qxt-confirm input{width:18px;height:18px;accent-color:var(--qx-brass);margin:0}
+.qxt-go{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.qxt-go .workspace-button{margin:0}
+.qx-inner main .qxt .qxt-danger:not(:disabled){background:#9c3b2e;border-color:#9c3b2e;color:#fff6ef}
+.qxt-done{margin:0 0 6px;padding:12px 14px;border-radius:12px;border:1px solid color-mix(in srgb,var(--qx-sage) 50%,transparent);background:color-mix(in srgb,var(--qx-sage) 10%,transparent);font-size:14px}
+.qxt-status{font-size:13.5px;color:var(--qx-ink);margin:10px 0 0;min-height:1.2em}
+@media (max-width:720px){.qxt-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.qxt-row>.qxt-field:first-child{grid-column:1/-1}}
+@media (max-width:540px){.qxt-stats,.qxt-choices{grid-template-columns:minmax(0,1fr)}.qxt-row{grid-template-columns:minmax(0,1fr)}}

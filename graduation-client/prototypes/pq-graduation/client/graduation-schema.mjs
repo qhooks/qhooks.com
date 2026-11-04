@@ -1,0 +1,10 @@
+const pool = Object.freeze({currency0:'address',currency1:'address',fee:'uint24',tickSpacing:'int24',hooks:'address'});
+const descriptor = Object.freeze({key:pool,hookSalt:'bytes32'});
+const position = Object.freeze({tickLower:'int24',tickUpper:'int24',salt:'bytes32',liquidity:'uint128'});
+const policy = Object.freeze({mode:'uint8',metric:'uint8',threshold:'uint256',destinationPoolId:'bytes32',adapterCodeHash:'bytes32',retainedHooksHash:'bytes32'});
+const limits = Object.freeze({minRemoved0:'uint256',minRemoved1:'uint256',maxAdded0:'uint256',maxAdded1:'uint256',minLiquidity:'uint128',recipient:'address'});
+const binding = Object.freeze({manager:'address',quote:'address',notice:'uint64',source:descriptor,position});
+const bootstrap = Object.freeze({source:descriptor,sqrtPriceX96:'uint160',position,maxAmount0:'uint256',maxAmount1:'uint256',policy,destination:descriptor});
+const migration = Object.freeze({sourceLiquidity:'uint128',sqrtPriceX96:'uint160',destinationPosition:position,limits});
+const withdrawal = Object.freeze({minAmount0:'uint256',minAmount1:'uint256',recipient:'address'});
+export const graduationSchemas = Object.freeze({pool,descriptor,position,policy,limits,binding,bootstrap,migration,withdrawal});

@@ -1,0 +1,86 @@
+{
+  "version": "volume-first-2026-10-10",
+  "currency": "USDC",
+  "decimals": 6,
+  "network": "eip155:8453",
+  "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  "payTo": "0x2b1Cf7c4071A98A59709166DFA73C7acb7E83E71",
+  "checkoutEnabled": false,
+  "products": [
+    {
+      "id": "wallet",
+      "title": "PQ wallet / account",
+      "amountAtomic": "0",
+      "unit": "account",
+      "description": "No platform creation fee. Onchain enrollment gas is separate."
+    },
+    {
+      "id": "preview",
+      "title": "Browse and preview",
+      "amountAtomic": "0",
+      "unit": "preview",
+      "description": "Explore the catalog and supported configurations."
+    },
+    {
+      "id": "hook",
+      "title": "Standard QHook",
+      "amountAtomic": "0",
+      "unit": "package",
+      "description": "No upfront platform fee for supported standard hooks. Deployment gas is separate."
+    },
+    {
+      "id": "build",
+      "title": "QHooks Lab build",
+      "amountAtomic": "0",
+      "unit": "build",
+      "description": "Supported-template configuration and export, subject to service limits. Not bespoke contract development."
+    },
+    {
+      "id": "launch",
+      "title": "QToken launch",
+      "amountAtomic": "3000000",
+      "unit": "launch",
+      "description": "Flat fee per launch, paid in the chain’s coin before the first launch transaction: 0.0002 ETH on Base, Ethereum, Arbitrum and Robinhood Chain and 0.0007 BNB on BNB Chain. Gas and liquidity are separate."
+    },
+    {
+      "id": "api-small",
+      "title": "Small paid API request",
+      "amountAtomic": "10000",
+      "unit": "request",
+      "description": "Only designated small paid operations. Builds and launches keep their website price."
+    },
+    {
+      "id": "trade",
+      "title": "Trade in the terminal",
+      "amountAtomic": "0",
+      "unit": "trade",
+      "rate": "1% of the trade, 30% of it back to you as cashback",
+      "description": "Taken on the quote side of each terminal trade. 30% is cashback you claim in the terminal, 20% goes to whoever referred you (fixed on your first referred trade; QHooks keeps it if nobody did), and the rest goes to QHooks. Share your referral link from the terminal to earn 20% of the fees on your referrals' trades."
+    }
+  ],
+  "trading": {
+    "model": "creator-lp-plus-protocol",
+    "collectionEnabled": true,
+    "reference": {
+      "creatorFeePpm": "10000",
+      "protocolFeePpm": "2000",
+      "totalFeePpm": "12000",
+      "protocolShareNumerator": "1",
+      "protocolShareDenominator": "5",
+      "denominator": "1000000"
+    },
+    "scope": "Supported launch pools only. Not all-market volume or token transfers.",
+    "rateRounding": "Protocol rate is rounded down to whole parts per million.",
+    "standardLaunchApiSurchargeAtomic": "0"
+  },
+  "policy": {
+    "gasIncluded": false,
+    "liquidityIncluded": false,
+    "launchIncludedStandardHooks": 1,
+    "samePriceViaApi": true,
+    "chargeFailedBuilds": false,
+    "chargeRepeatDownloads": false,
+    "withdrawalPlatformAmountAtomic": "0",
+    "mlDsaExtraNetworkCostRequiresConsent": true
+  }
+}

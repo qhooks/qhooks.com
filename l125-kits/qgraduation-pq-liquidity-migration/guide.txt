@@ -1,0 +1,18 @@
+QGraduation | QHooks
+====================
+
+Launch a token with post-quantum-controlled liquidity and a graduation policy you choose.
+
+Protected action: Controller-owned liquidity actions and graduation policy changes require wallet and post-quantum approval.
+Profile: SLH-DSA
+
+Choose Base, Robinhood Chain, Ethereum, Arbitrum One, BNB Chain or Arc in the builder. The downloadable Base example is public configuration only; it is not a key backup or deployed contract. Network and liquidity costs are shown in the launch flow. Net quote inflow is not market cap. Protection covers the controller-managed position, not arbitrary external pools, wallet transfers or cross-chain transit.
+
+GET STARTED
+1. Open https://qhooks.com/graduation-studio.html
+2. Import launch-recipe.json, choose your chain and replace the example token settings.
+3. Preview and continue into launch. Connect your wallet only when ready.
+4. Create your private quantum key and verify its encrypted backup. Never share it.
+5. Review network fees and approve each transaction separately.
+
+This public recipe contains no keys, signatures, deployed addresses or spending authority. Its example uses Base and is not evidence of a deployment. You can change the chain in the builder. It must never be used as a key backup.

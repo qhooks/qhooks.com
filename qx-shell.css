@@ -1,0 +1,28 @@
+/* Sitewide shell for working pages: maps legacy tokens onto the redesign and restyles header, type and controls.
+   Page layouts, ids and behaviour are untouched. Loaded last. */
+:root[data-theme] body.q170-desk.qx-inner,:root body.q170-desk.qx-inner{
+ --paper:var(--qx-bg);--ink:var(--qx-ink);--muted:var(--qx-muted);--line:var(--qx-line-2);--green:var(--qx-sage);--dark:var(--qx-panel);
+ --sans:var(--qx-sans);--serif:var(--qx-serif);
+ background:radial-gradient(1200px 600px at 85% -10%,color-mix(in srgb,var(--qx-brass) 9%,transparent),transparent 60%),var(--qx-bg);background-attachment:fixed;color:var(--qx-ink);font-family:var(--qx-sans)}
+.qx-inner .site-header{position:sticky;top:14px;left:auto;transform:none;margin:14px auto 0}
+.qx-inner main{position:relative}
+.qx-inner h1{font-family:var(--qx-sans)!important;font-weight:650!important;letter-spacing:-.045em!important;color:var(--qx-ink)}
+.qx-inner h2{font-family:var(--qx-sans);letter-spacing:-.03em;color:var(--qx-ink)}
+.qx-inner .eyebrow,.qx-inner [class*="eyebrow"]{color:var(--qx-brass);letter-spacing:.14em}
+.qx-inner p{color:inherit}
+.qx-inner input,.qx-inner select,.qx-inner textarea{border-radius:12px;border:1px solid var(--qx-line-2);background:color-mix(in srgb,var(--qx-ink) 4%,transparent);color:var(--qx-ink);font-family:var(--qx-sans)}
+.qx-inner input:focus,.qx-inner select:focus,.qx-inner textarea:focus{border-color:var(--qx-brass);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--qx-brass) 22%,transparent)}
+.qx-inner main button:not(.theme-toggle):not(.dialog-close),.qx-inner main .button,.qx-inner main [class*="-button"]{border-radius:999px;font-family:var(--qx-sans);font-weight:600}
+.qx-inner main button[type="submit"]:not(:disabled),.qx-inner main .workspace-button:not(:disabled),.qx-inner main .primary:not(:disabled){background:var(--qx-brass);border-color:var(--qx-brass);color:var(--qx-on-brass)}
+.qx-inner main button:disabled{opacity:.45}
+.qx-inner main section,.qx-inner main article,.qx-inner main [class*="card"],.qx-inner main [class*="panel"]{border-radius:var(--qx-radius)}
+.qx-inner main details{border-radius:16px}
+.qx-inner main a:not([class]){text-decoration-color:color-mix(in srgb,var(--qx-ink) 35%,transparent);text-underline-offset:3px}
+.qx-inner main a:not([class]):hover{text-decoration-color:var(--qx-brass)}
+.qx-inner footer{border-top:1px solid var(--qx-line);color:var(--qx-muted);font-family:var(--qx-sans)}
+.qx-inner .chain-symbol{filter:none}
+.qx-inner .listing-grid{gap:14px!important;border:0!important}.qx-inner .listing-grid>*{border:1px solid var(--qx-line)!important;border-radius:var(--qx-radius)!important;background:var(--qx-panel)}
+.qx-tx-feedback{margin:10px 0;padding:12px 14px;border-radius:12px;border:1px solid var(--qx-line-2);background:color-mix(in srgb,var(--qx-ink) 5%,transparent);font-size:14px;line-height:1.5}
+.qx-tx-feedback[data-error="true"]{border-color:#c9604a;background:color-mix(in srgb,#c9604a 12%,transparent);color:var(--qx-ink)}
+.qx-tx-feedback[data-error="true"]::before{content:"Couldn’t continue · ";font-weight:600;color:#e48a74}
+.qx-story-link{display:inline-block;margin-left:14px;color:var(--qx-brass);font-weight:600;text-decoration:none}

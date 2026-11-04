@@ -1,0 +1,10 @@
+.pricing-lead{max-width:42rem;font-size:1.2rem;line-height:1.6}
+#pricing h1{letter-spacing:-.02em;line-height:1.13}
+.price-table-wrap{margin:2rem 0;max-width:100%;overflow:auto}
+.price-table{width:100%;border-collapse:collapse;text-align:left;table-layout:fixed}
+.price-table caption{text-align:left;margin-bottom:1rem;font-size:.9rem}
+.price-table th,.price-table td{padding:1.2rem .8rem;border-bottom:1px solid var(--line,#bbb);vertical-align:top;overflow-wrap:anywhere;line-height:1.6}
+.price-table th:first-child{width:27%}.price-table th:nth-child(2){width:23%}
+.price-table td:nth-child(2){font-weight:650;font-variant-numeric:tabular-nums}
+.pricing-rules{max-width:48rem;line-height:1.7;margin:3rem 0}
+@media(max-width:600px){.price-table th,.price-table td{padding:.8rem .4rem;font-size:.86rem}.price-table th:first-child{width:28%}.price-table th:nth-child(2){width:25%}}

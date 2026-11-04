@@ -1,0 +1,31 @@
+// Local Ollama proposal with lead export, prototype and data-property checks.
+export const buildCreatorDraft = (input) => {
+  const decimal = (key, min, max) => {
+    const val = input[key];
+    if (typeof val !== 'string' || !/^(0|[1-9][0-9]*)$/.test(val) || val.length > 78) throw new Error(key);
+    const num = BigInt(val);
+    if (num < BigInt(min) || num > BigInt(max)) throw new Error(key);
+    return val;
+  };
+  const address = (key) => {
+    const val = input[key];
+    if (typeof val !== 'string' || !/^0x[0-9a-fA-F]{40}$/.test(val) || BigInt(val) <= 0n) throw new Error(key);
+    return val.toLowerCase();
+  };
+  if (typeof input !== 'object' || input === null || Array.isArray(input) || Object.getPrototypeOf(input) !== Object.prototype) throw new Error('input');
+  const keys = Reflect.ownKeys(input);
+  if (keys.length !== 8 || !keys.every(k => ['projectName','chainId','owner','currency0','currency1','feeBps','poolFee','tickSpacing'].includes(k))) throw new Error('input');
+  if (keys.some(key => typeof Object.getOwnPropertyDescriptor(input, key).value !== 'string')) throw new Error('All fields must be strings');
+  const projectName = input.projectName;
+  if (typeof projectName !== 'string' || projectName.trim().length < 1 || projectName.trim().length > 64) throw new Error('projectName');
+  const chainId = decimal('chainId', 1, (1n << 256n) - 1n);
+  const owner = address('owner');
+  const currency0 = address('currency0');
+  const currency1 = address('currency1');
+  if (BigInt(currency0) >= BigInt(currency1)) throw new Error('currency0');
+  if (currency0 === owner || currency1 === owner) throw new Error('owner');
+  const feeBps = decimal('feeBps', 1, 1000);
+  const poolFee = decimal('poolFee', 0, 1000000);
+  const tickSpacing = decimal('tickSpacing', 1, 32767);
+  return {schemaVersion:1,templateId:'qcreator-fee-pq-vault',kind:'qhooks-configuration-draft',projectName:projectName.trim(),chainId,owner,currency0,currency1,feeBps,poolFee,tickSpacing,status:'configuration-only',deploymentEnabled:false};
+};

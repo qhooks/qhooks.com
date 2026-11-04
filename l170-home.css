@@ -1,0 +1,7 @@
+/* Local Cline/Ollama L170-C02 proposal body, unchanged after review. */
+.q170-home .q170-hero { text-align: center; width: 91%; max-width: 1320px; margin: auto; padding: 40px 0 44px; }
+.q170-home .q170-preview { width: 91%; max-width: 1320px; margin: auto; border: 1px solid var(--line); border-radius: 12px; position: relative; }
+.q170-home .q170-preview-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; padding: 36px; }
+.q170-home .q170-details { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 24px; }
+.q170-home .q170-rule { display: flex; gap: 16px; align-items: center; padding: 20px 0; border-bottom: 1px solid var(--line); }
+@media (max-width: 800px) { .q170-home .q170-preview-body { grid-template-columns: minmax(0, 1fr); padding: 24px; gap: 24px; } .q170-home .q170-details { grid-template-columns: 90px minmax(0, 1fr); } }

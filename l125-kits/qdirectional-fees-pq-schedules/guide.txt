@@ -1,0 +1,42 @@
+Directional Fees | QHooks
+=========================
+
+Set different LP fees for each trading direction and authorize changes with both keys.
+
+Protected action: Directional LP-fee schedule updates
+Profile: ML-DSA-65
+
+Source integration on local chain 31337. Use a compatible Uniswap v4 PoolManager, ordered ERC-20 currencies and the exact hook permission salt. Wallet and ML-DSA-65 authorization protect only the named action, not the EVM wallet, token transfers or every swap. Key enrollment has a separate, potentially substantial network cost. No automatic public-chain deployment or arbitrary hook combinations.
+
+CONTENTS
+- 65 Solidity files, including the configured wrapper and dependencies
+- compiler-input.json: complete solc standard JSON input
+- project.json: public configuration, requirements and source metadata
+- SOURCE-INDEX.json: SHA-256 hashes for every other file in this ZIP
+- Original third-party licenses and notices
+- helper.json: pinned external helper bytecode and provenance (not built by this source input)
+
+GET STARTED
+1. Open https://qhooks.com/fee-lab.html?template=directional to configure your project and download a customized source/build package.
+2. This starter uses local chain 31337. Repeated-digit addresses are placeholders, not destinations. Volume-window timestamps are fixed examples and must be replaced or matched by a disposable local clock. Raw amounts and sqrt-price bounds are not dollar values.
+3. Use solc 0.8.26 with the included input:
+   solc --standard-json < compiler-input.json > compiler-output.json
+   Check the compiler errors array; a process exit alone does not establish compilation success.
+4. Resolve your PoolManager, ordered token pair, fresh owner/key enrollment and exact CREATE2 permission salt. Follow all project.json requirements. Never reuse test keys or treat placeholder owners as onchain enforcement.
+5. Exercise your chosen configuration and protected action in an isolated environment before separately reviewing any public-chain deployment. This download neither compiles nor deploys it.
+
+PROFILE AND COST
+This family uses ML-DSA-65. It is an optional, more expensive integration path; QGraduation uses the separate hash-based launch profile. Downloading/building does not incur an upfront hook purchase fee. Network costs, enrollment and any applicable trading fees are separate. No wallet connection, payment or transaction is requested by this kit.
+
+REQUIREMENTS
+- Optional expensive ML-DSA profile, not the cheaper hash-based launch default. Building is free locally; enrollment and public-chain transaction feasibility are separate.
+- The generated controller fixes initial fees, immutable ceiling, tick spacing, dynamic pool flag and local chain31337. Project name is metadata, never executable source.
+- Supply a verified manager, pinned helper, EOA owner, nonzero policy hash, authorization epoch and newly enrolled1952-byte raw ML-DSA public key. No fixture key, private key, wallet secret or nonce is included.
+- Currency0 and currency1 must be distinct ordered deployed ERC20s. No address in this project is a live deployment. Owner consent, key backup, rotation and recovery are separate workflows.
+- Find the CREATE2 hook salt for the actual controller address and exact constructor-dependent child hook initcode/permission flags. Initialize the exact pool through the controller; no alternate unsigned governance path is added.
+- Controller deployment creates its registry, verifier and hook. Public swaps do not each verify PQ; only the named fee-governance action is dual-authorized.
+- The helper is pinned external creation bytecode, not reproduced by the included Solidity. Retain source headers and third-party notices; packaging does not resolve production licensing obligations.
+- Compiling a new configuration is not an EVM behavior test or independent audit. No automatic deployment, key enrollment, wallet signing, bridging or billing is enabled.
+
+LICENSES
+Retain all source headers and bundled notices. Different dependencies have different licenses; this package does not grant rights beyond those licenses or resolve production licensing obligations.

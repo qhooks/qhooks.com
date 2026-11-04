@@ -1,0 +1,14 @@
+.guide[data-hook-name]{max-width:900px;margin-inline:auto;padding-bottom:4rem}
+.guide[data-hook-name] h1{letter-spacing:-.035em;line-height:1.08;overflow-wrap:anywhere}
+.guide[data-hook-name] .lead{max-width:46rem;font-size:1.15rem;line-height:1.65}
+.market-badges{display:flex;flex-wrap:wrap;gap:.6rem;margin:1.2rem 0}
+.market-badges span{border:1px solid var(--line,#c9c6bd);border-radius:999px;padding:.4rem .75rem;font-size:.8rem}
+.market-actions{display:flex;align-items:stretch;flex-wrap:wrap;gap:.75rem;margin:1.5rem 0}
+.market-actions a{display:inline-flex;align-items:center;justify-content:center;padding:.8rem 1.15rem;border:1px solid var(--line,#c9c6bd);border-radius:6px;text-decoration:none;font-weight:650;min-height:44px}
+.market-actions a.primary{background:#3d5147;border-color:#3d5147;color:#fff}
+.market-actions a:focus-visible,.guide[data-hook-name] summary:focus-visible{outline:3px solid #9b7954;outline-offset:4px}
+.guide[data-hook-name] ol{padding-left:1.4rem;display:grid;gap:.8rem;line-height:1.65}
+.guide[data-hook-name] details{margin-top:2rem;border-top:1px solid var(--line,#c9c6bd);padding-top:1rem;overflow-wrap:anywhere}
+.guide[data-hook-name] summary{cursor:pointer;font-weight:650}
+.guide[data-hook-name] .market-price{font-size:.9rem;line-height:1.5}
+@media(max-width:600px){.market-actions{flex-direction:column}.market-actions a{width:100%;box-sizing:border-box}.guide[data-hook-name] h1{font-size:2.7rem}.guide[data-hook-name] .lead{font-size:1rem}}

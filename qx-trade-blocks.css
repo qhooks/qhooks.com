@@ -1,0 +1,21 @@
+/* Trade page: blocks on the selected pool */
+.qtb h2{margin:0 0 12px}
+.qtb-now{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 8px}
+.qtb-now div{border:1px solid var(--qx-line-2,rgba(241,238,227,.18));border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.qtb-now span{font-size:12.5px;color:var(--qx-muted,#a7aea3)}
+.qtb-now b{font:600 22px var(--qx-mono,ui-monospace,monospace);color:var(--qx-brass,#d2ad72)}
+.qtb-note{font-size:12.5px;color:var(--qx-faint,#6f776c);margin:0 0 12px;line-height:1.45}
+.qtb-list{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:2px}
+.qtb-list li{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px dashed var(--qx-line,rgba(241,238,227,.1));font-size:13.5px}
+.qtb-list a{color:var(--qx-ink,#f1eee3);font-weight:600;text-decoration:none}
+.qtb-list a:hover{color:var(--qx-brass,#d2ad72)}
+.qtb-list span{color:var(--qx-muted,#a7aea3);text-align:right}
+.qtb-pots{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:0}
+.qtb-pots div{background:var(--qx-bg-2,#111613);border-radius:12px;padding:10px 12px}
+.qtb-pots dt{font-size:12px;color:var(--qx-muted,#a7aea3)}
+.qtb-pots dd{margin:4px 0 0;font:600 14px var(--qx-mono,ui-monospace,monospace)}
+.qtb-ref{margin-top:14px;padding-top:12px;border-top:1px solid var(--qx-line,rgba(241,238,227,.1))}
+.qtb-ref h3{margin:0 0 4px;font-size:15px}
+.qtb-ref p{margin:0 0 10px;font-size:12.5px;color:var(--qx-muted,#a7aea3);line-height:1.45}
+.qtb-ref-row{display:flex;gap:8px}
+.qtb-ref-row input{flex:1;min-width:0;font:500 12px var(--qx-mono,ui-monospace,monospace)}

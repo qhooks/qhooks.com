@@ -1,0 +1,6 @@
+.recipe-summary { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(0, 2fr); gap: .7rem 1.2rem; margin: 1.5rem 0; }
+.recipe-summary dt { font-weight: 600; }
+.recipe-summary dd { margin: 0; overflow-wrap: anywhere; }
+#qhl-panel { margin-bottom: 1.5rem; }
+#ql-feedback[data-error="true"], #qhl-status[data-error="true"] { color: var(--danger, #bc574f); }
+@media (max-width: 540px) { .recipe-summary { grid-template-columns: minmax(0,1fr); gap: .25rem; } .recipe-summary dd { margin-bottom: .8rem; } }

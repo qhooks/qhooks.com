@@ -1,0 +1,5 @@
+.staging-notice { margin: 1rem auto; padding: 1rem 1.2rem; max-width: 1180px; width: calc(100% - 2rem); box-sizing: border-box; border: 1px solid currentColor; border-radius: 10px; font: inherit; }
+.staging-notice strong { font-size: .95rem; }
+.staging-notice p { margin: .4rem 0 0; font-size: .88rem; line-height: 1.6; }
+[data-staging-unavailable] { opacity: .5; cursor: not-allowed !important; pointer-events: none !important; }
+.staging-layout-note { padding: 1rem; border-inline-start: 3px solid currentColor; line-height: 1.6; }

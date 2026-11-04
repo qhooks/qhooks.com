@@ -1,0 +1,117 @@
+{
+ "schemaVersion": 1,
+ "snapshotAt": "2026-10-21T15:19:08.333Z",
+ "source": "https://hookline.world/",
+ "basis": "Aggregate Uniswap v4 hook index: v4.xyz community counts and Sourcify-verified names. Not exhaustive.",
+ "totals": {
+  "hooks": 1281,
+  "chains": 12,
+  "swaps": 211191514
+ },
+ "chains": [
+  {
+   "chainId": 8453,
+   "name": "Base",
+   "icon": "/chain-symbol-icons/base.svg",
+   "indexed": true,
+   "hooks": 502,
+   "swaps": 94072246
+  },
+  {
+   "chainId": 4663,
+   "name": "Robinhood Chain",
+   "icon": "/chain-symbol-icons/robinhood.svg",
+   "indexed": true,
+   "hooks": 448,
+   "swaps": 90022009
+  },
+  {
+   "chainId": 1,
+   "name": "Ethereum",
+   "icon": "/chain-symbol-icons/ethereum.svg",
+   "indexed": true,
+   "hooks": 83,
+   "swaps": 6122583
+  },
+  {
+   "chainId": 42161,
+   "name": "Arbitrum One",
+   "icon": "/chain-symbol-icons/arbitrum.svg",
+   "indexed": true,
+   "hooks": 14,
+   "swaps": 2022999
+  },
+  {
+   "chainId": 56,
+   "name": "BNB Chain",
+   "icon": "/chain-symbol-icons/bnb.svg",
+   "indexed": true,
+   "hooks": 194,
+   "swaps": 10954100
+  },
+  {
+   "chainId": 5042,
+   "name": "Arc",
+   "icon": "/chain-symbol-icons/arc.svg",
+   "indexed": false,
+   "hooks": 0,
+   "swaps": 0
+  }
+ ],
+ "top": [
+  {
+   "name": "Pons V2 Meme Hook",
+   "chainId": 4663,
+   "chain": "Robinhood Chain",
+   "icon": "/chain-symbol-icons/robinhood.svg",
+   "address": "0xE5e702641Ea86F4ae6cC3cDaeD2B886f976Be044",
+   "pools": 10373,
+   "swaps": 46852283
+  },
+  {
+   "name": "Doppler Hook Initializer",
+   "chainId": 4663,
+   "chain": "Robinhood Chain",
+   "icon": "/chain-symbol-icons/robinhood.svg",
+   "address": "0x4e3468951D49f2EEa976eD0D6e75fFCb44a9a544",
+   "pools": 215526,
+   "swaps": 24528709
+  },
+  {
+   "name": "Zora V4 Coin Hook",
+   "chainId": 8453,
+   "chain": "Base",
+   "icon": "/chain-symbol-icons/base.svg",
+   "address": "0xC8d077444625eB300A427a6dfB2b1DBf9b159040",
+   "pools": 8170323,
+   "swaps": 19253060
+  },
+  {
+   "name": "Clanker Hook Static Fee V2",
+   "chainId": 8453,
+   "chain": "Base",
+   "icon": "/chain-symbol-icons/base.svg",
+   "address": "0xb429d62f8f3bFFb98CdB9569533eA23bF0Ba28CC",
+   "pools": 635534,
+   "swaps": 16012700
+  },
+  {
+   "name": "Creator Coin Hook",
+   "chainId": 8453,
+   "chain": "Base",
+   "icon": "/chain-symbol-icons/base.svg",
+   "address": "0xd61A675F8a0c67A73DC3B54FB7318B4D91409040",
+   "pools": 369331,
+   "swaps": 9154449
+  },
+  {
+   "name": "Doppler Hook Initializer",
+   "chainId": 8453,
+   "chain": "Base",
+   "icon": "/chain-symbol-icons/base.svg",
+   "address": "0xBDF938149ac6a781F94FAa0ed45E6A0e984c6544",
+   "pools": 370673,
+   "swaps": 7103000
+  }
+ ]
+}

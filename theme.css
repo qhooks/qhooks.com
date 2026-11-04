@@ -1,0 +1,83 @@
+/* Local Ollama palette proposal with lead contrast and selector corrections. */
+:root { color-scheme: light; }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #181d1b;
+  --ink: #e8e8df;
+  --dark: #111714;
+  --line: #38423d;
+  --green: #b4c4ac;
+}
+.site-nav { align-items: center; }
+.theme-toggle {
+  min-height: 2.5rem;
+  padding: .35rem .85rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.theme-toggle[hidden] { display: none; }
+.theme-toggle[aria-pressed="true"] { background: #b4c4ac; color: #172019; }
+:root[data-theme="dark"] .green,
+:root[data-theme="dark"] .status,
+:root[data-theme="dark"] .detail-kicker,
+:root[data-theme="dark"] .listing .product-action,
+:root[data-theme="dark"] .future-apps strong { color: #b4c4ac; }
+:root[data-theme="dark"] .notice,
+:root[data-theme="dark"] .guide pre,
+:root[data-theme="dark"] .workbench { background: #26322a; }
+:root[data-theme="dark"] .listing:hover,
+:root[data-theme="dark"] .listing:focus-within { background: #232d27; }
+:root[data-theme="dark"] .result-count,
+:root[data-theme="dark"] footer,
+:root[data-theme="dark"] .workflow-note,
+:root[data-theme="dark"] .field-feedback { color: #aeb8b1; }
+:root[data-theme="dark"] .field-feedback[data-error="true"] { color: #f3b7a5; }
+:root[data-theme="dark"] .simulation,
+:root[data-theme="dark"] .truth-card { color: var(--ink); }
+:root[data-theme="dark"] .draft-card,
+:root[data-theme="dark"] .truth-card,
+:root[data-theme="dark"] .future-apps,
+:root[data-theme="dark"] .draft-fields input { border-color: var(--line); }
+:root[data-theme="dark"] .draft-fields input { background: #18211b; color: var(--ink); }
+:root[data-theme="dark"] .sim-panel button,
+:root[data-theme="dark"] .skip-link,
+:root[data-theme="dark"] .listing button:hover,
+:root[data-theme="dark"] .listing button:focus-visible { color: #172019; }
+:root[data-theme="dark"] .primary-action:not(:disabled):hover,
+:root[data-theme="dark"] .primary-action:not(:disabled):focus-visible { background: #c6d0ba; color: #182019; }
+:root[data-theme="dark"] :focus-visible { outline-color: #b4c4ac; }
+
+/* L58-C01 local Cline proposal, with fixed mobile width and hidden selector. */
+.site-header { position: relative; padding-right: 5rem; }
+.site-header > .theme-toggle {
+  position: absolute;
+  top: 1.4rem;
+  right: 1.25rem;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: inherit;
+  background: transparent;
+  flex: none;
+}
+.site-header > .theme-toggle svg { width: 18px; height: 18px; }
+.site-header > .theme-toggle[hidden] { display: none; }
+.site-header > .theme-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.site-header > .theme-toggle[aria-pressed="true"] { background: var(--paper); color: var(--ink); }
+@media (max-width: 700px) {
+  .site-header { padding-right: 4.5rem; }
+  .site-header > .theme-toggle { top: 1.4rem; right: 1rem; }
+  .site-header nav { flex-basis: 100%; }
+}

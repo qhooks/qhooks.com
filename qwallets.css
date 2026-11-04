@@ -1,0 +1,20 @@
+/* Cline L67-C02 layout, integrated with the existing light/dark palette.
+   Lead removed proposed global colors, used --ink for contrast, and wraps actions. */
+.qwallet-workspace { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+.qwallet-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.2rem; }
+.qwallet-panel { min-width: 0; border: 1px solid var(--line); border-radius: .5rem; padding: 1.5rem; background: var(--paper); }
+.qwallet-panel h2 { margin-top: 0; font-size: 1.4rem; color: var(--ink); }
+.qwallet-panel .lab-form { display: grid; grid-template-columns: 1fr; gap: 1rem; margin: 1rem 0; }
+.qwallet-panel .lab-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1rem 0; }
+.qwallet-panel input, .qwallet-panel select, .qwallet-panel textarea { width: 100%; min-width: 0; max-width: 100%; border: 1px solid var(--line); padding: .75rem; color: var(--ink); background: var(--paper); font: inherit; }
+.qwallet-panel textarea { min-height: 7rem; resize: vertical; }
+.qwallet-panel input[type="checkbox"] { width: auto; flex-shrink: 0; }
+.qwallet-panel pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .8rem; color: var(--ink); }
+.qwallet-wide { grid-column: 1 / -1; }
+.qwallet-consent { display: flex; gap: .75rem; align-items: flex-start; }
+.qwallet-workspace [hidden] { display: none !important; }
+.qwallet-workspace small { line-height: 1.5; color: var(--ink); }
+.qwallet-workspace input:focus-visible, .qwallet-workspace button:focus-visible, .qwallet-workspace select:focus-visible, .qwallet-workspace textarea:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.qwallet-workspace button { max-width: 100%; white-space: normal; }
+.qwallet-workspace p, .qwallet-workspace label { overflow-wrap: anywhere; }
+@media (max-width: 700px) { .qwallet-grid { grid-template-columns: 1fr; } .qwallet-panel { padding: 1rem; } }

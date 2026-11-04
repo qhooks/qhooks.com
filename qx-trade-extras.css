@@ -1,0 +1,38 @@
+/* Trade page: Buy with ETH, limit orders and team locks panels */
+.qtx h2{margin:0 0 8px}
+.qtx-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:0 0 10px}
+.qtx-row label{display:flex;flex-direction:column;gap:5px;min-width:0}
+.qtx-row label>span{font-size:12.5px;color:var(--qx-muted,#a7aea3)}
+.qtx-row input,.qtx-row select{width:100%;min-width:0;box-sizing:border-box}
+.qtx .workspace-button{margin-top:4px}
+.qtz-out{display:flex;flex-direction:column;gap:3px;margin:4px 0 10px;font-size:13px;color:var(--qx-muted,#a7aea3)}
+.qtz-out b{font:600 20px var(--qx-mono,ui-monospace,monospace);color:var(--qx-brass,#d2ad72)}
+.qtx-status{font-size:13px;color:var(--qx-ink,#f1eee3);margin:8px 0 0;min-height:1em}
+.qtx-sub{font-size:15px;margin:18px 0 6px;padding-top:12px;border-top:1px solid var(--qx-line,rgba(241,238,227,.1))}
+.qtx-orders,.qtx-locks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.qtx-orders li{display:grid;grid-template-columns:auto 1fr 1fr auto auto;gap:10px;align-items:center;padding:8px 0;border-top:1px dashed var(--qx-line,rgba(241,238,227,.1));font-size:13px}
+.qtx-side{font:600 11px var(--qx-sans,inherit);letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:99px;border:1px solid var(--qx-line-2,rgba(241,238,227,.18))}
+.qtx-side.buy{color:var(--qx-sage,#9fb59a)}
+.qtx-side.sell{color:var(--qx-brass,#d2ad72)}
+.qtx-state{font-size:12px;color:var(--qx-faint,#6f776c)}
+.qtx-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.trade-workspace .qtx .qtx-mini{all:unset;box-sizing:border-box;cursor:pointer;padding:5px 10px;border:1px solid var(--qx-line-2,rgba(241,238,227,.18));border-radius:99px;font-size:12px;color:var(--qx-ink,#f1eee3)}
+.trade-workspace .qtx .qtx-mini:hover{border-color:var(--qx-brass,#d2ad72)}
+.trade-workspace .qtx .qtx-mini:disabled{opacity:.45;cursor:default}
+.trade-workspace .qtx .qtx-mini-input{width:96px;min-height:0;padding:5px 8px;font-size:12px}
+.qtx-locks li{display:flex;flex-direction:column;gap:4px;padding:10px 0;border-top:1px dashed var(--qx-line,rgba(241,238,227,.1));font-size:13px}
+.qtx-locks b{font-family:var(--qx-mono,ui-monospace,monospace)}
+.qtx-meta{color:var(--qx-muted,#a7aea3);font-size:12.5px;line-height:1.45}
+.qtx-alert{margin:0 0 12px;padding:10px 12px;border-radius:12px;border:1px solid color-mix(in srgb,var(--qx-brass,#d2ad72) 50%,transparent);background:color-mix(in srgb,var(--qx-brass,#d2ad72) 8%,transparent);font-size:13px}
+.trade-workspace .qtx .qtx-details{margin:14px 0 0;padding:12px 0 0;border:0;border-top:1px solid var(--qx-line,rgba(241,238,227,.1));border-radius:0;background:none;box-shadow:none}
+.qtx-details summary{cursor:pointer;font-weight:600;color:var(--qx-brass,#d2ad72);margin-bottom:8px}
+@media (max-width:560px){.qtx-orders li{grid-template-columns:auto 1fr;}.qtx-orders li .qtx-state,.qtx-orders li .qtx-actions{grid-column:span 2}}
+
+/* Telegram alerts button (Keys panel, Terms card). */
+.qtx-alerts{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:6px 0 10px}.qtx-alerts .qtb-note{margin:0}
+/* Builder marketplace module panels (qx-trade-modules.mjs) */
+.qtm-mod{padding:12px 0;border-top:1px solid var(--qx-line,rgba(241,238,227,.1))}
+.qtm-mod:first-of-type{border-top:0}
+.qtm-name{margin:0 0 4px;font:650 15px/1.25 var(--qx-sans,inherit);color:var(--qx-ink,#f1eee3)}
+.qtm-mod .qtx-meta a{color:var(--qx-brass,#d2ad72)}
+.qtm-paused{color:#d9a66a!important}

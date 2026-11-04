@@ -1,0 +1,26 @@
+.chain-symbol-label {
+ display: inline-flex;
+ align-items: center;
+ gap: .48rem;
+}
+.chain-symbol {
+ display: inline-block;
+ width: 1.35rem;
+ height: 1.35rem;
+ flex: 0 0 1.35rem;
+ object-fit: contain;
+ vertical-align: -.22rem;
+}
+.chain-option .chain-symbol { width: 1.5rem; height: 1.5rem; flex-basis: 1.5rem; }
+.chain-select-symbol {
+ display: inline-flex;
+ align-items: center;
+ justify-content: center;
+ margin-inline-start: .55rem;
+ vertical-align: middle;
+}
+.chain-select-symbol:empty { display: none; }
+@media (max-width: 520px) {
+ .chain-symbol { width: 1.2rem; height: 1.2rem; flex-basis: 1.2rem; }
+ .chain-select-symbol { margin-inline-start: .35rem; }
+}

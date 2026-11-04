@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "kind": "qhooks-qgraduation-launch-recipe",
+  "chainId": "8453",
+  "fields": {
+    "tokenName": "Your Token",
+    "symbol": "YOUR",
+    "decimals": "18",
+    "totalSupply": "1000000000000000000000000",
+    "notice": "86400",
+    "lpFeePpm": "10000",
+    "tokenAmount": "1000",
+    "quoteAmount": "0.1",
+    "graduationMode": "1",
+    "threshold": "0",
+    "destinationFeePpm": "5000"
+  }
+}

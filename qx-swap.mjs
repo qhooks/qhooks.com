@@ -1,0 +1,151 @@
+// Swaps through a launch pool and its hook with the chain's Universal Router: exact-in single-pool
+// trades paid from an ERC-20 (via Permit2), and buys paid in the native coin (wrapped first, or routed
+// native → USDC → token). Quotes run through the same pool and hook, so block charges are included.
+import { abi, calldata, ethCall, words, keyTuple, KEY_T, send, ensureAllowance, connectedAddress, NATIVE, MANAGER } from '/qx-chain.mjs';
+import { stockPair } from '/full-launch/packages/multichain-launch/stock-pairs.mjs';
+
+const Z = '0x0000000000000000000000000000000000000000';
+export const PERMIT2 = '0x000000000022d473030f116ddee9f6b43ac78ba3';
+// extended: this router's single-pool swap takes an extra uint256 (Robinhood Chain and Arc deployments).
+// hop: native coin is routed through USDC; wrap: the launch is quoted in the wrapped native coin.
+export const ROUTES = {
+  '8453': { router: '0x6ff5693b99212da76ad316178a184ab56d299b43', quoter: '0x0d5e0f971ed27fbff6c2837bf31316121532048d', hop: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913' },
+  '1': { router: '0x66a9893cc07d91d95644aedd05d03f95e1dba8af', quoter: '0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203', hop: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48' },
+  '42161': { router: '0x96b2fd2f80e9428daa65d859653117d453981ab4', quoter: '0x3972c00f7ed4885e145823eb7c655375d275a1c5', hop: '0xaf88d065e77c8cc2239327c5edb3a432268e5831' },
+  '4663': { router: '0x06afba43fd06227fa663b0daecf536f6eaa6bf99', quoter: '0x8dc178efb8111bb0973dd9d722ebeff267c98f94', wrap: '0x0bd7d308f8e1639fab988df18a8011f41eacad73', extended: true },
+  '56': { router: '0x91bf3bfaef8d771a74e1a8fe460b3ee646b2e588', quoter: '0x9f75dd27d6664c475b90e105573e550ff69437b0', wrap: '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c' },
+  '5042': { router: '0x4fca4a51ab4f23a7447b3284fbd7d73289a89fb1', quoter: '0x8dc178efb8111bb0973dd9d722ebeff267c98f94', extended: true }
+};
+const TIERS = [[500, 10], [3000, 60], [100, 1]];
+// Stock-paired launches on Robinhood Chain: the coin goes ETH → USDG → stock → token, through the deepest plain v4
+// pools (no hooks) for the first two hops.
+const STOCK_ROUTE = { '4663': { usdg: '0x5fc5360d0400a0fd4f2af552add042d716f1d168', ethTiers: [[100, 1], [500, 10]], stockTiers: [[3000, 60], [100, 1]] } };
+const PATH_T = '(address,uint24,int24,address,bytes)';
+const ADDRESS_THIS = '0x0000000000000000000000000000000000000002';
+
+/// Blocks pools credit the referrer kept from a ?ref= link; other pools get empty hook data.
+export function hookData(key) {
+  try {
+    const ref = localStorage.getItem('qhooks:referrer:v1') || savedReferrer(); // a launch's referral block credits the same referrer
+    if (ref && /^0x[0-9a-f]{40}$/.test(ref) && (BigInt(key.hooks) & 16383n) === 10956n) return '0x' + ref.slice(2).padStart(64, '0');
+  } catch {}
+  return '0x';
+}
+
+/// What `amountIn` of one side of `key` buys of the other, through the pool and its hook.
+export async function quoteSingle(chainId, key, zeroForOne, amountIn) {
+  const r = await ethCall(chainId, ROUTES[chainId].quoter, calldata('0xaa9d21cb', [`(${KEY_T},bool,uint128,bytes)`], [[keyTuple(key), zeroForOne, amountIn, hookData(key)]]), connectedAddress() || undefined);
+  return BigInt(r.slice(0, 66));
+}
+
+function singleParams(chainId, key, zeroForOne, amountIn, minOut) {
+  return ROUTES[chainId].extended
+    ? abi([`(${KEY_T},bool,uint128,uint128,uint256,bytes)`], [[keyTuple(key), zeroForOne, amountIn, minOut, 0n, hookData(key)]])
+    : abi([`(${KEY_T},bool,uint128,uint128,bytes)`], [[keyTuple(key), zeroForOne, amountIn, minOut, hookData(key)]]);
+}
+
+/// Router calldata for an exact-in single-pool swap paid from an ERC-20 the router pulls through Permit2.
+export function singleSwapCall(chainId, key, zeroForOne, amountIn, minOut, deadline) {
+  const [cin, cout] = zeroForOne ? [key.currency0, key.currency1] : [key.currency1, key.currency0];
+  const v4 = abi(['bytes', 'bytes[]'], ['0x060c0f', [singleParams(chainId, key, zeroForOne, amountIn, minOut), abi(['address', 'uint256'], [cin, amountIn]), abi(['address', 'uint256'], [cout, minOut])]]);
+  return calldata('0x3593564c', ['bytes', 'bytes[]', 'uint256'], ['0x10', [v4], deadline]);
+}
+
+/// Lets the router pull `amount` of `token` through Permit2, asking only for what is missing.
+export async function ensurePermit2(chainId, token, amount, now, onStatus) {
+  const router = ROUTES[chainId].router, me = connectedAddress();
+  await ensureAllowance(chainId, token, PERMIT2, amount, onStatus);
+  const allowed = words(await ethCall(chainId, PERMIT2, calldata('0x927da105', ['address', 'address', 'address'], [me, token, router])));
+  if (allowed[0] < amount || Number(allowed[1]) < Number(now) + 600) {
+    onStatus?.('Allow the router in your wallet…');
+    await send(chainId, { to: PERMIT2, data: calldata('0x87517c45', ['address', 'address', 'uint160', 'uint48'], [token, router, amount, now + 3600n]) }, onStatus);
+  }
+}
+
+/// Whether this launch can be bought with the chain's native coin in one transaction.
+export function nativeRoute(chainId, quoteToken) {
+  const route = ROUTES[chainId];
+  if (route && STOCK_ROUTE[chainId] && stockPair(chainId, quoteToken)) return { ...route, wrap: null, stock: quoteToken, ...STOCK_ROUTE[chainId] };
+  return route && (route.hop || route.wrap) === quoteToken ? route : null;
+}
+const plainKey = (a, b, fee, tickSpacing) => { const [c0, c1] = BigInt(a) < BigInt(b) ? [a, b] : [b, a]; return { currency0: c0, currency1: c1, fee, tickSpacing, hooks: Z }; };
+
+/// Best native-coin route into `token`: wrap then the launch pool, or native → USDC (best fee tier) → launch pool.
+export async function quoteNative(chainId, key, token, quoteToken, amountIn, symbol) {
+  const route = nativeRoute(chainId, quoteToken), from = connectedAddress() || undefined, data = hookData(key);
+  if (route.stock) {
+    const stock = stockPair(chainId, route.stock);
+    const tries = await Promise.all(route.ethTiers.flatMap(([f1, t1]) => route.stockTiers.map(async ([f2, t2]) => {
+      const path = [[route.usdg, f1, t1, Z, '0x'], [route.stock, f2, t2, Z, '0x'], [token, key.fee, key.tickSpacing, key.hooks, data]];
+      try { const r = await ethCall(chainId, route.quoter, calldata('0xca253dc9', [`(address,${PATH_T}[],uint128)`], [[Z, path, amountIn]]), from); return { out: BigInt(r.slice(0, 66)), path }; }
+      catch { return null; }
+    })));
+    const best = tries.filter(Boolean).sort((a, b) => (b.out > a.out ? 1 : -1))[0];
+    if (!best) throw new Error('No route for this amount');
+    return { out: best.out, path: best.path, label: NATIVE[chainId] + ' → USDG → ' + stock.symbol + ' → ' + symbol };
+  }
+  if (route.wrap) {
+    const out = await quoteSingle(chainId, key, key.currency0 === quoteToken, amountIn);
+    return { out, label: NATIVE[chainId] + ' → W' + NATIVE[chainId] + ' → ' + symbol };
+  }
+  const tries = await Promise.all(TIERS.map(async ([fee, ts]) => {
+    const path = [[route.hop, fee, ts, Z, '0x'], [token, key.fee, key.tickSpacing, key.hooks, data]];
+    try { const r = await ethCall(chainId, route.quoter, calldata('0xca253dc9', [`(address,${PATH_T}[],uint128)`], [[Z, path, amountIn]]), from); return { out: BigInt(r.slice(0, 66)), fee, path }; }
+    catch { return null; }
+  }));
+  const best = tries.filter(Boolean).sort((a, b) => (b.out > a.out ? 1 : -1))[0];
+  if (!best) throw new Error('No route for this amount');
+  return { out: best.out, path: best.path, label: NATIVE[chainId] + ' → USDC (' + best.fee / 10000 + '% pool) → ' + symbol };
+}
+
+/// Router calldata for a native-coin buy; send it with value = amountIn.
+export function nativeSwapCall(chainId, key, token, quoteToken, amountIn, minOut, q, deadline) {
+  const route = nativeRoute(chainId, quoteToken);
+  if (route.wrap) {
+    const v4 = abi(['bytes', 'bytes[]'], ['0x060b0f', [singleParams(chainId, key, key.currency0 === quoteToken, amountIn, minOut), abi(['address', 'uint256', 'bool'], [route.wrap, amountIn, false]), abi(['address', 'uint256'], [token, minOut])]]);
+    return calldata('0x3593564c', ['bytes', 'bytes[]', 'uint256'], ['0x0b10', [abi(['address', 'uint256'], [ADDRESS_THIS, amountIn]), v4], deadline]);
+  }
+  const exactIn = abi([`(address,${PATH_T}[],uint128,uint128)`], [[Z, q.path, amountIn, minOut]]);
+  const v4 = abi(['bytes', 'bytes[]'], ['0x070c0f', [exactIn, abi(['address', 'uint256'], [Z, amountIn]), abi(['address', 'uint256'], [token, minOut])]]);
+  return calldata('0x3593564c', ['bytes', 'bytes[]', 'uint256'], ['0x10', [v4], deadline]);
+}
+
+// ---- Platform fee router (QFeeRouter): 1% per trade. 30% comes back to the trader as claimable cashback
+// (more for qualifying holders on Robinhood Chain), 20% to the trader's referrer (fixed on their first referred
+// trade), the rest to the platform. The fee comes off the input on buys and off the output on sells, so it is
+// always in the quote currency (or the native coin when paying with it).
+export const FEE_BPS = 100n;
+const HOP_T = `(${KEY_T},bool,bytes)`;
+/// Router calldata for an exact-in swap through `hops` ([{ key, zeroForOne }]); `wrap` wraps native value first.
+export function feeSwapCall(chainId, hops, amountIn, minOut, wrap, feeOnInput, deadline, referrer = savedReferrer()) {
+  return calldata('0xf5ec7c4b', ['address', HOP_T + '[]', 'uint128', 'uint128', 'address', 'bool', 'uint16', 'uint256', 'address'],
+    [MANAGER[chainId], hops.map(x => [keyTuple(x.key), x.zeroForOne, hookData(x.key)]), amountIn, minOut, wrap || Z, feeOnInput, FEE_BPS, deadline, referrer || Z]);
+}
+/// The referrer this visitor arrived with (wallet-early.js stores it from ?ref=), never the trader themselves.
+export function savedReferrer() {
+  let r = null; try { r = localStorage.getItem('qhooks:ref'); } catch {}
+  const me = (connectedAddress() || '').toLowerCase();
+  return r && /^0x[0-9a-f]{40}$/.test(r) && r !== me ? r : null;
+}
+/// A link that credits `who` as referrer.
+export const referralLink = (who, path = '/terminal.html') => 'https://qhooks.com' + path + (path.includes('?') ? '&' : '?') + 'ref=' + who.toLowerCase();
+/// The hops for a native-coin buy, matching what quoteNative chose.
+export function nativeHops(chainId, key, quoteToken, q) {
+  const route = nativeRoute(chainId, quoteToken);
+  if (route.stock) {
+    const [[usdg, f1, t1], [stock, f2, t2]] = q.path;
+    const k1 = plainKey(Z, usdg, f1, t1), k2 = plainKey(usdg, stock, f2, t2);
+    return { hops: [{ key: k1, zeroForOne: true }, { key: k2, zeroForOne: k2.currency0 === usdg }, { key, zeroForOne: key.currency0 === stock }], wrap: null };
+  }
+  if (route.wrap) return { hops: [{ key, zeroForOne: key.currency0 === quoteToken }], wrap: route.wrap };
+  const [, fee, ts] = q.path[0];
+  return { hops: [{ key: { currency0: Z, currency1: route.hop, fee, tickSpacing: ts, hooks: Z }, zeroForOne: true }, { key, zeroForOne: key.currency0 === route.hop }], wrap: null };
+}
+/// Router calldata for an outside-token trade through 0x (QFeeRouter.swapVia): the router takes the fee (cashback and
+/// referral as above) and hands the rest to 0x's AllowanceHolder with the 0x quote's data. address(0) = the chain's coin.
+export function viaSwapCall(target, data, tokenIn, tokenOut, amountIn, minOut, feeOnInput, deadline, referrer = savedReferrer()) {
+  return calldata('0xa1dfd5d8', ['address', 'bytes', 'address', 'address', 'uint256', 'uint256', 'bool', 'uint16', 'uint256', 'address'],
+    [target, data, tokenIn, tokenOut, amountIn, minOut, feeOnInput, FEE_BPS, deadline, referrer || Z]);
+}
+export const cashbackOf = (chainId, router, who, currency) => ethCall(chainId, router, calldata('0x4f123156', ['address', 'address'], [who, currency])).then(BigInt);
+export const claimCall = currency => calldata('0x1e83409a', ['address'], [currency]);

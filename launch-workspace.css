@@ -1,0 +1,10 @@
+/* Reuse the existing quiet light/dark palette and compact global theme control. */
+.launch-progress { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .75rem; }
+.launch-progress li { min-width: 0; border: 1px solid var(--line); padding: 1rem; overflow-wrap: anywhere; }
+.launch-progress li[data-state="active"] { border-color: var(--ink); }
+.launch-progress li[data-state="complete"]::before { content: "✓ "; }
+#ql-review-panel button { margin: .35rem .25rem .35rem 0; }
+#ql-review-panel pre { max-height: 18rem; overflow: auto; }
+#ql-action-fields { min-height: 12rem; }
+#ql-feedback[data-error="true"] { font-weight: 650; }
+@media(max-width:700px) { .launch-progress { grid-template-columns: 1fr; } }

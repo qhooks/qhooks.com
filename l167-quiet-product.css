@@ -1,0 +1,9 @@
+/* Local Cline/Ollama L167-C01 proposal, unchanged after lead review. */
+.q167-quiet .guide { padding-block: 4.5rem; }
+.q167-quiet .guide h1 { letter-spacing: -0.025em; line-height: 1.12; }
+.q167-quiet .guide h2 { font-size: 1.65rem; line-height: 1.25; letter-spacing: -0.01em; }
+.q167-quiet .guide p { line-height: 1.65; }
+.q167-quiet .workspace-button { border-radius: 4px; min-height: 44px; }
+.q167-quiet input, .q167-quiet select { font-size: 1rem; }
+.q167-quiet details summary { padding-block: 0.6rem; }
+@media (max-width: 700px) { .q167-quiet .guide { padding-block: 2.75rem; } }

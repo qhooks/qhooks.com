@@ -1,0 +1,27 @@
+.inspection-workspace { max-width: 1160px; }
+.inspection-workspace h1 { letter-spacing: -.025em; line-height: 1.08; }
+.inspection-lead { font-size: 1.25rem; max-width: 42rem; }
+.inspection-muted { font-size: .92rem; opacity: .8; }
+.inspection-layout { display: grid; grid-template-columns: 1.1fr 1fr; gap: 1.4rem; margin: 2rem 0; }
+.inspection-card { border: 1px solid var(--line); border-radius: 16px; padding: 1.5rem; color: var(--ink); background: var(--paper); min-width: 0; }
+.inspection-card h2 { margin-top: 0; font-size: 1.3rem; }
+.inspection-workspace form { display: grid; gap: .65rem; }
+.inspection-workspace label { font-weight: 600; }
+.inspection-workspace input, .inspection-workspace select { width: 100%; box-sizing: border-box; padding: .8rem; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); font: inherit; min-width: 0; }
+.inspection-workspace .button { display: inline-block; width: fit-content; max-width: 100%; min-height: 44px; padding: .75rem 1.1rem; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-weight: 600; cursor: pointer; }
+.inspection-workspace .primary { background: var(--green); color: #172019; }
+.inspection-workspace .secondary { background: transparent; color: var(--ink); }
+.inspection-workspace button:disabled { cursor: not-allowed; opacity: .45; }
+.inspection-workspace :focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.inspection-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.inspection-workspace code, #inspection-order-summary, #inspection-wallet, #inspection-status, .inspection-review dd { overflow-wrap: anywhere; }
+#inspection-status { min-height: 2rem; }
+#inspection-result { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 38rem; overflow: auto; }
+#inspection-result:empty { display: none; }
+.inspection-review { width: min(620px, calc(100vw - 3rem)); max-height: calc(100dvh - 4rem); box-sizing: border-box; overflow-y: auto; }
+.inspection-review::backdrop { background: rgb(0 0 0 / .55); }
+.inspection-review dl { display: grid; grid-template-columns: 8rem 1fr; gap: .65rem; }
+.inspection-review dt { font-weight: 600; }.inspection-review dd { margin: 0; }
+.inspection-review button { margin: .5rem .65rem .25rem 0; }
+.inspection-workspace [hidden] { display: none; }
+@media(max-width: 720px) { .inspection-layout { grid-template-columns: 1fr; }.inspection-card { padding: 1.1rem; }.inspection-review dl { grid-template-columns: 1fr; gap: .3rem; }.inspection-review dd { margin-bottom: .7rem; } }

@@ -1,0 +1,50 @@
+/* Crypto-native navigation and density, retaining QHooks' quiet palette. */
+.site-nav a[href="launch.html"] { padding:.55rem .85rem; border:1px solid var(--line); border-radius:999px; font-weight:650; }
+.site-nav a[href="qwallets.html"] { font-weight:650; }
+.chain-select-control { display:flex; align-items:center; min-width:0; gap:.3rem; }
+.chain-select-control select { min-width:0; flex:1; }
+.chain-select-control .chain-select-symbol { flex:none; }
+.hero .hero-actions { display:flex; flex-wrap:wrap; align-items:center; gap:1rem; margin:2rem 0 1.4rem; }
+.hero-actions .workspace-button { padding:.85rem 1.25rem; text-decoration:none; }
+.hero .market-networks { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; padding:0; margin:0; list-style:none; }
+.market-networks li { display:inline-flex; align-items:center; gap:.4rem; padding:.4rem .6rem; border:1px solid var(--line); border-radius:6px; font-size:.72rem; font-weight:600; }
+#quantum-listing-grid { gap:.85rem; border-top:0; }
+#quantum-listing-grid .listing { min-height:250px; border:1px solid var(--line); border-radius:9px; padding:1.4rem; }
+#quantum-listing-grid .listing h3 { margin:1.1rem 0 .75rem; font-size:1.85rem; letter-spacing:-.035em; }
+#quantum-listing-grid .listing-meta { font-size:.66rem; letter-spacing:.05em; }
+.studio-preview { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.8rem; margin:1.8rem 0 1.25rem; padding:1.15rem; border:1px solid var(--line); border-radius:10px; }
+.studio-token-mark { display:grid; place-items:center; width:48px; height:48px; border:1px solid var(--line); border-radius:50%; font-size:1.6rem; }
+.studio-token-identity { display:flex; flex-direction:column; min-width:0; }
+.studio-token-identity strong,.studio-ticker { overflow-wrap:anywhere; }
+.studio-token-identity strong { font-size:1.2rem; }
+.studio-ticker,.studio-network { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.78rem; }
+.studio-preview>p { grid-column:1/-1; margin:0; font-size:.8rem; opacity:.8; }
+.studio-steps { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.45rem; margin:0 0 1.25rem; }
+.studio-step { display:flex; align-items:center; gap:.5rem; min-height:52px; padding:.65rem; color:inherit; background:none; border:1px solid var(--line); border-radius:7px; cursor:pointer; font-size:.78rem; text-align:left; }
+.studio-step[aria-current="step"] { background:var(--green); color:#242b25; border-color:#81947d; font-weight:700; }
+.studio-step-number { font: .74rem ui-monospace,SFMono-Regular,Consolas,monospace; opacity:.8; }
+.launch-studio-grid { display:block; }
+.launch-studio-grid .studio-panel { padding:0; scroll-margin-top:1.5rem; }
+.studio-panel[hidden] { display:none; }
+.studio-panel>.qwallet-panel { margin-bottom:1rem; border-radius:9px; padding:1.35rem; }
+.studio-panel .lab-form { max-width:680px; }
+.studio-navigation { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.8rem; margin:1rem 0; }
+.studio-back { padding:.7rem 0; border:0; color:inherit; background:none; cursor:pointer; }
+.studio-included { margin-bottom:1rem; }
+.studio-included>h2 { margin-top:0; }
+.studio-protections { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.7rem; }
+.studio-protections article { border:1px solid var(--line); border-radius:8px; padding:1rem; }
+.studio-included-label { font-size:.65rem; text-transform:uppercase; letter-spacing:.08em; color:var(--ink); opacity:.75; }
+.studio-protections h3 { font:1.25rem var(--serif); margin:.55rem 0; }
+.studio-protections p,.studio-note { font-size:.82rem; line-height:1.5; }
+#ql-feedback:not(:empty) { padding:.8rem 1rem; border:1px solid var(--line); border-radius:6px; }
+.studio-panel pre:empty { display:none; }
+@media(max-width:700px) {
+ .studio-steps { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .studio-step:last-child { grid-column:1/-1; }
+ .studio-preview { grid-template-columns:auto 1fr; }
+ .studio-network { grid-column:1/-1; }
+ .studio-protections { grid-template-columns:1fr; }
+ .studio-panel>.qwallet-panel { padding:1rem; }
+ #quantum-listing-grid .listing { min-height:230px; }
+}

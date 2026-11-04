@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hooks | QHooks</title>
+<meta name="description" content="Launch blocks for Uniswap v4: anti-snipe, taxes, burns, buybacks, pots, market-hours and storm fees. Set once at launch on Base, Robinhood Chain, Ethereum, Arbitrum or BNB Chain.">
+<link rel="icon" href="qhooks-logo.jpg">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="/wallet-site.css">
+<link rel="stylesheet" href="/qx-site.css">
+<link rel="stylesheet" href="/qx-shell.css">
+<link rel="stylesheet" href="/qx-hooks.css">
+<link rel="modulepreload" href="/wallet-site.mjs"><link rel="modulepreload" href="/wallet-hub.mjs"><link rel="modulepreload" href="/wallet-hub-fresh.mjs"><link rel="modulepreload" href="/full-launch/prototypes/qwallet/client/wallet-session.mjs"><link rel="modulepreload" href="/wallet-discovery.mjs"><link rel="modulepreload" href="/wallet-preference.mjs"><link rel="modulepreload" href="/wallet-rpc-compat.mjs"><link rel="modulepreload" href="/chain-catalog.mjs"><link rel="modulepreload" href="/wallet-login.mjs"><link rel="modulepreload" href="/embedded-wallet-provider.mjs"><meta property="og:type" content="website"><meta property="og:site_name" content="QHooks"><meta property="og:title" content="Hooks | QHooks"><meta property="og:description" content="Launch blocks for Uniswap v4: anti-snipe, taxes, burns, buybacks, pots, market-hours and storm fees. Set once at launch on Base, Robinhood Chain, Ethereum, Arbitrum or BNB Chain."><meta property="og:image" content="https://qhooks.com/og/qhooks-card.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://qhooks.com/og/qhooks-card.png"><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/app-icons/apple-touch-icon.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="QHooks"><meta name="theme-color" content="#111613">
+</head>
+<body class="qx qx-inner qx-hooks">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><a class="brand" href="/" aria-label="QHooks home"><span class="mark" aria-hidden="true"><img src="qhooks-logo.jpg" alt="" width="784" height="1168"></span><span>QHooks</span></a><nav class="site-nav qn" aria-label="Main navigation"><div class="qn-g is-current" data-qn="build"><a class="qn-top" href="hooks.html" aria-current="page">Build</a><div class="qn-panel"><div class="qn-card"><p class="qn-k"><span>01</span>Build</p><p class="qn-sum">Pick or build the hooks your token runs.</p><ul><li><a href="hooks.html"><strong>Launch blocks</strong><span>21 blocks and ready-made launch styles</span></a></li><li><a href="/#pq-hooks"><strong>Post-quantum hooks</strong><span>8 hooks whose controls need a second key</span></a></li><li><a href="lab.html"><strong>Lab</strong><span>Configure, build and download a hook</span></a></li><li><a href="graduation-lab.html"><strong>QGraduation Lab</strong><span>Design when liquidity moves on</span></a></li><li><a href="builders.html"><strong>Builders marketplace</strong><span>Build a module, earn from launches that use it</span></a></li><li><a href="builders-program.html"><strong>Builders program</strong><span>Grants and bounties for hooks and modules</span></a></li></ul></div></div></div><div class="qn-g" data-qn="launch"><a class="qn-top" href="qtoken-studio.html">Launch</a><div class="qn-panel"><div class="qn-card"><p class="qn-k"><span>02</span>Launch</p><p class="qn-sum">Turn your hooks into a qToken and launch it.</p><ul><li><a href="qtoken-studio.html"><strong>qToken Studio</strong><span>Quick launch, or every rule in the full Studio</span></a></li><li><a href="launch.html"><strong>Choose a chain</strong><span>Base, Robinhood Chain, Ethereum, Arbitrum, BNB Chain</span></a></li><li><a href="pricing.html"><strong>Pricing</strong><span>A flat launch fee and the trading fee</span></a></li><li><a href="verify.html"><strong>Verify your launch</strong><span>Link your launch to your X account</span></a></li></ul></div></div></div><div class="qn-g" data-qn="trade"><a class="qn-top" href="terminal.html">Trade</a><div class="qn-panel"><div class="qn-card"><p class="qn-k"><span>03</span>Trade</p><p class="qn-sum">Trade launches, and outside tokens, in one place.</p><ul><li><a href="terminal.html"><strong>Terminal</strong><span>Launches, EVM tokens via 0x, Solana via Jupiter</span></a></li><li><a href="markets.html"><strong>Markets</strong><span>Every listed QHooks market</span></a></li><li><a href="profile.html"><strong>Creator profiles</strong><span>Every launch a wallet created</span></a></li></ul></div></div></div><div class="qn-g" data-qn="grow"><a class="qn-top" href="graduation.html">Grow</a><div class="qn-panel"><div class="qn-card"><p class="qn-k"><span>04</span>Grow</p><p class="qn-sum">Reward holders and plan what comes next.</p><ul><li><a href="me.html"><strong>My QHooks</strong><span>Your launches, stakes, rewards and claims</span></a></li><li><a href="terminal.html"><strong>Holder staking</strong><span>Stake for a share of a launch’s income</span></a></li><li><a href="hooks.html#block-buyback"><strong>Buyback and burn</strong><span>Charges buy the token back and burn it</span></a></li><li><a href="graduation.html"><strong>Graduation</strong><span>Choose when liquidity moves to its next pool</span></a></li><li><a href="hooks.html#hk-beside-h"><strong>Team locks</strong><span>Cliffs, drips and a public sell notice</span></a></li></ul></div></div></div><div class="qn-g" data-qn="protect"><a class="qn-top" href="qwallets.html">Protect</a><div class="qn-panel"><div class="qn-card"><p class="qn-k"><span>05</span>Protect</p><p class="qn-sum">A second, post-quantum key on the money.</p><ul><li><a href="qwallets.html"><strong>qWallets</strong><span>Withdrawals need your wallet and your second key</span></a></li><li><a href="/#two-keys"><strong>The two-key model</strong><span>Creator actions need both keys</span></a></li></ul></div></div></div><div class="qn-g" data-qn="integrate"><a class="qn-top" href="integrate.html">Integrate</a><div class="qn-panel"><div class="qn-card"><p class="qn-k"><span>06</span>Integrate</p><p class="qn-sum">Bring QHooks into your own app.</p><ul><li><a href="community.html"><strong>Community</strong><span>X, Telegram, builder docs and news</span></a></li><li><a href="integrate.html"><strong>Integration guide</strong><span>Wire the creator fee pieces into your app</span></a></li><li><a href="api.html"><strong>API</strong><span>Read markets and launch data</span></a></li><li><a href="changelog.html"><strong>Changelog</strong><span>What changed, newest first</span></a></li><li><a href="roadmap.html"><strong>Roadmap</strong><span>What we plan to build next</span></a></li><li><a href="https://t.me/qhooks_bot" target="_blank" rel="noopener noreferrer"><strong>Telegram bot <i aria-hidden="true">↗</i></strong><span>Alerts, and the terminal inside Telegram</span></a></li><li><a href="/#on-your-phone"><strong>Install the app</strong><span>Add the terminal to your home screen</span></a></li></ul></div></div></div><a class="qn-me" href="me.html"><i aria-hidden="true"></i>My QHooks</a></nav><button type="button" id="qhc-trigger" class="qhc-trigger" aria-haspopup="dialog">Connect wallet</button><button class="theme-toggle" data-theme-toggle type="button" aria-pressed="false" hidden>Dark mode</button></header>
+
+<main id="main" class="hk">
+ <section class="hk-hero">
+  <div class="hk-hero-copy">
+   <p class="qx-eyebrow">Hooks</p>
+   <h1>Every trade, <span class="qx-serif">your rules.</span></h1>
+   <p class="hk-lede">Pick what runs on each trade of your token: snipe guards, taxes, burns, buybacks, pots and fees that follow the market. You set them once, at launch. After that nobody can change them, including you.</p>
+   <div class="hk-cta"><a class="qx-btn qx-btn-primary" href="qtoken-studio.html">Build a launch<span class="qx-btn-dot" aria-hidden="true">→</span></a><a class="qx-btn qx-btn-ghost" href="#presets">Start from a preset</a></div>
+  </div>
+  <dl class="hk-stats" aria-label="At a glance">
+   <div><dt id="hk-count">20</dt><dd>launch blocks</dd></div>
+   <div><dt>5</dt><dd>launch chains, same contracts</dd></div>
+   <div><dt>0</dt><dd>admin keys on blocks</dd></div>
+   <div><dt>2</dt><dd>keys to touch liquidity</dd></div>
+  </dl>
+ </section>
+
+ <section class="hk-how" aria-labelledby="hk-how-h">
+  <h2 id="hk-how-h" class="sr-only">How blocks work</h2>
+  <ol>
+   <li><b>Pick</b><span>Choose blocks in Studio and tune each one. A preview shows what a buy and a sell will pay, minute by minute.</span></li>
+   <li><b>Launch</b><span>Your blocks deploy with your pool. Their settings are written once and have no owner function.</span></li>
+   <li><b>Trade</b><span>Every swap runs through them. Charges sit in the blocks contract until anyone releases them to your payees.</span></li>
+  </ol>
+  <p class="hk-gasnote">Gas per trade, measured on Uniswap v4: about 17K extra with blocks attached and none switched on, 34K with a tax, and about 100K for the full Degen preset.</p>
+ </section>
+
+ <section class="hk-catalog" aria-labelledby="hk-catalog-h">
+  <div class="hk-catalog-head">
+   <h2 id="hk-catalog-h">All blocks</h2>
+   <div class="hk-filters">
+    <div class="hk-chips" id="hk-chips" role="group" aria-label="Filter by category"></div>
+    <input id="hk-search" type="search" placeholder="Search blocks" aria-label="Search blocks" autocomplete="off">
+   </div>
+  </div>
+  <div class="hk-grid" id="hk-grid"></div>
+  <p class="hk-empty" id="hk-empty" hidden>No block matches that search.</p>
+ </section>
+
+ <section class="hk-presets" id="presets" aria-labelledby="hk-presets-h">
+  <p class="qx-eyebrow">Presets</p>
+  <h2 id="hk-presets-h">Start from a launch that already works.</h2>
+  <div class="hk-preset-grid" id="hk-presets"></div>
+ </section>
+
+ <section class="hk-built" aria-labelledby="hk-built-h">
+  <p class="qx-eyebrow">Built in</p>
+  <h2 id="hk-built-h">Every launch comes with these.</h2>
+  <div class="hk-built-grid" id="hk-built"></div>
+ </section>
+
+ <section class="hk-beside" aria-labelledby="hk-beside-h">
+  <p class="qx-eyebrow">Beside every pool</p>
+  <h2 id="hk-beside-h">Tools on every Trade page.</h2>
+  <p class="hk-beside-lede">They work with any QHooks launch, old or new. Each runs on one public contract per chain with no owner, at the same address on every chain.</p>
+  <div class="hk-beside-grid">
+   <article><h3>Buy with ETH</h3><p>Pay in ETH or BNB on a USDC or WETH pool. Trade compares Uniswap&rsquo;s ETH&thinsp;/&thinsp;USDC pools, takes the best route and buys in one transaction. The quote runs through the pool&rsquo;s blocks, so every charge is included.</p></article>
+   <article><h3>Limit orders</h3><p>Set a price to buy the dip or sell into strength. Your funds wait in the orders contract, and anyone can fill the order once the market reaches your price, earning the tip you set. You never get less than your price after fees. Cancel any time.</p></article>
+   <article><h3>Second pool</h3><p>The creator can open a token&thinsp;/&thinsp;ETH market next to the launch pool. It runs the launch&rsquo;s own blocks: the same charges, guards and burns, paid to the same payees, so there is no cheaper side door. Its liquidity can never be withdrawn; the creator collects the LP fees.</p></article>
+   <article><h3>Team locks</h3><p>Lock team tokens with a cliff and a drip. Every sale needs a public on-chain notice first, which shows on the Trade page before it can run. Locks can be extended but never shortened or cancelled.</p></article>
+   <article id="hk-vesting"><h3>Vesting streams</h3><p>Pay the creator&rsquo;s share, or a treasury&rsquo;s, through a vesting stream instead of straight to a wallet. Each payout reaches the wallet evenly over 30 days to a year, and nobody can change who it pays or how fast. Pick it on any payee in Studio; the Trade page shows what is vesting and when it is done.</p></article>
+  </div>
+ </section>
+
+ <section class="hk-open" aria-labelledby="hk-open-h">
+  <div>
+   <h2 id="hk-open-h">Read any pool&rsquo;s blocks.</h2>
+   <p>Each launch&rsquo;s blocks are a public contract. Its settings, pots, points and the charge a trade will pay right now are readable by anyone, from any wallet or explorer. The Trade page shows them before you swap.</p>
+  </div>
+  <a class="qx-btn qx-btn-ghost" href="trade.html">Open Trade</a>
+ </section>
+</main>
+
+<footer class="qx-footer qx-footer-eco"><div class="qx-wrap"><div class="qx-footer-grid"><div class="qx-footer-brand"><a class="brand" href="/"><img src="qhooks-logo.jpg" alt="" width="30" height="30">QHooks</a><p>An ecosystem for token builders. It starts with a hook: build it, launch it, trade it, grow it and protect it.</p><p class="qx-footer-social"><a class="qx-link" href="https://x.com/qHooks_" target="_blank" rel="noopener noreferrer">X @qHooks_ ↗</a><a class="qx-link" href="https://t.me/qhooks_bot" target="_blank" rel="noopener noreferrer">Telegram @qhooks_bot ↗</a></p></div><div class="qx-footer-cols"><div><h2><span>01</span>Build</h2><ul><li><a href="hooks.html">Launch blocks</a></li><li><a href="/#pq-hooks">Post-quantum hooks</a></li><li><a href="lab.html">Lab</a></li><li><a href="graduation-lab.html">QGraduation Lab</a></li><li><a href="builders.html">Builders marketplace</a></li><li><a href="builders-program.html">Builders program</a></li></ul></div><div><h2><span>02</span>Launch</h2><ul><li><a href="qtoken-studio.html">qToken Studio</a></li><li><a href="launch.html">Choose a chain</a></li><li><a href="pricing.html">Pricing</a></li><li><a href="verify.html">Verify your launch</a></li></ul></div><div><h2><span>03</span>Trade</h2><ul><li><a href="terminal.html">Terminal</a></li><li><a href="markets.html">Markets</a></li><li><a href="profile.html">Creator profiles</a></li></ul></div><div><h2><span>04</span>Grow</h2><ul><li><a href="me.html">My QHooks</a></li><li><a href="terminal.html">Holder staking</a></li><li><a href="hooks.html#block-buyback">Buyback and burn</a></li><li><a href="graduation.html">Graduation</a></li><li><a href="hooks.html#hk-beside-h">Team locks</a></li></ul></div><div><h2><span>05</span>Protect</h2><ul><li><a href="qwallets.html">qWallets</a></li><li><a href="/#two-keys">The two-key model</a></li></ul></div><div><h2><span>06</span>Integrate</h2><ul><li><a href="community.html">Community</a></li><li><a href="integrate.html">Integration guide</a></li><li><a href="api.html">API</a></li><li><a href="changelog.html">Changelog</a></li><li><a href="roadmap.html">Roadmap</a></li><li><a href="https://t.me/qhooks_bot" target="_blank" rel="noopener noreferrer">Telegram bot ↗</a></li><li><a href="/#on-your-phone">Install the app</a></li></ul></div></div></div><div class="qx-footer-base"><span>© 2026 QHooks</span><span>Launch on Base, Robinhood Chain, Ethereum, Arbitrum and BNB Chain</span></div></div></footer>
+<dialog id="qhc-dialog" class="qhc-dialog" aria-labelledby="qhc-title">
+ <div class="qhc-heading"><h2 id="qhc-title">Your wallet</h2><button id="qhc-close" type="button" aria-label="Close wallet dialog">×</button></div>
+ <section class="qhc-login"><button id="qhc-email-login" type="button" class="qhc-choice">Continue with email or Google</button><p>No wallet extension needed. Your QWallet quantum key stays separate.</p><button id="qhc-email-logout" type="button" class="qhc-secondary" hidden>Sign out of QHooks login</button><p id="qhc-login-status" role="status" aria-live="polite"></p></section><section class="qhc-mobile">
+ <label for="qhc-mobile-chain">Mobile wallet network</label><select id="qhc-mobile-chain"></select>
+ <button id="qhc-mobile-login" type="button" class="qhc-choice">MetaMask Mobile</button>
+ <p id="qhc-mobile-status" role="status" aria-live="polite">Connect your phone with a QR code.</p>
+ <button id="qhc-mobile-disconnect" type="button" class="qhc-secondary" hidden>Disconnect mobile session</button>
+ <p class="qhc-sdk-notice">Uses MetaMask Connect, copyright ConsenSys. <a href="/metamask/LICENSE.txt" target="_blank" rel="noopener">License</a></p>
+</section>
+<div id="qhc-choices">
+  <p>Choose an EVM wallet.</p>
+  <div id="qhc-wallets" class="qhc-wallets"></div>
+  <div id="qhc-empty"><p>No wallet detected in this browser.</p><p>Open <strong>qhooks.com</strong> in Chrome with your wallet extension enabled, or in your wallet app’s built-in browser.</p><p>The in-app preview cannot access Chrome’s wallet extensions. Use MetaMask Mobile above to pair your phone.</p></div>
+  <button id="qhc-rescan" type="button" class="qhc-secondary">Detect wallets again</button>
+ </div>
+ <div id="qhc-account" hidden><p id="qhc-address" class="qhc-address"></p><p id="qhc-chain"></p><p id="qhc-remembered"></p><button id="qhc-forget" type="button" class="qhc-secondary">Disconnect and forget</button></div>
+ <div id="qhc-email-network" hidden><label for="qhc-embedded-chain">Embedded wallet network</label><select id="qhc-embedded-chain"></select><button id="qhc-embedded-switch" type="button" class="qhc-secondary">Switch network</button></div><p id="qhc-status" role="status" aria-live="polite"></p>
+ <p class="qhc-footnote">Connecting does not authorize spending. Every signature and transaction needs your approval. Never enter your recovery phrase here.</p>
+</dialog><script src="/wallet-early.js"></script>
+<script type="module" src="/wallet-site.mjs"></script><script type="module" src="/wallet-page-resume.mjs"></script><script type="module" src="/wallet-login.mjs"></script><script type="module" src="/l121-mobile-login.mjs"></script>
+<script type="module" src="/qx-shell.mjs"></script>
+<script type="module" src="/qx-hooks.mjs"></script>
+</body>
+</html>

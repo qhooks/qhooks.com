@@ -1,0 +1,27 @@
+.pool-workspace { max-width:1160px; }
+.pool-workspace h1 { max-width:16ch; letter-spacing:-.035em; line-height:1.04; }
+.pool-lead { max-width:53ch; font-size:1.25rem; }
+.pool-flow { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:2rem; margin-block:3.5rem; }
+.pool-flow section { border-top:1px solid var(--line); padding-top:1.5rem; }
+.pool-flow h2 { font-size:1.35rem; }
+.pool-build { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:3rem; border:1px solid var(--line); padding:2rem; }
+.pool-build-actions { display:flex; flex-direction:column; justify-content:center; gap:1rem; }
+.pool-build-actions p { font-size:.8rem; margin:0; }
+.pool-workspace > section { margin-block:3rem; }
+.pool-workspace .lab-form select { padding:.8rem; border:1px solid var(--line); color:inherit; background:var(--paper); font:inherit; width:100%; min-width:0; }
+.pool-workspace .lab-form [hidden] { display:none; }
+.pool-workspace small { line-height:1.5; overflow-wrap:anywhere; }
+.pool-profile { border-top:1px solid var(--line); padding-top:1.5rem; }
+.pool-connected { border-top:1px solid var(--line); padding-top:2rem; }
+.pool-connected textarea,.pool-connected input:not([type="checkbox"]) { width:100%; min-width:0; box-sizing:border-box; padding:.8rem; border:1px solid var(--line); color:inherit; background:var(--paper); font:inherit; }
+.pool-connected textarea { resize:vertical; }
+.pool-journal { margin-block:1.5rem; }
+.pool-connected summary { cursor:pointer; padding-block:.75rem; }
+.pool-cost-consent { display:flex; gap:.75rem; align-items:flex-start; margin-block:1rem; }
+.pool-cost-consent input { width:auto; flex:0 0 auto; margin-top:.3rem; }
+.pool-next { font-size:.875rem; }
+.pool-connected .build-summary dd,.pool-connected #pool-setup-cost,.pool-connected #pool-account-cost { overflow-wrap:anywhere; }
+#grad-key-status,#grad-cost { overflow-wrap:anywhere; }
+.pool-connected [hidden] { display:none; }
+#pool-setup-recovery,#pool-account-recovery { margin-top:1.5rem; }
+@media(max-width:750px) { .pool-flow,.pool-build { grid-template-columns:1fr; gap:1rem; } .pool-build { padding:1.25rem; } .pool-flow { margin-block:2rem; } }

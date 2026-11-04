@@ -1,0 +1,18 @@
+/* Quick launch card on top of Studio (qx-quick-launch.mjs). Uses the page's own tokens. */
+.qql{border:1px solid var(--line,#d8d3c6);border-radius:18px;padding:22px;margin:0 0 22px;background:var(--paper,#fbf9f4)}
+.qql-head h2{margin:0 0 4px;font-size:1.35rem}.qql-head p{margin:0 0 16px;color:var(--muted,#6f776c)}
+.qql-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 16px;margin:0 0 12px}
+.qql label{display:flex;flex-direction:column;gap:6px;font-size:.9rem;min-width:0}
+.qql input[type=text],.qql input[type=password],.qql select{font:inherit;padding:.6rem .7rem;border:1px solid var(--line,#d8d3c6);border-radius:9px;background:transparent;color:inherit;min-width:0}
+.qql-amount{display:flex;align-items:center;gap:8px}.qql-amount input{flex:1}.qql-unit{font-weight:600}
+.qql-hint{color:var(--muted,#6f776c);font-size:.8rem;line-height:1.4}
+.qql label.qql-consent{flex-direction:row;align-items:flex-start;gap:10px;margin:6px 0 14px;line-height:1.45}
+.qql-consent input{margin-top:3px}
+.qql-actions{display:flex;flex-wrap:wrap;align-items:center;gap:14px}.qql-actions p{margin:0}
+.qql-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin:14px 0 0;padding:0;list-style:none;counter-reset:q}
+.qql-steps li{counter-increment:q;font-size:.8rem;padding:6px 9px;border:1px solid var(--line,#d8d3c6);border-radius:8px;color:var(--muted,#6f776c)}
+.qql-steps li::before{content:counter(q) ". "}
+.qql-steps li[data-state=now]{color:inherit;border-color:currentColor}
+.qql-steps li[data-state=done]{color:inherit;background:color-mix(in srgb,currentColor 7%,transparent)}
+.qql-steps li[data-state=done]::after{content:" ✓"}
+.qql-done{margin-top:14px}

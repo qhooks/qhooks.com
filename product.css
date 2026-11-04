@@ -1,0 +1,76 @@
+/* Local Ollama proposal with lead layout, contrast and focus corrections. */
+:root {
+  --paper: #f4f1e9;
+  --ink: #262b27;
+  --dark: #242b25;
+  --green: #c9d3bd;
+  --line: #d4d7cd;
+}
+.green, .status, .detail-kicker { color: #425849; }
+.simulation .green, .truth-card .green { color: #c9d3bd; }
+.site-header { flex-wrap: wrap; gap: 1rem; }
+.site-nav { display: flex; flex-wrap: wrap; gap: 1.25rem; font-size: .85rem; }
+.site-nav a, footer a, .guide a { color: inherit; text-underline-offset: .25em; }
+.site-nav a { text-decoration: none; }
+.site-nav a:hover { text-decoration: underline; }
+.hero { padding-top: clamp(4rem, 9vw, 7rem); }
+.hero h1 { font-size: clamp(2.25rem, 7.6vw, 6.5rem); font-weight: 600; letter-spacing: -.02em; line-height: 1.12; }
+.hero-bottom { max-width: 900px; }
+.hero-bottom p { max-width: 520px; }
+.notice { background: #e5e9df; }
+.catalog-section { padding-block: 4.5rem; }
+#quantum-listing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#quantum-listing-grid .listing:nth-child(odd) { border-left: 1px solid var(--line); }
+#quantum-listing-grid > .listing[data-listing-id="qgraduation-pq-liquidity-migration"] {
+  grid-column: 1 / -1;
+}
+#quantum-listing-grid > .listing[data-listing-id="qgraduation-pq-liquidity-migration"] > p {
+  max-width: 70ch;
+}
+.listing { min-width: 0; }
+.listing p { max-width: none; }
+.listing .product-action { font-size: .78rem; margin: 1.25rem 0; color: #425849; }
+.listing button { margin-bottom: .5rem; padding-block: .3rem; }
+.product-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 2rem; }
+.developer-lab { max-width: 1240px; margin: 0 auto; padding: 2rem; border-top: 1px solid var(--line); }
+.developer-lab > summary { cursor: pointer; padding: .5rem 0; font-weight: 600; }
+.developer-lab .catalog-section { padding-inline: 0; }
+.technical-notes { margin-top: 2rem; }
+.technical-notes summary { margin-bottom: 1rem; cursor: pointer; }
+.integration-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.integration-steps article { border-top: 1px solid var(--line); padding: 1.5rem 0; }
+.integration-steps h3 { font: 1.5rem var(--serif); }
+.integration-steps p { max-width: 32ch; }
+.guide { max-width: 960px; margin: auto; padding: 3rem 2rem; }
+.guide h1 { font: clamp(2.5rem, 6vw, 4.5rem)/1 var(--serif); letter-spacing: -.05em; }
+.guide h2 { font: 2rem var(--serif); }
+.guide section { padding-block: 1rem; line-height: 1.6; }
+.guide pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #e5e9df; padding: 1rem; }
+.guide details { border-top: 1px solid var(--line); margin-top: 2rem; padding-top: 1rem; }
+.guide summary { cursor: pointer; }
+.guide p, .guide li { overflow-wrap: anywhere; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #526953; outline-offset: 3px; }
+.draft-output { color: #e1e5d9; }
+footer { flex-wrap: wrap; }
+.platform-intro { max-width: 65ch; line-height: 1.7; margin-bottom: 2.5rem; }
+.platform-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem 3rem; }
+.platform-card { border-top: 1px solid var(--line); padding-top: 1.5rem; display: flex; flex-direction: column; align-items: start; }
+.platform-card h3 { margin: 0 0 .75rem; font: 1.8rem var(--serif); }
+.platform-card p { max-width: 42ch; line-height: 1.65; flex: 1; }
+.platform-card .text-link { margin-top: 1rem; }
+@media (max-width: 700px) {
+  #quantum-listing-grid, .integration-steps, .platform-grid { grid-template-columns: 1fr; }
+  .developer-lab, .guide { padding-inline: 1rem; }
+  .site-nav { gap: .9rem; }
+  .selects { flex-wrap: wrap; }
+  .integration-steps p { max-width: none; }
+  .text-link { white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+/* User-supplied original artwork, framed in CSS without modifying the image. */
+.brand .mark,footer .mark{position:relative;display:block;flex:0 0 52px;width:52px;height:52px;overflow:hidden;border:0;border-radius:50%;background:#191919}
+.mark img{position:absolute;display:block;width:140%;height:auto;max-width:none;left:50%;top:50%;transform:translate(-50%,-50%)}
+footer .mark{flex-basis:36px;width:36px;height:36px}

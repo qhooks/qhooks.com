@@ -1,0 +1,79 @@
+.qtd-desk #graduation-studio { max-width: 1440px; margin: auto; padding: 3rem 3.5rem; }
+.qtd-desk h1 { font: 400 clamp(2.25rem, 4.1vw, 4rem)/1.1 var(--serif); letter-spacing: -0.02em; margin: 0 0 0.5rem; }
+.qtd-desk .qtd-layout { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(260px, 1fr); gap: 2rem; }
+.qtd-desk .qtd-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.qtd-desk .qtd-liquidity { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+@media (max-width: 900px) { .qtd-desk #graduation-studio { padding: 2rem 1rem; } .qtd-desk .qtd-layout { grid-template-columns: 1fr; } }
+@media (max-width: 540px) { .qtd-desk .qtd-fields, .qtd-desk .qtd-liquidity { grid-template-columns: 1fr; } }
+
+/* Lead integration: scoped controls, existing theme tokens and responsive safeguards. */
+.qtd-desk .site-header{max-width:1440px;padding-left:3.5rem;padding-right:5.5rem}
+.qtd-desk .qtd-intro p{margin:.6rem 0 0;max-width:75ch}
+.qtd-desk .qtd-steps{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1.5rem;padding:0;margin:2rem 0 1.5rem}
+.qtd-desk .qtd-steps li{border-bottom:1px solid var(--line);padding:.65rem 0}
+.qtd-desk .qtd-steps button{border:0;background:none;color:inherit;font:inherit;padding:0;min-height:40px;cursor:pointer}
+.qtd-desk .qtd-steps [aria-current="step"]{color:var(--ink);font-weight:700;border-bottom:2px solid var(--green)}
+.qtd-desk .qtd-editor,.qtd-desk .qtd-summary,.qtd-desk .qtd-field{min-width:0}
+.qtd-desk .qtd-chain-picker{padding:0}
+.qtd-desk .qtd-chain-picker h2{font:600 1.2rem var(--sans);margin:0 0 .35rem}
+.qtd-desk .qtd-chain-picker p,.qtd-desk .qtd-form>p{margin:.4rem 0 1rem;font-size:.9rem}
+.qtd-desk .qtd-chain-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.5rem;margin-bottom:1.75rem}
+.qtd-desk .qtd-chain-row button{display:flex;align-items:center;justify-content:center;gap:.4rem;padding:.7rem .4rem;min-height:54px;border:1px solid var(--line);border-radius:4px;color:var(--ink);background:transparent;font-size:.85rem;cursor:pointer}
+.qtd-desk .qtd-chain-row img{flex:none;width:22px;height:22px}
+.qtd-desk .qtd-chain-row span{min-width:0;overflow-wrap:anywhere}
+.qtd-desk .qtd-chain-row [aria-pressed="true"]{border-color:var(--ink);background:color-mix(in srgb,var(--green) 10%,transparent)}
+.qtd-desk .qtd-form{padding:0;border:0;background:transparent}
+.qtd-desk .qtd-form h2{font:400 1.5rem var(--serif);margin:1.4rem 0 .3rem}
+.qtd-desk .qtd-field{display:grid;gap:.45rem;margin:.5rem 0}
+.qtd-desk .qtd-field input,.qtd-desk .qtd-field select,.qtd-desk .qtd-rules input,.qtd-desk .qtd-rules select{width:100%;min-width:0;min-height:44px;border:1px solid var(--line);border-radius:4px;padding:.65rem .8rem;color:var(--ink);background:transparent}
+.qtd-desk .qtd-liquidity{margin-bottom:1rem}
+.qtd-desk .qtd-advanced{display:flex;flex-direction:column;border-top:1px solid var(--line);padding-top:1rem;margin-top:1.25rem}
+.qtd-desk .qtd-advanced summary{min-height:44px;margin:0}
+.qtd-desk .qtd-actions{display:flex;align-items:center;flex-wrap:wrap;gap:1rem;border-top:1px solid var(--line);padding-top:1.25rem;margin-top:1.2rem}
+.qtd-desk .qtd-actions .workspace-button{min-height:48px;border-radius:6px;padding:.8rem 1.5rem;border:1px solid var(--line)}
+.qtd-desk .qtd-actions .qtd-primary{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:650}
+:root[data-theme="dark"] .qtd-desk .qtd-actions .qtd-primary{background:var(--green);color:var(--dark);border-color:var(--green)}
+.qtd-desk .qtd-actions small{flex:1;min-width:180px;max-width:45ch;font-size:.8rem}
+.qtd-desk .qtd-summary{border-left:1px solid var(--line);padding-left:2rem}
+.qtd-desk .qtd-summary h2{font:400 1.6rem var(--serif);margin:0 0 .3rem}
+.qtd-desk .qtd-summary>p{font-size:.9rem}
+.qtd-desk .qtd-summary dl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:1rem .75rem;border-top:1px solid var(--line);padding-top:1.5rem;margin:1.5rem 0}
+.qtd-desk .qtd-summary dt{font-size:.9rem}
+.qtd-desk .qtd-summary dd{margin:0;text-align:right;overflow-wrap:anywhere}
+.qtd-desk #qtd-summary-chain-icon{vertical-align:middle;margin-right:.4rem}
+.qtd-desk .qtd-muted{font-size:.85rem;opacity:.85}
+.qtd-desk .qtd-rules .lab-form{display:grid;gap:.6rem}
+.qtd-desk .qtd-tools{margin-top:2rem;padding-top:1rem}
+.qtd-desk .qtd-tools .lab-actions{display:flex;flex-wrap:wrap;gap:.75rem;margin:1rem 0}
+.qtd-desk .qtd-tools .lab-form{display:grid;gap:.75rem;max-width:42rem}
+.qtd-desk .qtd-validation{min-height:0;margin:.5rem 0 1rem}
+.qtd-desk .qtd-validation:empty{display:none}
+.qtd-desk .qtd-steps{margin:1.25rem 0 1rem}
+.qtd-desk .qtd-field{align-content:start}
+.qtd-desk .qtd-advanced{display:block}
+.qtd-desk #graduation-studio,.qtd-desk .site-header{max-width:1487px}
+.qtd-desk .qtd-form{line-height:1.45}
+.qtd-desk .qtd-form h2{margin-top:1.15rem}
+.qtd-desk .qtd-chain-row button{line-height:1.2;padding:.6rem .3rem;min-height:54px}
+.qtd-desk .qtd-advanced{margin-top:.75rem;padding-top:.75rem}
+.qtd-desk .qtd-actions{padding-top:1rem}
+.qtd-desk .qtd-steps li{display:flex;align-items:center;gap:.75rem;border:0;padding:0}
+.qtd-desk .qtd-steps li:not(:last-child)::after{content:"";height:1px;background:var(--line);flex:1}
+.qtd-desk .qtd-steps button{display:inline-flex;align-items:center;gap:.6rem}
+.qtd-desk .qtd-step-count{display:inline-grid;place-items:center;flex:none;width:32px;height:32px;border:1px solid var(--line);border-radius:50%;font-size:.85rem}
+.qtd-desk .qtd-steps [aria-current="step"]{border:0}
+.qtd-desk .qtd-steps [aria-current="step"] .qtd-step-count{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+:root[data-theme="dark"] .qtd-desk .qtd-steps [aria-current="step"] .qtd-step-count{background:var(--green);color:var(--dark);border-color:var(--green)}
+.qtd-desk .qtd-validation[data-error="true"]{font-weight:650}
+.qtd-desk :is(input,select,button,a,summary):focus-visible{outline:2px solid currentColor;outline-offset:3px}
+@media(max-width:900px){
+ .qtd-desk .site-header{padding-left:1rem;padding-right:4.5rem}
+ .qtd-desk .qtd-chain-row{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .qtd-desk .qtd-summary{border-left:0;border-top:1px solid var(--line);padding:1.5rem 0}
+}
+@media(max-width:540px){
+ .qtd-desk .qtd-steps{grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem 1rem;font-size:.85rem}
+ .qtd-desk .qtd-steps button{min-height:44px}
+ .qtd-desk .qtd-actions .workspace-button{width:100%}
+ .qtd-desk .qtd-actions small{min-width:0}
+}

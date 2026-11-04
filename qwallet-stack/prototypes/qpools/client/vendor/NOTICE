@@ -1,0 +1,8 @@
+This local client uses exact pinned noble post-quantum 0.7.1, noble curves 2.4.0,
+and noble hashes 2.4.0 sources acquired during L11. Respective MIT licenses
+and author notices are retained. Bare package import specifiers alone are
+rewritten to local relative imports; upstream arithmetic is unchanged.
+
+The selected client profile is SLH-DSA-SHA2-128s external pure signing. Other
+upstream exports are dependencies, not exposed product profiles. See the L25
+source closure and task for hashes, interop checks and limitations.

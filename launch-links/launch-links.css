@@ -1,0 +1,9 @@
+/* Studio: the signed launch-link review card (launch-links/prefill.mjs). */
+#qhooks-launch-link{border:1px solid var(--qx-brass,#d5bd86);border-radius:14px;padding:22px 24px;margin:0 0 22px}
+#qhooks-launch-link h2{margin:0 0 4px;font-size:1.35rem}
+#qhooks-launch-link>p:first-of-type{margin:0 0 16px;color:var(--qx-ink-2,inherit);font-size:1.05rem}
+#qhooks-launch-link dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 18px;margin:0 0 18px}
+#qhooks-launch-link dl>div{border-top:1px solid var(--qx-line,#3a3f38);padding-top:8px;min-width:0}
+#qhooks-launch-link dt{font-size:.8rem;color:var(--qx-faint,#a4ae9e);margin:0 0 3px}
+#qhooks-launch-link dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+#qhooks-launch-link-status{margin:12px 0 0;font-size:.92rem}
