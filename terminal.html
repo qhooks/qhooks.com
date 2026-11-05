@@ -3,14 +3,15 @@
 <title>Terminal | QHooks</title><meta name="description" content="Trade every QHooks launch, plus EVM tokens via 0x and Solana tokens via Jupiter: live charts, trades, holders, positions and each launch's on-chain rules.">
 <link rel="icon" href="qhooks-logo.jpg" type="image/jpeg">
 <link rel="stylesheet" href="/qx-site.css"><link rel="stylesheet" href="/qx-trade-blocks.css"><link rel="stylesheet" href="/qx-trade-extras.css"><link rel="stylesheet" href="/wallet-site.css"><link rel="stylesheet" href="/qx-terminal.css">
+<link rel="stylesheet" href="/qx-terminal-feed.css">
 <link rel="modulepreload" href="/wallet-site.mjs"><link rel="modulepreload" href="/wallet-hub.mjs"><link rel="modulepreload" href="/wallet-hub-fresh.mjs"><link rel="modulepreload" href="/full-launch/prototypes/qwallet/client/wallet-session.mjs"><link rel="modulepreload" href="/wallet-discovery.mjs"><link rel="modulepreload" href="/wallet-preference.mjs"><link rel="modulepreload" href="/wallet-rpc-compat.mjs"><link rel="modulepreload" href="/chain-catalog.mjs"><link rel="modulepreload" href="/wallet-login.mjs"><link rel="modulepreload" href="/embedded-wallet-provider.mjs"><meta property="og:type" content="website"><meta property="og:site_name" content="QHooks"><meta property="og:title" content="Terminal | QHooks"><meta property="og:description" content="Trade every QHooks launch, plus EVM tokens via 0x and Solana tokens via Jupiter: live charts, trades, holders, positions and each launch's on-chain rules."><meta property="og:image" content="https://qhooks.com/og/qhooks-card.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://qhooks.com/og/qhooks-card.png"><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/app-icons/apple-touch-icon.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="QHooks"><meta name="theme-color" content="#111613">
-<script src="/tg-early.js"></script>
+<script src="/qx-telegram.mjs"></script><script src="/tg-early.js"></script>
 </head>
 <body class="qx qxt">
 <a class="skip-link" href="#qxt-trade">Skip to trading</a>
 <header class="qxt-top">
  <a class="qxt-brand" href="/" aria-label="QHooks home"><img src="qhooks-logo.jpg" alt="" width="28" height="28"><span>QHooks</span></a>
- <nav class="qxt-nav" aria-label="Main navigation"><a href="/hooks.html">Build</a><a href="/qtoken-studio.html">Launch</a><a href="/terminal.html" aria-current="page">Trade</a><a href="/graduation.html">Grow</a><a href="/qwallets.html">Protect</a><a href="/integrate.html">Integrate</a></nav>
+ <nav class="qxt-nav" aria-label="Main navigation"><a href="/hooks.html">Build</a><a href="/qtoken-studio.html">Launch</a><a href="/discover.html">Discover</a><a href="/terminal.html" aria-current="page">Trade</a><a href="/graduation.html">Grow</a><a href="/qwallets.html">Protect</a><a href="/integrate.html">Integrate</a></nav>
  <div class="qxt-chains" role="group" aria-label="Chains" id="qxt-chains"></div>
  <label class="qxt-search"><span class="qxt-sr">Search tokens</span><input id="qxt-search" type="search" placeholder="Search name, symbol or address" autocomplete="off" spellcheck="false"><kbd>/</kbd></label>
  <div class="qxt-wallet"><button type="button" id="qxt-connect">Connect wallet</button><button type="button" id="qhc-trigger" class="qhc-trigger" aria-haspopup="dialog" hidden>Connect wallet</button><div id="qxt-wallets" class="qxt-menu" hidden></div></div>
@@ -86,7 +87,9 @@
 </dialog><script src="/wallet-early.js"></script>
 <script type="module" src="/wallet-site.mjs"></script><script type="module" src="/wallet-page-resume.mjs"></script><script type="module" src="/wallet-login.mjs"></script><script type="module" src="/l121-mobile-login.mjs"></script>
 <script type="module" src="/qx-terminal.mjs"></script>
+<script type="module" src="/qx-terminal-feed.mjs"></script>
 <script type="module" src="/qx-rewards.mjs"></script>
-<script type="module" src="/qx-telegram.mjs"></script>
+<script type="module" src="/qx-tg-link.mjs"></script>
 <script type="module" src="/qx-trade-blocks.mjs"></script><script type="module" src="/qx-terms.mjs"></script><script type="module" src="/qx-keys.mjs"></script><script type="module" src="/qx-trade-auction.mjs"></script><script type="module" src="/qx-trade-orders.mjs"></script><script type="module" src="/qx-trade-pair.mjs"></script><script type="module" src="/qx-trade-locks.mjs"></script><script type="module" src="/qx-trade-staking.mjs"></script><script type="module" src="/qx-trade-modules.mjs"></script><script type="module" src="/qx-trade-vest.mjs"></script>
+<script type="module" src="/qx-wallet-copy.mjs"></script>
 </body></html>

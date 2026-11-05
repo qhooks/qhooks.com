@@ -1,6 +1,7 @@
 // Launch blocks as creators see them. Settings map onto the QLaunchBlocks constructor
 // fields; units: 'pct' (percent, stored as bps), 'min'/'hr'/'day'/'sec' (stored as seconds),
 // 'quote' (quote asset, stored in its base units), 'raw' (plain number), 'addr', 'supplyPct'.
+import {chainMap} from './chains.mjs';
 export const CATEGORIES = [
   { id: 'protect', name: 'Protection', line: 'Keep bots and whales from taking the launch.' },
   { id: 'fees', name: 'Fees', line: 'Charges that follow the market, the clock or the trade.' },
@@ -130,10 +131,15 @@ export const PRESETS = [
   { id: 'auction', name: 'Opening auction', line: 'One opening price for everyone, then a small tax that buys back and burns.',
     on: ['openingAuction', 'tax', 'autoBurn', 'buyback', 'sandwich'], set: { auctionMin: 30, buyTaxBps: 2, sellTaxBps: 2, burnBps: 1, buybackShareBps: 50 } },
   { id: 'burn', name: 'Burn engine', line: 'Every buy burns, and charges buy back and burn more.',
-    on: ['autoBurn', 'tax', 'buyback'], set: { burnBps: 2, buyTaxBps: 2, sellTaxBps: 2, buybackShareBps: 100 } }
+    on: ['autoBurn', 'tax', 'buyback'], set: { burnBps: 2, buyTaxBps: 2, sellTaxBps: 2, buybackShareBps: 100 } },
+  // 2% tax: 0.75% buyback and burn every 15 minutes, 0.25% referrals, and the creator's 1% split 75/25 with stakers
+  // (Quick launch preselects the 25% stakers share; in Studio add "Stakers" to the revenue split).
+  { id: 'flywheel', name: 'Holder engine', line: '2% tax: 0.75% buys back and burns every 15 minutes, 0.25% to stakers, 0.25% to referrers, 0.75% to you. Fair-launch guards for ten minutes.',
+    on: ['antiSnipe', 'walletCap', 'cooldown', 'sandwich', 'tax', 'buyback', 'referrals', 'points'], guardMin: 10, stakers: 25,
+    set: { buyTaxBps: 2, sellTaxBps: 2, launchTaxBps: 0, buybackShareBps: 37.5, referralShareBps: 12.5, buybackCooldown: 15, buybackSlipBps: 1 } }
 ];
 /// Hidden presets show only when the page is opened with ?style=<id>.
 export const presetVisible = p => !p.hidden || new URLSearchParams(location.search).get('style') === p.id;
 
 // Which block covers each of hookr.fun's swap-path blocks, for the Hooks page comparison.
-export const QUOTE_ASSETS = { '8453': ['USDC', 6], '4663': ['WETH', 18], '1': ['USDC', 6], '42161': ['USDC', 6], '56': ['WBNB', 18], '5042': ['USDC', 6] };
+export const QUOTE_ASSETS = chainMap(c => [c.quote.symbol, c.quote.decimals]);

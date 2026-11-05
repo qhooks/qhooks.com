@@ -6,7 +6,8 @@ export const CHAIN_SYMBOLS=Object.freeze([
  Object.freeze({id:'1',name:'Ethereum',aliases:Object.freeze(['Ethereum']),icon:'/chain-symbol-icons/ethereum.svg',kind:'official'}),
  Object.freeze({id:'42161',name:'Arbitrum One',aliases:Object.freeze(['Arbitrum One','Arbitrum']),icon:'/chain-symbol-icons/arbitrum.svg',kind:'official'}),
  Object.freeze({id:'56',name:'BNB Chain',aliases:Object.freeze(['BNB Chain','BNB']),icon:'/chain-symbol-icons/bnb.svg',kind:'official'}),
- Object.freeze({id:'5042',name:'Arc',aliases:Object.freeze(['Arc']),icon:'/chain-symbol-icons/arc.svg',kind:'official'})
+ Object.freeze({id:'5042',name:'Arc',aliases:Object.freeze(['Arc']),icon:'/chain-symbol-icons/arc.svg',kind:'official'}),
+ Object.freeze({id:'99801',name:'Elysium Testnet',aliases:Object.freeze(['Elysium Testnet','Elysium']),icon:'/chain-symbol-icons/elysium.svg',kind:'official'})
 ]);
 
 export const CHAIN_SYMBOL_SURFACES=Object.freeze({

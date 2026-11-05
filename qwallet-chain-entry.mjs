@@ -1,5 +1,6 @@
 // Inert URL-to-select initialization. No wallet, RPC or cryptography access.
-const chainIds=Object.freeze(['8453','4663','1','42161','56','5042']);
+import {BUILT} from './chains.mjs';
+const chainIds=Object.freeze(BUILT.map(c=>c.id));
 
 export function initializeQWalletChainEntry({document:d=document,location=window.location}={}){
  const select=d.getElementById('qw-chain'),provider=d.getElementById('qw-provider'),connect=d.getElementById('qw-connect'),status=d.getElementById('qw-connection');

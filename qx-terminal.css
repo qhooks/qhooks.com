@@ -184,8 +184,10 @@ body.qx.qxt{font-size:13px;line-height:1.4}
  .qxt-grid{grid-template-columns:minmax(0,1fr) 320px;height:auto}
  .qxt-feed{grid-column:1/-1;order:3;max-height:70vh;border-right:0;border-top:1px solid var(--qx-line)}
  .qxt-center{min-height:calc(100vh - var(--qxt-h))}
- .qxt-nav{display:none}
 }
+/* Laptop widths: keep the menu bar down to 881px like every other page (Randall, 2026-11-05); tighten the header. */
+@media (min-width:881px) and (max-width:1180px){.qxt-top{gap:10px}.qxt-brand span{display:none}.qxt-nav a{padding:6px 7px}.qxt-search{flex:0 1 220px}}
+@media (max-width:880px){.qxt-nav{display:none}}
 @media (max-width:760px){
  .qxt-top{flex-wrap:wrap;height:auto;padding:8px 12px;gap:8px}
  .qxt-chains{order:5;width:100%;margin:0}

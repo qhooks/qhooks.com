@@ -1,6 +1,7 @@
 // Public metadata preview only; no wallet, persistent storage or transaction API.
 import {normalizeTokenBrief,tokenBriefLink} from './l170-token-brief.mjs';
-const chainNotes=Object.freeze({'8453':['Base','ETH'],'4663':['Robinhood Chain','ETH'],'1':['Ethereum','ETH'],'42161':['Arbitrum One','ETH'],'56':['BNB Chain','BNB'],'5042':['Arc','USDC']});
+import {chainMap} from './chains.mjs';
+const chainNotes=chainMap(c=>[c.name,c.native]);
 export function bindLaunchDesk({document:d=document,target=window}={}){
  const form=d.getElementById('q170-brief-form'),name=d.getElementById('q170-name'),symbol=d.getElementById('q170-symbol'),chain=d.getElementById('q170-chain'),note=d.getElementById('q170-chain-note'),status=d.getElementById('q170-brief-status');
  if(!form||!name||!symbol||!chain||!note||!status)throw Error('Missing launch desk controls');

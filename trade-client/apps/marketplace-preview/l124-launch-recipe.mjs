@@ -3,7 +3,8 @@ import {normalizeWorkspaceFields} from '../../packages/multichain-launch/workspa
 const rows=[
  ['8453','Base','USDC',6,'ETH'],['4663','Robinhood Chain','WETH',18,'ETH'],
  ['1','Ethereum','USDC',6,'ETH'],['42161','Arbitrum One','USDC',6,'ETH'],
- ['56','BNB Chain','WBNB',18,'BNB'],['5042','Arc','USDC',6,'USDC']
+ ['56','BNB Chain','WBNB',18,'BNB'],['5042','Arc','USDC',6,'USDC'],
+ ['99801','Elysium Testnet','WHYPE',18,'HYPE']
 ];
 export const recipeChains=Object.freeze(rows.map(([id,name,quoteSymbol,quoteDecimals,nativeSymbol])=>Object.freeze({id,name,quoteSymbol,quoteDecimals,nativeSymbol})));
 export const recipeLimit=8192;

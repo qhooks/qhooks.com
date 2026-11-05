@@ -2,13 +2,12 @@
 // launch-contract deployment carries exactly this amount and the contract forwards it to the fee wallet, so
 // there is no separate payment step and no launch on this code can skip it.
 import { connectedAddress, onWalletChange, CHAIN_NAME } from '/qx-chain.mjs';
+import { chainMap } from '/chains.mjs';
 
 export const FEE_WALLET = '0x2b1cf7c4071a98a59709166dfa73c7acb7e83e71';
 // [display amount, symbol, wei]
-export const LAUNCH_FEE = {
-  '8453': ['0.0002', 'ETH', 2n * 10n ** 14n], '1': ['0.0002', 'ETH', 2n * 10n ** 14n], '42161': ['0.0002', 'ETH', 2n * 10n ** 14n], '4663': ['0.0002', 'ETH', 2n * 10n ** 14n],
-  '56': ['0.0007', 'BNB', 7n * 10n ** 14n], '5042': ['0.5', 'USDC', 5n * 10n ** 17n]
-};
+// From the registry (chains.mjs launchFee / launchFeeWei, which mirror QLaunchBlocks' per-chain constant).
+export const LAUNCH_FEE = chainMap(c => [c.launchFee, c.native, BigInt(c.launchFeeWei)]);
 const d = document, chainId = () => d.getElementById('ql-chain')?.value || '8453';
 
 const box = d.createElement('div');

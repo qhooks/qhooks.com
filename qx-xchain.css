@@ -1,0 +1,18 @@
+.qxc-funding,.qxc-recovery{display:grid;gap:6px;padding:12px;margin:10px 0;border:1px solid var(--qx-line-2,#ffffff28);border-radius:10px;background:var(--qx-bg,transparent);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.qxc-funding>b{font-size:12px;letter-spacing:.02em}
+.qxc-funding>span:nth-of-type(1){color:var(--qx-ink,inherit)}
+.qxc-funding>span:nth-of-type(2){font-size:11px}
+.qxc-funding[hidden]{display:none}
+.qxc-funding select,.qxc-settings select{width:100%;min-height:36px;min-width:0;font:inherit;color:inherit;background:var(--panel,#111b20);border:1px solid #ffffff28;border-radius:6px;padding:6px}
+.qxc-funding span{color:var(--muted,#a9b9bd)}
+.qxc-funding button,.qxc-recovery button{min-height:36px;justify-self:start}
+.qxc-settings{position:relative;font-size:12px;margin:8px 0}
+.qxc-settings summary{cursor:pointer;width:fit-content;padding:6px 0}
+.qxc-settings label{display:block;padding:10px;border:1px solid #ffffff28;border-radius:8px}
+.qxc-funding :focus-visible,.qxc-recovery :focus-visible,.qxc-settings :focus-visible{outline:2px solid var(--qx-brass,#d2ad72);outline-offset:3px}
+/* Sell to cash: a full-width quiet row under Buy/Sell, only on the sell side. */
+.qxt-side-toggle button[data-side="cash"]{grid-column:1/-1;padding:5px;font-size:12px;font-weight:500}
+.qxt-side-toggle button[data-side="cash"][aria-pressed="true"]{color:var(--qx-ink,inherit);box-shadow:inset 0 0 0 1px var(--qx-line-2,#ffffff28)}
+[data-side="buy"]>.qxt-side-toggle button[data-side="cash"]{display:none}
+.qxc-settings small{display:block;margin-top:6px;color:var(--qx-muted,#a9b9bd)}
+@media(max-width:480px){.qxc-funding,.qxc-recovery{padding:10px}.qxc-funding button,.qxc-recovery button,.qxc-settings select{min-height:44px}}

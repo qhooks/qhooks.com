@@ -2,7 +2,7 @@
 // The fixed connected-swap boundary must derive the CREATE graph and admit it onchain.
 import {normalizeTokenFields} from '../token-launch/token-fields.mjs';
 const ensure=(ok,message)=>{if(!ok)throw new TypeError(message);};
-const chains=['8453','4663','1','42161','56','5042'];
+const chains=['8453','4663','1','42161','56','5042','99801'];
 function exact(value,names){
  ensure(value&&Object.getPrototypeOf(value)===Object.prototype,'Plain pool data required');
  const keys=Reflect.ownKeys(value),d=Object.getOwnPropertyDescriptors(value);

@@ -6,7 +6,7 @@ const ARC_QUOTE_DECIMALS=6;
 const NATIVE_DECIMALS=18;
 const QUOTE_TO_NATIVE_SCALE=10n**12n;
 const FORWARD_GAS_LIMIT=7_000_000n;
-const SUPPORTED_CHAIN_IDS=new Set(['8453','4663','1','42161','56','5042']);
+const SUPPORTED_CHAIN_IDS=new Set(['8453','4663','1','42161','56','5042','99801']);
 const INPUT_KEYS=['chainId','quote','reservedQuoteRaw','maximumFee','maxFeePerGas','nativeBalance'];
 const QUOTE_KEYS=['address','decimals','nativeSharedBalance'];
 

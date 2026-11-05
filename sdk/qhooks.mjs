@@ -8,7 +8,7 @@
 // Reads use the public API (https://qhooks.com/api.html) and, for quotes, the chain's own RPC when given.
 // The SDK never holds keys or sends transactions: it returns { to, data, value } for your wallet to send.
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 export const API = 'https://qhooks.com/api/v1';
 const Z = '0x0000000000000000000000000000000000000000';
 export const PERMIT2 = '0x000000000022d473030f116ddee9f6b43ac78ba3';
@@ -99,6 +99,24 @@ export function universalRouterSwap({ chainId, pool, zeroForOne, amountIn, minOu
 /// options: { api = API, rpc: { [chainId]: url } | (chainId) => url, fetch = globalThis.fetch }
 export function createClient({ api = API, rpc = {}, fetch: f = globalThis.fetch.bind(globalThis) } = {}) {
   const get = async path => { const r = await f(api + path); const j = await r.json(); if (!r.ok) { const e = new Error(j.error || 'HTTP ' + r.status); e.status = r.status; e.body = j; throw e; } return j; };
+  const query = params => { const q = new URLSearchParams(); for (const [key, value] of Object.entries(params || {})) if (value !== undefined && value !== null && value !== '' && value !== false) q.set(key, value === true ? '1' : String(value)); return q.size ? '?' + q : ''; };
+  const segment = value => encodeURIComponent(String(value));
+  // client.hook(chainId, hook) is the routing view (QHooks pools behind a hook, for routers).
+  // client.hooks.get(chainId, hook) is the discovery view: live evidence, capabilities, shared code, Tape activity.
+  const hooks = Object.freeze({
+    list: params => get('/hooks' + query(params)),
+    get: (chainId, address) => get('/hooks/' + segment(chainId) + '/' + segment(address.toLowerCase())),
+    compare: ids => get('/hooks/compare' + query({ ids: Array.isArray(ids) ? ids.join(',') : ids })),
+    family: fp => get('/hooks/families/' + segment(fp)),
+    projects: params => get('/hooks/projects' + query(params)),
+    project: id => get('/hooks/projects/' + segment(id)),
+    tape: Object.freeze({
+      status: params => get('/hooks/tape/status' + query(params)),
+      pools: params => get('/hooks/tape/pools' + query(params)),
+      swaps: params => get('/hooks/tape/swaps' + query(params)),
+      activity: params => get('/hooks/tape/activity' + query(params))
+    })
+  });
   const rpcUrl = c => typeof rpc === 'function' ? rpc(c) : rpc[c];
   async function rpcCall(chainId, method, params) {
     const url = rpcUrl(chainId); if (!url) throw new Error('No RPC for chain ' + chainId);
@@ -111,6 +129,7 @@ export function createClient({ api = API, rpc = {}, fetch: f = globalThis.fetch.
     const j = await r.json(); if (j.error) { const e = new Error(j.error.message || 'eth_call failed'); e.data = j.error.data; throw e; } return j.result;
   }
   const client = Object.freeze({
+    hooks,
     chains: () => get('/chains').then(j => j.chains),
     markets: ({ chain } = {}) => get('/markets' + (chain ? '?chain=' + chain : '')).then(j => j.markets),
     market: (chainId, controller) => get(`/markets/${chainId}/${controller.toLowerCase()}`),

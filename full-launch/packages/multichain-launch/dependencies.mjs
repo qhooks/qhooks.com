@@ -2,7 +2,7 @@
 // A passing observation is not a token-behavior audit or permission to transact.
 import {networkProfile,requireRpcChain} from '../multichain/profiles.mjs';
 import {STOCK_PAIRS,stockPair} from './stock-pairs.mjs';
-export const LAUNCH_DEPENDENCY_POLICY_SHA='610f444c151e8a6209675ebb2bebdcb3cf2884baa59d48bf706bbb9b12f0a14d';
+export const LAUNCH_DEPENDENCY_POLICY_SHA='7eebb70c350880038ff4e0b750248ec5018b74165e47dd8f8da627ebf0b799a8';
 const ensure=(ok,m)=>{if(!ok)throw new TypeError(m);};
 const freeze=o=>{if(o&&typeof o==='object'){Object.values(o).forEach(freeze);Object.freeze(o);}return o;};
 const sha=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');

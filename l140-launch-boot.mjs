@@ -1,6 +1,25 @@
 // Public launch boot boundary only. Resolve or reject the URL chain before the
 // page can discover a provider or load any launch, wallet or crypto runtime.
-const chainIds = Object.freeze(['8453', '4663', '1', '42161', '56']); // Arc (5042) is hidden until a launch there is proven
+import {visibleChains, LIVE} from './chains.mjs';
+// Launchable chains come from the registry: live ones, plus hidden/testnet ones (Arc until a launch there is
+// proven, Elysium Testnet) only when the hidden-chain flag is on (?chains=all).
+const chainIds = Object.freeze(visibleChains().map(c => c.id));
+
+// Hidden chains are not in the static HTML: add their network option and Studio chain button at boot.
+function addHiddenChains(d, select) {
+  const live = new Set(LIVE.map(c => c.id));
+  const row = d.querySelector('.qtd-chain-row'), model = row?.querySelector('[data-qtd-chain]');
+  for (const c of visibleChains()) {
+    if (live.has(c.id) || [...select.options].some(o => o.value === c.id)) continue;
+    const o = d.createElement('option'); o.value = c.id; o.textContent = `${c.name} · ${c.native} gas`; select.append(o);
+    if (model && !row.querySelector(`[data-qtd-chain="${c.id}"]`)) {
+      const b = model.cloneNode(true); b.dataset.qtdChain = c.id; b.setAttribute('aria-pressed', 'false');
+      const img = b.querySelector('img'); if (img) img.src = `/chain-symbol-icons/${c.icon}.svg`;
+      const label = b.querySelector('span'); if (label) label.textContent = c.status === 'testnet' ? c.name : c.short;
+      row.append(b);
+    }
+  }
+}
 
 export function initializeLaunchChainEntry({document: d = document, location = window.location} = {}) {
   const select = d.getElementById('ql-chain');
@@ -8,6 +27,7 @@ export function initializeLaunchChainEntry({document: d = document, location = w
   const connect = d.getElementById('ql-connect');
   const status = d.getElementById('ql-connection');
   if (!select || !provider || !connect || !status) throw new TypeError('Launch chain controls unavailable');
+  addHiddenChains(d, select);
   let values;
   try { values = new URLSearchParams(location?.search || '').getAll('chain'); }
   catch { values = ['']; }

@@ -38,7 +38,8 @@
     {
       "id": "launch",
       "title": "QToken launch",
-      "amountAtomic": "3000000",
+      "amountAtomic": "450000",
+      "rate": "About $0.45 / launch (0.0002 ETH; 0.0007 BNB on BNB Chain)",
       "unit": "launch",
       "description": "Flat fee per launch, paid in the chain’s coin before the first launch transaction: 0.0002 ETH on Base, Ethereum, Arbitrum and Robinhood Chain and 0.0007 BNB on BNB Chain. Gas and liquidity are separate."
     },

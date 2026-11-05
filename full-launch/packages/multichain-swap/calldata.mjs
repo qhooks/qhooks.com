@@ -17,7 +17,8 @@ const PROFILES=Object.freeze({
  '1':Object.freeze({router:'0x66a9893cc07d91d95644aedd05d03f95e1dba8af',permit2:'0x000000000022d473030f116ddee9f6b43ac78ba3',quoter:'0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203',extended:false}),
  '42161':Object.freeze({router:'0x96b2fd2f80e9428daa65d859653117d453981ab4',permit2:'0x000000000022d473030f116ddee9f6b43ac78ba3',quoter:'0x3972c00f7ed4885e145823eb7c655375d275a1c5',extended:false}),
  '56':Object.freeze({router:'0x91bf3bfaef8d771a74e1a8fe460b3ee646b2e588',permit2:'0x000000000022d473030f116ddee9f6b43ac78ba3',quoter:'0x9f75dd27d6664c475b90e105573e550ff69437b0',extended:false}),
- '5042':Object.freeze({router:'0x4fca4a51ab4f23a7447b3284fbd7d73289a89fb1',permit2:'0x000000000022d473030f116ddee9f6b43ac78ba3',quoter:'0x8dc178efb8111bb0973dd9d722ebeff267c98f94',extended:true})
+ '5042':Object.freeze({router:'0x4fca4a51ab4f23a7447b3284fbd7d73289a89fb1',permit2:'0x000000000022d473030f116ddee9f6b43ac78ba3',quoter:'0x8dc178efb8111bb0973dd9d722ebeff267c98f94',extended:true}),
+ '99801':Object.freeze({router:'0x06afba43fd06227fa663b0daecf536f6eaa6bf99',permit2:'0x000000000022d473030f116ddee9f6b43ac78ba3',quoter:'0x8dc178efb8111bb0973dd9d722ebeff267c98f94',extended:true})
 });
 const keyNames=Object.freeze(['currency0','currency1','fee','tickSpacing','hooks']);
 function exact(input,names,label){

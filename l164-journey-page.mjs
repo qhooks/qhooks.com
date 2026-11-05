@@ -6,6 +6,7 @@ import {readLaunchForm} from './launch-form-values.mjs';
 import {fillRecipeForm} from '/trade-client/apps/marketplace-preview/l124-recipe-form.mjs';
 import {parseDecimalAmount} from '/full-launch/packages/crosschain/decimal-amount.mjs';
 import {qTokenPresetValues} from './l162-qtoken-presets.mjs';
+import {chainMap} from './chains.mjs';
 import {launchDraftView,placeSelectSymbols} from './crypto-product-ui.mjs';
 import {exportSwapPoolPackage} from '/trade-client/packages/multichain-swap/pool-package.mjs';
 import {tradePoolLink} from '/trade-client/apps/marketplace-preview/trade-pool-links.mjs';
@@ -50,7 +51,7 @@ export function bindLaunchJourney({document:d=document,target=window,snapshot=()
   try{const c=withPair(recipeChain($('ql-chain').value)),value=id=>$(id).value,view=launchDraftView({name:value('ql-name'),symbol:value('ql-symbol'),supply:value('ql-supply'),mode:value('ql-mode'),fee:value('ql-fee'),network:c.name});
    text('qtd-summary-name',view.name+' ('+view.symbol+')');text('qtd-summary-chain',c.name);text('qtd-summary-supply',value('ql-supply').trim()||'Not set');text('qtd-summary-token',(value('ql-token-funding').trim()||'Not set')+' '+view.symbol);text('qtd-summary-quote',(value('ql-quote-funding').trim()||'Not set')+' '+c.quoteSymbol);text('qtd-quote-label','Initial '+c.quoteSymbol+' amount');text('qtd-summary-note','Initial liquidity uses '+c.quoteSymbol+' on '+c.name+'. Network gas is paid in '+c.nativeSymbol+'.');text('qtd-fee-preview',view.fees);
    if(!s.connected)text('ql-quote-unit','Liquidity uses '+c.quoteSymbol+' ('+c.quoteDecimals+' decimals). Keep '+c.nativeSymbol+' for network fees.');
-   const names={'8453':'base','4663':'robinhood','1':'ethereum','42161':'arbitrum','56':'bnb','5042':'arc'};$('qtd-summary-chain-icon').src='/chain-symbol-icons/'+names[c.id]+'.svg';$('ql-threshold-label').hidden=$('ql-mode').value!=='0';
+   const names=chainMap(c=>c.icon);$('qtd-summary-chain-icon').src='/chain-symbol-icons/'+names[c.id]+'.svg';$('ql-threshold-label').hidden=$('ql-mode').value!=='0';
   }catch{message('Choose one supported chain before continuing.',true);}
   $('qj-success').hidden=!ready;
   if(!ready){shareRetries=0;clearLinks();return;}

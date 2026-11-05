@@ -1,0 +1,82 @@
+/* The move dialog owns its layout; it can be opened from the terminal or any wallet menu. */
+.qmf-dialog {
+  box-sizing: border-box;
+  width: min(480px, calc(100% - 24px));
+  max-width: none;
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+  margin: auto;
+  padding: 24px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--qx-line-2, #3e433b);
+  border-radius: 20px;
+  background: var(--qx-bg-2, #111613);
+  color: var(--qx-ink, #f1eee3);
+  box-shadow: 0 24px 90px #0008;
+  font: 13px/1.45 var(--qx-sans, Inter, system-ui, sans-serif);
+  color-scheme: dark;
+}
+.qmf-dialog::backdrop { background: #080d0bc2; backdrop-filter: blur(4px); }
+.qmf-dialog *, .qmf-dialog *::before, .qmf-dialog *::after { box-sizing: border-box; }
+.qmf-dialog [hidden] { display: none !important; }
+.qmf-dialog .qmf-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.qmf-dialog .qmf-heading h2 { margin: 6px 0 0; font-size: 22px; font-weight: 600; letter-spacing: -.045em; line-height: 1.2; }
+.qmf-dialog .qmf-eyebrow { margin: 0; color: var(--qx-brass, #d2ad72); font-size: 10px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; }
+.qmf-dialog .qmf-subtitle { margin: 10px 0 22px; color: var(--qx-muted, #a7aea3); font-size: 12px; }
+.qmf-dialog button, .qmf-dialog select, .qmf-dialog input { font-family: inherit; }
+.qmf-dialog button { cursor: pointer; }
+.qmf-dialog .qmf-close { flex: 0 0 44px; height: 44px; padding: 0; border: 1px solid var(--qx-line-2, #3e433b); border-radius: 50%; color: inherit; background: transparent; font-size: 26px; line-height: 1; }
+.qmf-dialog .qmf-form { margin: 0; }
+.qmf-dialog .qmf-route { min-width: 0; margin: 0; padding: 12px 14px 14px; background: var(--qx-panel, #151b18); border: 1px solid var(--qx-line, #2b322a); border-radius: 12px; }
+.qmf-dialog .qmf-route legend { padding: 0 6px; color: var(--qx-muted, #a7aea3); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.qmf-dialog .qmf-pickers { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.qmf-dialog label { display: block; min-width: 0; color: var(--qx-muted, #a7aea3); font-size: 11px; }
+.qmf-dialog select { display: block; width: 100%; min-width: 0; min-height: 44px; margin-top: 5px; padding: 10px 7px; border: 1px solid var(--qx-line-2, #3e433b); border-radius: 8px; color: var(--qx-ink, #f1eee3); background: var(--qx-bg-2, #111613); font-size: 13px; text-overflow: ellipsis; }
+.qmf-dialog .qmf-balance { margin: 10px 0 12px; color: var(--qx-muted, #a7aea3); font-size: 11px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.qmf-dialog .qmf-amount-label { margin-bottom: 4px; }
+.qmf-dialog .qmf-amount-row { display: flex; align-items: center; gap: 8px; }
+.qmf-dialog .qmf-amount-row input { width: 0; min-width: 0; flex: 1; min-height: 48px; border: 0; border-bottom: 1px solid var(--qx-line-2, #3e433b); border-radius: 0; padding: 4px 0; color: var(--qx-ink, #f1eee3); background: transparent; font-size: 28px; font-weight: 500; letter-spacing: -.045em; font-variant-numeric: tabular-nums; }
+.qmf-dialog .qmf-amount-row input::placeholder { color: var(--qx-faint, #6f776c); opacity: 1; }
+.qmf-dialog .qmf-max { min-width: 48px; min-height: 44px; padding: 8px; border: 1px solid var(--qx-line-2, #3e433b); border-radius: 8px; color: var(--qx-brass, #d2ad72); background: transparent; font-size: 12px; font-weight: 600; }
+.qmf-dialog .qmf-help { margin: 8px 0 0; min-height: 15px; color: var(--qx-muted, #a7aea3); font-size: 10px; overflow-wrap: anywhere; }
+.qmf-dialog .qmf-direction { width: 28px; margin: 4px auto -1px; text-align: center; color: var(--qx-brass, #d2ad72); font-size: 20px; line-height: 24px; }
+.qmf-dialog .qmf-receive { display: grid; gap: 3px; margin-top: 14px; border-top: 1px solid var(--qx-line, #2b322a); padding-top: 12px; }
+.qmf-dialog .qmf-receive > span { color: var(--qx-muted, #a7aea3); font-size: 11px; }
+.qmf-dialog .qmf-arrives { font-size: 24px; line-height: 1.3; font-weight: 500; letter-spacing: -.03em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.qmf-dialog .qmf-recipient { display: grid; gap: 3px; padding: 12px 2px; color: var(--qx-muted, #a7aea3); font-size: 10px; }
+.qmf-dialog .qmf-owner { display: block; color: var(--qx-ink, #f1eee3); font: 10px/1.5 var(--qx-mono, ui-monospace, monospace); overflow-wrap: anywhere; }
+.qmf-dialog .qmf-summary { border-top: 1px solid var(--qx-line, #2b322a); padding-top: 10px; }
+.qmf-dialog .qmf-fee { margin: 0 0 8px; color: var(--qx-brass, #d2ad72); font-size: 12px; overflow-wrap: anywhere; }
+.qmf-dialog .qmf-stats { display: grid; gap: 5px; margin: 0; font-size: 11px; font-variant-numeric: tabular-nums; }
+.qmf-dialog .qmf-stats > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.qmf-dialog .qmf-stats dt { color: var(--qx-muted, #a7aea3); }
+.qmf-dialog .qmf-stats dd { margin: 0; text-align: right; overflow-wrap: anywhere; max-width: 60%; }
+.qmf-dialog .qmf-notice { min-height: 18px; margin: 14px 0 10px; font-size: 11px; color: var(--qx-muted, #a7aea3); overflow-wrap: anywhere; }
+.qmf-dialog .qmf-notice[data-error="true"] { color: #e4a294; }
+.qmf-dialog .qmf-move { width: 100%; min-height: 48px; padding: 12px 16px; border: 0; border-radius: 9px; background: var(--qx-brass, #d2ad72); color: var(--qx-on-brass, #17130b); font-size: 14px; font-weight: 650; }
+.qmf-dialog .qmf-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 12px; margin-top: 3px; }
+.qmf-dialog .qmf-secondary { min-height: 44px; padding: 10px 2px; border: 0; background: transparent; color: var(--qx-muted, #a7aea3); font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
+.qmf-dialog .qmf-progress { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 18px 0 10px; padding: 0; list-style: none; font-size: 10px; color: var(--qx-muted, #a7aea3); }
+.qmf-dialog .qmf-progress li { border-top: 2px solid var(--qx-line-2, #3e433b); padding-top: 6px; overflow-wrap: anywhere; }
+.qmf-dialog .qmf-progress [data-state="active"] { border-color: var(--qx-brass, #d2ad72); color: var(--qx-brass, #d2ad72); }
+.qmf-dialog .qmf-progress [data-state="done"] { border-color: var(--qx-sage, #a9bc9b); color: var(--qx-sage, #a9bc9b); }
+.qmf-dialog .qmf-progress [data-state="error"] { border-color: #e4a294; color: #e4a294; }
+.qmf-dialog .qmf-links { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.qmf-dialog .qmf-links a { display: inline-flex; align-items: center; min-height: 44px; padding: 6px 0; color: var(--qx-brass, #d2ad72); font: 11px var(--qx-mono, ui-monospace, monospace); text-underline-offset: 3px; overflow-wrap: anywhere; }
+.qmf-dialog :is(button, select, input):focus-visible { outline: 2px solid var(--qx-brass, #d2ad72); outline-offset: 3px; }
+.qmf-dialog button:hover:not(:disabled) { filter: brightness(1.13); }
+.qmf-dialog :disabled { opacity: .5; cursor: default; }
+:root[data-theme="light"] .qmf-dialog { color-scheme: light; }
+:root[data-theme="light"] .qmf-dialog .qmf-notice[data-error="true"] { color: #a63d2b; }
+@media (max-width: 420px) {
+  .qmf-dialog { padding: 18px 14px 12px; border-radius: 16px; }
+  .qmf-dialog .qmf-heading h2 { font-size: 20px; }
+  .qmf-dialog .qmf-route { padding: 10px 10px 12px; }
+  .qmf-dialog .qmf-pickers { gap: 8px; }
+  .qmf-dialog select { font-size: 12px; }
+  .qmf-dialog .qmf-arrives { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qmf-dialog, .qmf-dialog * { scroll-behavior: auto; transition: none; animation: none; }
+}

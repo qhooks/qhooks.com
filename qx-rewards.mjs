@@ -2,23 +2,20 @@
 // referral rewards share one balance per currency), each with its own Claim button, plus the wallet's referral link.
 // Reads go through the public RPCs; claiming switches the wallet to that chain and sends router.claim(currency).
 import { STOCK_PAIRS } from '/full-launch/packages/multichain-launch/stock-pairs.mjs';
+import { chainMap, visibleChains } from '/chains.mjs';
 import { formatUnits, send, connectedAddress, onWalletChange, CHAIN_NAME, NATIVE, codeAt, h } from '/qx-chain.mjs';
 import { cashbackOf, referralLink, claimCall } from '/qx-swap.mjs';
 import { extraAddress } from '/qx-extras.mjs';
 
 const Z = '0x0000000000000000000000000000000000000000';
 // The quote tokens terminal fees are taken in, besides each chain's coin.
-const QUOTES = {
-  '8453': [['0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', 'USDC', 6]],
-  '1': [['0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', 'USDC', 6]],
-  '42161': [['0xaf88d065e77c8cc2239327c5edb3a432268e5831', 'USDC', 6]],
-  // Stock-paired launches take sell fees in the stock: the most-traded stocks are listed too.
-  '4663': [['0x0bd7d308f8e1639fab988df18a8011f41eacad73', 'WETH', 18], ...STOCK_PAIRS['4663'].tokens.slice(0, 8).map(([a, s]) => [a, s, 18])],
-  '56': [['0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c', 'WBNB', 18]]
-};
-const ICON = { '8453': 'base', '1': 'ethereum', '42161': 'arbitrum', '56': 'bnb', '4663': 'robinhood' };
+// From the registry (chains.mjs): each chain's launch quote (Robinhood also its most-traded stock pairs).
+const QUOTES = chainMap(c => c.id === '4663'
+  ? [[c.quote.address, c.quote.symbol, c.quote.decimals], ...STOCK_PAIRS['4663'].tokens.slice(0, 8).map(([a, s]) => [a, s, 18])]
+  : [[c.quote.address, c.quote.symbol, c.quote.decimals]], visibleChains().filter(c => c.router));
+const ICON = chainMap(c => c.icon);
 const CHAINS = Object.keys(QUOTES);
-const LABEL = { '8453': 'Base', '1': 'Ethereum', '42161': 'Arbitrum', '56': 'BNB', '4663': 'Robinhood' };
+const LABEL = chainMap(c => c.short);
 const small = (v, d) => { let max = 4; while (max < d && v > 0n && formatUnits(v, d, max) === '0') max++; return formatUnits(v, d, Math.min(d, max + 2)); };
 const short = a => a.slice(0, 6) + '…' + a.slice(-4);
 

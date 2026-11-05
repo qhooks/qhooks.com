@@ -1,13 +1,13 @@
 // Shared chain plumbing for the Trade page's extra panels (Buy with ETH, limit orders, team locks):
 // public-RPC reads, a small ABI codec, the pool's live key, and wallet sends with chain switching.
-export const RPC = { '8453': 'https://mainnet.base.org', '4663': 'https://rpc.mainnet.chain.robinhood.com', '1': 'https://ethereum-rpc.publicnode.com',
-  '42161': 'https://arb1.arbitrum.io/rpc', '56': 'https://bsc-dataseed.bnbchain.org', '5042': 'https://rpc.mainnet.arc.io' };
-export const CHAIN_NAME = { '8453': 'Base', '4663': 'Robinhood Chain', '1': 'Ethereum', '42161': 'Arbitrum One', '56': 'BNB Chain', '5042': 'Arc' };
-export const NATIVE = { '8453': 'ETH', '4663': 'ETH', '1': 'ETH', '42161': 'ETH', '56': 'BNB', '5042': 'USDC' };
-export const QUOTER = { '8453': '0x0d5e0f971ed27fbff6c2837bf31316121532048d', '4663': '0x8dc178efb8111bb0973dd9d722ebeff267c98f94', '1': '0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203',
-  '42161': '0x3972c00f7ed4885e145823eb7c655375d275a1c5', '56': '0x9f75dd27d6664c475b90e105573e550ff69437b0', '5042': '0x8dc178efb8111bb0973dd9d722ebeff267c98f94' };
-export const MANAGER = { '8453': '0x498581ff718922c3f8e6a244956af099b2652b2b', '4663': '0x8366a39cc670b4001a1121b8f6a443a643e40951', '1': '0x000000000004444c5dc75cb358380d2e3de08a90',
-  '42161': '0x360e68faccca8ca495c1b759fd9eee466db9fb32', '56': '0x28e2ea090877bf75740558f6bfb36a5ffee9e9df', '5042': '0x8366a39cc670b4001a1121b8f6a443a643e40951' };
+import { chainMap } from '/chains.mjs';
+import { silentActive } from '/qx-instant-bridge.mjs';
+// Every built chain from the registry (chains.mjs); pages decide which ones to show.
+export const RPC = chainMap(c => c.rpc);
+export const CHAIN_NAME = chainMap(c => c.name);
+export const NATIVE = chainMap(c => c.native);
+export const QUOTER = chainMap(c => c.contracts.quoter);
+export const MANAGER = chainMap(c => c.contracts.manager);
 
 // ---- ABI codec: address, bool, uint<N>, int<N>, bytes32, bytes, string, T[], tuples "(a,b)". ----
 const W = 64;
@@ -145,7 +145,7 @@ async function providerFor(address) {
 async function onChain(p, chainId, onStatus = () => {}) {
   const hexChain = '0x' + Number(chainId).toString(16);
   if ((await p.request({ method: 'eth_chainId' })).toLowerCase() === hexChain) return;
-  onStatus('Switching your wallet to ' + CHAIN_NAME[chainId] + '…');
+  onStatus((silentActive() ? 'Switching to ' : 'Switching your wallet to ') + CHAIN_NAME[chainId] + '…');
   window.dispatchEvent(new CustomEvent('qhooks:chain-switch', { detail: { chainId: String(chainId) } }));
   await p.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: hexChain }] });
 }
@@ -164,7 +164,7 @@ export async function send(chainId, tx, onStatus = () => {}) {
   // estimate, so the gas limit carries 30% headroom over a fresh estimate. Unused gas is not charged.
   const value = '0x' + BigInt(tx.value || 0).toString(16);
   try { const est = BigInt(await rpc(chainId, 'eth_estimateGas', [{ from, to: tx.to, data: tx.data, value }])); fees.gas = '0x' + (est * 13n / 10n).toString(16); } catch {}
-  onStatus('Confirm in your wallet…');
+  onStatus(silentActive() ? 'Sending…' : 'Confirm in your wallet…');
   const hash = await p.request({ method: 'eth_sendTransaction', params: [{ from, to: tx.to, data: tx.data, value, ...fees }] });
   onStatus('Waiting for the transaction…');
   for (let i = 0; i < 180; i++) {
@@ -193,7 +193,7 @@ export async function ensureAllowance(chainId, token, spender, amount, onStatus)
   const owner = connectedAddress();
   const current = BigInt(await ethCall(chainId, token, calldata('0xdd62ed3e', ['address', 'address'], [owner, spender])));
   if (current >= amount) return;
-  onStatus?.('Approve the token in your wallet…');
+  onStatus?.(silentActive() ? 'Approving…' : 'Approve the token in your wallet…');
   await send(chainId, { to: token, data: calldata('0x095ea7b3', ['address', 'uint256'], [spender, amount]) }, onStatus);
 }
 

@@ -3,19 +3,17 @@
 // native → USDC → token). Quotes run through the same pool and hook, so block charges are included.
 import { abi, calldata, ethCall, words, keyTuple, KEY_T, send, ensureAllowance, connectedAddress, NATIVE, MANAGER } from '/qx-chain.mjs';
 import { stockPair } from '/full-launch/packages/multichain-launch/stock-pairs.mjs';
+import { chainMap } from '/chains.mjs';
 
 const Z = '0x0000000000000000000000000000000000000000';
 export const PERMIT2 = '0x000000000022d473030f116ddee9f6b43ac78ba3';
 // extended: this router's single-pool swap takes an extra uint256 (Robinhood Chain and Arc deployments).
 // hop: native coin is routed through USDC; wrap: the launch is quoted in the wrapped native coin.
-export const ROUTES = {
-  '8453': { router: '0x6ff5693b99212da76ad316178a184ab56d299b43', quoter: '0x0d5e0f971ed27fbff6c2837bf31316121532048d', hop: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913' },
-  '1': { router: '0x66a9893cc07d91d95644aedd05d03f95e1dba8af', quoter: '0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203', hop: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48' },
-  '42161': { router: '0x96b2fd2f80e9428daa65d859653117d453981ab4', quoter: '0x3972c00f7ed4885e145823eb7c655375d275a1c5', hop: '0xaf88d065e77c8cc2239327c5edb3a432268e5831' },
-  '4663': { router: '0x06afba43fd06227fa663b0daecf536f6eaa6bf99', quoter: '0x8dc178efb8111bb0973dd9d722ebeff267c98f94', wrap: '0x0bd7d308f8e1639fab988df18a8011f41eacad73', extended: true },
-  '56': { router: '0x91bf3bfaef8d771a74e1a8fe460b3ee646b2e588', quoter: '0x9f75dd27d6664c475b90e105573e550ff69437b0', wrap: '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c' },
-  '5042': { router: '0x4fca4a51ab4f23a7447b3284fbd7d73289a89fb1', quoter: '0x8dc178efb8111bb0973dd9d722ebeff267c98f94', extended: true }
-};
+// From the registry (chains.mjs): hop = USDC-quoted chains route the native coin through USDC; wrap = quoted in
+// the wrapped native coin; extended = the router's single-pool swap takes an extra word.
+export const ROUTES = chainMap(c => Object.assign({ router: c.contracts.router, quoter: c.contracts.quoter },
+  c.quote.wrapNative ? { wrap: c.quote.address } : c.family !== 'arc' && c.quote.symbol === 'USDC' ? { hop: c.quote.address } : {},
+  c.contracts.extended ? { extended: true } : {}));
 const TIERS = [[500, 10], [3000, 60], [100, 1]];
 // Stock-paired launches on Robinhood Chain: the coin goes ETH → USDG → stock → token, through the deepest plain v4
 // pools (no hooks) for the first two hops.

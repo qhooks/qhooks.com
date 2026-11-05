@@ -1,4 +1,5 @@
 // prototypes/pq-graduation/client/graduation-setup-fields.mjs
+import {BUILT} from './chains.mjs';
 function normalizeGraduationSetupFields(input) {
   const fields = ["tokenName", "symbol", "decimals", "totalSupply", "quoteSupply", "notice"];
   if (input === null || typeof input !== "object" || Array.isArray(input) || Object.getPrototypeOf(input) !== Object.prototype && Object.getPrototypeOf(input) !== null) {
@@ -65,7 +66,7 @@ function normalizeTokenFields(input) {
 var ensure = (ok, message) => {
   if (!ok) throw new TypeError(message);
 };
-var chains = ["8453", "4663", "1", "42161", "56", "5042"];
+var chains = BUILT.map(c => c.id);
 function exact(value, names) {
   ensure(value && Object.getPrototypeOf(value) === Object.prototype, "Plain pool data required");
   const keys = Reflect.ownKeys(value), d = Object.getOwnPropertyDescriptors(value);

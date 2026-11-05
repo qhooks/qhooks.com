@@ -1,5 +1,6 @@
 // Sitewide shell: the ecosystem nav. Desktop panels open on hover/focus (CSS); this adds Escape to close them
-// and the collapsible phone/tablet menu under 1100px.
+// and the collapsible phone/tablet menu under 1100px. Also loads Copy address for the connected wallet.
+import '/qx-wallet-copy.mjs';
 const header = document.querySelector('.site-header'), nav = header?.querySelector('.site-nav');
 if (header && nav) {
  const btn = document.createElement('button');

@@ -1,10 +1,7 @@
 // Presentation-only integration. Existing recipe validation and handoff remain authoritative.
 import {launchDraftView} from './crypto-product-ui.mjs';
-const chains=Object.freeze([
- ['8453','Base','USDC','ETH'],['4663','Robinhood Chain','WETH','ETH'],
- ['1','Ethereum','USDC','ETH'],['42161','Arbitrum One','USDC','ETH'],
- ['56','BNB Chain','WBNB','BNB'],['5042','Arc','USDC','USDC']
-]);
+import {BUILT,chainMap} from './chains.mjs';
+const chains=Object.freeze(BUILT.map(c=>[c.id,c.name,c.quote.symbol,c.native]));
 export function bindQTokenDesk({document:d=document,target=window,designer}={}){
  const $=id=>d.getElementById(id),select=$('ql-chain');
  const buttons=[...d.querySelectorAll('[data-qtd-chain]')],listeners=[];
@@ -32,7 +29,7 @@ export function bindQTokenDesk({document:d=document,target=window,designer}={}){
   text('qtd-quote-label','Initial '+chain[2]+' amount');
   text('qtd-summary-note','Initial liquidity uses '+chain[2]+' on '+chain[1]+'. Network gas is paid in '+chain[3]+'.');
   text('qtd-fee-preview',view.fees);
-  const icon=$('qtd-summary-chain-icon'),files={'8453':'base','4663':'robinhood','1':'ethereum','42161':'arbitrum','56':'bnb','5042':'arc'};
+  const icon=$('qtd-summary-chain-icon'),files=chainMap(c=>c.icon);
   if(icon)icon.src='/chain-symbol-icons/'+files[chain[0]]+'.svg';
   // A generic edit notice adds no information beside the live summary. Preserve
   // validation failures and explicit save/import/preview messages unchanged.

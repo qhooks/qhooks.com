@@ -7,7 +7,8 @@ const custodyCopy=Object.freeze({
  '1':'Protect Ethereum native ETH and the ERC20 contracts admitted when you create the QWallet.',
  '42161':'Protect Arbitrum One native ETH and the ERC20 contracts admitted when you create the QWallet.',
  '56':'Protect BNB Chain native BNB and the ERC20 contracts admitted when you create the QWallet.',
- '5042':'Protect Arc native USDC and admitted ERC20 contracts. Use native USDC, not its ERC20 alias.'
+ '5042':'Protect Arc native USDC and admitted ERC20 contracts. Use native USDC, not its ERC20 alias.',
+ '99801':'Protect Elysium Testnet native HYPE and the ERC20 contracts admitted when you create the QWallet.'
 });
 
 export function bindPoolsNetwork({document:d=document,location=window.location}={}){

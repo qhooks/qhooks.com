@@ -3,6 +3,7 @@
 // Shown on the Trade page and in the terminal's tools.
 import { ethCall, words, livePoolKey, erc20, formatUnits, h } from '/qx-chain.mjs';
 import { alertsButton } from '/qx-alerts.mjs';
+import { boardLink } from '/qx-board-link.mjs';
 import { renderTrust } from '/qx-trust.mjs';
 
 const SEL = { notice: '0x6b188e85', phase: '0xb1c9fe6e', policy: '0xe2e269f2', creatorFee: '0xe9b7df7f', protocolFee: '0x6b4082d1', recoveryEta: '0x1479b3da', recoveryBy: '0xaa19ddc3' };
@@ -45,7 +46,7 @@ async function show(pool) {
     card.replaceChildren(h('h2', { id: 'qtt-heading' }, 'Launch terms'), trust,
       h('ul', { class: 'qtb-list' }, ...rows.map(([k, v]) => h('li', {}, h('b', {}, k), h('span', {}, v)))),
       h('p', { class: 'qtb-note' }, 'Read from this launch’s contracts just now, not from anything the creator wrote.'),
-      alertsButton(pool));
+      alertsButton(pool), boardLink(pool.chainId, pool.controller, { cls: 'qtb-note qb-boardlink' }));
     card.hidden = false;
   } catch { if (mine === seq) card.hidden = true; }
 }

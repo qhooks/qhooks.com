@@ -1,11 +1,13 @@
 // apps/marketplace-preview/chain-catalog.mjs
+import {BUILT,hiddenChainsOn} from './chains.mjs';
 var launchChains = Object.freeze([
   Object.freeze({ id: "8453", slug: "base", name: "Base", gas: "ETH", feeModel: "op-stack", coreHref: "deploy.html", status: "QPool core setup available" }),
   Object.freeze({ id: "4663", slug: "robinhood", name: "Robinhood Chain", gas: "ETH", feeModel: "nitro", coreHref: null, status: "Integration in progress" }),
   Object.freeze({ id: "1", slug: "ethereum", name: "Ethereum", gas: "ETH", feeModel: "ethereum", coreHref: null, status: "Integration in progress" }),
   Object.freeze({ id: "42161", slug: "arbitrum", name: "Arbitrum One", gas: "ETH", feeModel: "nitro", coreHref: null, status: "Integration in progress" }),
   Object.freeze({ id: "56", slug: "bnb", name: "BNB Chain", gas: "BNB", feeModel: "bsc", coreHref: null, status: "Integration in progress" }),
-  Object.freeze({ id: "5042", slug: "arc", name: "Arc", gas: "USDC", feeModel: "arc-stablecoin", coreHref: null, status: "Integration in progress" })
+  Object.freeze({ id: "5042", slug: "arc", name: "Arc", gas: "USDC", feeModel: "arc-stablecoin", coreHref: null, status: "Integration in progress" }),
+  Object.freeze({ id: "99801", slug: "elysium", name: "Elysium Testnet", gas: "HYPE", feeModel: "nitro", coreHref: null, status: "Integration in progress" })
 ]);
 function launchChain(id) {
   if (typeof id !== "string") throw new TypeError("Choose a chain ID");
@@ -58,7 +60,7 @@ function selectMarkets(rows, { chainId = "all", query = "", offset = 0, limit = 
   const ensure3 = (ok, message) => {
     if (!ok) throw new TypeError(message);
   };
-  const chains2 = ["1", "56", "8453", "42161", "4663", "5042"];
+  const chains2 = ["1", "56", "8453", "42161", "4663", "5042", "99801"];
   const address = (value) => typeof value === "string" && value.length === 42 && /^0x[0-9a-f]{40}$/.test(value) && BigInt(value) > 0n;
   ensure3(Array.isArray(rows) && rows.length <= 1e3, "Bounded market rows required");
   ensure3(chainId === "all" || chains2.includes(chainId), "Invalid directory chain");
@@ -154,7 +156,7 @@ function normalizeTokenFields(input) {
 var ensure = (ok, message) => {
   if (!ok) throw new TypeError(message);
 };
-var chains = ["8453", "4663", "1", "42161", "56", "5042"];
+var chains = BUILT.map(c => c.id);
 function exact(value, names) {
   ensure(value && Object.getPrototypeOf(value) === Object.prototype, "Plain pool data required");
   const keys = Reflect.ownKeys(value), d = Object.getOwnPropertyDescriptors(value);
@@ -424,7 +426,7 @@ function bindMarketBrowser({ document: d = document, target = window, client = c
     }
   }
   $("chain").replaceChildren();
-  for (const chain of [{ id: "all", name: "All chains" }, ...launchChains]) {
+  for (const chain of [{ id: "all", name: "All chains" }, ...launchChains.filter(c => c.id !== "99801" || hiddenChainsOn())]) {
     const option = d.createElement("option");
     option.value = chain.id;
     option.textContent = chain.name;

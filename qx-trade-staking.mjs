@@ -112,5 +112,7 @@ async function show(pool) {
 }
 
 document.addEventListener('qhooks:pool', e => show(e.detail));
+// Trades change what the launch holds for stakers (and the trader's balance): re-read after each one.
+document.addEventListener('qhooks:traded', () => { if (state) render().catch(() => {}); });
 if (window.__qhooksPool) show(window.__qhooksPool);
 onWalletChange(() => { if (state) render().catch(() => {}); });

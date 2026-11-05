@@ -9,7 +9,7 @@ import { restoreSigner } from '/full-launch/packages/multichain-launch/actions/s
 import { typedGraduationAction } from '/full-launch/prototypes/pq-graduation/client/graduation-typed-data.mjs';
 import { getWalletHub } from '/wallet-hub.mjs';
 
-const EXPLORER = { '8453': 'https://basescan.org', '4663': 'https://explorer.chain.robinhood.com', '1': 'https://etherscan.io', '42161': 'https://arbiscan.io', '56': 'https://bscscan.com' };
+const EXPLORER = { '8453': 'https://basescan.org', '4663': 'https://explorer.chain.robinhood.com', '1': 'https://etherscan.io', '42161': 'https://arbiscan.io', '56': 'https://bscscan.com', '5042': 'https://explorer.arc.io', '99801': 'https://explorer-elysium-testnet.t.conduit.xyz' };
 const PROOF_T = '(uint256,uint64,uint64,bytes,bytes)';
 const ZERO32 = '0x' + '0'.repeat(64);
 const TAGS = { 21: 'QHOOKS/SLHVAULT/WITHDRAW/1', 22: 'QHOOKS/LPFEE/REPLACE/1', 23: 'QHOOKS/PRICEBAND/REPLACE/1', 24: 'QHOOKS/VOLEPOCH/OPEN/1', 25: 'QHOOKS/DIRFEE/SCHEDULE/1', 26: 'QHOOKS/CIRCUIT/RESUME/1' };
@@ -38,7 +38,8 @@ $('lh-connect').addEventListener('click', () => $('qhc-trigger')?.click());
 const pct = (n, d) => (Number(n) / d).toLocaleString('en-US', { maximumFractionDigits: 4 }) + '%';
 const LABELS = { owner: ['Fee owner', v => v], currency0: ['Token 0', v => v], currency1: ['Token 1', v => v], feeBps: ['Creator fee', v => pct(v, 100) + ' of each swap'],
   poolFee: ['Pool LP fee', v => pct(v, 10000)], tickSpacing: ['Tick spacing', v => String(v)], initialLpFee: ['Starting LP fee', v => pct(v, 10000)], maxLpFee: ['Fee ceiling (permanent)', v => pct(v, 10000)],
-  maxTickMove: ['Truncation', v => Number(v) ? v + ' ticks per second per observation' : 'off'], cardinality: ['History slots at launch', v => String(v)] };
+  maxTickMove: ['Truncation', v => Number(v) ? v + ' ticks per second per observation' : 'off'], cardinality: ['History slots at launch', v => String(v)],
+  baseFee: ['Base fee', v => pct(v, 10000)], maxFee: ['Fee cap (permanent)', v => pct(v, 10000)], feePerTickCentiPips: ['Added per tick of movement', v => (Number(v) / 100) + ' pips'], halfLife: ['Movement half-life', v => v + ' s'] };
 const configRows = Object.entries(m.configuration).filter(([k]) => !['template', 'projectName', 'chainId'].includes(k) && !(k === 'owner' && m.configuration.owner === m.owner))
   .map(([k, v]) => [LABELS[k]?.[0] || k, isZero(v) && k === 'currency0' ? NATIVE[chainId] + ' (native)' : LABELS[k] ? LABELS[k][1](v) : v]);
 $('lh-facts').replaceChildren(...[
@@ -76,6 +77,21 @@ async function liveCheck() {
 }
 liveCheck().catch(e => status($('lh-live-note'), 'Chain check failed: ' + e.message, true));
 if (keyless) $('lh-owner').hidden = true;
+
+// ---- Volatility Fee: the fee the next swap pays and why ----
+if (m.template === 'volfee') {
+  const box = h('section', { class: 'build-summary', id: 'lh-volfee' }, h('h2', {}, 'Fee now'), h('ul', { class: 'ld-checks ld-plain', id: 'lh-volfee-list' }),
+    h('p', { class: 'ld-muted' }, 'Each swap pays the base fee plus a charge for how far the price recently moved, up to the cap. The movement score halves every half-life without trading.'));
+  $('lh-live').closest('section').after(box);
+  (async () => {
+    const hook = m.hook.address, n = async s => Number(word(await call(hook, s)));
+    const [fee, score, base, max, half] = await Promise.all(['currentFee()', 'score()', 'BASE_FEE()', 'MAX_FEE()', 'HALF_LIFE()'].map(n));
+    $('lh-volfee-list').replaceChildren(
+      h('li', {}, `Next swap pays ${fee} pips (${(fee / 10000).toFixed(4)}%)` + (fee === base ? ' · the base fee: the market is quiet' : fee >= max ? ' · at the cap' : '')),
+      h('li', {}, `Recent movement: ${score.toLocaleString('en-US')} ticks (≈ ${(score / 100).toFixed(2)}% of price), halving every ${half} s`),
+      h('li', { class: 'ld-muted' }, `Range: ${base} to ${max} pips`));
+  })().catch(e => $('lh-volfee-list').replaceChildren(h('li', { 'data-ok': 'false' }, 'Fee read failed: ' + e.message)));
+}
 
 // ---- TWAP Oracle: what any contract reading it gets right now ----
 if (m.template === 'twap') {

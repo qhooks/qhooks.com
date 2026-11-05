@@ -5,7 +5,7 @@ import {swapReceiptOutcome as ordinaryOutcome} from './receipt-outcome.mjs';
 const USDC='0x3600000000000000000000000000000000000000';
 const SYSTEM='0xfffffffffffffffffffffffffffffffffffffffe';
 const TRANSFER='0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
-const SCALE=1000000000000n,CHAINS=new Set(['8453','4663','1','42161','56','5042']);
+const SCALE=1000000000000n,CHAINS=new Set(['8453','4663','1','42161','56','5042','99801']);
 const ensure=(ok,message)=>{if(!ok)throw new TypeError(message);};
 function own(o,k){ensure(o&&Object.getPrototypeOf(o)===Object.prototype,'Plain receipt data required');const d=Object.getOwnPropertyDescriptor(o,k);ensure(d?.enumerable&&Object.hasOwn(d,'value'),'Receipt data field required: '+k);return d.value;}
 const quantity=x=>typeof x==='string'&&x.length<=66&&/^0x(?:0|[1-9a-f][0-9a-f]*)$/.test(x);

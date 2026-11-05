@@ -1,11 +1,13 @@
 // apps/marketplace-preview/chain-catalog.mjs
+import {BUILT} from './chains.mjs';
 var launchChains = Object.freeze([
   Object.freeze({ id: "8453", slug: "base", name: "Base", gas: "ETH", feeModel: "op-stack", coreHref: "deploy.html", status: "QPool core setup available" }),
   Object.freeze({ id: "4663", slug: "robinhood", name: "Robinhood Chain", gas: "ETH", feeModel: "nitro", coreHref: null, status: "Integration in progress" }),
   Object.freeze({ id: "1", slug: "ethereum", name: "Ethereum", gas: "ETH", feeModel: "ethereum", coreHref: null, status: "Integration in progress" }),
   Object.freeze({ id: "42161", slug: "arbitrum", name: "Arbitrum One", gas: "ETH", feeModel: "nitro", coreHref: null, status: "Integration in progress" }),
   Object.freeze({ id: "56", slug: "bnb", name: "BNB Chain", gas: "BNB", feeModel: "bsc", coreHref: null, status: "Integration in progress" }),
-  Object.freeze({ id: "5042", slug: "arc", name: "Arc", gas: "USDC", feeModel: "arc-stablecoin", coreHref: null, status: "Integration in progress" })
+  Object.freeze({ id: "5042", slug: "arc", name: "Arc", gas: "USDC", feeModel: "arc-stablecoin", coreHref: null, status: "Integration in progress" }),
+  Object.freeze({ id: "99801", slug: "elysium", name: "Elysium Testnet", gas: "HYPE", feeModel: "nitro", coreHref: null, status: "Integration in progress" })
 ]);
 function launchChain(id) {
   if (typeof id !== "string") throw new TypeError("Choose a chain ID");
@@ -81,7 +83,7 @@ function normalizeTokenFields(input) {
 var ensure = (ok, message) => {
   if (!ok) throw new TypeError(message);
 };
-var chains = ["8453", "4663", "1", "42161", "56", "5042"];
+var chains = BUILT.map(c => c.id);
 function exact(value, names) {
   ensure(value && Object.getPrototypeOf(value) === Object.prototype, "Plain pool data required");
   const keys = Reflect.ownKeys(value), d = Object.getOwnPropertyDescriptors(value);

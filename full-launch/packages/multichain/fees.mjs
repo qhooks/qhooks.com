@@ -7,7 +7,7 @@ const ensure=(v,m)=>{if(!v)throw new TypeError(m);};
 const hex=n=>'0x'+n.toString(16),address=x=>typeof x==='string'&&/^0x[0-9a-f]{40}$/.test(x)&&!/^0x0{40}$/.test(x);
 const hash=x=>typeof x==='string'&&/^0x[0-9a-f]{64}$/.test(x);
 // Application review bounds, not protocol fee claims. They are never silently enlarged.
-const caps=Object.freeze({'4663':10000000000n,'1':1000000000000n,'42161':10000000000n,'56':10000000000n,'5042':20000000000000n});
+const caps=Object.freeze({'4663':10000000000n,'1':1000000000000n,'42161':10000000000n,'56':10000000000n,'5042':20000000000000n,'99801':10000000000n});
 export function nextChainFeePolicy(chainId){
  const p=networkProfile(chainId);ensure(Object.hasOwn(caps,chainId),'Use the existing Base fee adapter');
  return Object.freeze({chainId,hexId:p.hexId,nativeSymbol:p.nativeSymbol,maxGas:7000000n,maxPrice:caps[chainId],feeAccounting:p.feeAccounting});

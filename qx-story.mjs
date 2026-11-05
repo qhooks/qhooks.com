@@ -1,5 +1,6 @@
 // Launch story: token page + metadata, campaign plan and avatar family, built from the real launch recipe or trade link.
 // Reads only this browser's saved drafts and what the person pastes or imports. No wallet, no network writes.
+import {hiddenChainsOn} from './chains.mjs';
 const $ = id => document.getElementById(id);
 const CHAINS = [
  {id: '8453', name: 'Base', slug: 'base', quote: 'USDC', native: 'ETH', explorer: 'https://basescan.org'},
@@ -8,6 +9,7 @@ const CHAINS = [
  {id: '42161', name: 'Arbitrum One', slug: 'arbitrum', quote: 'USDC', native: 'ETH', explorer: 'https://arbiscan.io'},
  {id: '56', name: 'BNB Chain', slug: 'bnb', quote: 'WBNB', native: 'BNB', explorer: 'https://bscscan.com'},
  {id: '5042', name: 'Arc', slug: 'arc', quote: 'USDC', native: 'USDC', explorer: 'https://explorer.arc.io'},
+ {id: '99801', name: 'Elysium Testnet', slug: 'elysium', quote: 'WHYPE', native: 'HYPE', explorer: 'https://explorer-elysium-testnet.t.conduit.xyz'},
 ];
 const chainOf = id => CHAINS.find(c => c.id === String(id)) || CHAINS[0];
 const store = (() => { try { return window.localStorage; } catch { return null; } })();
@@ -140,8 +142,9 @@ function load() {
  renderAll();
 }
 function renderAll() { renderPage(); renderCampaign(); renderFamily(); }
-$('st-chain').innerHTML = CHAINS.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-const qsChain = new URLSearchParams(location.search).get('chain'); if (qsChain && CHAINS.some(c => c.id === qsChain)) $('st-chain').value = qsChain;
+const selectableChains = CHAINS.filter(c => c.id !== '99801' || hiddenChainsOn());
+$('st-chain').innerHTML = selectableChains.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+const qsChain = new URLSearchParams(location.search).get('chain'); if (qsChain && selectableChains.some(c => c.id === qsChain)) $('st-chain').value = qsChain;
 $('st-chain').addEventListener('change', load);
 $('st-recipe').addEventListener('change', async e => { const file = e.target.files?.[0]; if (!file) return; try { if (file.size > 20000) throw Error('Recipe file is too large.'); state.launch = readRecipe(await file.text()); $('st-chain').value = state.launch.chainId; setSource(`${state.launch.fields.tokenName} ($${state.launch.fields.symbol}) · imported recipe`); renderAll(); } catch (err) { setSource(err.message, false); } });
 $('st-link').addEventListener('change', e => { try { const r = fromLink(e.target.value.trim()); state.launch = r.launch; state.deployed = r.deployed; $('st-chain').value = r.launch.chainId; setSource(`${r.launch.fields.tokenName} ($${r.launch.fields.symbol}) · launched on ${chainOf(r.launch.chainId).name}`); renderAll(); } catch (err) { setSource(err.message, false); } });

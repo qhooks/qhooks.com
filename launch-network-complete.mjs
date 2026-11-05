@@ -6,7 +6,8 @@ const copy=Object.freeze({
  '1':'Use USDC for launch liquidity and retain ETH separately for network gas.',
  '42161':'Use USDC for launch liquidity and retain ETH separately for network gas.',
  '56':'Use WBNB for launch liquidity and retain BNB separately for network gas.',
- '5042':'Use USDC for launch liquidity. Arc uses USDC for network gas as well; quote and gas are distinct requirements.'
+ '5042':'Use USDC for launch liquidity. Arc uses USDC for network gas as well; quote and gas are distinct requirements.',
+ '99801':'Use WHYPE for launch liquidity. Elysium uses HYPE for network gas.'
 });
 export function bindCompleteNetworkPicker({document:d=document,location=window.location,history=window.history}={}){
  const buttons=[...d.querySelectorAll('[data-chain]')],panel=d.getElementById('network-selection'),title=d.getElementById('network-title'),detail=d.getElementById('network-copy'),launch=d.getElementById('network-launch'),wallet=d.getElementById('network-wallet');

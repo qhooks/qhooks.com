@@ -2,16 +2,21 @@
 // holders and positions from the worker's index (/api/terminal), and a trade ticket that quotes through
 // each pool and its blocks. The launch tools (rules, auction, limit orders, second pool, team locks) are
 // the Trade page's own panels, mounted here unchanged and fed the same pool event.
+import { tokenBoardHref } from '/qx-board-link.mjs';
 import { CHAIN_NAME, h, connectedAddress } from '/qx-chain.mjs';
+import { menuChains, chainMap } from '/chains.mjs';
 import { createChart, CrosshairMode } from '/vendor/lightweight-charts/lightweight-charts.standalone.production.mjs';
 import { mountTicket } from '/qx-terminal-trade.mjs';
 import { afterBuy, onReached } from '/qx-terminal-tpsl.mjs';
 import { getWalletHub } from '/wallet-hub.mjs';
 import { trustList, trustOf, badge, copyLabel } from '/qx-trust.mjs';
+import { externalQuick } from '/qx-terminal-feed-core.mjs';
+import { parseTerminalHash, applyTradePrefill, readTokenBalance, openTerminalView } from '/qx-tg-prefill.mjs';
 
-const CHAINS = [['all', 'All'], ['8453', 'Base'], ['1', 'Ethereum'], ['42161', 'Arbitrum'], ['56', 'BNB'], ['4663', 'Robinhood']];
-const ICON = { '8453': 'base', '1': 'ethereum', '42161': 'arbitrum', '56': 'bnb', '4663': 'robinhood', '5042': 'arc', solana: 'solana' };
-const EXPLORER = { '8453': 'https://basescan.org', '1': 'https://etherscan.io', '42161': 'https://arbiscan.io', '56': 'https://bscscan.com', '4663': 'https://robinhoodchain.blockscout.com', '5042': 'https://explorer.arc.io', solana: 'https://solscan.io' };
+// Chain filter: live chains, plus hidden/testnet ones with the hidden-chain flag (chains.mjs).
+const CHAINS = [['all', 'All'], ...menuChains().map(c => [c.id, c.short])];
+const ICON = { ...chainMap(c => c.icon), solana: 'solana' };
+const EXPLORER = { ...chainMap(c => c.explorer), solana: 'https://solscan.io' };
 const TFS = [[1, '1s'], [60, '1m'], [300, '5m'], [900, '15m'], [3600, '1h'], [14400, '4h'], [86400, '1D']];
 const BITS = ['Opening bell', 'Anti-snipe', 'Wallet cap', 'Max trade', 'Cooldown', 'Holder gate', 'Exit clock', 'Sandwich guard', 'Impact fee', 'Storm fee', 'Session fee', 'Tax', 'Whale tiers', 'Auto burn', 'King', 'Last buyer wins', 'Buyback', 'Referrals', 'Points'];
 const QUICK = { usd: '10', eth: '0.01', bnb: '0.05' };
@@ -19,6 +24,7 @@ const DEAD = '0x000000000000000000000000000000000000dead', ZERO = '0x00000000000
 const $ = id => document.getElementById(id);
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem('qhooks:terminal:' + k); localStorage.setItem('qhooks:terminal:' + k, v); } catch {} return null; };
 const now = () => Math.floor(Date.now() / 1000);
+const marketListeners = new Set();
 
 const state = { chain: store('chain') || 'all', feed: store('feed') || 'new', tf: Number(store('tf')) || 60, unit: 'price', filter: 'all', pane: 'trades',
   markets: [], sel: null, pool: null, data: null, cursor: -1, watch: new Set(JSON.parse(store('watch') || '[]')), quick: { ...QUICK, ...JSON.parse(store('quick') || '{}') }, me: null,
@@ -156,7 +162,7 @@ function renderFeed() {
         h('span', {}, h('i', {}, 'H '), String(s.holders ?? '—')), h('span', { class: s.change24 > 0 ? 'up' : s.change24 < 0 ? 'down' : '' }, pct(s.change24)))
         : h('span', { class: 'qxt-r2 qxt-quiet' }, 'No stats yet'),
       h('span', { class: 'qxt-r3' }, ...badges(m)));
-    const qb = h('button', { type: 'button', class: 'qxt-qb', title: 'Buy ' + state.quick[u] + ' ' + QUNIT[u] + ' now (your wallet confirms)', onclick: () => quickBuy(m) }, '⚡ ' + state.quick[u]);
+    const qb = h('button', { type: 'button', class: 'qxt-qb', title: 'Buy ' + m.symbol + ' with ' + state.quick[u] + ' ' + QUNIT[u], onclick: () => quickBuy(m) }, '⚡ ' + state.quick[u]);
     return h('li', { class: (sel ? 'sel ' : '') + (i === state.cursor ? 'cur' : ''), 'data-key': keyOf(m) }, row, qb);
   }), ...xPart);
 }
@@ -165,7 +171,7 @@ async function loadFeed() {
     const r = await fetch('/api/terminal/feed?chain=' + state.chain, { cache: 'no-store' });
     const [j, trust] = await Promise.all([r.ok ? r.json() : null, trustList()]);
     state.trust = trust;
-    if (j) { state.markets = j.markets || []; renderFeed(); }
+    if (j) { state.markets = j.markets || []; renderFeed(); for (const fn of marketListeners) { try { fn(state.markets); } catch {} } }
   } catch {}
 }
 
@@ -223,6 +229,9 @@ function renderHead() {
   const av = $('qxt-av'); if (av) { av.hidden = false; av.style.setProperty('--h', hue(m.token || state.sel?.controller)); av.firstChild.textContent = (m.symbol || '?').replace(/^\$/, '').slice(0, 1).toUpperCase(); }
   const copy = $('qxt-copy'); copy.hidden = false; copy.textContent = short(m.token); copy.title = 'Copy ' + m.token;
   $('qxt-share').hidden = false; $('qxt-share').textContent = 'Share';
+  // Community board for launches and outside tokens (/board.html, qx-board.mjs).
+  let bl = $('qxt-board'); if (!bl) { bl = h('a', { id: 'qxt-board', class: 'qxt-addr', title: 'Community posts about this token' }, 'Board'); $('qxt-share').after(bl); }
+  bl.hidden = !state.sel; if (state.sel) bl.href = state.sel.ext ? tokenBoardHref(state.sel.chainId, state.sel.ext) : '/board.html#m=' + m.chainId + ':' + state.sel.controller;
   const star = $('qxt-star'); star.hidden = false; const on = state.watch.has(keyOf(state.sel)); star.textContent = on ? '★' : '☆'; star.setAttribute('aria-pressed', String(on));
   const q = m.quoteSymbol, cell = (k, v, cls) => [h('div', {}, h('dt', {}, k), h('dd', { class: cls || '' }, v))];
   if (d.ext) {
@@ -339,7 +348,7 @@ async function loadActivity(quiet = false) {
   } catch {}
   activityTimer = setTimeout(() => { if (!document.hidden) loadActivity(); else activityTimer = setTimeout(loadActivity, 10000); }, 10000);
 }
-/// Copy a tracked wallet's buy: open that launch and buy your own quick-buy amount (your wallet confirms).
+/// Copy a tracked wallet's buy: open that launch and buy your own quick-buy amount.
 async function copyTrade(t) {
   const m = state.markets.find(x => x.chainId === t.chainId && x.controller === t.controller) || { chainId: t.chainId, controller: t.controller, quoteSymbol: t.quoteSymbol };
   return quickBuy(m);
@@ -379,7 +388,7 @@ function renderWallets() {
   for (const t of state.activity.slice(0, 40)) items.push(h('li', { class: 'qxt-act' }, h('button', { type: 'button', class: 'qxt-row', onclick: () => select(t.chainId, t.controller) },
     h('span', { class: 'qxt-r1' }, icon(t.chainId), h('b', {}, state.tracked[t.trader] || short(t.trader)), h('span', { class: t.buy ? 'up' : 'down' }, t.buy ? 'bought' : 'sold'), h('b', {}, t.symbol), h('span', { class: 'qxt-age' }, age(t.ts))),
     h('span', { class: 'qxt-r2' }, h('span', {}, compact(t.token) + ' ' + t.symbol), h('span', {}, money(t.quote, t.quoteSymbol)), h('span', {}, h('i', {}, '@ '), price(t.price)))),
-    t.buy ? h('button', { type: 'button', class: 'qxt-qb', title: 'Buy your quick-buy amount of ' + t.symbol + ' (your wallet confirms)', onclick: () => copyTrade(t) }, 'Copy') : null));
+    t.buy ? h('button', { type: 'button', class: 'qxt-qb', title: 'Buy your quick-buy amount of ' + t.symbol, onclick: () => copyTrade(t) }, 'Copy') : null));
   list.replaceChildren(...items);
 }
 
@@ -415,11 +424,13 @@ async function loadMarket() {
     if (mine !== mseq) return;
     if (!r.ok) { $('qxt-sync').textContent = r.status === 404 ? 'This launch is not listed yet.' : 'Market data is unavailable right now.'; return; }
     state.data = await r.json();
+    ticket.setPriceUsd(state.data.meta?.quoteSymbol === 'USD' || /^(USDC|USDT)$/i.test(state.data.meta?.quoteSymbol || '') ? state.data.summary?.price : null);
     renderHead(); renderChart(); if (state.pane !== 'positions') renderPane();
     if (!state.markets.find(m => keyOf(m) === keyOf(state.sel))?.summary) loadFeed();
   } catch { $('qxt-sync').textContent = 'Market data is unavailable right now.'; }
 }
 async function select(chainId, controller, { quiet = false } = {}) {
+  if (!quiet) document.dispatchEvent(new CustomEvent('qxt:token'));
   // On phones the list sits below the market, so picking a launch brings its chart into view.
   if (!quiet && matchMedia('(max-width: 760px)').matches) $('qxt-head').scrollIntoView({ block: 'start' });
   const mine = ++mseq;
@@ -456,10 +467,12 @@ async function loadExternal() {
       summary: { price: t.priceUsd, change24: t.change24, mcap: t.mcapUsd ?? t.fdvUsd, fdv: t.fdvUsd, liquidity: t.liquidityUsd, volume24: t.volume24Usd, buys24: t.buys24, sells24: t.sells24, trades24: t.buys24 != null ? t.buys24 + t.sells24 : null },
       candles, trades: trades.map(x => ({ ts: Math.floor(x.ts / 1000), buy: x.side === 'buy', price: x.priceUsd, token: x.amountToken, quote: x.valueUsd, trader: (x.wallet || '').toLowerCase(), tx: x.tx, pool: 0 })),
       holders: [], traders: [], synced: { behind: 0, at: 0, block: 0 } };
+    ticket.setPriceUsd(state.data.summary.price);
     renderHead(); renderChart(); if (state.pane !== 'positions') renderPane();
   } catch { $('qxt-sync').textContent = 'Market data is unavailable right now.'; }
 }
 async function selectExternal(chainId, address, { quiet = false } = {}) {
+  if (!quiet) document.dispatchEvent(new CustomEvent('qxt:token'));
   if (!quiet && matchMedia('(max-width: 760px)').matches) $('qxt-head').scrollIntoView({ block: 'start' });
   const mine = ++mseq;
   if (address.startsWith('0x')) address = address.toLowerCase(); // Solana mints are case-sensitive
@@ -471,6 +484,7 @@ async function selectExternal(chainId, address, { quiet = false } = {}) {
   if (mine !== mseq || !state.data) return;
   const t = state.data.token;
   const ready = ticket.setExternal({ chainId, address, symbol: t.symbol, decimals: t.decimals }).catch(e => { $('qxt-sync').textContent = e.message; });
+  ready.then(() => { if (mine === mseq) ticket.setPriceUsd(state.data.summary.price); });
   fetch(`/api/terminal/x/safety/${chainId}/${address}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(v => {
     if (mine !== mseq || !v) return; state.data.safety = v; ticket.setSafety(v); renderHead();
   }).catch(() => {});
@@ -483,6 +497,19 @@ async function quickBuy(m) {
   if (!state.me) { $('qxt-connect').click(); return; }
   await select(m.chainId, m.controller);
   await ticket.quickBuy(u === 'usd' ? 'usd' : u, state.quick[u]);
+}
+async function quickBuyExternal(chainId, address) {
+  chainId = String(chainId);
+  const plan = externalQuick(chainId, address, state.quick);
+  if (plan.stock) return;
+  if (!state.me) { $('qxt-connect').click(); return; }
+  const launch = state.markets.find(m => m.live && String(m.chainId) === chainId && (chainId === 'solana' ? m.token === address : m.token?.toLowerCase() === address.toLowerCase()));
+  if (launch) return quickBuy(launch);
+  const ready = selectExternal(chainId, address), mine = mseq;
+  await ready;
+  if (mine !== mseq || !state.data || !ticket.unitClass) return;
+  if (!plan.supported) { $('qxt-sync').textContent = 'Use the trade ticket for this token; quick buy is unavailable.'; return; }
+  await ticket.quickBuy(plan.cls, plan.value);
 }
 /// A Trade link (#pool=…) lists the market if needed, then opens it.
 async function openPoolLink(text) {
@@ -555,6 +582,7 @@ for (const [id] of TOOLS) toolWatch.observe($(id), { attributes: true, attribute
 
 // Keyboard: trading keys work anywhere outside a text field; Enter sends from the amount field too.
 document.addEventListener('keydown', e => {
+  if (document.body.classList.contains('qxt-discover-mode') || e.target.closest?.('.qxfd-back')) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '');
   if (typing) { if (e.key === 'Escape') document.activeElement.blur(); return; }
@@ -564,7 +592,7 @@ document.addEventListener('keydown', e => {
   else if (k === 'w') $('qxt-feed-tabs').querySelector('[data-feed="wallets"]').click();
   else if (k === 'b' || k === 's') { ticket.setSide(k === 'b' ? 'buy' : 'sell'); $('qxt-amount').focus(); e.preventDefault(); }
   else if (/^[1-4]$/.test(k)) ticket.preset(Number(k) - 1);
-  else if (k === 'enter') ticket.submit();
+  else if (k === 'enter') { e.preventDefault(); if (!e.repeat) ticket.submit(); }
   else if (k === 'j' || k === 'k') { if (!rows.length) return; state.cursor = Math.max(0, Math.min(rows.length - 1, state.cursor + (k === 'j' ? 1 : -1))); renderFeed(); document.querySelector('.qxt-list li.cur')?.scrollIntoView({ block: 'nearest' }); }
   else if (k === 'o' && rows[state.cursor]) select(rows[state.cursor].chainId, rows[state.cursor].controller);
   else if (k === '[' || k === ']') { const i = TFS.findIndex(([t]) => t === state.tf), n = TFS[Math.max(0, Math.min(TFS.length - 1, i + (k === ']' ? 1 : -1)))][0]; if (n !== state.tf) setTf(n); }
@@ -577,25 +605,37 @@ ticket = mountTicket($('qxt-ticket'), { onTraded: async ({ side, moved, status }
   if (side === 'buy') try { if (await afterBuy(moved, status)) { status('TP/SL set on the ' + compact(Number(moved) / 1e18) + ' bought.'); toast('TP/SL placed on your buy.'); } } catch (e) { toast('TP/SL was not placed: ' + (e.message || 'error')); }
 } });
 onReached(text => toast(text, ['Open TP/SL', () => document.querySelector('#qxt-tool-tabs [data-tool="qts"]')?.click()]));
+window.qxTerminal = { selectExternal, select, quickBuyExternal, get state() { return state; }, onMarkets(fn) { marketListeners.add(fn); fn(state.markets); return () => marketListeners.delete(fn); } };
+document.dispatchEvent(new CustomEvent('qxt:ready'));
 loadActivity(true);
 renderTools(); renderPane();
 await loadFeed();
 setInterval(() => { if (!document.hidden) loadFeed(); }, 15000);
 setInterval(() => { if (!document.hidden && state.markets.some(m => (m.auctionEndsAt || m.opensAt || 0) > now())) renderFeed(); }, 1000);
+let linkRevision = 0;
+async function openTerminalHash(hash) {
+  const route = parseTerminalHash(hash), revision = ++linkRevision;
+  if (!route) return false;
+  const { kind, chain, address, trade } = route;
+  if (kind === 'm') await select(chain, address);
+  else await selectExternal(chain, address);
+  const active = () => revision === linkRevision && state.sel?.chainId === chain && (kind === 'm' ? state.sel.controller === address : state.sel.ext === address);
+  if (active() && state.data && trade) {
+    const token = kind === 'm' ? state.data.meta.token : address;
+    await applyTradePrefill($('qxt-ticket'), trade, { active, balanceOf: () => readTokenBalance({ chain, address: token, wallet: trade.wallet }) });
+  }
+  return true;
+}
 const hash = location.hash.slice(1);
 try {
   if (hash.startsWith('pool=')) await openPoolLink(decodeURIComponent(hash.slice(5)));
-  else if (/^m=\d+:0x[0-9a-f]{40}$/.test(hash)) { const [c, a] = hash.slice(2).split(':'); await select(c, a); }
-  else if (/^t=(\d+:0x[0-9a-fA-F]{40}|solana:[1-9A-HJ-NP-Za-km-z]{32,44})$/.test(hash)) { const [c, a] = hash.slice(2).split(':'); await selectExternal(c, a); }
-  else { const first = feedRows()[0]; if (first) await select(first.chainId, first.controller, { quiet: true }); }
+  else if (!await openTerminalHash(hash)) document.dispatchEvent(new CustomEvent('qxt:discover'));
 } catch (e) { $('qxt-sync').textContent = e.message || 'Could not open that launch'; }
 
-// A launch or token link opened while the terminal is already open (#m= or #t=) switches to it.
-addEventListener('hashchange', () => {
-  const h2 = location.hash.slice(1);
-  if (/^m=\d+:0x[0-9a-f]{40}$/.test(h2)) { const [c, a] = h2.slice(2).split(':'); if (state.sel?.controller !== a) select(c, a); }
-  else if (/^t=(\d+:0x[0-9a-fA-F]{40}|solana:[1-9A-HJ-NP-Za-km-z]{32,44})$/.test(h2)) { const [c, a] = h2.slice(2).split(':'); if (state.sel?.ext !== (a.startsWith('0x') ? a.toLowerCase() : a)) selectExternal(c, a); }
-});
+// A link opened while the terminal is already open switches the token and fills its ticket.
+addEventListener('hashchange', () => { openTerminalHash(location.hash).catch(e => { $('qxt-sync').textContent = e.message || 'Could not open that launch'; }); });
+
+openTerminalView(new URLSearchParams(location.search).get('view'), document);
 
 // Phones: a bottom bar to jump between the launch list, the chart and the trade ticket.
 for (const b of document.querySelectorAll('.qxt-mnav button')) b.addEventListener('click', () => document.querySelector(b.dataset.to)?.scrollIntoView({ block: 'start', behavior: 'smooth' }));

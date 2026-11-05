@@ -5,6 +5,7 @@
 // If any step stops, the message shows here and the full Studio below takes over where it stopped.
 import { PRESETS, QUOTE_ASSETS, presetVisible } from '/qx-block-catalog.mjs';
 import { connectedAddress } from '/qx-chain.mjs';
+import { menuChains } from '/chains.mjs';
 import { STOCK_PAIRS, selectedPair, choosePair, stockPair } from '/full-launch/packages/multichain-launch/stock-pairs.mjs';
 import { listedModules, loadModules } from '/full-launch/packages/multichain-launch/market-modules.mjs';
 
@@ -15,9 +16,10 @@ const until = async (test, ms, step = 250) => { const end = Date.now() + ms; whi
 const setValue = (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); };
 const h = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (v !== false && v != null) e.setAttribute(k, v === true ? '' : v); } e.append(...kids.flat().filter(x => x != null)); return e; };
 
-const CHAINS = [['8453', 'Base'], ['1', 'Ethereum'], ['42161', 'Arbitrum'], ['56', 'BNB Chain'], ['4663', 'Robinhood Chain']];
-const STYLES = PRESETS.filter(p => ['fair', 'degen', 'community', 'burn', 'hours'].includes(p.id) || (p.hidden && presetVisible(p)));
-const DEFAULT_QUOTE = { USDC: '50', WETH: '0.02', WBNB: '0.1' };
+// Live chains, plus hidden/testnet ones when the hidden-chain flag is on (chains.mjs).
+const CHAINS = menuChains().map(c => [c.id, c.id === '56' ? 'BNB Chain' : c.id === '42161' ? 'Arbitrum' : c.name]);
+const STYLES = PRESETS.filter(p => ['fair', 'flywheel', 'degen', 'community', 'burn', 'hours'].includes(p.id) || (p.hidden && presetVisible(p)));
+const DEFAULT_QUOTE = { USDC: '50', WETH: '0.02', WBNB: '0.1', WHYPE: '0.5' };
 const STAGES = ['Create token', 'Deploy verifier', 'Deploy fee collector', 'Deploy launch blocks', 'Deploy launch controller', 'Fund liquidity', 'Launch protected pool'];
 
 const main = $('launch-workspace');
@@ -30,7 +32,7 @@ function mount() {
   const style = h('select', { id: 'qql-style', 'aria-label': 'Launch style' }, ...STYLES.map(p => h('option', { value: p.id }, p.name)));
   const styleLine = h('small', { class: 'qql-hint' });
   // Holder staking: part of the style's income (tax and charges) goes to the launch's staking vault.
-  const stakers = h('select', { id: 'qql-stakers', 'aria-label': 'Stakers share' }, ...[['0', 'None'], ['10', '10%'], ['20', '20%'], ['50', '50%']].map(([v, t]) => h('option', { value: v }, t)));
+  const stakers = h('select', { id: 'qql-stakers', 'aria-label': 'Stakers share' }, ...[['0', 'None'], ['10', '10%'], ['20', '20%'], ['25', '25%'], ['50', '50%']].map(([v, t]) => h('option', { value: v }, t)));
   const stakersRow = h('label', {}, h('span', {}, "Stakers' share"), stakers, h('small', { class: 'qql-hint' }, 'Of the launch income, paid to holders who stake the token.'));
   // Builder marketplace: one reviewed module (other than staking, which has its own row) can take a share too.
   const moduleSel = h('select', { id: 'qql-module', 'aria-label': 'Marketplace module' }, h('option', { value: '' }, 'None'));
@@ -41,7 +43,7 @@ function mount() {
   // Creator vesting: the creator's own share of that income reaches their wallet through a public vesting stream.
   const vest = h('select', { id: 'qql-vest', 'aria-label': 'Your share pays out' }, ...[['0', 'At once'], ['30', 'Over 30 days'], ['90', 'Over 90 days'], ['180', 'Over 180 days'], ['365', 'Over 1 year']].map(([v, t]) => h('option', { value: v }, t)));
   const vestRow = h('label', {}, h('span', {}, 'Your share pays out'), vest, h('small', { class: 'qql-hint' }, 'Vesting shows holders your income reaches you slowly, on a schedule nobody can change.'));
-  const tokens = h('input', { id: 'qql-tokens', type: 'text', inputmode: 'decimal', value: '100000', 'aria-label': 'Tokens in the pool' });
+  const tokens = h('input', { id: 'qql-tokens', type: 'text', inputmode: 'decimal', value: '700000000', 'aria-label': 'Tokens in the pool' });
   const quote = h('input', { id: 'qql-quote', type: 'text', inputmode: 'decimal', 'aria-label': 'Starting liquidity' });
   const unit = h('span', { class: 'qql-unit' });
   // Robinhood Chain: trade against WETH or a tokenized stock.
@@ -64,13 +66,13 @@ function mount() {
   };
   pair.addEventListener('change', () => { choosePair(chain.value, pair.value); quote.dataset.touched = ''; syncQuote(); });
   const earns = id => (PRESETS.find(p => p.id === id)?.on || []).includes('tax');
-  const syncStyle = () => { styleLine.textContent = STYLES.find(p => p.id === style.value)?.line || ''; stakersRow.hidden = !earns(style.value) || !!PRESETS.find(p => p.id === style.value)?.payees; if (stakersRow.hidden) stakers.value = '0'; vestRow.hidden = stakersRow.hidden; if (vestRow.hidden) vest.value = '0'; moduleRow.hidden = stakersRow.hidden; if (moduleRow.hidden) moduleSel.value = ''; };
+  const syncStyle = () => { styleLine.textContent = STYLES.find(p => p.id === style.value)?.line || ''; stakersRow.hidden = !earns(style.value) || !!PRESETS.find(p => p.id === style.value)?.payees; if (stakersRow.hidden) stakers.value = '0'; else stakers.value = String(PRESETS.find(p => p.id === style.value)?.stakers || 0); vestRow.hidden = stakersRow.hidden; if (vestRow.hidden) vest.value = '0'; moduleRow.hidden = stakersRow.hidden; if (moduleRow.hidden) moduleSel.value = ''; };
   quote.addEventListener('input', () => { quote.dataset.touched = '1'; });
   consent.addEventListener('change', () => { if (consent.checked && /Tick the box/.test(status.textContent)) status.textContent = ''; });
   chain.addEventListener('change', syncQuote); style.addEventListener('change', syncStyle);
   const fromUrl = new URLSearchParams(location.search).get('chain'); if (CHAINS.some(([v]) => v === fromUrl)) chain.value = fromUrl;
   // ?style=<id> (a hidden style) preselects it, on its own chain if the style names one.
-  const hiddenPick = STYLES.find(p => p.hidden);
+  const hiddenPick = STYLES.find(p => p.hidden) || STYLES.find(p => p.id === new URLSearchParams(location.search).get('style'));
   if (hiddenPick) { style.value = hiddenPick.id; if (hiddenPick.chain && [...chain.options].some(o => o.value === hiddenPick.chain)) chain.value = hiddenPick.chain; }
   syncQuote(); syncStyle();
 
@@ -82,7 +84,7 @@ function mount() {
       pairRow,
       h('label', {}, h('span', {}, 'Name'), name),
       h('label', {}, h('span', {}, 'Ticker'), symbol),
-      h('label', {}, h('span', {}, 'Tokens in the pool'), tokens, h('small', { class: 'qql-hint' }, 'Of a 1,000,000 supply; the rest stays in your wallet.')),
+      h('label', {}, h('span', {}, 'Tokens in the pool'), tokens, h('small', { class: 'qql-hint' }, 'Of a 1,000,000,000 supply; the rest stays in your wallet.')),
       h('label', {}, h('span', {}, 'Starting liquidity'), h('div', { class: 'qql-amount' }, quote, unit)),
       stakersRow, moduleRow, vestRow),
     styleLine,
@@ -111,7 +113,7 @@ async function autopilot(o, say, steps, done) {
   say('Setting up your token…');
   document.querySelector(`[data-qtd-chain="${o.chain}"]`)?.click(); await sleep(300);
   if ($('ql-chain') && $('ql-chain').value !== o.chain) setValue($('ql-chain'), o.chain);
-  setValue($('ql-name'), o.name); setValue($('ql-symbol'), o.symbol); setValue($('ql-token-funding'), o.tokens); setValue($('ql-quote-funding'), o.quote);
+  setValue($('ql-supply'), '1000000000'); setValue($('ql-name'), o.name); setValue($('ql-symbol'), o.symbol); setValue($('ql-token-funding'), o.tokens); setValue($('ql-quote-funding'), o.quote);
   await sleep(300); if (!can('qj-next-token')) throw new Error('Studio did not accept the token details.'); $('qj-next-token').click();
   if (!await until(() => document.querySelector(`.qxb-preset[data-preset="${o.style}"]`), 8000)) throw new Error('Launch styles did not load.');
   document.querySelector(`.qxb-preset[data-preset="${o.style}"]`).click(); await sleep(400);

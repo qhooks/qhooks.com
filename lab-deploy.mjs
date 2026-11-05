@@ -7,14 +7,16 @@ import { planTransactions, plannedChecks, wordMatches, compareRuntime, buildHash
 import { RPC, CHAIN_NAME, NATIVE, rpc, ethCall, send, decodeString, formatUnits, h } from '/qx-chain.mjs';
 import { createSigner, restoreSigner } from '/full-launch/packages/multichain-launch/actions/signer.mjs';
 import { getWalletHub } from '/wallet-hub.mjs';
+import { chainMap, visibleChains } from '/chains.mjs';
 
-export const DEPLOY_CHAINS = ['8453', '4663', '1', '42161', '56'];
-const ICON = { '8453': 'base', '4663': 'robinhood', '1': 'ethereum', '42161': 'arbitrum', '56': 'bnb' };
-const EXPLORER = { '8453': 'https://basescan.org', '4663': 'https://explorer.chain.robinhood.com', '1': 'https://etherscan.io', '42161': 'https://arbiscan.io', '56': 'https://bscscan.com' };
+// Chains the Lab build service builds for (chains.mjs `lab`), hidden ones only with the hidden-chain flag.
+export const DEPLOY_CHAINS = visibleChains().filter(c => c.lab).map(c => c.id);
+const ICON = chainMap(c => c.icon);
+const EXPLORER = chainMap(c => c.explorer);
 // Measured on mainnet forks; used only for steps that cannot be estimated until an earlier step exists.
 const GAS_HINTS = { 'creator:verifier': 980_000, 'creator:vault': 1_990_000, 'creator:hook': 850_000, 'creator:pool': 55_000,
   'dynamic-fee:verifier': 980_000, 'dynamic-fee:controller': 3_460_000, 'dynamic-fee:hook': 1_250_000, 'dynamic-fee:pool': 90_000,
-  'twap:hook': 1_800_000,
+  'twap:hook': 1_800_000, 'volfee:hook': 1_000_000, 'volfee:pool': 70_000,
   'price-band:verifier': 980_000, 'price-band:controller': 4_400_000, 'price-band:hook': 1_300_000, 'price-band:pool': 90_000,
   'volume-epoch:verifier': 980_000, 'volume-epoch:controller': 5_000_000, 'volume-epoch:hook': 1_700_000, 'volume-epoch:pool': 90_000,
   'directional-fee:verifier': 980_000, 'directional-fee:controller': 4_700_000, 'directional-fee:hook': 1_600_000, 'directional-fee:pool': 90_000,
@@ -30,7 +32,8 @@ const FIELDS = { creator: ['template', 'projectName', 'chainId', 'owner', 'curre
   'volume-epoch': ['template', 'projectName', 'chainId', 'currency0', 'currency1', 'poolFee', 'tickSpacing', 'epochSeconds', 'initialStartsAt', 'initialEndsAt', 'initialCap0For1', 'initialCap1For0'],
   'directional-fee': ['template', 'projectName', 'chainId', 'currency0', 'currency1', 'tickSpacing', 'initialFee0For1', 'initialFee1For0', 'maxLpFee'],
   circuit: ['template', 'projectName', 'chainId', 'currency0', 'currency1', 'poolFee', 'tickSpacing', 'cooldownSeconds', 'initialThreshold0For1', 'initialThreshold1For0'],
-  split: ['template', 'projectName', 'chainId', 'owner', 'ownerB', 'publicKeyB', 'currency0', 'currency1', 'feeBps', 'shareBps', 'poolFee', 'tickSpacing'] };
+  split: ['template', 'projectName', 'chainId', 'owner', 'ownerB', 'publicKeyB', 'currency0', 'currency1', 'feeBps', 'shareBps', 'poolFee', 'tickSpacing'],
+  volfee: ['template', 'projectName', 'chainId', 'currency0', 'currency1', 'tickSpacing', 'baseFee', 'maxFee', 'feePerTickCentiPips', 'halfLife'] };
 // Templates whose host form has no token fields: the panel asks for the pair.
 const PAIR_IN_PANEL = ['dynamic-fee', 'price-band', 'volume-epoch', 'directional-fee', 'circuit'];
 const JOURNAL = 'qhooks.lab.deploy.v1';

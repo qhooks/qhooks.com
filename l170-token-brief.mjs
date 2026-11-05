@@ -1,5 +1,6 @@
 import {readPublicConfig} from './public-config-input.mjs';
-const CHAIN_IDS = Object.freeze(new Set(['8453','4663','1','42161','56','5042']));
+import {BUILT} from './chains.mjs';
+const CHAIN_IDS = Object.freeze(new Set(BUILT.map(c=>c.id)));
 const INVALID_NAME_RE = /[\u0000-\u001F\u007F<>]/;
 const SYMBOL_RE = /^[A-Z0-9]{1,10}$/;
 const briefFields = Object.freeze(['chainId','name','symbol']);

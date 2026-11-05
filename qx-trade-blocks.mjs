@@ -3,6 +3,7 @@ import { BLOCKS, QUOTE_ASSETS, AUCTION_ADDRESS } from '/qx-block-catalog.mjs';
 import { BLOCK_FIELDS, BLOCK_BITS } from '/full-launch/packages/multichain-launch/launch-blocks.mjs';
 import { setSwapReferrer } from '/full-launch/packages/multichain-swap/calldata.mjs';
 import { stockPair } from '/full-launch/packages/multichain-launch/stock-pairs.mjs';
+import { chainMap } from '/chains.mjs';
 
 // Referral links: the first ?ref= this browser sees is kept, so saved swaps rebuild identically.
 const REF_KEY = 'qhooks:referrer:v1';
@@ -12,8 +13,7 @@ try {
   setSwapReferrer(localStorage.getItem(REF_KEY));
 } catch {}
 
-const RPC = { '8453': 'https://mainnet.base.org', '4663': 'https://rpc.mainnet.chain.robinhood.com', '1': 'https://ethereum-rpc.publicnode.com',
-  '42161': 'https://arb1.arbitrum.io/rpc', '56': 'https://bsc-dataseed.bnbchain.org', '5042': 'https://rpc.mainnet.arc.io' };
+const RPC = chainMap(c => c.rpc);
 const SEL = { config: '0x79502c55', previewRate: '0xb9c3fc44', kingCurrent: '0x32cf3d5f', kingPot: '0x496def18', clockPot: '0x68ca9100', clockDeadline: '0x0e6b792b', buybackPot: '0x39a704dc', totalPoints: '0x567142be', launchTime: '0x790ca413' };
 const card = document.getElementById('qtb');
 // Trade page: "Open in the terminal" carries the selected pool.
