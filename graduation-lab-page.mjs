@@ -21,7 +21,7 @@ export function bindGraduationLabPage({document:d,target,fetch:request,downloadF
  $('restore').addEventListener('click',()=>{invalidate();try{install(readGraduationLabDraft(target.localStorage.getItem(graduationLabStorageKey)));feedback('Saved draft restored and validated.');}catch{feedback('No valid saved graduation draft was found.',true);}});
  $('import').addEventListener('click',async()=>{invalidate();const rev=revision;try{const file=$('file').files?.[0];if(!file||file.size<1||file.size>4096)throw Error('Invalid file');const next=readGraduationLabDraft(await file.text());if(dead||rev!==revision)return;install(next);feedback('Configuration imported and validated. No transaction was authorized.');}catch{if(!dead&&rev===revision)feedback('Import a public QGraduation configuration, not a backup or transaction journal.',true);}});
  $('download-draft').addEventListener('click',()=>{if(draft)download(JSON.stringify(draft,null,2),'qhooks-graduation-draft.json');});
- $('continue').addEventListener('click',()=>{try{save();navigate('graduation.html');}catch{feedback('Save failed. Download the draft before leaving.',true);}});
+ $('continue').addEventListener('click',()=>{try{save();navigate('/graduation');}catch{feedback('Save failed. Download the draft before leaving.',true);}});
  $('package').addEventListener('click',async()=>{
   if(!draft||pending||dead)return;const rev=revision,current=draft,controller=new AbortController();pending=controller;toolkit=null;render();feedback('Preparing your configuration and accepted developer toolkit…');
   try{

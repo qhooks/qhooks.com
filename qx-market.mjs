@@ -18,7 +18,7 @@ async function show() {
         h('div', {}, h('dt', { text: 'Reviewed' }), h('dd', { text: m.review?.date || '' })),
         h('div', {}, h('dt', { text: 'Code hash' }), h('dd', { class: 'mk-mono', title: m.creationHash, text: short(m.creationHash) }))),
       h('p', { class: 'mk-note', text: m.review?.notes || '' })));
-    grid.replaceChildren(...cards, h('a', { class: 'mk-card mk-card-new', href: 'market-submit.html' }, h('span', { class: 'mk-plus', text: '+' }), h('h3', { text: 'Your module here' }), h('p', { class: 'mk-sum', text: 'Submit it for review. Approved modules appear in Studio for every launch.' })));
+    grid.replaceChildren(...cards, h('a', { class: 'mk-card mk-card-new', href: '/market-submit' }, h('span', { class: 'mk-plus', text: '+' }), h('h3', { text: 'Your module here' }), h('p', { class: 'mk-sum', text: 'Submit it for review. Approved modules appear in Studio for every launch.' })));
   } catch { grid.replaceChildren(h('p', { class: 'mk-empty', text: 'The module list could not load. Try again in a moment.' })); }
 }
 show();

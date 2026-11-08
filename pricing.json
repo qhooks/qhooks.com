@@ -55,8 +55,8 @@
       "title": "Trade in the terminal",
       "amountAtomic": "0",
       "unit": "trade",
-      "rate": "1% of the trade, 30% of it back to you as cashback",
-      "description": "Taken on the quote side of each terminal trade. 30% is cashback you claim in the terminal, 20% goes to whoever referred you (fixed on your first referred trade; QHooks keeps it if nobody did), and the rest goes to QHooks. Share your referral link from the terminal to earn 20% of the fees on your referrals' trades."
+      "rate": "Eligible EVM trades: 30% cashback · 20% referral rewards",
+      "description": "The terminal fee is 1% of the trade. Of that fee, 30% is cashback, 20% goes to a referrer when present, and the remainder goes to QHooks before route-specific partner costs. Cashback and referrals do not add another charge."
     }
   ],
   "trading": {

@@ -1,4 +1,4 @@
-// Creator dashboard (/creator.html#m=<chain>:<controller>): one launch, everything a creator acts on. The header and
+// Creator dashboard (/creator#m=<chain>:<controller>): one launch, everything a creator acts on. The header and
 // tables come from the terminal's index (/api/terminal/market); the panels below are the launch page's own panels
 // (rules and pots, terms and graduation, keys and recovery, staking, modules, vesting, team locks), opened by the
 // same qhooks:pool event the terminal sends, so every button here is the code the launch page already runs.
@@ -26,7 +26,7 @@ async function pick() {
   const list = r.launches || [];
   box.replaceChildren(h('h2', {}, 'Pick a launch'), list.length
     ? h('div', { class: 'qc-picklist' }, ...list.map(L => h('a', { class: 'qc-pickrow', href: '#m=' + L.chainId + ':' + L.controller }, h('b', {}, L.name), h('span', {}, L.symbol + ' · ' + (CHAIN_NAME[L.chainId] || L.chainId)))))
-    : h('p', {}, 'This wallet has not created a launch yet. ', h('a', { href: '/qtoken-studio.html' }, 'Launch a token'), '.'));
+    : h('p', {}, 'This wallet has not created a launch yet. ', h('a', { href: '/qtoken-studio' }, 'Launch a token'), '.'));
 }
 
 async function open(chainId, controller) {
@@ -40,7 +40,7 @@ async function open(chainId, controller) {
   window.__qhooksPool = pool;
   document.dispatchEvent(new CustomEvent('qhooks:pool', { detail: pool }));
   state = { chainId, controller, pool };
-  $('qc-trade').href = '/terminal.html#m=' + chainId + ':' + controller;
+  $('qc-trade').href = '/terminal#m=' + chainId + ':' + controller;
   await Promise.all([market(mine), payouts(mine)]);
 }
 
@@ -51,7 +51,7 @@ async function market(mine) {
   const m = r.meta, s = r.summary || {}, me = connectedAddress(), q = m.quoteSymbol;
   state.meta = m;
   $('qc-title').replaceChildren(m.name + ' ', h('span', { class: 'qc-sym' }, m.symbol));
-  $('qc-sub').replaceChildren(h('span', { class: 'qa-chain' }, CHAIN_NAME[chainId] || chainId), ' Created by ', h('a', { href: '/profile.html#' + (m.owner || ''), title: 'Creator profile' }, h('code', {}, short(m.owner || ''))),
+  $('qc-sub').replaceChildren(h('span', { class: 'qa-chain' }, CHAIN_NAME[chainId] || chainId), ' Created by ', h('a', { href: '/profile#' + (m.owner || ''), title: 'Creator profile' }, h('code', {}, short(m.owner || ''))),
     me && m.owner === me ? h('span', { class: 'qc-you' }, 'you') : me ? h('span', { class: 'qc-not' }, 'not this wallet: actions that need the creator will ask for it') : null);
   const tile = (k, v, sub) => h('div', { class: 'qa-tile' }, h('span', {}, k), h('b', {}, v), sub ? h('small', {}, sub) : null);
   $('qc-stats').replaceChildren(tile('Price', num(s.price) + ' ' + q, s.change24 ? (s.change24 >= 0 ? '+' : '') + (s.change24 * 100).toFixed(1) + '% in 24h' : null),

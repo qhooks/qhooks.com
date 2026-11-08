@@ -1,0 +1,4 @@
+Bundled license information:
+
+js-cookie/dist/js.cookie.mjs:
+  /*! js-cookie v3.0.8 | MIT */

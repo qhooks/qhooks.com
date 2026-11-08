@@ -22,9 +22,15 @@ const keyOf = (chainId, controller) => chainId + ':' + String(controller).toLowe
 
 // ---- Server data ----
 export const trustOf = (chainId, controller) => once('t:' + keyOf(chainId, controller), 20000, () => getJson(`/api/trust/market/${chainId}/${String(controller).toLowerCase()}`)).catch(() => null);
-export const verdictOf = (chainId, controller) => once('v:' + keyOf(chainId, controller), 60000, () => getJson(`/api/trust/verdict/${chainId}/${String(controller).toLowerCase()}`)).catch(() => null);
+export const verdictOf = (chainId, controller) => once('v:' + keyOf(chainId, controller), 20000, async () => {
+  const address=String(controller).toLowerCase(),response=await fetch('/api/repoproof/check?'+new URLSearchParams({kind:'launch',chainId:String(chainId),address}),{cache:'no-store'}),value=await response.json();
+  if(value?.version!==1||value.subject?.kind!=='launch'||String(value.subject?.chainId)!==String(chainId)||value.subject?.address?.toLowerCase()!==address)return null;
+  const report=value.report;
+  if(!report||!['danger','caution','clear','unknown'].includes(report.level)||!Array.isArray(report.checks))return {level:null,unavailable:true,state:value.state,source:'RepoProof via QHooks',checkedAt:value.checkedAt||null,cached:!!value.cached,stale:!!value.stale};
+  return {...report,state:value.state,source:'RepoProof via QHooks',checkedAt:value.checkedAt||report.completedAt||report.retrievedAt||null,cached:!!value.cached,stale:!!value.stale||value.state!=='ready'||!response.ok};
+}).catch(() => null);
 export const trustList = () => once('list', 20000, () => getJson('/api/trust/list')).then(j => j.markets || {}).catch(() => ({}));
-export const forget = (chainId, controller) => { cache.delete('t:' + keyOf(chainId, controller)); cache.delete('list'); };
+export const forget = (chainId, controller) => { cache.delete('t:' + keyOf(chainId, controller)); cache.delete('v:' + keyOf(chainId, controller)); cache.delete('list'); };
 
 // ---- Small labels ----
 export function badge(v, { compact = false } = {}) {
@@ -38,87 +44,108 @@ export function copyLabel(c, { compact = false } = {}) {
   if (!c) return null;
   return h('span', { class: 'qtr-copy', title: 'Same ' + c.same + ' as $' + c.symbol + ', launched earlier by the verified creator @' + c.handle }, compact ? 'Copy of $' + c.symbol : 'Same ' + c.same + ' as an earlier verified launch');
 }
-const LEVEL = { danger: ['High risk', 'danger'], caution: ['Caution', 'caution'], clear: ['No red flags', 'clear'], unknown: ['Not enough data', 'unknown'] };
+const LEVEL = { danger: ['High risk', 'danger'], caution: ['Caution', 'caution'], clear: ['No flags returned', 'unknown'], unknown: ['Coverage incomplete', 'unknown'] };
+const timeOf=value=>{const n=typeof value==='number'?(value<1e12?value*1000:value):typeof value==='string'?Date.parse(value):NaN;return Number.isFinite(n)&&n>0&&n<=Date.now()+60000?n:null;};
+const ageOf=at=>{const seconds=Math.max(0,Math.floor((Date.now()-at)/1000));return seconds<60?seconds+'s ago':seconds<3600?Math.floor(seconds/60)+'m ago':seconds<86400?Math.floor(seconds/3600)+'h ago':Math.floor(seconds/86400)+'d ago';};
+const checkTime=v=>timeOf(v?.checkedAt||v?.completedAt||v?.retrievedAt);
+const completeCoverage=v=>v?.coverage?.complete===true&&v?.coverage?.unknown===0;
+function verdictMeta(v){
+ const at=checkTime(v),coverage=v?.coverage,checked=Number.isSafeInteger(coverage?.checked)?coverage.checked:null,unknown=Number.isSafeInteger(coverage?.unknown)?coverage.unknown:null;
+ const snapshot=v?.snapshot,point=snapshot?(snapshot.chain?' · snapshot '+String(snapshot.chain).slice(0,40):'')+(snapshot.block!=null?' · block '+String(snapshot.block).slice(0,80):snapshot.slot!=null?' · slot '+String(snapshot.slot).slice(0,80):''):'';
+ return (v?.source||'RepoProof via QHooks')+' · '+(v?.stale?'stale · ':'')+(v?.cached?'cached · ':'')+(at?new Date(at).toISOString()+' ('+ageOf(at)+')':'check time unknown')+' · source coverage: '+(checked!==null?checked+' checked'+(unknown!==null?', '+unknown+' unknown':''):Array.isArray(v?.checks)?v.checks.length+' returned checks; completeness unknown':'unavailable')+(point||'');
+}
 export function verdictChip(v) {
   if (!v || !v.level) return h('span', { class: 'qtr-chip' }, v?.unsupported ? 'Not covered' : 'Unavailable');
+  if(v.level==='clear'&&(v.stale||!checkTime(v)||!completeCoverage(v)))return h('span',{class:'qtr-chip unknown'},v.stale?'Earlier check':!checkTime(v)?'Check time unknown':'Limited coverage');
   const [t, c] = LEVEL[v.level] || ['Unknown', 'unknown'];
   return h('span', { class: 'qtr-chip ' + c }, t);
 }
 
 // ---- The launch's own facts, read from chain ----
 /** Blocks on, what a trade pays now, liquidity, team locks, keys and recovery, modules. */
+const address=value=>typeof value==='string'&&/^0x[0-9a-f]{40}$/i.test(value);
+const uint=hex=>{if(typeof hex!=='string'||!/^0x[0-9a-f]{64}$/i.test(hex))throw Error('Unreadable ABI word');return BigInt(hex);};
+const abiWords=(hex,min)=>{if(typeof hex!=='string'||!/^0x(?:[0-9a-f]{64})+$/i.test(hex))throw Error('Unreadable ABI words');const out=words(hex);if(out.length<min)throw Error('Incomplete ABI result');return out;};
 export function factsOf(pool) {
-  return once('f:' + keyOf(pool.chainId, pool.controller), 30000, async () => {
-    const { chainId, controller } = pool, c = pool.constructor, blocks = c.blocks, quote = c.quote.toLowerCase();
-    const token = (c.currency0.toLowerCase() === quote ? c.currency1 : c.currency0).toLowerCase(), owner = String(c.owner).toLowerCase();
-    const call = (to, data) => ethCall(chainId, to, data).catch(() => null);
-    const hasBlocks = blocks && BigInt(blocks) !== 0n;
-    const [raw, buy, sell, curOwner, eta, by, supplyHex, ownerBal] = await Promise.all([hasBlocks ? call(blocks, SEL.config) : null,
-      hasBlocks ? call(blocks, SEL.previewRate + pad(1) + pad(0) + pad(0)) : null, hasBlocks ? call(blocks, SEL.previewRate + pad(0) + pad(0) + pad(0)) : null,
-      call(controller, SEL.currentOwner), call(controller, SEL.recoveryEta), call(controller, SEL.recoveryBy), call(token, SEL.totalSupply), call(token, calldata('0x70a08231', ['address'], [owner]))]);
-    const facts = [];
-    facts.push({ k: 'Liquidity', v: hasBlocks ? 'Permanent: nobody can withdraw it, the creator included' : 'The creator can withdraw graduated liquidity with both keys', tone: hasBlocks ? 'good' : 'warn' });
-    let on = [], cfg = null;
-    if (raw && raw.length > 2) {
-      const w = words(raw); cfg = Object.fromEntries(BLOCK_FIELDS.map(([k], i) => [k, w[i]]));
-      on = Object.entries(BLOCK_BITS).filter(([, b]) => (cfg.mask >> BigInt(b)) & 1n).map(([id]) => id);
-      if (on.includes('holderGate') && cfg.gateToken === BigInt(AUCTION_ADDRESS)) on = on.map(x => x === 'holderGate' ? 'openingAuction' : x);
-      const names = on.map(id => BLOCKS.find(b => b.id === id)?.name || id);
-      facts.push({ k: 'Blocks on', v: names.length ? names.length + ': ' + names.join(', ') : 'None', tone: '' });
-    }
-    if (buy && sell) { const b = BigInt(buy), s = BigInt(sell); facts.push({ k: 'Charges now', v: 'A buy pays ' + pct(b) + ', a sell pays ' + pct(s) + ' (on top of pool fees)', tone: s >= 1000n || b >= 1000n ? 'warn' : '' }); }
-    // Team tokens: locked in the chain's QLocks, and what the creator wallet holds with no lock at all.
-    const supply = supplyHex ? BigInt(supplyHex) : 0n;
-    if (supply) {
-      let locked = 0n;
-      try { if (await isLive(chainId, 'locks')) locked = words(await ethCall(chainId, await extraAddress('locks'), calldata(SEL.locksSummary, ['address'], [token])))[0]; } catch {}
-      const free = ownerBal ? BigInt(ownerBal) : 0n;
-      facts.push({ k: 'Team tokens', v: share(locked, supply) + ' locked with public notice; the creator wallet holds ' + share(free, supply) + ' unlocked', tone: free * 20n > supply ? 'warn' : '' });
-    }
-    // Keys: who acts for the launch now, and any key recovery under way.
-    const now = curOwner && curOwner.length === 66 ? toAddress(BigInt(curOwner)) : owner, etaN = eta ? Number(BigInt(eta)) : 0;
-    const keys = etaN > 0 ? 'A recovery started by the creator\'s ' + (Number(BigInt(by || '0x0')) === 1 ? 'wallet' : 'post-quantum key') + ' replaces both keys from ' + new Date(etaN * 1000).toLocaleDateString() + ' unless the other key cancels it'
-      : (now !== owner ? 'Keys were rotated to a new wallet. ' : '') + 'Creator actions need the wallet and a post-quantum key together; no recovery pending';
-    facts.push({ k: 'Creator keys', v: keys, tone: etaN > 0 ? 'warn' : '' });
-    if (cfg) {
-      try {
-        await loadModules();
-        const w = words(raw), payees = w.slice(BLOCK_FIELDS.length, BLOCK_FIELDS.length + 8).map(toAddress).filter(x => x !== ZERO);
-        const found = modulesAmong(payees, token, quote);
-        facts.push({ k: 'Modules', v: found.length ? found.map(f => f.module.name + (f.module.builderBps ? ' (builder keeps ' + pct(f.module.builderBps) + ')' : '')).join(', ') : 'None', tone: '' });
-      } catch {}
-    }
-    return { facts, token, owner, current: now, recovery: etaN > 0, sellBps: sell ? Number(BigInt(sell)) : null, buyBps: buy ? Number(BigInt(buy)) : null };
-  });
+ return once('f:'+keyOf(pool.chainId,pool.controller),30000,async()=>{
+  const {chainId,controller}=pool,c=pool.constructor,quote=c.quote.toLowerCase();
+  const token=(c.currency0.toLowerCase()===quote?c.currency1:c.currency0).toLowerCase(),owner=String(c.owner).toLowerCase();
+  if(!address(token)||!address(owner)||owner===ZERO)throw Error('Launch identity unavailable');
+  const hasBlocksField=Object.hasOwn(c,'blocks'),blocks=c.blocks,knownType=!hasBlocksField||address(blocks),hasBlocks=address(blocks)&&blocks.toLowerCase()!==ZERO;
+  const reads={};
+  async function read(name,to,data,decode=uint){try{const result=decode(await ethCall(chainId,to,data));reads[name]='observed';return result;}catch{reads[name]='unavailable';return null;}}
+  const [configWords,buy,sell,current,eta,by,supply,free]=await Promise.all([
+   hasBlocks?read('Block configuration',blocks,SEL.config,hex=>abiWords(hex,BLOCK_FIELDS.length)):null,
+   hasBlocks?read('Buy charge',blocks,SEL.previewRate+pad(1)+pad(0)+pad(0),hex=>{const n=uint(hex);if(n>10000n)throw Error('Invalid charge');return n;}):null,
+   hasBlocks?read('Sell charge',blocks,SEL.previewRate+pad(0)+pad(0)+pad(0),hex=>{const n=uint(hex);if(n>10000n)throw Error('Invalid charge');return n;}):null,
+   read('Current owner',controller,SEL.currentOwner,hex=>{const n=uint(hex);if(n===0n||n>=1n<<160n)throw Error('Invalid owner');return toAddress(n);}),
+   read('Recovery status',controller,SEL.recoveryEta,hex=>{const n=uint(hex);if(n>8640000000000n)throw Error('Unreadable recovery time');return Number(n);}),
+   read('Recovery initiating key',controller,SEL.recoveryBy,hex=>{const n=uint(hex);if(n>2n)throw Error('Invalid recovery key');return Number(n);}),
+   read('Total supply',token,SEL.totalSupply),read('Original creator balance',token,calldata('0x70a08231',['address'],[owner]))
+  ]);
+  const liquidity={k:'Liquidity',v:!knownType?'Unavailable · launch type could not be determined':hasBlocksField?'Permanent: nobody can withdraw it, the creator included':'The creator can withdraw graduated liquidity with both keys',tone:!knownType?'':hasBlocksField?'':'warn',source:'Listed launch configuration'};
+  const facts=[liquidity];let cfg=null,on=[];
+  if(configWords){
+   cfg=Object.fromEntries(BLOCK_FIELDS.map(([key],i)=>[key,configWords[i]]));
+   on=Object.entries(BLOCK_BITS).filter(([,bit])=>(cfg.mask>>BigInt(bit))&1n).map(([id])=>id);
+   if(on.includes('holderGate')&&cfg.gateToken===BigInt(AUCTION_ADDRESS))on=on.map(id=>id==='holderGate'?'openingAuction':id);
+   const names=on.map(id=>BLOCKS.find(block=>block.id===id)?.name||id);
+   facts.push({k:'Blocks observed',v:names.length?names.length+': '+names.join(', '):'None enabled in the observed configuration',tone:''});
+  }else facts.push({k:'Blocks observed',v:hasBlocks?'Unavailable · block configuration could not be read':'No block contract in the listed launch configuration',tone:''});
+  if(hasBlocks)facts.push({k:'Charges observed',v:'A buy '+(buy===null?'charge is unavailable':'pays '+pct(buy))+', a sell '+(sell===null?'charge is unavailable':'pays '+pct(sell))+' (on top of pool fees)',tone:(buy!==null&&buy>=1000n)||(sell!==null&&sell>=1000n)?'warn':''});
+  let locked=null,lockState='unavailable';
+  try{
+   const live=await isLive(chainId,'locks');reads['QLocks presence']='observed';
+   if(live){locked=await read('QLocks summary',await extraAddress('locks'),calldata(SEL.locksSummary,['address'],[token]),hex=>abiWords(hex,5)[0]);lockState=locked===null?'unavailable':'observed';}
+   else lockState='not_deployed';
+  }catch{reads['QLocks presence']='unavailable';}
+  const lockText=lockState==='not_deployed'?'QLocks is not deployed at its listed address; lock coverage unavailable':locked===null?'QLocks balance unavailable':supply===null?'QLocks share unavailable because total supply could not be read':supply===0n?'QLocks holds '+locked+' raw token units':share(locked,supply)+' of supply in QLocks across all beneficiaries, with public notice';
+  const creatorText=free===null?'Original creator wallet balance unavailable':supply===null?'Original creator wallet share unavailable because total supply could not be read':supply===0n?'Original creator wallet holds '+free+' raw token units':'Original creator wallet holds '+share(free,supply)+' unlocked';
+  facts.push({k:'Token locks & creator holdings',v:(supply===0n?'Total supply is 0; percentage shares do not apply. ':'')+lockText+'; '+creatorText,tone:free!==null&&supply!==null&&supply>0n&&free*20n>supply?'warn':''});
+  const ownerText=current===null?'Current creator wallet unavailable. ':current!==owner?'Keys were rotated to '+current+'. ':'';
+  const recoveryText=eta===null?'Recovery status unavailable; it could not be read from the controller.':eta>0?'A creator key recovery is pending'+(by===1?' (started by the wallet)':by===2?' (started by the post-quantum key)':' (initiating key unavailable)')+'; it can replace both keys from '+new Date(eta*1000).toISOString()+' unless the other key cancels it.':'No recovery pending at this observation.';
+  facts.push({k:'Creator keys',v:ownerText+'Creator actions require the wallet and a post-quantum key together. '+recoveryText,tone:eta!==null&&eta>0?'warn':''});
+  if(cfg&&configWords.length>=BLOCK_FIELDS.length+8){
+   try{await loadModules();const payees=configWords.slice(BLOCK_FIELDS.length,BLOCK_FIELDS.length+8).map(toAddress).filter(value=>value!==ZERO),found=modulesAmong(payees,token,quote);facts.push({k:'Modules observed',v:found.length?found.map(f=>f.module.name+(f.module.builderBps?' (builder keeps '+pct(f.module.builderBps)+')':'')).join(', '):'No recognized modules among the observed payees',tone:''});}
+   catch{facts.push({k:'Modules observed',v:'Unavailable · reviewed module coverage could not be checked',tone:''});}
+  }else if(hasBlocks)facts.push({k:'Modules observed',v:'Unavailable · complete payee configuration could not be read',tone:''});
+  const observed=Object.values(reads).filter(state=>state==='observed').length,unavailable=Object.values(reads).filter(state=>state==='unavailable').length;
+  return {facts,token,owner,current,recovery:eta===null?null:eta>0,buyBps:buy===null?null:Number(buy),sellBps:sell===null?null:Number(sell),checkedAt:new Date().toISOString(),source:'RPC latest + listed launch configuration (liquidity policy)',coverage:{observed,unavailable,reads}};
+ });
 }
+const factsMeta=f=>{const at=timeOf(f.checkedAt);return f.source+' · observed '+(at?new Date(at).toISOString()+' ('+ageOf(at)+')':'time unavailable')+' · read coverage: '+f.coverage.observed+' observed, '+f.coverage.unavailable+' unavailable. RPC reads use latest independently; no common block was pinned.';};
 
 // ---- The Launch terms card's trust section ----
-const verifyHref = pool => '/verify.html#m=' + pool.chainId + ':' + pool.controller;
+const verifyHref = pool => '/verify#m=' + pool.chainId + ':' + pool.controller;
 function verdictBlock(v) {
-  const head = h('div', { class: 'qtr-row' }, h('b', {}, 'Pre-buy check'), verdictChip(v));
+  const head = h('div', { class: 'qtr-row' }, h('b', {}, 'Market checks'), verdictChip(v));
   if (!v || !v.level) return h('div', { class: 'qtr-verdict' }, head,
-    h('p', { class: 'qtb-note' }, v?.unsupported ? 'RepoProof does not cover this chain yet.' : 'RepoProof could not be reached just now. The facts below are read from the launch\'s contracts.'),
+    h('p', { class: 'qtb-note' }, v?.unsupported ? 'RepoProof does not cover this chain yet.' : 'No full cached RepoProof report is available. Contract observations below have separate source coverage.'),
+    h('p',{class:'qtr-evidence'},verdictMeta(v)),
     v?.url ? h('a', { class: 'qtr-link', href: v.url, target: '_blank', rel: 'noopener' }, 'Run the check on RepoProof ↗') : null);
-  return h('div', { class: 'qtr-verdict ' + v.level }, head,
-    h('p', { class: 'qtr-headline' }, 'RepoProof: ' + v.headline + (v.counts ? ' · ' + v.counts.danger + ' red, ' + v.counts.caution + ' watch, ' + v.counts.clear + ' clear' : '') + (v.stale ? ' (from an earlier check)' : '')),
-    v.checks?.length ? h('ul', { class: 'qtr-checks' }, ...v.checks.slice(0, 4).map(c => h('li', { class: c.status }, c.title))) : null,
+  return h('div', { class: 'qtr-verdict ' + (v.level==='clear'?'unknown':v.level) }, head,
+    h('p', { class: 'qtr-headline' }, 'RepoProof: ' + v.headline + (v.counts ? ' · ' + (v.counts.danger??'?') + ' red, ' + (v.counts.caution??'?') + ' watch, ' + (v.counts.clear??'?') + ' clear' : '') + (v.stale ? ' (from an earlier check)' : '')),
+    h('p',{class:'qtr-evidence'},verdictMeta(v)),
+    v.checks?.length ? h('ul', { class: 'qtr-checks' }, ...v.checks.slice(0, 4).map(c => h('li', { class: c.status==='clear'&&(v.stale||!checkTime(v)||!completeCoverage(v))?'unknown':c.status }, c.title))) : null,
     v.url ? h('a', { class: 'qtr-link', href: v.url, target: '_blank', rel: 'noopener' }, 'Evidence on RepoProof ↗') : null);
 }
+const renderRuns=new WeakMap();
+function beginRender(el,key){const revision=(renderRuns.get(el)||0)+1;renderRuns.set(el,revision);el.dataset.key=key;return()=>el.dataset.key===key&&renderRuns.get(el)===revision;}
 /** Fills `el` with the trust section for `pool` (creator, copy warning, verdict, facts). */
 export async function renderTrust(el, pool) {
-  const key = keyOf(pool.chainId, pool.controller); el.dataset.key = key;
+  const key = keyOf(pool.chainId, pool.controller),active=beginRender(el,key);
   el.className = 'qtr';
   el.replaceChildren(h('p', { class: 'qtb-note' }, 'Checking who made this launch…'));
   const [t, v, f] = await Promise.all([trustOf(pool.chainId, pool.controller), verdictOf(pool.chainId, pool.controller), factsOf(pool).catch(() => null)]);
-  if (el.dataset.key !== key) return;
+  if (!active()) return;
   const creator = t?.verified
     ? h('div', { class: 'qtr-row' }, h('b', {}, 'Creator'), badge(t.verified))
-    : h('div', { class: 'qtr-row' }, h('b', {}, 'Creator'), h('span', { class: 'qtr-muted' }, 'Not verified on X'), h('a', { class: 'qtr-link', href: verifyHref(pool) }, 'Are you the creator? Verify'));
+    : h('div', { class: 'qtr-row' }, h('b', {}, 'Creator'), h('span', { class: 'qtr-muted' }, t?'Not verified on X':'Creator verification unavailable'), h('a', { class: 'qtr-link', href: verifyHref(pool) }, 'Are you the creator? Verify'));
   const copy = t?.copyOf ? h('div', { class: 'qtr-warn', role: 'note' }, h('b', {}, 'Check you have the right token'),
     h('span', {}, 'Same ' + t.copyOf.same + ' as $' + t.copyOf.symbol + ' (' + t.copyOf.name + '), launched earlier by the verified creator @' + t.copyOf.handle + '. '),
-    h('a', { href: '/terminal.html#m=' + t.copyOf.chainId + ':' + t.copyOf.controller }, 'Open the earlier launch')) : null;
+    h('a', { href: '/terminal#m=' + t.copyOf.chainId + ':' + t.copyOf.controller }, 'Open the earlier launch')) : null;
   // Liquidity has its own row in the terms below, so it is left out here.
-  const facts = f ? h('div', {}, h('p', { class: 'qtr-sub' }, 'Read from the launch’s contracts just now'),
+  const facts = f ? h('div', {}, h('p', { class: 'qtr-sub' }, 'Launch observations'),h('p',{class:'qtr-evidence'},factsMeta(f)),
     h('ul', { class: 'qtb-list qtr-facts' }, ...f.facts.filter(x => x.k !== 'Liquidity').map(x => h('li', { class: x.tone }, h('b', {}, x.k), h('span', {}, x.v))))) : null;
   el.replaceChildren(...[creator, copy, verdictBlock(v), facts].filter(Boolean));
 }
@@ -126,22 +153,34 @@ export async function renderTrust(el, pool) {
 // ---- The terminal's risk banner for a QHooks launch ----
 /** Fills the ticket's banner: copy warning first, then RepoProof's verdict, then the facts that matter at the moment of trading. */
 export async function renderRisk(el, pool) {
-  const key = keyOf(pool.chainId, pool.controller); el.dataset.key = key;
+  const key = keyOf(pool.chainId, pool.controller),active=beginRender(el,key);
   const [t, v, f] = await Promise.all([trustOf(pool.chainId, pool.controller), verdictOf(pool.chainId, pool.controller), factsOf(pool).catch(() => null)]);
-  if (el.dataset.key !== key) return;
-  const level = t?.copyOf ? 'danger' : v?.level === 'danger' ? 'danger' : v?.level === 'caution' || f?.recovery ? 'caution' : v?.level === 'clear' ? 'ok' : '';
+  if (!active()) return;
+  const warningChecks=(v?.checks||[]).filter(c=>c.status==='danger'||c.status==='caution');
+  const warningFacts=(f?.facts||[]).filter(fact=>fact.tone==='warn');
+  const level = t?.copyOf || v?.level === 'danger' || warningChecks.some(c=>c.status==='danger') ? 'danger'
+    : v?.level === 'caution' || warningChecks.length || warningFacts.length || f?.recovery ? 'caution' : '';
   const title = t?.copyOf ? 'Copy warning: same ' + t.copyOf.same + ' as $' + t.copyOf.symbol + ' by @' + t.copyOf.handle
-    : v?.level === 'danger' ? 'RepoProof: ' + v.headline : v?.level === 'caution' ? 'Trade with care: ' + v.headline : v?.level === 'clear' ? 'RepoProof found no red flags' : 'Pre-buy check unavailable';
-  const lines = [];
-  if (t?.verified) lines.push(h('li', {}, 'Creator verified on X: ', badge(t.verified, { compact: true })));
-  else lines.push(h('li', {}, 'Creator not verified on X'));
-  for (const c of (v?.checks || []).filter(c => c.status === 'danger' || c.status === 'caution').slice(0, 2)) lines.push(h('li', {}, c.title));
-  if (f) {
-    lines.push(h('li', {}, 'Liquidity permanent' + (f.buyBps != null ? ' · buy pays ' + pct(f.buyBps) + ', sell pays ' + pct(f.sellBps) : '')));
-    if (f.recovery) lines.push(h('li', {}, 'A creator key recovery is under way'));
-  }
-  el.className = 'qxt-risk ' + level;
-  el.replaceChildren(h('b', {}, title), h('ul', {}, ...lines.filter(Boolean)),
+    : v?.level === 'danger' ? 'RepoProof: ' + v.headline : v?.level === 'caution' ? 'Trade with care: ' + v.headline : v?.level === 'clear' ? v.stale?'Refreshing RepoProof check…':!checkTime(v)?'Refreshing RepoProof check…':!completeCoverage(v)?'RepoProof: no flags · partial checks':'No flags returned by available RepoProof checks' : 'Refreshing market checks…';
+  const partialReads=!f||f.coverage.unavailable>0||f.facts.some(fact=>/unavailable|could not be read|could not be checked/i.test(fact.v));
+  const summary=!v?.level?'Refreshing market checks…':v.stale?'Refreshing checks…':!checkTime(v)?'Refreshing checks…':!completeCoverage(v)||v.level==='unknown'?'Checks: no flags · partial checks':partialReads?'Checks: no flags · partial reads':!t?'Checks: no flags · creator unknown':'Checks returned no flags';
+  const creator=h('li',{},...(t?.verified?['Creator verified on X: ',badge(t.verified,{compact:true})]:[t?'Creator not verified on X':'Creator not verified on X']));
+  const factLine=fact=>h('li',{},h('b',{},fact.k+': '),fact.v);
+  const body=h('div',{class:'qtr-risk-detail-body'},
+    h('p',{class:'qtr-headline'},title),h('ul',{},creator),
+    h('p',{class:'qtr-evidence'},verdictMeta(v)),
+    (v?.checks||[]).some(c=>c.status!=='danger'&&c.status!=='caution')?h('ul',{},...(v.checks.filter(c=>c.status!=='danger'&&c.status!=='caution').map(c=>h('li',{},c.title)))):null,
+    f?h('p',{class:'qtr-evidence'},factsMeta(f)):h('p',{class:'qtr-evidence'},'Launch contract observations unavailable.'),
+    f?h('ul',{},...f.facts.filter(fact=>fact.tone!=='warn').map(factLine)):null,
     h('a', { href: v?.url || 'https://repoproof.online/proof#q=' + encodeURIComponent('https://qhooks.com/l/' + pool.chainId + '/' + pool.controller), target: '_blank', rel: 'noopener' }, v?.url && v.level ? 'Evidence on RepoProof ↗' : 'Full check on RepoProof ↗'));
+  // Native details/summary retains browser keyboard behavior without a second action or any scan.
+  const coverageIncomplete=!v?.level||v.level==='unknown'||!completeCoverage(v)||partialReads||!t;
+  const details=h('details',{class:'qtr-risk-details'},h('summary',{class:'qtr-risk-summary'},level?(coverageIncomplete?'Sources · incomplete coverage':'Sources & launch observations'):summary),body);
+  const warningTitle=t?.copyOf||v?.level==='danger'||v?.level==='caution'?title:warningChecks.length?'Market checks need attention':'Launch observations need attention';
+  const evidenceState=v?.stale?'Earlier RepoProof check · '+(checkTime(v)?ageOf(checkTime(v)):'check time unknown'):v?.level&&!checkTime(v)?'RepoProof check time unknown':null;
+  el.className = 'qxt-risk qtr-ticket-risk ' + (level||'qtr-ticket-risk--compact');
+  el.replaceChildren(...(level?[h('b',{},warningTitle),
+    h('ul',{},...warningChecks.map(c=>h('li',{},c.title)),...warningFacts.map(factLine)),
+    evidenceState?h('p',{class:'qtr-evidence'},evidenceState):null]:[]).filter(Boolean),details);
   el.hidden = false;
 }

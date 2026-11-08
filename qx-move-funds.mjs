@@ -358,6 +358,7 @@ export function createMoveFunds({ document = globalThis.document, target = globa
     view = { dialog, fromChain, toChain, fromToken, toToken, amount, balance, reserve, arrives, fee, stats,
       note: noteNode, owner, move, max, refresh, connect, check, progress, steps, links };
     dialog.addEventListener('close', () => {
+      if (dialog.dataset.qxUnder) return; // stepped under a wallet confirm (qx-confirm-top.mjs): keep the move running
       clearTimer(debounce); clearRepeat(interval); quoteRevision++; revision++;
       stopWatching?.(); stopWatching = null;
       if (!s.busy) { s.quote = null; s.loading = false; }

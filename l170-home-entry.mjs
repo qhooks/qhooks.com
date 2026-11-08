@@ -11,7 +11,7 @@ const rows=[
 ];
 const grid=document.getElementById('quantum-listing-grid');
 grid.replaceChildren(...rows.map(([id,icon,summary])=>{
- const copy=productCopy[id],row=document.createElement('a');row.className='q170-hook-row';row.href='hook.html?id='+encodeURIComponent(id);row.dataset.listingId=id;
+ const copy=productCopy[id],row=document.createElement('a');row.className='q170-hook-row';row.href='/hook?id='+encodeURIComponent(id);row.dataset.listingId=id;
  const image=document.createElement('img');image.src='/l170-icons/'+icon+'.svg';image.alt='';image.setAttribute('aria-hidden','true');image.width=30;image.height=30;
  const title=document.createElement('h3');title.textContent=copy.name;
  const description=document.createElement('p');description.textContent=summary;

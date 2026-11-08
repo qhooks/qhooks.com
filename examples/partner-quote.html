@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exact-pool trading example — QHooks</title>
+  <meta name="description" content="Quote an exact QHooks pool as a public trader and build unsigned SDK calldata with explicit limits.">
+  <link rel="icon" href="/qhooks-logo.jpg" type="image/jpeg">
+  <script src="/theme.js"></script>
+  <link rel="stylesheet" href="/qx-site.css">
+  <link rel="stylesheet" href="/examples/partner-quote.css">
+</head>
+<body class="qx qx-inner">
+<a class="skip-link" href="#main-content">Skip to content</a>
+<header class="partner-nav"><a class="partner-brand" href="/"><img src="/qhooks-logo.jpg" width="32" height="32" alt="">QHooks</a><a href="/api#partner-example">Developer API →</a></header>
+<main class="partner-doc" id="main-content">
+  <p class="partner-kicker">Build with QHooks</p>
+  <h1>Quote one exact pool. Build an unsigned swap.</h1>
+  <p>Use the <a href="/examples/partner-quote.mjs">reusable helper</a> in a browser or Node 18+, or run the <a href="/examples/partner-quote-cli.mjs">Node CLI</a>. Both use the <a href="/sdk/qhooks.mjs">public SDK</a> without dependencies. This example supports quote-token buys on listed QHooks pools on Base, Robinhood Chain, Ethereum, Arbitrum and BNB Chain.</p>
+  <h2>Choose the identity and limits.</h2>
+  <p>Read <code>GET https://qhooks.com/api/v1/pools?chain=8453</code> and choose the exact <code>poolId</code>. Supply the trader’s public EVM address, the quote currency’s address and decimals from that pool, and a positive raw integer amount. No pool is selected automatically.</p>
+  <pre><code>const input = {
+  chainId: '8453',
+  poolId: 'YOUR_EXACT_BYTES32_POOL_ID',
+  trader: 'YOUR_PUBLIC_EVM_TRADER_ADDRESS',
+  amountIn: '20000000', // 20 units only when quoteDecimals is 6
+  quoteCurrency: 'THE_POOL_QUOTE_CURRENCY_ADDRESS',
+  quoteDecimals: 6,
+  route: 'rewards', // choose 'rewards' or 'direct'
+  slippageBps: 100, // 100 = 1%; example accepts 0–500
+  deadline: YOUR_EXPLICIT_UNIX_SECOND_DEADLINE
+  // referrer: 'OPTIONAL_PUBLIC_EVM_REFERRER_ADDRESS' // rewards only
+};</code></pre>
+  <p>The deadline must be in the future and no more than 30 minutes away. The helper rechecks it after reads and before returning calldata. Slippage and deadline are encoded into the actual SDK transaction. These example limits are integration choices, not an assertion that every trade within them will succeed.</p>
+  <h2>Pick the route.</h2>
+  <ul>
+    <li><strong>Rewards:</strong> the 1% QHooks router fee is taken from gross input. The V4Quoter simulates the remaining input as the trader. The build uses <code>prepareFeeRouterSwap</code> with that gross input, the minimum quoted output, explicit deadline and optional referral address. The helper refuses an undeployed or unknown rewards router; it does not return or send a setup transaction. Cashback and referral accounting follow the router’s rules.</li>
+    <li><strong>Direct:</strong> the full input is quoted and <code>universalRouterSwap</code> builds the swap. There is no QHooks terminal fee or terminal cashback/referral credit. The pool’s LP, protocol and configured hook charges still apply on both routes.</li>
+  </ul>
+  <h2>Run it.</h2>
+  <p>In a browser, import the helper from QHooks and call it with the explicit input:</p>
+  <pre><code>import { quoteAndBuild } from 'https://qhooks.com/examples/partner-quote.mjs';
+const review = await quoteAndBuild(input);
+console.log(review); // unsigned transaction + quote, limits and allowance requirements</code></pre>
+  <p>For Node, keep <code>public/examples/partner-quote-cli.mjs</code>, <code>public/examples/partner-quote.mjs</code> and <code>public/sdk/qhooks.mjs</code> in their relative directory structure. Save your input as JSON, then explicitly enable public API reads:</p>
+  <pre><code>node public/examples/partner-quote-cli.mjs --input input.json --live</code></pre>
+  <p>The CLI also accepts <code>--fixture fixture.json</code> instead of <code>--live</code>. A fixture contains <code>now</code> (Unix seconds) and <code>responses</code>: exact <code>path</code>, JSON <code>body</code> and optional HTTP <code>status</code> entries. Fixture output is marked offline and is not a live quote.</p>
+  <h2>Review before any wallet action.</h2>
+  <p>The output includes chain, pool, input and output currencies, gross and quoted input, router fee, quoted output, minimum output, deadline, directory rule notes, allowance requirements and <code>{ chainId, from, to, data, value }</code>. Raw amounts remain decimal strings. ERC-20 rewards input needs an allowance to QFeeRouter; direct ERC-20 input uses Permit2 and a separate Permit2 allowance with its own expiration. Native input uses transaction value.</p>
+  <p>This example reads the public pool, chain and quote APIs. The quote request sends the displayed public trader address, pool and amount to QHooks. It does not read balances or existing allowances, connect a wallet, approve, sign, deploy or submit. A successful quote is a simulation of that request; pool rules, wallet state, gas and prices can change. Requote immediately before signing and verify the selected wallet, chain, allowances and full transaction in your own integration.</p>
+  <p><a href="/api#routers">Read the hook and routing rules →</a></p>
+</main>
+</body>
+</html>

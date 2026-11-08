@@ -1,0 +1,107 @@
+/* QHOOKS roadmap (DRAFT). Builds on qx-community.css (.cx-*). Chart colours validated with the dataviz validator
+   (dark vs #151b18, light vs #fbf9f4): all six checks pass in both modes. Colour follows the slice everywhere. */
+:root{--rm-c1:#179a8e;--rm-c2:#b9883c;--rm-c3:#4273b0;--rm-c4:#c36953;--rm-c5:#78579b;--rm-c6:#679c5b;--rm-surface:var(--qx-panel)}
+:root[data-theme="light"]{--rm-c1:#0a8e7a;--rm-c2:#b27923;--rm-c3:#2f5da0;--rm-c4:#b3543c;--rm-c5:#674689;--rm-c6:#518b44}
+/* Six validated slots; roadmap-data.json assigns a slot to each slice and tax part, so colour follows the item. */
+.rm-s1{--c:var(--rm-c1)}.rm-s2{--c:var(--rm-c2)}.rm-s3{--c:var(--rm-c3)}.rm-s4{--c:var(--rm-c4)}.rm-s5{--c:var(--rm-c5)}.rm-s6{--c:var(--rm-c6)}
+
+.rm-hero h1{max-width:18ch}
+.rm-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;margin:36px 0 0;background:var(--qx-line);border:1px solid var(--qx-line);border-radius:18px;overflow:hidden}
+.rm-tiles div{padding:16px 18px;background:var(--qx-bg-2);min-width:0}
+.rm-tiles dt{font-size:12px;color:var(--qx-faint);letter-spacing:.04em}
+.rm-tiles dd{margin:4px 0 0;font:400 clamp(24px,2.4vw,32px)/1.1 var(--qx-serif);color:var(--qx-ink);overflow-wrap:anywhere}
+.rm-intro{max-width:70ch;margin:-8px 0 22px;color:var(--qx-muted);font-size:16px;line-height:1.6}
+.rm-card{padding:24px;border:1px solid var(--qx-line);border-radius:var(--qx-radius);background:var(--qx-panel)}
+
+/* Tall segmented bar: 28px, 4px corners, 2px surface gaps, share printed inside when it fits. */
+.rm-bar{display:flex;gap:2px;height:28px}
+.rm-seg{flex:var(--w) 1 0;min-width:4px;display:flex;align-items:center;padding:0 8px;border-radius:4px;background:var(--c);overflow:hidden}
+.rm-seg b{font:600 12.5px/1 var(--qx-sans);color:#fff;white-space:nowrap}
+:root[data-theme="light"] .rm-seg b{color:#fff}
+.rm-seg.rm-narrow b{font-size:11px}.rm-seg.rm-tiny b{display:none}
+.rm-legend{display:flex;flex-wrap:wrap;gap:8px 20px;list-style:none;margin:16px 0 0;padding:0;font-size:13.5px;color:var(--qx-muted)}
+.rm-legend li{display:inline-flex;align-items:center;gap:8px}
+.rm-legend span{color:var(--qx-ink);font-weight:600}
+.rm-sw{display:inline-block;flex:none;width:10px;height:10px;border-radius:3px;background:var(--c)}
+.rm-table-wrap{overflow-x:auto;margin-top:20px}
+.rm-table{width:100%;border-collapse:collapse;font-size:14px}
+.rm-table th,.rm-table td{padding:11px 12px;text-align:left;vertical-align:top;border-top:1px solid var(--qx-line);color:var(--qx-ink)}
+.rm-table thead th{border-top:0;font-size:11.5px;font-weight:600;letter-spacing:.04em;color:var(--qx-faint)}
+.rm-table tbody th{font-weight:600;white-space:nowrap}
+.rm-table tbody th .rm-sw{margin-right:8px;vertical-align:1px}
+.rm-table td{color:var(--qx-muted)}
+.rm-num{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--qx-ink)!important;text-align:right!important}
+.rm-table thead th:nth-child(2),.rm-table thead th:nth-child(3){text-align:right}
+.rm-lock code,.rm-addrs code,.rm-use code{font:500 12.5px var(--qx-mono);color:var(--qx-brass)}
+.rm-note{margin-top:14px;padding:16px 18px;border:1px dashed color-mix(in srgb,var(--rm-c2) 55%,var(--qx-line-2));border-radius:16px;color:var(--qx-muted);font-size:15px;line-height:1.55}
+.rm-note b{color:var(--qx-ink)}
+
+/* Unlock chart: stacked areas with a 2px surface edge, recessive grid, crosshair + tooltip. */
+.rm-chart-wrap{position:relative;margin-top:14px}
+.rm-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.rm-chart{display:block;width:100%;height:auto;overflow:visible}
+.rm-chart-narrow{display:none}
+@media (max-width:700px){.rm-chart-wide{display:none}.rm-chart-narrow{display:block}}
+.rm-area{fill:var(--c)}
+.rm-edge{fill:none;stroke:var(--rm-surface);stroke-width:2}
+.rm-grid{stroke:var(--qx-line);stroke-width:1}
+.rm-ax{fill:var(--qx-faint);font:500 11px var(--qx-sans)}
+.rm-dl{fill:var(--qx-muted);font:500 11.5px var(--qx-sans)}
+.rm-mark{stroke:var(--qx-line-2);stroke-dasharray:3 4}
+.rm-mark-t{fill:var(--qx-muted)}
+.rm-cross{stroke:var(--qx-ink);stroke-width:1;opacity:.6}
+.rm-hit{fill:transparent;cursor:crosshair}
+.rm-tip{position:absolute;top:8px;z-index:3;min-width:200px;padding:10px 12px;border:1px solid var(--qx-line-2);border-radius:12px;background:var(--qx-bg-2);box-shadow:0 18px 40px -18px rgba(0,0,0,.6);font-size:12.5px;color:var(--qx-muted);pointer-events:none}
+.rm-tip b{display:block;margin-bottom:6px;color:var(--qx-ink);font-size:13px}
+.rm-tip div{display:flex;justify-content:space-between;gap:14px}
+.rm-tip div span:first-child{display:inline-flex;align-items:center;gap:6px}
+.rm-tip div span:last-child{color:var(--qx-ink);font-variant-numeric:tabular-nums}
+.rm-tip .rm-tot{margin-top:6px;padding-top:6px;border-top:1px solid var(--qx-line)}
+.rm-details{margin-top:14px;color:var(--qx-muted);font-size:14px}
+.rm-details summary{cursor:pointer;color:var(--qx-ink)}
+
+.rm-addrs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;margin:0;background:var(--qx-line);border:1px solid var(--qx-line);border-radius:18px;overflow:hidden}
+.rm-addrs div{padding:14px 18px;background:var(--qx-panel);min-width:0}
+.rm-addrs dt{font-size:12px;color:var(--qx-faint)}
+.rm-addrs dd{margin:4px 0 0;color:var(--qx-muted);font-size:13px;overflow-wrap:anywhere}
+.rm-legend-tax{gap:10px 26px}
+.rm-rev{margin-top:14px}
+.rm-use{grid-template-columns:repeat(4,minmax(0,1fr))}
+
+.rm-time{position:relative;list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.rm-time::before{content:"";position:absolute;left:0;right:0;top:7px;height:1px;background:linear-gradient(90deg,var(--qx-brass),color-mix(in srgb,var(--qx-brass) 25%,var(--qx-line-2)))}
+.rm-time>li{position:relative;padding-top:30px}
+.rm-time>li::before{content:"";position:absolute;top:0;left:0;width:15px;height:15px;border-radius:50%;border:1.5px solid var(--qx-brass);background:var(--qx-bg);box-shadow:0 0 0 5px var(--qx-bg)}
+.rm-time>li:first-child::before{background:var(--qx-brass)}
+.rm-when{font:500 12px var(--qx-mono);color:var(--qx-brass)}
+.rm-time h3{margin:8px 0 10px;font:650 20px/1.2 var(--qx-sans)!important;letter-spacing:-.02em!important}
+.rm-time ul{margin:0;padding-left:16px;display:grid;gap:6px;color:var(--qx-muted);font-size:14.5px;line-height:1.5}
+
+.rm-risks{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 28px}
+.rm-risks li{padding:16px 0;border-top:1px solid var(--qx-line);color:var(--qx-muted);font-size:15px;line-height:1.55}
+.rm-risks b{display:block;margin-bottom:4px;color:var(--qx-ink)}
+
+@media (max-width:1100px){.rm-use{grid-template-columns:repeat(2,minmax(0,1fr))}.rm-time{grid-template-columns:1fr;gap:0}.rm-time::before{left:7px;right:auto;top:8px;bottom:8px;width:1px;height:auto;background:linear-gradient(180deg,var(--qx-brass),color-mix(in srgb,var(--qx-brass) 25%,var(--qx-line-2)))}.rm-time>li{padding:0 0 26px 36px}.rm-time>li::before{top:2px}}
+@media (max-width:700px){.rm-tiles,.rm-addrs,.rm-use,.rm-risks{grid-template-columns:1fr 1fr}.rm-addrs,.rm-use,.rm-risks{grid-template-columns:1fr}.rm-card{padding:18px}.rm-seg{padding:0 5px}.rm-seg b{font-size:10.5px}}
+@media (prefers-reduced-motion:reduce){.rm-tip{transition:none}}
+@media (forced-colors:active){.rm-seg,.rm-area,.rm-sw{forced-color-adjust:none}}
+@media (max-width:700px){
+ .rm-table-alloc thead{display:none}
+ .rm-table-alloc,.rm-table-alloc tbody{display:block}
+ .rm-table-alloc tr{display:grid;grid-template-columns:1fr auto auto;gap:4px 14px;padding:14px 0;border-top:1px solid var(--qx-line)}
+ .rm-table-alloc tr:first-child{border-top:0}
+ .rm-table-alloc th,.rm-table-alloc td{padding:0;border:0}
+ .rm-table-alloc td[data-l]{grid-column:1/-1;display:block;font-size:13.5px}
+ .rm-table-alloc td[data-l]::before{content:attr(data-l);display:block;margin-top:6px;font-size:11px;letter-spacing:.04em;color:var(--qx-faint)}
+ .rm-table-alloc tbody th{white-space:normal}
+}
+@media (max-width:700px){.rm-seg.rm-narrow b{display:none}}
+/* Live / Next tags in the timeline (same words as the product roadmap). */
+.rm-tag{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:99px;font:600 10.5px/1.5 var(--qx-sans);font-style:normal;letter-spacing:.06em;text-transform:uppercase;vertical-align:1px}
+.rm-tag-live{color:var(--qx-on-brass);background:var(--qx-brass)}
+.rm-tag-next{color:var(--qx-brass);border:1px solid var(--qx-brass)}
+
+/* Cashback CTA (2026-11-08) */
+.rm-use .rm-cta{display:flex;justify-content:center;margin:14px 0 8px;width:100%;text-align:center}
+.rm-cta-note{margin:0;font-size:12.5px;line-height:1.45;color:var(--qx-muted)}
+.rm-use a.rm-cta,.rm-use a.rm-cta:visited,.rm-use a.rm-cta:hover{color:var(--qx-on-brass,#fff);text-decoration:none}

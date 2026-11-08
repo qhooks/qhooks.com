@@ -3,7 +3,8 @@
 // the Privy bridge (privy/entry.js) sends eth_sendTransaction and signTypedData without Privy's confirm or
 // "All Done" screens. Outside a press, or for external wallets, or when the wallet chose "Ask in a pop-up", nothing
 // changes: wallets prompt as usual and we never add a step of our own.
-// Launches, withdrawals, claims and post-quantum key actions must NOT be wrapped.
+// Launches use their own reviewed, bounded session and a separate bundled policy.
+// Withdrawals, claims and standalone post-quantum key actions never use this flag.
 //
 // Usage (callers):  import { oneClickPlan, withOneClick } from '/qx-instant-bridge.mjs';
 //   const plan = oneClickPlan(address, walletEntry, usd);   // { silent, ticketConfirm, capUsd }
@@ -15,6 +16,16 @@ import { oneClick, needsTicketConfirm, tradePrefs } from './qx-trade-prefs.mjs';
 const MAX_PRESS_MS = 180000; // a press that hangs can never leave silent sends switched on (setup + approve + swap fit well inside)
 let depth = 0, until = 0;
 const state = globalThis.__qhooksSilent ||= { active: () => depth > 0 && Date.now() < until };
+const MAX_LAUNCH_MS = 20 * 60 * 1000;
+let launchUntil=0,launchRunning=false,launchId=null;
+state.launch=()=>launchRunning&&Date.now()<launchUntil;
+state.launchId=()=>state.launch()?launchId:null;
+// Call only after the in-app review is confirmed. Never persist a silent flag.
+export async function withLaunchSession(fn,{id=globalThis.crypto?.randomUUID?.()||String(Date.now())}={}) {
+ if(launchRunning)throw Error('A launch is already running.');
+ launchRunning=true;launchUntil=Date.now()+MAX_LAUNCH_MS;launchId=id;
+ try{return await fn();}finally{launchRunning=false;launchUntil=0;launchId=null;}
+}
 
 /// What a trade press for `usd` should do for this wallet.
 export function oneClickPlan(address, entry, usd) {

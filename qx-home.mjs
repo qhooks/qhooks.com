@@ -1,4 +1,7 @@
 import './qx-shell.mjs';
+import {mountHomeLive} from './qx-home-live.mjs';
+const homeLive=mountHomeLive(document.querySelector('[data-home-live]'));
+window.addEventListener('pagehide',()=>homeLive?.dispose(),{once:true});
 // QHooks home motion: hero pointer depth + lattice spotlight, scroll-linked launch explainer, reveals.
 // Everything settles when input stops and is off under prefers-reduced-motion.
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;

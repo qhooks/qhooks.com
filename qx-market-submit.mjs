@@ -64,7 +64,7 @@ async function showReceipt(id, fresh = false) {
     const head = document.createElement('h2'); head.textContent = fresh ? 'Submitted. Keep this receipt.' : s.name;
     const dl = document.createElement('dl'); dl.className = 'mk-facts';
     dl.append(row('Receipt', s.id), row('Module', s.name + ' (' + s.kind + ')'), row('Status', LABEL[s.status] || s.status), row('Builder share', s.builderBps / 100 + '%'), row('Creation hash', s.creationHash), row('Updated', new Date(s.updatedAt).toLocaleString()));
-    const note = document.createElement('p'); note.className = 'mk-note'; note.textContent = s.note ? 'Reviewer: ' + s.note : 'Reviewers will note what they find here. Bookmark this page: ' + location.origin + '/market-submit.html#receipt=' + s.id;
+    const note = document.createElement('p'); note.className = 'mk-note'; note.textContent = s.note ? 'Reviewer: ' + s.note : 'Reviewers will note what they find here. Bookmark this page: ' + location.origin + '/market-submit#receipt=' + s.id;
     receipt.replaceChildren(head, dl, note);
   } catch (err) { receipt.textContent = err.message; }
 }

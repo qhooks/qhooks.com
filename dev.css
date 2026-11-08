@@ -2,7 +2,7 @@
 .dev-page h3{margin-top:1.4rem}
 .dev-toc{display:flex;flex-wrap:wrap;gap:.4rem .9rem;margin:1rem 0 1.5rem;font-size:.92rem}
 .dev-toc a{text-decoration:none;border-bottom:1px solid currentColor;opacity:.85}
-.dev-page section{margin:2.2rem 0}
+.dev-page section{margin:2.2rem 0;scroll-margin-top:100px}
 .dev-page pre{overflow-x:auto;max-width:100%;padding:.9rem 1rem;border-radius:10px;border:1px solid var(--line,rgba(127,127,127,.28));font-size:.85rem;line-height:1.5}
 .dev-table{overflow-x:auto;margin:.75rem 0}
 .dev-table table{width:100%;border-collapse:collapse;font-size:.92rem}

@@ -265,7 +265,7 @@ if (root && out) {
     return el('div', { class: 'qxb-modules', id: 'qxb-modules' },
       el('p', { class: 'qxb-mod-head', text: 'Modules are reviewed contracts that earn a share of your launch income for your holders. Each one gets its own panel on your launch page.' }),
       cards.length ? cards : el('p', { text: 'No modules are listed yet.' }),
-      el('small', {}, 'Built one? ', el('a', { href: '/builders.html', text: 'Submit a module' })));
+      el('small', {}, 'Built one? ', el('a', { href: '/builders', text: 'Submit a module' })));
   }
   loadModules().then(() => { if (modulesOpen || state.payees.some(p => moduleIdOfPayee(p.addr) >= 0)) render(); });
   // A vesting payee: its share goes to a public stream contract that pays the wallet evenly over the period.

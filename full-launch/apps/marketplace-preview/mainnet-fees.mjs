@@ -21,6 +21,7 @@ export async function baseDataFees(request,data,gas){
  const [l1,operator]=await Promise.all([ask('0xf1c7a58b',size),ask('0x275aedd2',BigInt(gas))]);
  return Object.freeze({l1Wei:l1.toString(),operatorWei:operator.toString(),unsignedSizeBound:size.toString()});
 }
+const TIP_CAP=100000000n; // 0.1 gwei
 export async function quoteBaseCreation({request,owner,data,clock=Date.now}){
  ensure(typeof request==='function'&&address(owner)&&bytes(data)&&data.length<=98306,'Deployment quote input');
  ensure(await request('eth_chainId',[])===BASE_CHAIN,'Switch your wallet to Base mainnet');
@@ -29,10 +30,17 @@ export async function quoteBaseCreation({request,owner,data,clock=Date.now}){
   request('eth_getTransactionCount',[owner,'pending']),
   request('eth_estimateGas',[{from:owner,data,value:'0x0'}]),request('eth_getBalance',[owner,'latest'])
  ]);
- const base=unsigned(block?.baseFeePerGas,'baseFeePerGas'),tip=unsigned(priority,'priority fee'),n=unsigned(nonce,'pending nonce'),g=unsigned(estimate,'gas estimate');
- ensure(base>0n&&tip<=1000000000n&&n<(1n<<64n)-1n&&g>0n,'Invalid deployment fee data');
+ const base=unsigned(block?.baseFeePerGas,'baseFeePerGas'),walletTip=unsigned(priority,'priority fee'),n=unsigned(nonce,'pending nonce'),g=unsigned(estimate,'gas estimate');
+ ensure(base>0n&&n<(1n<<64n)-1n&&g>0n,'Invalid deployment fee data');
+ // The flow's max fee is 1 gwei (2 × base fee + tip). Base orders by tip and its usual tip is ~0.001 gwei, so a wallet
+ // that suggests a tip of ~1 gwei made the deploy refuse outright. The requested tip is now lowered to at most
+ // 0.1 gwei (and to what fits under the cap); it is never raised. Plain-word refusals end with a period so the page shows them.
+ const room=1000000000n-base*2n;
+ ensure(room>0n,'Base network fees are unusually high right now. Nothing was sent; wait a few minutes and retry.');
+ const tip=[walletTip,TIP_CAP,room].reduce((a,b)=>a<b?a:b);
  const gas=(g*125n+99n)/100n,maxFee=base*2n+tip;
- ensure(gas<=7000000n&&maxFee<=1000000000n,'Deployment exceeds this flow’s gas limit');
+ ensure(gas<=7000000n,'This launch needs more gas than the guided flow allows on Base. Nothing was sent; remove an option or use Expert Studio.');
+ ensure(maxFee<=1000000000n,'Base network fees are unusually high right now. Nothing was sent; wait a few minutes and retry.');
  const fees=await baseDataFees(request,data,hex(gas));
  const execution=gas*maxFee,total=execution+2n*(BigInt(fees.l1Wei)+BigInt(fees.operatorWei));
  ensure(total<=unsigned(balance,'native balance'),'Not enough ETH on Base for this fee estimate');

@@ -32,3 +32,25 @@
  .rp-phases,.rp-phase.is-now ul{grid-template-columns:1fr}
  .rp-phase{padding:22px}
 }
+
+/* QHOOKS token block (launch-day release). Tags: Live / Next / Planned. */
+.rp-tok-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 40px;margin-bottom:24px}
+.rp-tok-head .cx-h2{margin:0}
+.rp-tok-head p{margin:0;max-width:46ch;color:var(--qx-muted);font-size:15.5px;line-height:1.55}
+.rp-tok-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:14px}
+.rp-tok-col{display:flex;flex-direction:column;gap:12px;padding:26px;border:1px solid var(--qx-line);border-radius:var(--qx-radius);background:var(--qx-panel);scroll-margin-top:110px}
+.rp-tok-col.is-live{border-color:color-mix(in srgb,var(--qx-brass) 40%,var(--qx-line));background:radial-gradient(80% 120% at 100% 0%,color-mix(in srgb,var(--qx-brass) 14%,transparent),transparent 60%),var(--qx-panel)}
+.rp-tag{padding:3px 9px;border-radius:99px;font:600 11px/1.4 var(--qx-sans);font-style:normal;letter-spacing:.06em;text-transform:uppercase}
+.rp-tag-live{color:var(--qx-on-brass);background:var(--qx-brass);border:1px solid var(--qx-brass)}
+.rp-tag-next{color:var(--qx-brass);border:1px solid var(--qx-brass)}
+.rp-tag-planned{color:var(--qx-muted);border:1px solid var(--qx-line-2)}
+.rp-tok-col h3{margin:0;font:650 22px/1.15 var(--qx-sans)!important;letter-spacing:-.02em!important;color:var(--qx-ink)}
+.rp-tok-col ul{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.rp-tok-col li{position:relative;padding-left:20px;color:var(--qx-muted);font-size:15px;line-height:1.55}
+.rp-tok-col li::before{content:"";position:absolute;left:2px;top:.62em;width:7px;height:7px;border-radius:50%;border:1.5px solid var(--qx-brass)}
+.rp-tok-col.is-live li{color:var(--qx-ink)}
+.rp-tok-col.is-live li::before{background:var(--qx-brass)}
+.rp-tok-col li a{color:inherit;text-decoration:none;border-bottom:1px solid var(--qx-line-2)}
+.rp-tok-col li a:hover{border-color:var(--qx-brass)}
+.qx-inner main .rp-tok-col{border-radius:var(--qx-radius)}
+@media (max-width:900px){.rp-tok-grid{grid-template-columns:1fr}.rp-tok-col{padding:22px}}

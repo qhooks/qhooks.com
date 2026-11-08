@@ -70,7 +70,7 @@ function showDetail(item, trigger) {
   detailContent.innerHTML = `<p class="detail-kicker">${item.category} / ${copy ? "Developer beta" : item.status}</p>
     <h2 id="detail-title" class="detail-title">${copy ? copy.name : item.name}</h2>
     <p>${copy ? copy.summary : item.detail}</p>
-    ${copy ? `<section class="evidence" aria-label="Integration scope">${protectedAction}${unprotectedActions}</section><p><a class="text-link" href="integrate.html">Integration guide ↗</a></p>` : ""}
+    ${copy ? `<section class="evidence" aria-label="Integration scope">${protectedAction}${unprotectedActions}</section><p><a class="text-link" href="/integrate">Integration guide ↗</a></p>` : ""}
     <details class="technical-notes"><summary>Technical notes and test history</summary><section class="evidence" aria-label="Evidence status"><p>${item.detail}</p>${evidence}${provenance}${limitations}</section></details>`;
   dialog.showModal();
   closeDialog.focus();

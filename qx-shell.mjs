@@ -22,3 +22,5 @@ if (header && nav) {
  nav.addEventListener('focusin', e => { if (!e.target.classList.contains('qn-top')) header.classList.remove('qn-hush'); });
  nav.addEventListener('pointerover', e => { if (e.target.closest('.qn-g') !== nav.querySelector('.qn-g:focus-within')) header.classList.remove('qn-hush'); });
 }
+
+import './qx-repoproof-entrypoints.mjs';

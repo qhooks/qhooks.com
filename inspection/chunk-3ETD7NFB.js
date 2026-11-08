@@ -45,7 +45,7 @@ function normalizeInspectionRequest(input) {
   if (v.jsonrpc !== "2.0" || typeof v.method !== "string" || !(typeof v.id === "string" && /^[A-Za-z0-9._:-]{1,64}$/.test(v.id) || Number.isSafeInteger(v.id))) throw new TypeError("Invalid request");
   const params = normalizeInspectionParams(v.method, v.params);
   const request = Object.freeze({ jsonrpc: "2.0", method: v.method, params, id: v.id });
-  return Object.freeze({ request, upstream: Object.freeze({ ...request, method: v.method.replace(/^qhooks_/, "hookline_") }) });
+  return Object.freeze({ request, upstream: Object.freeze({ ...request }) });
 }
 function canonical(value, depth = 0) {
   if (depth > 16) throw new TypeError("JSON nesting limit");

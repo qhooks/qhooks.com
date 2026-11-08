@@ -8,7 +8,7 @@
 // Reads use the public API (https://qhooks.com/api.html) and, for quotes, the chain's own RPC when given.
 // The SDK never holds keys or sends transactions: it returns { to, data, value } for your wallet to send.
 
-export const VERSION = '1.1.0';
+export const VERSION = '1.2.0';
 export const API = 'https://qhooks.com/api/v1';
 const Z = '0x0000000000000000000000000000000000000000';
 export const PERMIT2 = '0x000000000022d473030f116ddee9f6b43ac78ba3';
@@ -117,6 +117,34 @@ export function createClient({ api = API, rpc = {}, fetch: f = globalThis.fetch.
       activity: params => get('/hooks/tape/activity' + query(params))
     })
   });
+  // Public captured-template preparation, using the configured API's origin.
+  // This namespace is transport only; it does not sign, compile source or deploy.
+  async function labRequest(path, input, { signal } = {}) {
+    signal?.throwIfAborted();
+    const url = new URL('/api/lab/catalog' + path, api);
+    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw new TypeError('Use an HTTP(S) API origin without credentials.');
+    const posting = path === '/build';
+    const response = await f(url.href, { method: posting ? 'POST' : 'GET', mode: 'cors', credentials: 'omit', redirect: 'manual', cache: 'no-store', signal,
+      headers: { accept: 'application/json', ...(posting ? { 'content-type': 'application/json' } : {}) }, ...(posting ? { body: JSON.stringify(input) } : {}) });
+    signal?.throwIfAborted();
+    if (response.type === 'opaqueredirect' || response.status >= 300 && response.status < 400) {
+      const error = new Error('Lab API redirects are refused.'); error.code = 'redirect_refused'; error.status = response.status; throw error;
+    }
+    const body = await response.json().catch(() => null); signal?.throwIfAborted();
+    if (!response.ok) {
+      const error = new Error(body?.error?.message || 'Lab API HTTP ' + response.status);
+      error.status = response.status; error.code = body?.error?.code || 'lab_api_error'; error.body = body; throw error;
+    }
+    const envelope = body?.schemaVersion === 1 && /^[0-9a-f]{64}$/i.test(body?.sourceVersion || '');
+    const valid = posting ? envelope && body.kind === 'qhooks-lab-catalog-build' && body.sourceVersion === input?.sourceVersion &&
+      body.request?.kind === 'qhooks-lab-template-request' && body.request.schemaVersion === 1 && body.request.sourceVersion === input?.sourceVersion && body.request.template === input?.template && body.request.chainId === '8453' && input?.chainId === '8453' &&
+      body.artifact?.chainId === '8453' && body.artifact.template === 'catalogue/' + input?.template && body.artifact.sourceVersion === body.sourceVersion && body.artifact.prepared === true && body.artifact.executionEnabled === false && body.artifact.signingEnabled === false && body.artifact.compilerInput === null &&
+      body.artifactInput?.kind === 'qhooks-lab-template-artifact-input' && body.artifactInput.sourceVersion === body.sourceVersion && Array.isArray(body.additionalChecks)
+      : envelope && body.kind === 'qhooks-lab-catalog' && body.chainId === '8453' && Array.isArray(body.templates);
+    if (!valid) { const error = new Error('The Lab API response did not match this preparation.'); error.code = 'invalid_response'; error.status = response.status; throw error; }
+    return body;
+  }
+  const lab = Object.freeze({ catalog: options => labRequest('', undefined, options), prepareTemplate: (request, options) => labRequest('/build', request, options) });
   const rpcUrl = c => typeof rpc === 'function' ? rpc(c) : rpc[c];
   async function rpcCall(chainId, method, params) {
     const url = rpcUrl(chainId); if (!url) throw new Error('No RPC for chain ' + chainId);
@@ -129,7 +157,7 @@ export function createClient({ api = API, rpc = {}, fetch: f = globalThis.fetch.
     const j = await r.json(); if (j.error) { const e = new Error(j.error.message || 'eth_call failed'); e.data = j.error.data; throw e; } return j.result;
   }
   const client = Object.freeze({
-    hooks,
+    hooks, lab,
     chains: () => get('/chains').then(j => j.chains),
     markets: ({ chain } = {}) => get('/markets' + (chain ? '?chain=' + chain : '')).then(j => j.markets),
     market: (chainId, controller) => get(`/markets/${chainId}/${controller.toLowerCase()}`),

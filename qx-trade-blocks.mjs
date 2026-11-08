@@ -17,7 +17,7 @@ const RPC = chainMap(c => c.rpc);
 const SEL = { config: '0x79502c55', previewRate: '0xb9c3fc44', kingCurrent: '0x32cf3d5f', kingPot: '0x496def18', clockPot: '0x68ca9100', clockDeadline: '0x0e6b792b', buybackPot: '0x39a704dc', totalPoints: '0x567142be', launchTime: '0x790ca413' };
 const card = document.getElementById('qtb');
 // Trade page: "Open in the terminal" carries the selected pool.
-document.addEventListener('qhooks:pool', e => { const a = document.getElementById('qt-terminal'); if (a && e.detail) a.href = '/terminal.html#pool=' + encodeURIComponent(JSON.stringify(e.detail)); });
+document.addEventListener('qhooks:pool', e => { const a = document.getElementById('qt-terminal'); if (a && e.detail) a.href = '/terminal#pool=' + encodeURIComponent(JSON.stringify(e.detail)); });
 const word = (hex, i) => BigInt('0x' + hex.slice(2 + i * 64, 2 + (i + 1) * 64));
 const pad = v => BigInt(v).toString(16).padStart(64, '0');
 let seq = 0;
@@ -82,7 +82,7 @@ async function show(pool) {
     if (mine !== seq) return;
     const stock = stockPair(pool.chainId, pool.constructor.quote), asset = stock ? [stock.symbol, 18] : QUOTE_ASSETS[pool.chainId] || ['quote', 18], q = v => (Number(BigInt(v)) / 10 ** asset[1]).toLocaleString(undefined, { maximumFractionDigits: 4 }) + ' ' + asset[0];
     const h = (t, a = {}, ...k) => { const n = document.createElement(t); Object.assign(n, a); n.append(...k); return n; };
-    const list = h('ul', { className: 'qtb-list' }, ...on.map(id => { const b = BLOCKS.find(x => x.id === id); return h('li', {}, h('a', { href: '/hooks.html#block-' + id, textContent: b?.name || id }), h('span', { textContent: summary(id, c, asset) })); }));
+    const list = h('ul', { className: 'qtb-list' }, ...on.map(id => { const b = BLOCKS.find(x => x.id === id); return h('li', {}, h('a', { href: '/hooks#block-' + id, textContent: b?.name || id }), h('span', { textContent: summary(id, c, asset) })); }));
     const pots = [on.includes('king') && ['King pot', q(kingPot)], on.includes('clockPot') && ['Last-buyer pot', q(clockPot)], on.includes('buyback') && ['Buyback pot', q(buybackPot)]].filter(Boolean);
     card.replaceChildren(
       h('h2', { id: 'qtb-heading', textContent: 'Blocks on this pool' }),

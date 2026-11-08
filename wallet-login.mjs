@@ -1,6 +1,7 @@
 import {getWalletHub} from './wallet-hub.mjs';
 import {embeddedWalletProvider,EMBEDDED_RDNS,EMBEDDED_UUID,PHONE_RDNS,PHONE_UUID} from './embedded-wallet-provider.mjs';
 import {launchChains} from './chain-catalog.mjs';
+import './qx-confirm-top.mjs';
 
 const DROP_GRACE_MS=1500;
 // Progress steps for diagnosing the email wallet on real devices (no addresses, tokens or emails).
@@ -15,14 +16,35 @@ function intent(target,mode){
   const age=Date.now()-Number(saved);return mode==='consume'&&/^\d{13}$/.test(saved||'')&&age>=0&&age<300000;
  }catch{return false;}
 }
+// In-app browsers (X, Telegram, Instagram, Facebook, Android WebViews, iOS WKWebViews without Safari):
+// Google refuses sign-in there ("disallowed_useragent"), so offer email only and say how to open a real browser.
+export function inAppBrowser(target=globalThis){
+ const ua=String(target.navigator?.userAgent||'');
+ const app=/Twitter|TwitterAndroid/i.test(ua)?'X':target.TelegramWebviewProxy||target.Telegram?.WebView||/Telegram/i.test(ua)?'Telegram':/Instagram/i.test(ua)?'Instagram':/FBAN|FBAV|FB_IAB/i.test(ua)?'Facebook':/LinkedInApp/i.test(ua)?'LinkedIn':null;
+ const webview=/; wv\)/.test(ua)||/(iPhone|iPad|iPod).*AppleWebKit(?!.*Safari\/)/i.test(ua);
+ return app||webview?{app:app||'this app',ios:/iPhone|iPad|iPod/i.test(ua)}:null;
+}
 export function bindWalletLogin({target=window,document:d=document,hub=getWalletHub(target),load=()=>import('/privy/entry.js')}={}){
  const $=id=>d.getElementById('qhc-'+id),button=$('email-login');if(!button)return;
  const bridge=embeddedWalletProvider(target);
  // Any phone wallet through WalletConnect (Privy pairs it: wallet-app list on a phone, QR on desktop).
  const phoneBridge=embeddedWalletProvider(target,{uuid:PHONE_UUID,name:'WalletConnect · phone wallet',rdns:PHONE_RDNS});let wantPhone=false;let sdk=null,loading=null,state={ready:false,authenticated:false,hasWallet:false},wanted=false,hasProvider=false,providerChain=null,wantedChain=null,dead=false,switchTimer=null,dropTimer=null,walletAddress=null,openTimer=null;
  const status=text=>{$('login-status').textContent=text;};
+ const inApp=inAppBrowser(target);if(inApp)target.QHOOKS_LOGIN_METHODS=['email'];
+ if(inApp&&!$('in-app')){
+  const copy=d.createElement('button');copy.type='button';copy.className='qhc-secondary';copy.textContent='Copy link';
+  copy.addEventListener('click',async()=>{try{await target.navigator.clipboard.writeText(target.location.href);copy.textContent='Link copied';}catch{copy.textContent=target.location.href;}});
+  const note=d.createElement('p');note.id='qhc-in-app';note.className='qhc-in-app';
+  note.append('You\u2019re in '+inApp.app+'\u2019s browser. Sign in with email here, or open in '+(inApp.ios?'Safari':'Chrome')+': tap \u22ef \u2192 Open in browser. ',copy);
+  button.after(note);
+ }
+ // Phones without a wallet extension: email first, wallet apps folded under a toggle.
+ if(target.matchMedia?.('(pointer:coarse)').matches&&!target.ethereum&&!$('more-wallets')){
+  const mobile=d.querySelector('#qhc-dialog .qhc-mobile'),choices=$('choices');
+  if(mobile||choices){const more=d.createElement('details');more.id='qhc-more-wallets';more.className='qhc-more-wallets';const sum=d.createElement('summary');sum.textContent='I have a wallet app';more.append(sum);(mobile||choices).before(more);if(mobile)more.append(mobile);if(choices)more.append(choices);}
+ }
  const show=()=>{if(!dead&&!$('dialog').open)$('dialog').showModal();};
- function render(){button.disabled=!!loading&&!state.ready;button.textContent=!state.authenticated?'Continue with email or Google':state.hasWallet?'Use my QHooks wallet':'Create my EVM wallet';$('email-logout').hidden=!state.authenticated;const c=hub.snapshot().current;$('email-network').hidden=c?.entry.rdns!==EMBEDDED_RDNS;if(c?.entry.rdns===EMBEDDED_RDNS&&!wantedChain)$('embedded-chain').value=c.chainId;}
+ function render(){button.disabled=!!loading&&!state.ready;button.textContent=!state.authenticated?(inApp?'Continue with email':'Continue with email or Google'):state.hasWallet?'Use my QHooks wallet':'Create my EVM wallet';$('email-logout').hidden=!state.authenticated;const c=hub.snapshot().current;$('email-network').hidden=c?.entry.rdns!==EMBEDDED_RDNS;if(c?.entry.rdns===EMBEDDED_RDNS&&!wantedChain)$('embedded-chain').value=c.chainId;}
  async function connect(){
   if(!wanted||dead||!hasProvider||wantedChain&&providerChain!==wantedChain)return;
   wanted=false;target.clearTimeout(switchTimer);wantedChain=null;status('Connecting your QHooks wallet…');
@@ -52,7 +74,7 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
  }
  async function login(){
   if(dead)return;try{await initialize();wanted=true;wantedChain=null;
-   if(!state.authenticated){intent(target,'save');$('dialog').close();sdk.login();}
+   if(!state.authenticated){intent(target,'save');$('dialog').close();sdk.login(inApp?['email']:undefined);}
    else if(!state.hasWallet){status('Creating your EVM wallet…');$('dialog').close();await sdk.create();}
    else{trace('open','has provider:'+hasProvider);status('Opening your QHooks wallet…');await connect();
     // Say where it stopped instead of leaving "Opening…" forever.

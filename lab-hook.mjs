@@ -9,7 +9,7 @@ import { restoreSigner } from '/full-launch/packages/multichain-launch/actions/s
 import { typedGraduationAction } from '/full-launch/prototypes/pq-graduation/client/graduation-typed-data.mjs';
 import { getWalletHub } from '/wallet-hub.mjs';
 
-const EXPLORER = { '8453': 'https://basescan.org', '4663': 'https://explorer.chain.robinhood.com', '1': 'https://etherscan.io', '42161': 'https://arbiscan.io', '56': 'https://bscscan.com', '5042': 'https://explorer.arc.io', '99801': 'https://explorer-elysium-testnet.t.conduit.xyz' };
+const EXPLORER = { '8453': 'https://basescan.org', '4663': 'https://robinhoodchain.blockscout.com', '1': 'https://etherscan.io', '42161': 'https://arbiscan.io', '56': 'https://bscscan.com', '5042': 'https://explorer.arc.io', '99801': 'https://explorer-elysium-testnet.t.conduit.xyz' };
 const PROOF_T = '(uint256,uint64,uint64,bytes,bytes)';
 const ZERO32 = '0x' + '0'.repeat(64);
 const TAGS = { 21: 'QHOOKS/SLHVAULT/WITHDRAW/1', 22: 'QHOOKS/LPFEE/REPLACE/1', 23: 'QHOOKS/PRICEBAND/REPLACE/1', 24: 'QHOOKS/VOLEPOCH/OPEN/1', 25: 'QHOOKS/DIRFEE/SCHEDULE/1', 26: 'QHOOKS/CIRCUIT/RESUME/1' };

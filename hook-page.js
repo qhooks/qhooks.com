@@ -19,7 +19,7 @@ if (!hook) {
   const h1 = createElementWithText('h1', 'Hook not found');
   const p = createElementWithText('p', 'Choose a hook from the collection.');
   const a = document.createElement('a');
-  a.href = 'hooks.html';
+  a.href = '/hooks';
   a.textContent = 'Browse hooks';
   main.append(h1, p, a);
 } else {
@@ -37,18 +37,18 @@ if (!hook) {
   const links = document.createElement('p');
   links.className = 'product-actions';
   const allHooks = document.createElement('a');
-  allHooks.href = 'hooks.html';
+  allHooks.href = '/hooks';
   allHooks.textContent = 'All hooks';
   const lab = document.createElement('a');
-  lab.href = hook.id === 'qgraduation-pq-liquidity-migration' ? 'graduation-lab.html' : hook.id === 'qrevenue-split-pq-vaults' ? 'lab.html?template=split' : 'lab.html';
+  lab.href = hook.id === 'qgraduation-pq-liquidity-migration' ? '/graduation-lab' : hook.id === 'qrevenue-split-pq-vaults' ? '/lab?template=split' : '/lab';
   lab.textContent = 'Build in the Lab';
-  if (hook.id === 'qprice-band-pq-governance') lab.href = 'price-band-lab.html';
-  if (hook.id === 'qvolume-epochs-pq-renewal') lab.href = 'volume-epoch-lab.html';
-  if (hook.id === 'qcircuit-recovery-pq-resume') lab.href = 'circuit-lab.html';
+  if (hook.id === 'qprice-band-pq-governance') lab.href = '/price-band-lab';
+  if (hook.id === 'qvolume-epochs-pq-renewal') lab.href = '/volume-epoch-lab';
+  if (hook.id === 'qcircuit-recovery-pq-resume') lab.href = '/circuit-lab';
   const feeBundle = ['qdynamic-fee-pq-governance', 'qdirectional-fees-pq-schedules'].includes(hook.id);
-  if (feeBundle) lab.href = 'fee-lab.html?template=' + (hook.id === 'qdynamic-fee-pq-governance' ? 'dynamic' : 'directional');
+  if (feeBundle) lab.href = '/fee-lab?template=' + (hook.id === 'qdynamic-fee-pq-governance' ? 'dynamic' : 'directional');
   const integrate = document.createElement('a');
-  integrate.href = 'integrate.html';
+  integrate.href = '/integrate';
   integrate.textContent = 'Creator Revenue reference';
   links.append(allHooks, ' · ', lab, ' · ', integrate);
 
@@ -65,10 +65,10 @@ if (!hook) {
   }
   if (hook.id === 'qgraduation-pq-liquidity-migration') {
     const launch = createElementWithText('a', 'Open graduation setup');
-    launch.href = 'graduation.html';
+    launch.href = '/graduation';
     links.append(' · ', launch);
     const manage = createElementWithText('a', 'Manage graduation liquidity');
-    manage.href = 'graduation-actions.html';
+    manage.href = '/graduation-actions';
     links.append(' · ', manage);
     const availability = createElementWithText('p', 'Create a local token-pair and controller setup, then open the liquidity workspace to initialize, manage policy, migrate and claim payouts. The graduation threshold measures net raw quote-token inflow, not market cap.');
     main.insertBefore(availability, links);

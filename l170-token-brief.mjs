@@ -18,7 +18,7 @@ export function normalizeTokenBrief(input) {
 
 export function tokenBriefLink(input) {
   const b = normalizeTokenBrief(input);
-  return '/qtoken-studio.html?chain=' + b.chainId + '#brief=' + encodeURIComponent(JSON.stringify(b));
+  return '/qtoken-studio?chain=' + b.chainId + '#brief=' + encodeURIComponent(JSON.stringify(b));
 }
 
 export function readTokenBrief(hash, chainId) {

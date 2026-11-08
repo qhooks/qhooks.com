@@ -282,9 +282,10 @@ export function createFundingRow({ h, onChange = () => {}, action = 'swap', getP
       active = quote;
       const summary = summarize(quote), prefix = action === 'order' ? 'Fund from ' : 'Pay with ';
       select.options[select.selectedIndex].textContent = prefix + displayAmount(summary.inAmount, from.decimals) + ' ' + from.symbol + ' on ' + chainName(from.chainId);
-      line.textContent = `Arrives in ~${summary.timeSeconds ?? '—'} s · No QHooks fee · Relay's fee $${summary.relayerFeeUsd}`;
-      detail.textContent = `Relay network gas $${summary.gasFeeUsd} · Relay total $${summary.feeTotalUsd} · Destination gas reserve estimate ${formatAmount(input.costs.estimatedGasCost, 18)} ${chainById(input.chainId).native}. ` +
-        'Includes a 0.5% funding buffer; any unused pay asset stays in your wallet.';
+      // Plain line first; the provider breakdown stays in the hover detail.
+      line.textContent = `Moving cost ≈ $${summary.feeTotalUsd} · arrives in about ${summary.timeSeconds ?? 20} s · a little extra ${chainById(input.chainId).native} is kept for gas.`;
+      line.title = `Bridge provider: Relay · its fee $${summary.relayerFeeUsd} · network gas $${summary.gasFeeUsd} · no QHooks fee`;
+      detail.textContent = `Includes a 0.5% buffer; anything unused stays in your wallet. Gas kept on ${chainById(input.chainId).name}: about ${formatAmount(input.costs.estimatedGasCost, 18)} ${chainById(input.chainId).native}.`;
       prompts.textContent = fundingPrompts(quote, { ...input.costs, ...getPlan(quote), action }).text + ' · Your wallet may also ask to switch networks.';
     } catch (e) { if (mine !== revision) return; line.textContent = e.message; }
     notify();

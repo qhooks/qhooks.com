@@ -18,6 +18,7 @@ a.qtr-badge:hover{color:var(--qx-ink,#f1eee3)}
 .qtr-verdict.caution{border-color:color-mix(in srgb,var(--qx-brass,#d2ad72) 50%,transparent)}
 .qtr-verdict.clear{border-color:color-mix(in srgb,#5fae8a 45%,transparent)}
 .qtr-headline{margin:0;font-size:12.5px;color:var(--qx-muted,#a7aea3)}
+.qtr-evidence{margin:2px 0;font:11.5px/1.55 var(--qx-sans,system-ui,sans-serif);color:var(--qx-muted,#a7aea3);overflow-wrap:anywhere}
 .qtr-checks{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2px;font-size:12.5px;color:var(--qx-ink,#f1eee3)}
 .qtr-checks li::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:8px;background:var(--qx-faint,#6f776c);vertical-align:1px}
 .qtr-checks li.danger::before{background:#d06a5b}.qtr-checks li.caution::before{background:var(--qx-brass,#d2ad72)}.qtr-checks li.clear::before{background:#5fae8a}
@@ -38,6 +39,16 @@ a.qtr-badge:hover{color:var(--qx-ink,#f1eee3)}
 .qxt-trust:empty{display:none}
 .qxt-r3 .qtr-badge,.qxt-r3 .qtr-copy{font-size:10.5px;padding:1px 6px}
 .qxt-risk .qtr-badge{font-size:11px;padding:0 6px}
+.qxt-risk.qtr-ticket-risk--compact{padding:0}
+.qxt-risk>.qtr-ticket-risk{margin:0}
+.qxt-risk>.qtr-ticket-risk--compact{border:0;background:transparent}
+.qtr-risk-details{min-width:0}
+.qtr-risk-summary{padding:8px 10px;font:500 12px/1.5 var(--qx-sans,system-ui,sans-serif);cursor:pointer;overflow-wrap:anywhere}
+.qtr-risk-summary:focus-visible{outline:2px solid var(--qx-brass,#d2ad72);outline-offset:3px;border-radius:4px}
+.qxt-risk>.qtr-ticket-risk--compact .qtr-risk-summary,.qtr-ticket-risk:not(.qtr-ticket-risk--compact) .qtr-risk-summary{padding:0}
+.qtr-risk-detail-body{display:flex;flex-direction:column;gap:6px;padding:8px 10px 10px;overflow-wrap:anywhere}
+.qtr-risk-details:not([open])>.qtr-risk-detail-body{display:none}
+.qtr-ticket-risk:not(.qtr-ticket-risk--compact) .qtr-risk-detail-body{padding:8px 0 0}
 @media (max-width:760px){.qxt-trust .qtr-badge,.qxt-trust .qtr-copy{font-size:10.5px}}
 /* Verify page */
 .qvf{max-width:760px;margin:0 auto;padding:56px 20px 80px}

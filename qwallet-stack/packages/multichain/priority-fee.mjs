@@ -10,7 +10,17 @@ function unsupported(error){
  const original=data(data(error,'data'),'originalError');
  return code===-32603&&[-32601,-32004,4200].includes(data(original,'code'));
 }
+// Base (0x2105): wallets that suggest a ~1 gwei tip pushed launch steps past the flows' 1 gwei max fee. Base's
+// usual tip is ~0.001 gwei, so the tip the flows request on Base is lowered to at most 0.1 gwei (never raised).
+// Other chains are unchanged.
+const BASE_TIP_CAP=100000000n;
 export async function readPriorityFee(request){
+ const tip=await readPriorityFeeRaw(request);
+ if(BigInt(tip)<=BASE_TIP_CAP)return tip;
+ const chain=await request('eth_chainId',[]);
+ return chain==='0x2105'?'0x'+BASE_TIP_CAP.toString(16):tip;
+}
+async function readPriorityFeeRaw(request){
  if(typeof request!=='function')throw TypeError('Fee request function required');
  let direct;
  try{direct=await request('eth_maxPriorityFeePerGas',[]);}

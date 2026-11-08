@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <title>QHOOKS contributor round | QHooks</title>
+ <meta name="description" content="The QHOOKS contributor round: put in ETH before launch; together it is the first buy, and you get your share.">
+ <meta name="robots" content="noindex,nofollow">
+ <meta name="theme-color" content="#0c100e"><link rel="icon" href="/qhooks-logo.jpg" type="image/jpeg">
+ <script src="/theme.js"></script><link rel="stylesheet" href="/qx-site.css"><link rel="stylesheet" href="/qx-contribute.css">
+</head>
+<body class="qx cr">
+ <a class="skip-link" href="#cr-app">Skip to the round</a>
+ <header class="site-header">
+  <a class="brand" href="/" aria-label="QHooks home"><span class="mark" aria-hidden="true"><img src="/qhooks-logo.jpg" width="34" height="34" alt=""></span><span>QHooks</span></a>
+  <nav class="site-nav" aria-label="Main navigation"><a href="/terminal">Terminal</a><a href="/hook-marketplace">Hooks</a><a href="/community">Community</a><a href="/integrate">Integrate</a></nav>
+  <button class="theme-toggle" data-theme-toggle type="button" aria-pressed="false" hidden>Dark mode</button>
+ </header>
+ <main id="cr-app" class="cr-main">
+  <section class="cr-hero">
+   <p class="qx-eyebrow">QHOOKS · Robinhood Chain</p>
+   <h1>Contributor round</h1>
+   <p class="cr-lede">Put in whatever ETH you like before launch. At launch, everyone's ETH together (up to 0.5 ETH) is the very first buy, inside the launch transaction, so nobody gets in ahead of you. You get your share of what it buys.</p>
+  </section>
+
+  <section class="cr-panel cr-status" aria-labelledby="cr-status-title">
+   <div class="cr-head"><h2 id="cr-status-title">Round status</h2><span id="cr-state" class="cr-badge">Reading…</span></div>
+   <div class="cr-facts">
+    <div><span>Raised</span><strong id="cr-raised">–</strong><small id="cr-raised-of"></small></div>
+    <div><span>Group's share</span><strong id="cr-price">–</strong><small>of supply, from the first buy</small></div>
+    <div><span>Contributors</span><strong id="cr-people">–</strong><small id="cr-people-of"></small></div>
+    <div><span id="cr-when-label">Closes</span><strong id="cr-when">–</strong><small id="cr-when-sub"></small></div>
+   </div>
+   <div class="cr-bar" aria-hidden="true"><span id="cr-bar-fill"></span></div>
+   <p id="cr-status-line" class="cr-note" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="cr-panel cr-send" id="cr-send" aria-labelledby="cr-send-title" hidden>
+   <div class="cr-head"><h2 id="cr-send-title">Send ETH on Robinhood Chain to</h2><button id="cr-copy" class="cr-button" type="button">Copy address</button></div>
+   <p id="cr-send-address" class="cr-mono cr-address"></p>
+   <p class="cr-note">From your own wallet only (MetaMask, Rabby, Coinbase Wallet and the like). Not from an exchange, and not from a multisig or other contract wallet: your QHOOKS go back to the sending address.</p>
+  </section>
+
+  <div class="cr-grid">
+   <section class="cr-panel" aria-labelledby="cr-wallet-title">
+    <div class="cr-head"><h2 id="cr-wallet-title">Your share</h2><button id="cr-connect" class="cr-button cr-primary" type="button">Connect wallet</button></div>
+    <div id="cr-wallets" class="cr-wallets" hidden></div>
+    <p id="cr-who" class="cr-note">Connect the wallet you sent from to see your share and claim.</p>
+    <div class="cr-facts cr-mine" id="cr-mine" hidden>
+     <div><span>You put in</span><strong id="cr-dep">–</strong></div>
+     <div><span>Your QHOOKS</span><strong id="cr-tokens">–</strong><small id="cr-tokens-sub"></small></div>
+     <div><span>ETH to take back</span><strong id="cr-refund">–</strong><small>only if the round is cancelled</small></div>
+    </div>
+    <div class="cr-actions" id="cr-actions" hidden>
+     <button id="cr-claim" class="cr-button cr-primary" type="button" hidden>Claim QHOOKS</button>
+     <button id="cr-claim-refund" class="cr-button" type="button" hidden>Take my ETH back</button>
+     <button id="cr-unwrap" class="cr-button" type="button" hidden>Unwrap WETH to ETH</button>
+     <button id="cr-cancel" class="cr-button cr-quiet" type="button" hidden>Leave the round</button>
+    </div>
+    <p id="cr-action-status" class="cr-note" role="status" aria-live="polite"></p>
+   </section>
+
+   <section class="cr-panel" id="cr-deposit-panel" aria-labelledby="cr-deposit-title">
+    <div class="cr-head"><h2 id="cr-deposit-title">Put in ETH</h2></div>
+    <form id="cr-deposit" class="cr-form">
+     <label for="cr-amount">Amount in ETH<input id="cr-amount" inputmode="decimal" autocomplete="off" placeholder="1.0" required pattern="[0-9]*[.]?[0-9]*"></label>
+     <p id="cr-preview" class="cr-note">Everyone's ETH together is the first buy at launch. You get your share of what it buys.</p>
+     <button id="cr-deposit-go" class="cr-button cr-primary" type="submit" disabled>Put in ETH</button>
+    </form>
+    <p id="cr-deposit-status" class="cr-note" role="status" aria-live="polite"></p>
+   </section>
+  </div>
+
+  <section class="cr-panel cr-how" aria-labelledby="cr-how-title">
+   <h2 id="cr-how-title">How it works</h2>
+   <ol>
+    <li>Anyone with the round address can put in. Send ETH to it from your own wallet, or use the button here. It sits in the round contract, not in anyone's wallet.</li>
+    <li>Your QHOOKS and any refund go back to the address you sent from. Don't send from an exchange or from a multisig or other contract wallet: you couldn't claim.</li>
+    <li>Until the round closes you can take your ETH back in full.</li>
+    <li>At launch, the round's ETH (up to 0.5 ETH) is the first buy of QHOOKS, inside the same transaction that creates the token and its pool. No one can trade before it.</li>
+    <li>The group buy is 0.5 ETH, about 20% of the supply. If more than 0.5 ETH comes in, everyone is scaled down by the same fraction and the rest of their ETH comes back when they claim.</li>
+    <li>You get the QHOOKS it bought in proportion to your ETH. Nobody's share is fixed in advance.</li>
+    <li>Your QHOOKS are claimable straight after launch and are not locked. After launch, come back here and tap Claim — with the same wallet you sent from.</li>
+    <li>If the round is called off, closes below its minimum, or the launch does not happen by the deadline shown above, everyone takes their full ETH back.</li>
+   </ol>
+  </section>
+
+  <footer class="cr-fine">
+   <p>Contributing is a risk. QHOOKS can trade below what the group paid, and the 2% token tax applies to trades after launch. This page reads the round contract directly; it holds no funds and keeps no records. Not investment advice.</p>
+   <p id="cr-contract" class="cr-mono"></p>
+  </footer>
+ </main>
+ <script type="module" src="/qx-contribute.mjs"></script>
+</body></html>

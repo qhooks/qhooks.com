@@ -1,10 +1,13 @@
+import {discoveryCoverage} from './qx-discover-coverage.mjs';
+import {inspectorProfileMatches,mountInspectorRepoProof} from './qx-discover-repoproof.mjs';
 // Shared Discover formatting, deterministic layout and same-origin page controllers.
 import {projectSummary, projectLabURL} from './qx-discover-projects.mjs';
+import {mountHookChanges, mountRecentChanges, renderTapeStatusCards, upgradeableLabel} from './qx-discover-monitor.mjs';
 export const API = '/api/v1/hooks';
 export const PERMISSIONS = Object.freeze(['beforeInitialize', 'afterInitialize', 'beforeAddLiquidity', 'afterAddLiquidity', 'beforeRemoveLiquidity', 'afterRemoveLiquidity', 'beforeSwap', 'afterSwap', 'beforeDonate', 'afterDonate', 'beforeSwapReturnDelta', 'afterSwapReturnDelta', 'afterAddLiquidityReturnDelta', 'afterRemoveLiquidityReturnDelta']);
 export const CHAIN_NAMES = Object.freeze({8453:'Base',4663:'Robinhood Chain',1:'Ethereum',42161:'Arbitrum One',56:'BNB Chain'});
 export const GROUPS = Object.freeze(['Swap amounts', 'Swap callbacks', 'Liquidity', 'Pool lifecycle', 'No permission bits']);
-const COLORS = ['var(--qx-sage)','var(--qx-brass)','#8ca5b1','#b3a0b8','#bd9980','#9d9e96'];
+const COLORS = ['var(--qx-sage)','var(--qx-brass)','#9d9e96','#8ca5b1','#b3a0b8','#9d9e96'];
 const chainColor = id => ({8453:0,4663:1,1:2,42161:3,56:4}[Number(id)] ?? 5);
 const WATCH_KEY = 'qhooks.discover.watchlist.v1';
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -20,9 +23,14 @@ export function parseCompareHash(hash) {
   return new Set(parts.map(x => x.id)).size === parts.length ? parts.map(x => x.id) : [];
 }
 export const hookId = hook => parseHookHash(hook.id || `${hook.chainId}:${hook.address || hook.hook || hook.hookAddress}`)?.id || '';
-export const profileURL = hook => { const p = parseHookHash(typeof hook === 'string' ? hook : hookId(hook)); return p ? `discover-hook.html#${p.chainId}:${p.address}` : 'discover-hook.html'; };
-export function hookLabel(h){
-  return h.name || h.verified?.name || h.project?.name || (h.sameCodeAs?'Same code as '+h.sameCodeAs:'') || 'Unnamed hook';
+export const profileURL = hook => { const p = parseHookHash(typeof hook === 'string' ? hook : hookId(hook)); return p ? `/discover-hook#${p.chainId}:${p.address}` : '/discover-hook'; };
+// Best available label: hook name, then verified name, then project, then a named hook with identical code; else "Unnamed hook"
+// with what its permissions let it do. Never a bare address (the address stays on the row as secondary text).
+export function hookLabel(h,{capability=false}={}){
+  const named=h.name || h.verified?.name || h.project?.name || (h.sameCodeAs?'Same code as '+h.sameCodeAs:'');
+  if(named)return named;
+  const cap=(h.capabilities||[])[0]?.title;
+  return capability&&cap?'Unnamed hook · '+cap.replace(/^Can /,'can '):'Unnamed hook';
 }
 export const short = (s, n = 8) => s ? String(s).length > n * 2 + 1 ? String(s).slice(0,n) + '…' + String(s).slice(-n) : String(s) : 'Unavailable';
 export const chainName = id => CHAIN_NAMES[id] || `Chain ${id}`;
@@ -39,14 +47,15 @@ export function filterQuery(state) {
   return p.toString();
 }
 export const boardURL = state => `${API}?${filterQuery(state)}`;
-export function formatNumber(value, reason = 'not reported') {
-  if (value === null || value === undefined || value === '' || (typeof value !== 'number' && typeof value !== 'bigint' && !/^-?\d+(\.\d+)?$/.test(String(value))) || !Number.isFinite(Number(value))) return `Unavailable · ${reason}`;
-  try { return new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(typeof value === 'bigint' ? value : /^-?\d+$/.test(String(value)) ? BigInt(value) : Number(value)); } catch { return `Unavailable · ${reason}`; }
+export function formatNumber(value, reason = '') {
+  const missing=reason?`Unavailable · ${reason}`:'Unavailable';
+  if (value === null || value === undefined || value === '' || (typeof value !== 'number' && typeof value !== 'bigint' && !/^-?\d+(\.\d+)?$/.test(String(value))) || !Number.isFinite(Number(value))) return missing;
+  try { return new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(typeof value === 'bigint' ? value : /^-?\d+$/.test(String(value)) ? BigInt(value) : Number(value)); } catch { return missing; }
 }
 export function formatTime(value) {
-  if (value == null || value === '') return 'time not reported';
+  if (value == null || value === '') return 'Time unavailable';
   const d = new Date(value);
-  if (Number.isNaN(+d)) return 'time not reported';
+  if (Number.isNaN(+d)) return 'Time unavailable';
   const date=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',timeZone:'UTC'});
   const time=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'UTC',hour12:false});
   return `${date}, ${time} UTC`;
@@ -57,16 +66,16 @@ export function formatEvidenceText(value) {
 }
 export function relativeTime(value, now=Date.now()) {
   const time=Date.parse(value);
-  if (!Number.isFinite(time)) return 'time not reported';
+  if (!Number.isFinite(time)) return 'Time unavailable';
   const seconds=Math.max(0,Math.floor((Number(now)-time)/1000));
   if (seconds<60) return 'just now';
   const [amount,unit]=seconds<3600?[Math.floor(seconds/60),'minute']:seconds<86400?[Math.floor(seconds/3600),'hour']:[Math.floor(seconds/86400),'day'];
   return `${formatNumber(amount)} ${unit}${amount===1?'':'s'} ago`;
 }
-export function sourceText(record = {}, fallback = 'Source not reported') {
+export function sourceText(record = {}, fallback = 'Source unavailable') {
   const source = record.source || record.sources;
   const label = Array.isArray(source) ? source.map(x => typeof x === 'string' ? x : x.label).filter(Boolean).join(', ') : typeof source === 'object' ? source?.label || source?.used || source?.name : source;
-  const at = record.snapshotAt ? `snapshot ${formatTime(record.snapshotAt)}` : record.observedAt || record.generatedAt ? formatTime(record.observedAt || record.generatedAt) : 'time not reported';
+  const at = record.snapshotAt ? `snapshot ${formatTime(record.snapshotAt)}` : record.observedAt || record.generatedAt ? formatTime(record.observedAt || record.generatedAt) : 'Time unavailable';
   const named = label && /v4\.xyz/i.test(label) && !/indexed/i.test(label) ? 'Indexed by '+label : label || fallback;
   return `${named} · ${at}${record.block != null ? ` · block ${formatNumber(record.block)}` : ''}`;
 }
@@ -94,10 +103,10 @@ export function renderBoard(body,{watch=[],tray=[]}={}) {
     return `<tr data-hook-row><td class="qd-board-identity"><a class="qd-record-name${name==='Unnamed hook'?' is-unnamed':''}" href="${profileURL(h)}" title="${esc(name)}">${esc(name)}</a><span class="qd-board-meta"><span title="${esc(chain)}">${esc(chain)}</span><code title="${esc(h.address)}">${esc(short(h.address,4))}</code>${h.qhooks?'<span class="qd-board-qhooks">QHooks</span>':''}</span></td><td class="qd-board-capabilities"><div class="qd-marks" aria-label="Capabilities">${capabilityMarks(h.capabilities)}</div></td><td class="qd-board-activity" aria-label="${esc(formatNumber(h.swaps))} swaps · ${esc(formatNumber(h.pools))} pools" title="${esc(formatNumber(h.swaps))} swaps · ${esc(formatNumber(h.pools))} pools"><span class="qd-number">${esc(formatNumber(h.swaps))} <i>·</i> ${esc(formatNumber(h.pools))}</span></td><td class="qd-board-keep"><div class="qd-row-actions"><button type="button" class="qd-button qd-star" data-star="${id}" aria-label="${watch.includes(id)?'Unwatch':'Watch'} ${esc(name)}" title="Watch hook" aria-pressed="${watch.includes(id)}">${watch.includes(id)?'★':'☆'}</button><label class="qd-check" title="Compare ${esc(name)}"><input type="checkbox" data-compare="${id}" aria-label="Compare ${esc(name)}"${tray.includes(id)?' checked':''}><span>Compare</span></label></div></td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
-export function renderStats(body) {
-  const coverage=body.coverage || {}, date=new Date(body.snapshotAt || NaN);
+export function renderStats(body, directory = body) {
+  const view=discoveryCoverage(body,directory),date=new Date(view.snapshotAt || NaN);
   const at=Number.isNaN(+date)?'date not reported':date.toLocaleDateString('en-GB',{day:'2-digit',month:'short',timeZone:'UTC'});
-  return [['Hooks indexed',coverage.hookCount],['Chains covered',coverage.chainCount],['Pools indexed',coverage.totalPools],['Swaps indexed',coverage.totalSwaps]].map(([label,value])=>`<div><p>${label}</p><strong class="qd-number">${esc(formatNumber(value))}</strong><small>v4.xyz index · ${esc(at)}</small></div>`).join('');
+  return [['Hooks in directory',view.hooks,view.includesTape?'Snapshot + newly observed Tape hooks':'Snapshot records'],['Snapshot chains',view.chains,'Activity snapshot · '+at],['Pools at snapshot',view.pools,'v4.xyz index · '+at],['Swaps at snapshot',view.swaps,'v4.xyz index · '+at]].map(([label,value,source])=>`<div><p>${label}</p><strong class="qd-number">${esc(formatNumber(value))}</strong><small>${esc(source)}</small></div>`).join('');
 }
 export function renderNewHooks(body,now=Date.now()) {
   return body.hooks?.length?body.hooks.slice(0,6).map(h=>`<article class="qd-mini qd-new-card"><h3>${link(profileURL(h),hookLabel(h))}</h3><p>${esc(h.chainName || chainName(h.chainId))}</p><p class="qd-note" title="${esc(formatTime(h.firstSeen?.at))}">first seen block ${esc(formatNumber(h.firstSeen?.block))} · ${esc(relativeTime(h.firstSeen?.at,now))}</p></article>`).join(''):note('No first-seen hooks were returned by the Tape.');
@@ -137,17 +146,32 @@ export function toggleWatchlist(value, id) {
   if (list.length >= 200) throw new Error('Your watchlist has 200 hooks. Remove one before adding another.');
   return [...list,valid];
 }
+// The community profile owns identity and persistence; this adapter never signs in or sends implicitly.
+export function identity(host = globalThis.window) {
+  try {
+    const provider=host?.qhIdentity;
+    const value=typeof provider==='function'?provider():typeof provider?.identity==='function'?provider.identity():provider;
+    const wallet=value?.wallet;
+    return /^0x[\da-f]{40}$/i.test(wallet || '') ? {wallet:wallet.toLowerCase()} : null;
+  } catch {return null;}
+}
+export async function syncWatchlist(list, host = globalThis.window) {
+  const provider=host?.qhIdentity, who=identity(host);
+  if(!who)throw new Error('Sign in to your community profile before syncing.');
+  if(typeof provider?.syncWatchlist!=='function')throw new Error('Profile sync is not available yet. Your browser watchlist is still saved.');
+  return provider.syncWatchlist(normalizeWatchlist(list));
+}
 export function rawAmount(value, token) {
   try {
-    if (value == null || String(value).trim() === '') return 'Unavailable · amount not reported';
+    if (value == null || String(value).trim() === '') return 'Unavailable · amount missing';
     const n=BigInt(value), raw=n.toString();
     if (!token || !Number.isInteger(token.decimals) || token.decimals < 0 || token.decimals > 36) return `${raw} raw · token decimals unknown`;
     const negative=n<0n, abs=(negative?-n:n).toString().padStart(token.decimals+1,'0');
     const display=token.decimals ? `${abs.slice(0,-token.decimals)}.${abs.slice(-token.decimals)}` : abs;
     return `${raw} raw · ${negative?'-':''}${display}${token.symbol ? ' '+token.symbol : ''}`;
-  } catch { return 'Unavailable · amount not reported'; }
+  } catch { return 'Unavailable · amount missing'; }
 }
-const unavailable = reason => `Unavailable · ${reason || 'not reported'}`;
+const unavailable = reason => `Unavailable · ${reason || 'value unavailable'}`;
 const goodEvidence = h => h.evidence?.status === 'ok';
 const liveValue = (h,key,suffix='') => goodEvidence(h) && h.evidence[key] != null ? `${['block','latencyMs','codeBytes'].includes(key) ? formatNumber(h.evidence[key]) : h.evidence[key]}${suffix}` : unavailable(h.evidence?.reason || 'live read did not report this value');
 const livePermissions = h => goodEvidence(h) && Array.isArray(h.evidence.permissions?.names) ? h.evidence.permissions.names : null;
@@ -155,7 +179,7 @@ export const COMPARE_ROWS = Object.freeze([
  ['Identity','Name',h=>h.board?.name || 'Unnamed hook'],['Identity','Chain',h=>chainName(h.chainId)],['Identity','Address',h=>h.hook],['Identity','Project',h=>h.project?.name || 'No project linked'],['Identity','QHooks kind',h=>h.kind || (h.qhooks?.kind) || (h.qhooks === true ? 'QHooks' : '—')],
  ['Capabilities','Permission names',h=>livePermissions(h)?.slice().sort().join(', ') || (livePermissions(h) ? 'No permission bits set' : unavailable(h.evidence?.reason))],['Capabilities','Can do',h=>h.capabilities?.map(c=>c.title).sort().join(' · ') || 'No capabilities reported'],
  ['Evidence','Read status',h=>h.evidence?.status === 'ok' ? 'Read succeeded' : unavailable(h.evidence?.reason)],['Evidence','Block',h=>liveValue(h,'block')],['Evidence','Observed',h=>goodEvidence(h)?formatTime(h.evidence.observedAt):unavailable(h.evidence?.reason)],['Evidence','Read source',h=>`QHooks chain read · ${chainName(h.chainId)}`],['Evidence','Latency',h=>liveValue(h,'latencyMs',' ms')],['Evidence','Code size',h=>liveValue(h,'codeBytes',' bytes')],['Evidence','Fingerprint',h=>liveValue(h,'fingerprint')],['Evidence','Owner probe',h=>ownerText(h.evidence?.owner)],
- ['Activity','Indexed pools',h=>formatNumber(h.board?.pools,'no board snapshot for this hook')],['Activity','Indexed swaps',h=>formatNumber(h.board?.swaps,'no board snapshot for this hook')],['Activity','Snapshot source / time',h=>h.board?sourceText(h.board,'Indexed by v4.xyz'):unavailable('no board snapshot for this hook')],['Activity','Tape pools',h=>formatNumber(h.tape?.pools,'Tape coverage unavailable')],['Activity','Tape swaps, 24h',h=>formatNumber(h.tape?.swaps24h,'Tape coverage unavailable')],['Activity','Tape through block',h=>formatNumber(h.tape?.lastSwapBlock,'Tape boundary not reported')]
+ ['Activity','Indexed pools',h=>formatNumber(h.board?.pools,'no board snapshot for this hook')],['Activity','Indexed swaps',h=>formatNumber(h.board?.swaps,'no board snapshot for this hook')],['Activity','Snapshot source / time',h=>h.board?sourceText(h.board,'Indexed by v4.xyz'):unavailable('no board snapshot for this hook')],['Activity','Tape pools',h=>formatNumber(h.tape?.pools,'Tape coverage unavailable')],['Activity','Tape swaps, 24h',h=>formatNumber(h.tape?.swaps24h,'Tape coverage unavailable')],['Activity','Tape through block',h=>formatNumber(h.tape?.lastSwapBlock,'Tape boundary unavailable')]
 ]);
 export function normalizeCompareRecord(h) {
   const parsed=parseHookHash(h.id || `${h.chainId ?? h.evidence?.chainId}:${h.hook || h.address}`);
@@ -163,11 +187,11 @@ export function normalizeCompareRecord(h) {
 }
 export function compareDiff(hooks) {
   hooks=hooks.map(normalizeCompareRecord);
-  return COMPARE_ROWS.map(([group,label,read]) => {const values=hooks.map(h=>String(read(h) ?? unavailable('not reported'))); return {group,label,values,differs:new Set(values).size>1};});
+  return COMPARE_ROWS.map(([group,label,read]) => {const values=hooks.map(h=>String(read(h) ?? unavailable('value unavailable'))); return {group,label,values,differs:new Set(values).size>1};});
 }
 export function ownerText(owner) {
-  if (!owner) return unavailable('owner probe not reported');
-  if (owner.status === 'ok') return owner.address || unavailable('owner address not reported');
+  if (!owner) return unavailable('owner probe unavailable');
+  if (owner.status === 'ok') return owner.address || unavailable('owner address unavailable');
   return {none:'No owner returned',reverted:'Owner probe reverted',unavailable:'Unavailable · owner probe failed'}[owner.status] || unavailable('owner probe status unknown');
 }
 const fact = (name,value) => `<div><dt>${esc(name)}</dt><dd>${esc(formatEvidenceText(value))}</dd></div>`;
@@ -178,21 +202,47 @@ export function permissionGrid(evidence) {
   const known=evidence?.status === 'ok' && Array.isArray(evidence.permissions?.names);
   return `<div class="qd-permissions">${PERMISSIONS.map((p,i)=>`<div class="${known && evidence.permissions.names.includes(p)?'is-on':''}"><span>${esc(p.replace(/([A-Z])/g,' $1'))}</span><b>${known ? evidence.permissions.names.includes(p)?'Enabled':'Off' : 'Unknown'}</b><span class="qd-note">bit ${13-i}</span></div>`).join('')}</div>`;
 }
+export function normalizeTradePage(value) {
+  const rows=Array.isArray(value)?value:Array.isArray(value?.tokens)?value.tokens:[];
+  const tokens=new Map();
+  for(const row of rows){
+    const parsed=parseHookHash(`${row?.chainId}:${row?.token}`),url=safeURL(row?.url,true);
+    if(!parsed || /^0x0{40}$/.test(parsed.address) || !url || url.toLowerCase()!==`/terminal.html#t=${parsed.chainId}:${parsed.address}`)continue;
+    tokens.set(parsed.id,{...row,chainId:parsed.chainId,token:parsed.address,url});
+  }
+  return {tokens:[...tokens.values()],total:Array.isArray(value)?tokens.size:Number.isSafeInteger(value?.total)&&value.total>=0?value.total:null,nextCursor:typeof value?.nextCursor==='string'&&value.nextCursor.length>0&&value.nextCursor.length<=2048?value.nextCursor:null};
+}
+export function appendTradePage(current, value, requestedCursor = null) {
+  if(!Array.isArray(value)&&!Array.isArray(value?.tokens))throw new Error('Token records were not returned.');
+  const page=normalizeTradePage(value),previous=normalizeTradePage(current),tokens=new Map(previous.tokens.map(t=>[`${t.chainId}:${t.token}`,t]));
+  for(const row of page.tokens)tokens.set(`${row.chainId}:${row.token}`,row);
+  if(requestedCursor && page.nextCursor===requestedCursor)throw new Error('The token cursor did not advance. Try Refresh live.');
+  return {tokens:[...tokens.values()],total:page.total ?? previous.total,nextCursor:page.nextCursor};
+}
 export function tradeLinks(profile) {
-  const rows = profile.launch ? [{...profile.launch, launch:true}] : profile.trade || [];
+  const rows = profile.launch ? [{...profile.launch, launch:true}] : normalizeTradePage(profile.trade).tokens;
   return rows.map(t => {
     const candidate=safeURL(t.url,true), expected=t.launch ? `#m=${t.chainId}:${String(t.controller).toLowerCase()}` : `#t=${t.chainId}:${String(t.token).toLowerCase()}`;
     if (!candidate || !/^\/terminal\.html#(?:t|m)=/.test(candidate) || candidate.toLowerCase() !== '/terminal.html'+expected.toLowerCase()) return '';
     return link(candidate,t.launch?'Open launch in the terminal →':`${chainName(t.chainId)} · ${short(t.token)} →`,'qd-button');
   }).filter(Boolean).join('');
 }
+export function renderTradeTokens(trade) {
+  return normalizeTradePage(trade).tokens.map(t=>`<article class="qd-trade-token"><a class="qd-button" href="${esc(t.url)}">${esc(chainName(t.chainId))} · ${esc(short(t.token))} →</a><details data-trade-details><summary>Hooks this token trades through</summary><div data-trade-token-host data-chain="${t.chainId}" data-token="${t.token}"></div></details></article>`).join('');
+}
+export function renderTradeSection(profile) {
+  const state=normalizeTradePage(profile.trade),launch=profile.launch?tradeLinks(profile):'';
+  if(!state.tokens.length&&!state.nextCursor&&!launch)return '';
+  return panel('Trade',`${launch?`<div class="qd-actions">${launch}</div>`:''}<div id="qd-trade-tokens" class="qd-trade-tokens">${renderTradeTokens(state)}</div><p id="qd-trade-count" class="qd-note">${esc(formatNumber(state.tokens.length))}${state.total===null?'':` of ${esc(formatNumber(state.total))}`} tokens returned by this hook’s pool records.</p><button type="button" id="qd-more-trade" class="qd-button"${state.nextCursor?'':' hidden'}>Load more tokens ↓</button><p id="qd-trade-status" class="qd-note" role="status"></p>`,'qd-trade');
+}
 export function renderProfile(h, watched = false) {
   const id=hookId(h), e=h.evidence, live=goodEvidence(h), p=livePermissions(h), title=h.board?.name || 'Unnamed hook';
   const evidenceNote=live ? `Read by QHooks from ${chainName(h.chainId)} · block ${formatNumber(e.block)} · ${formatTime(e.observedAt)}` : unavailable(e?.reason || 'live evidence not returned');
   const boardNote=h.board?sourceText(h.board,'Indexed by v4.xyz'):'No board snapshot exists for this hook.';
-  const identity=`<section class="qd-identity qd-panel"><div><p class="qd-kicker">${esc(chainName(h.chainId))} · Hook record</p><h2>${esc(title)}</h2><p class="qd-address"><code>${esc(h.hook)}</code><button class="qd-button" type="button" data-copy="${esc(h.hook)}">Copy address</button></p><p>${h.project?link('discover-projects.html#'+encodeURIComponent(h.project.id),h.project.name):'No project linked'}${h.qhooks?' · '+esc(h.kind || h.qhooks?.kind || 'QHooks'):''}</p></div><div class="qd-actions"><button class="qd-button" type="button" data-star="${id}" aria-pressed="${watched}">${watched?'★ Watching':'☆ Watch hook'}</button><button type="button" data-refresh class="qd-button">Refresh live ↻</button>${link(`${API}/${h.chainId}/${h.hook}`,'Raw JSON ↗','qx-link')}</div></section>`;
+  const identity=`<section class="qd-identity qd-panel"><div><p class="qd-kicker">${esc(chainName(h.chainId))} · Hook record</p><h2>${esc(title)}</h2><p class="qd-address"><code>${esc(h.hook)}</code><button class="qd-button" type="button" data-copy="${esc(h.hook)}">Copy address</button></p><p>${h.project?link('/discover-projects#'+encodeURIComponent(h.project.id),h.project.name):'No project linked'}${h.qhooks?' · '+esc(h.kind || h.qhooks?.kind || 'QHooks'):''}</p>${upgradeableLabel(h)?`<span class="qd-chip qd-upgradeable">${esc(upgradeableLabel(h))}</span>`:''}</div><div class="qd-actions"><button class="qd-button" type="button" data-star="${id}" aria-pressed="${watched}">${watched?'★ Watching':'☆ Watch hook'}</button><button type="button" data-refresh class="qd-button">Refresh live ↻</button>${link(`${API}/${h.chainId}/${h.hook}`,'Raw JSON ↗','qx-link')}</div></section>`;
   const caps=panel('What it can do',note('Permission bits describe what this address can do, not what its code chooses to do.')+`<div class="qd-capabilities">${(h.capabilities || []).map(c=>`<article><h3>${esc(c.title)}</h3><p>${esc(c.detail)}</p></article>`).join('') || note('No capability descriptions were returned. Read the permission grid below.')}</div>`);
   const evidence=panel('Evidence',note(evidenceNote)+`<dl class="qd-facts">${fact('Status',live?'Read succeeded':unavailable(e?.reason))}${fact('Deployed',live && e.deployed != null ? e.deployed?'Yes':'No code at this block':unavailable(e?.reason))}${fact('Block',liveValue(h,'block'))}${fact('Observed',live?formatTime(e.observedAt):unavailable(e?.reason))}${fact('Latency',liveValue(h,'latencyMs',' ms'))}${fact('Code size',liveValue(h,'codeBytes',' bytes'))}${fact('Runtime fingerprint',liveValue(h,'fingerprint'))}${fact('Owner probe',ownerText(e?.owner))}${fact('Permission flags',p?formatNumber(e.permissions.flags):unavailable(e?.reason))}</dl>`+permissionGrid(e)+(!h.family?note(live?'Unique runtime among indexed hooks.':'Shared runtime lookup needs a successful live read.'):''),'qd-evidence');
+  const proof=panel('Public contract report','<div id="qd-repoproof-host"></div>','qd-repoproof');
   const fam=h.family;
   const family=fam?panel('Shared code',note('Identical runtime fingerprints link these deployments; they do not establish common ownership.')+`<dl class="qd-facts">${fact('Family',fam.name || 'Unnamed runtime family')}${fact('Fingerprint',fam.fingerprint)}${fact('Deployments',formatNumber(fam.deploymentCount))}</dl>`+note(`Family registry · registry observation time not returned. Matched using the runtime fingerprint read by QHooks at block ${formatNumber(e?.block)} · ${formatTime(e?.observedAt)}`)+`<div class="qd-actions">${(fam.sample || []).map(id=>link(profileURL(id),short(id))).join('')}${link(`${API}/families/${encodeURIComponent(fam.fingerprint)}`,'All deployments · JSON ↗')}</div>`):'';
   const tape=h.tape;
@@ -205,8 +255,8 @@ export function renderProfile(h, watched = false) {
   const trust=h.trust?panel('Trust',note('These labels report the trust layer’s records. They do not guarantee code behavior.')+`<dl class="qd-facts">${fact('Verified creator',trustText(h.trust.verifiedCreator))}${fact('RepoProof',trustText(h.trust.repoproof))}</dl>`):h.launch?panel('Trust',note('Unavailable · the trust layer did not return labels for this launch.')):'';
   const follow=panel('Follow',`<div class="qd-actions"><button type="button" class="qd-button" data-star="${id}" aria-pressed="${watched}">${watched?'★ Watching':'☆ Watch hook'}</button><button type="button" class="qd-button" data-follow="${id}">Follow on Telegram ↗</button></div><p class="qd-note">Stars stay in this browser. Telegram opens a bot link where you can choose to follow.</p><p id="qd-follow-status" class="qd-note" role="status"></p>`);
   const lists=panel('Measured / Planned',`<div class="qd-two"><div><h3>Measured</h3>${stringList(h.measured,'No measurements listed in the response.')}</div><div><h3>Planned</h3>${stringList(h.planned,'No planned items listed in the response.')}</div></div>`);
-  const handoffs=tradeLinks(h);
-  return identity+`<div class="qd-profile-grid">${caps}${evidence}${family}${activity}${handoffs?panel('Trade',`<div class="qd-actions">${handoffs}</div>`):''}${build}${trust}${follow}${lists}</div>`;
+  const changes=panel('Change log','<div id="qd-hook-changes"><p class="qd-note">Reading watched hook changes…</p></div>','qd-change-log');
+  return identity+`<div class="qd-profile-grid">${caps}${evidence}${proof}${family}${activity}${changes}${renderTradeSection(h)}${build}${trust}${follow}${lists}</div>`;
 }
 const stringList=(values,fallback)=>Array.isArray(values)&&values.length?`<ul class="qd-list">${values.map(v=>`<li>${esc(formatEvidenceText(v))}</li>`).join('')}</ul>`:note(fallback);
 export function trustText(value) {
@@ -225,43 +275,19 @@ export function renderComparison(body) {
   return sharedNote+table+`<div class="qd-compare qd-compare-${hooks.length}">${hooks.map((h,i)=>`<article class="qd-compare-card qd-panel"><h2>${link(profileURL(h),h.board?.name || short(h.hook))}</h2>${['Identity','Capabilities','Evidence','Activity'].map(group=>`<section><h3>${group}</h3><dl>${rows.filter(r=>r.group===group).map(r=>`<div class="${r.differs?'qd-diff':''}"><dt>${esc(r.label)}${r.differs?' <span class="qd-note">· differs</span>':''}</dt><dd>${esc(r.values[i])}</dd></div>`).join('')}</dl></section>`).join('')}</article>`).join('')}</div>`;
 }
 export function renderProjectCards(projects) {
-  return projects.map(p=>`<article class="qd-panel qd-project-card"><p class="qd-kicker">${esc(p.qhooks?'QHooks · '+p.category:p.category)}</p><h2>${link('discover-projects.html#'+encodeURIComponent(p.id),p.name)}</h2><p>${esc(projectSummary(p))}</p><p class="qd-note">${esc(p.provenance || 'Provenance not reported')}</p><div class="qd-project-links">${projectLabURL(p)?link(projectLabURL(p),'Open in the Lab →','qx-link'):''}${link('discover-projects.html#'+encodeURIComponent(p.id),'Sources & deployments →','qx-link')}</div></article>`).join('') || empty('No projects match this search.');
+  return projects.map(p=>`<article class="qd-panel qd-project-card"><p class="qd-kicker">${esc(p.qhooks?'QHooks · '+p.category:p.category)}</p><h2>${link('/discover-projects#'+encodeURIComponent(p.id),p.name)}</h2><p>${esc(projectSummary(p))}</p><p class="qd-note">${esc(p.provenance || 'Provenance unavailable')}</p><div class="qd-project-links">${projectLabURL(p)?link(projectLabURL(p),'Open in the Lab →','qx-link'):''}${link('/discover-projects#'+encodeURIComponent(p.id),'Sources & deployments →','qx-link')}</div></article>`).join('') || empty('No projects match this search.');
 }
 export function renderProjectDetail(p) {
   const observations=p.observations || [];
-  return panel(p.name,`<p>${esc(projectSummary(p))}</p><p>${esc(p.provenance || 'Provenance not reported')}</p><div class="qd-actions">${(p.sources || []).map(s=>link(s.url,s.label+' ↗')).join('')}${p.website?link(p.website,'Project website ↗'):''}${link(`${API}/projects/${encodeURIComponent(p.id)}`,'Raw JSON ↗')}</div><h3 class="qd-section-label">Deployments & live observations</h3>${(p.deployments || []).map(d=>{const o=observations.find(o=>Number(o.chainId)===Number(d.chainId) && o.address?.toLowerCase()===d.address?.toLowerCase()); return `<article class="qd-deployment"><h4>${link(profileURL(d),chainName(d.chainId)+' · '+short(d.address))}</h4><p>${esc(d.role || 'Deployment')}</p>${note(typeof d.source === 'object'? d.source.label || 'Source label not reported':d.source || 'Deployment source not reported')}${note(o?`QHooks chain read · ${chainName(o.chainId)} · ${o.status} · block ${formatNumber(o.block)} · ${formatNumber(o.codeBytes)} bytes · fingerprint ${o.fingerprint || 'not reported'} · owner: ${ownerText(o.owner)}`:'Unavailable · no observation returned; live reads are bounded to eight deployments per request.')}</article>`;}).join('') || note('No deployments are registered.')}`,'qd-selected-project');
+  return panel(p.name,`<p>${esc(projectSummary(p))}</p><p>${esc(p.provenance || 'Provenance unavailable')}</p><div class="qd-actions">${(p.sources || []).map(s=>link(s.url,s.label+' ↗')).join('')}${p.website?link(p.website,'Project website ↗'):''}${link(`${API}/projects/${encodeURIComponent(p.id)}`,'Raw JSON ↗')}</div><h3 class="qd-section-label">Deployments & live observations</h3>${(p.deployments || []).map(d=>{const o=observations.find(o=>Number(o.chainId)===Number(d.chainId) && o.address?.toLowerCase()===d.address?.toLowerCase()); return `<article class="qd-deployment"><h4>${link(profileURL(d),chainName(d.chainId)+' · '+short(d.address))}</h4><p>${esc(d.role || 'Deployment')}</p>${note(typeof d.source === 'object'? d.source.label || 'Source label unavailable':d.source || 'Deployment source unavailable')}${note(o?`QHooks chain read · ${chainName(o.chainId)} · ${o.status} · block ${formatNumber(o.block)} · ${formatNumber(o.codeBytes)} bytes · fingerprint ${o.fingerprint || 'unavailable'} · owner: ${ownerText(o.owner)}`:'Unavailable · no observation returned; live reads are bounded to eight deployments per request.')}</article>`;}).join('') || note('No deployments are registered.')}`,'qd-selected-project');
 }
 export function tapeStatuses(body) {
   if (Array.isArray(body.chains)) return body.chains;
   if (body.chains && typeof body.chains === 'object') return Object.entries(body.chains).map(([chainId,s])=>({...s,chainId:s.chainId || Number(chainId)}));
   return [body];
 }
-export function renderCoverage(body) {
-  return tapeStatuses(body).map(s=>{
-    const c=s.coverage || {}, scan=s.scan || {}, sw=s.swapCoverage || {}, source=s.source || {};
-    const id=s.chainId ?? source.chainId, known=value=>value!=null && value!=='';
-    const facts=[];
-    const add=(label,value,format=v=>v)=>{if(known(value))facts.push(fact(label,format(value)));};
-    add('Manager',source.managerAddress ?? s.manager);
-    add('Deployment block',source.deploymentBlock ?? s.deploymentBlock,formatNumber);
-    add('Finalized head',c.finalizedBlock ?? s.finalizedHead,formatNumber);
-    add('Live cursor',c.liveThrough ?? s.liveCursor,formatNumber);
-    add('Historical cursor',c.historicalThrough ?? s.historicalCursor,formatNumber);
-    add('Swap live cursor',sw.liveThrough,formatNumber);
-    add('Live lag',c.lagBlocks,n=>formatNumber(n)+' blocks');
-    add('Swap lag',sw.lagBlocks,n=>formatNumber(n)+' blocks');
-    add('Historical gap',c.gapBlocks,n=>formatNumber(n)+' blocks');
-    add('Pools',s.counts?.pools,formatNumber);add('Swaps',s.counts?.swaps,formatNumber);
-    add('Source used',s.sourceUsed ?? scan.source ?? source.used ?? (typeof s.source==='string'?s.source:null));
-    const success=scan.lastSuccessAt ?? s.lastSuccessAt;
-    add('Last success',success,formatTime);
-    const failure=scan.lastFailureAt ?? scan.lastFailure?.at ?? scan.lastFailure?.time ?? (typeof scan.lastFailure==='string'?scan.lastFailure:null) ?? s.lastFailureAt ?? s.lastFailure?.at ?? (typeof s.lastFailure==='string'?s.lastFailure:null)
-      ?? (scan.failure ? scan.lastCheckedAt : null);
-    const newerFailure=Number.isFinite(Date.parse(failure)) && (!Number.isFinite(Date.parse(success)) || Date.parse(failure)>Date.parse(success));
-    const missing=!known(success) && !known(c.liveThrough) ? `${chainName(id)} coverage starts with the first scan.`
-      : !known(source.deploymentBlock ?? s.deploymentBlock) ? (/genesis/i.test(source.deploymentBlockSource || '')?'Deployment block unrecorded; history starts at chain genesis.':'Deployment block has not been recorded.') : '';
-    return panel(chainName(id),note('Finalized only · official Uniswap v4 PoolManager logs')+`<dl class="qd-facts">${facts.join('')}</dl>`+(missing?note(missing):'')+(newerFailure?note('Last run partly failed: retrying'):'')+note(sourceText({source:'QHooks Tape',generatedAt:s.generatedAt || body.generatedAt})));
-  }).join('');
+export function renderCoverage(body, options) {
+  return renderTapeStatusCards(body, options);
 }
 export function normalizeTapeRow(row) {
   return {...row,
@@ -336,6 +362,21 @@ function boot() {
   const watched=id=>watch.includes(id);
   const saveWatch=(id)=>{const next=toggleWatchlist(watch,id);try{localStorage.setItem(WATCH_KEY,JSON.stringify(next));watch=next;}catch{throw new Error('Browser storage is unavailable. This hook could not be saved.');} document.querySelectorAll('[data-star]').forEach(b=>{const yes=watched(b.dataset.star);b.setAttribute('aria-pressed',String(yes));b.textContent=b.classList.contains('qd-star')?(yes?'★':'☆'):(yes?'★ Watching':'☆ Watch');});renderWatch();};
   function renderWatch(){if($('qd-watchlist')) $('qd-watchlist').innerHTML=watch.length?watch.map(id=>`<article class="qd-mini">${link(profileURL(id),short(id))}<button class="qd-button" data-star="${id}" aria-pressed="true" type="button">★ Remove</button></article>`).join(''):note('Star a hook to keep its profile here.');}
+  const syncButton=$('qd-sync-watchlist'),syncStatus=$('qd-sync-status');
+  if(syncButton){
+    const updateIdentity=()=>{syncButton.hidden=!window.qhIdentity;};
+    updateIdentity();
+    // The future identity module can announce readiness or sign-in changes without a polling loop.
+    window.addEventListener('qhidentitychange',updateIdentity);
+    window.addEventListener('qhidentityready',updateIdentity);
+    window.addEventListener('pageshow',updateIdentity);
+    syncButton.onclick=async()=>{
+      syncButton.disabled=true;syncStatus.textContent='Syncing your browser watchlist…';
+      try{await syncWatchlist(watch);syncStatus.textContent='Watchlist synced to your profile. Your browser copy is still saved.';}
+      catch(e){syncStatus.textContent=e.message;}
+      finally{syncButton.disabled=false;updateIdentity();}
+    };
+  }
   let refresh=()=>{}, loadSerial=0;
   main.addEventListener('click',async event=>{
     const b=event.target.closest('button'); if (!b) return;
@@ -356,10 +397,11 @@ function boot() {
   const formState=form=>Object.fromEntries(new FormData(form));
   const updateURL=state=>history.replaceState(null,'',location.pathname+'?'+filterQuery(state)+location.hash);
   if(main.dataset.discover==='board') {
-    const form=$('qd-filters');let state=filterState(location.search), board=null, mapHooks=[], lens='activity', tray=[];
+    const form=$('qd-filters');let state=filterState(location.search), board=null, tray=[];
+    mountRecentChanges($('qd-recent-changes'));
     for(const p of PERMISSIONS) form.elements.permission.add(new Option(p.replace(/([A-Z])/g,' $1'),p));
     const fillForm=()=>{for(const k of ['q','chain','permission','project','sort','limit']) {const el=form.elements[k];if(state[k] && el.tagName==='SELECT' && ![...el.options].some(o=>o.value===String(state[k]))) el.add(new Option(String(state[k]),String(state[k])));el.value=state[k];}form.elements.qhooks.checked=state.qhooks;};fillForm();renderWatch();
-    function renderTray(){const el=$('qd-tray');el.hidden=!tray.length;el.innerHTML=`<span>${tray.length} of 4 hooks selected</span>${tray.length>=2?link('discover-compare.html#'+tray.join(','),'Compare hooks →','qd-button qd-primary'):note('Choose at least two to compare.')}<button class="qd-button" type="button" id="qd-clear-tray">Clear</button>`;$('qd-clear-tray')?.addEventListener('click',()=>{tray=[];drawBoard();});}
+    function renderTray(){const el=$('qd-tray');el.hidden=!tray.length;el.innerHTML=`<span>${tray.length} of 4 hooks selected</span>${tray.length>=2?link('/discover-compare#'+tray.join(','),'Compare hooks →','qd-button qd-primary'):note('Choose at least two to compare.')}<button class="qd-button" type="button" id="qd-clear-tray">Clear</button>`;$('qd-clear-tray')?.addEventListener('click',()=>{tray=[];drawBoard();});}
     function drawBoard(){
       if(!board)return;
       $('qd-board-source').hidden=true;
@@ -368,36 +410,73 @@ function boot() {
       $('qd-prev').disabled=state.offset===0;$('qd-next').disabled=board.offset+board.hooks.length>=board.total;$('qd-export').href=boardURL(state);renderTray();
     }
     $('qd-board').addEventListener('change',event=>{const el=event.target;if(!el.dataset.compare)return;if(el.checked){if(tray.length===4){el.checked=false;status('Compare up to four hooks. Remove one before adding another.');return;}tray.push(el.dataset.compare);}else tray=tray.filter(x=>x!==el.dataset.compare);renderTray();});
-    function drawMap(){
-      const nodes=mapLayout(mapHooks), byFamily=new Map();
-      for(const n of nodes)if(n.hook.family){if(!byFamily.has(n.hook.family))byFamily.set(n.hook.family,[]);byFamily.get(n.hook.family).push(n);}
-      const edges=lens==='shared'?[...byFamily.values()].flatMap(v=>v.slice(1).map(n=>`<line x1="${v[0].x}" y1="${v[0].y}" x2="${n.x}" y2="${n.y}"/>`)).join(''):'';
-      $('qd-map').innerHTML=nodes.length?`<svg viewBox="0 0 1000 460" role="group" aria-label="Hooks grouped by permission capability"><g class="qd-map-edges">${edges}</g>${renderMapLabels(nodes)}${nodes.map((n,i)=>`<a href="${profileURL(n.hook)}" data-map-index="${i}" tabindex="${i===0?0:-1}" aria-label="${esc(n.hook.name || n.hook.address)}, ${esc(n.hook.chainName || chainName(n.hook.chainId))}"><circle cx="${n.x}" cy="${n.y}" r="${lens==='capabilities'?5:n.r}" fill="${n.color}" opacity="${lens==='new'&&!n.hook.firstSeen?.block?.toString()?'.18':'1'}"${n.hook.qhooks?' stroke="var(--qx-ink)" stroke-width="1.3"':''}/></a>`).join('')}</svg>`:empty('No hook points match this scope. All records remain available in the table.');
-      $('qd-legend').innerHTML=[...new Set(nodes.map(n=>n.hook.chainId))].sort((a,b)=>a-b).map(id=>`<span><i class="qd-color-${chainColor(id)}"></i>${esc(nodes.find(n=>n.hook.chainId===id).hook.chainName || chainName(id))}</span>`).join('');
-      $('qd-map-note').textContent=`${nodes.length} hooks shown: top activity, QHooks and first-seen records within a 300-point ceiling. ${lens==='shared'?'Lines join exact runtime families.':lens==='new'?'Bright points were first seen by the Tape.':lens==='capabilities'?'Equal point sizes bring capability groups forward.':'Size follows indexed swaps on a log scale.'} Colour identifies chains; an outline marks QHooks. The table includes all results. ${board?sourceText(board,'Indexed by v4.xyz'):''}`;
-      const show=index=>{const h=nodes[index]?.hook;if(!h)return;$('qd-map-card').innerHTML=`<p class="qd-kicker">${esc(h.chainName || chainName(h.chainId))}${h.qhooks?' · QHooks':''}</p><h3>${esc(h.name || 'Unnamed hook')}</h3><code>${esc(short(h.address))}</code><div class="qd-chips">${capabilityChips(h.capabilities)}</div><p><span class="qd-number">${esc(formatNumber(h.swaps))}</span> indexed swaps</p>${note(h.firstSeen?`First seen by QHooks Tape · ${formatTime(h.firstSeen.at)} · block ${formatNumber(h.firstSeen.block)}`:sourceText(board || {},'Indexed by v4.xyz'))}${link(profileURL(h),'Open profile →','qx-link')}`;};
-      const svg=$('qd-map').querySelector('svg');
-      svg?.addEventListener('pointerdown',event=>{if(event.pointerType!=='touch')return;const matrix=svg.getScreenCTM();if(!matrix)return;const point=svg.createSVGPoint();point.x=event.clientX;point.y=event.clientY;const local=point.matrixTransform(matrix.inverse());let nearest=0,distance=Infinity;nodes.forEach((n,i)=>{const d=(n.x-local.x)**2+(n.y-local.y)**2;if(d<distance){distance=d;nearest=i;}});if(distance<80**2){event.preventDefault();show(nearest);}});
-      for(const a of $('qd-map').querySelectorAll('[data-map-index]')){a.addEventListener('focus',()=>show(Number(a.dataset.mapIndex)));a.addEventListener('pointerenter',()=>show(Number(a.dataset.mapIndex)));a.addEventListener('click',e=>{if(e.pointerType==='touch'){e.preventDefault();show(Number(a.dataset.mapIndex));}});a.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key))return;e.preventDefault();const at=Number(a.dataset.mapIndex), next=e.key==='Home'?0:e.key==='End'?nodes.length-1:(at+(e.key==='ArrowLeft'||e.key==='ArrowUp'?-1:1)+nodes.length)%nodes.length;a.setAttribute('tabindex','-1');const nextNode=$('qd-map').querySelector(`[data-map-index="${next}"]`);nextNode.setAttribute('tabindex','0');nextNode.focus();});}
-    }
-    $('qd-lenses').addEventListener('click',e=>{if(!e.target.dataset.lens)return;lens=e.target.dataset.lens;for(const b of $('qd-lenses').children)b.setAttribute('aria-pressed',String(b===e.target));drawMap();});
-    async function allSpecial(params){let rows=[],offset=0;for(let i=0;i<50;i++){const b=await requestJSON(boardURL({...state,...params,limit:200,offset}));rows.push(...b.hooks);offset+=b.hooks.length;if(offset>=b.total || !b.hooks.length)break;}return rows;}
-    async function load(){const serial=++loadSerial;status('Loading hook records…');$('qd-map').innerHTML=empty('Refreshing points for these filters…');mapHooks=[];try{
-      const next=await requestJSON(boardURL(state));if(serial!==loadSerial)return;board=next;drawBoard();
+    async function load(){const serial=++loadSerial;status('Loading hook records…');try{
+      const [next,directory]=await Promise.all([requestJSON(boardURL(state)),requestJSON(API+'?limit=1')]);if(serial!==loadSerial)return;board=next;drawBoard();
       for(const c of next.chains || [])if(![...form.elements.chain.options].some(o=>o.value===String(c.chainId)))form.elements.chain.add(new Option(c.name,String(c.chainId)));fillForm();
-      $('qd-stats').innerHTML=renderStats(next);$('qd-stats-source').textContent=sourceText(next,'Indexed by v4.xyz')+' · coverage is not exhaustive';status(`${formatNumber(next.total)} matching hooks. Snapshot coverage is not exhaustive.`);
-      const [top,second,own,newRows]=await Promise.all([requestJSON(boardURL({...state,sort:'swaps',limit:200,offset:0})),requestJSON(boardURL({...state,sort:'swaps',limit:100,offset:200})),allSpecial({qhooks:true}),allSpecial({new:true})]);if(serial!==loadSerial)return;mapHooks=[...top.hooks,...second.hooks,...own,...newRows];drawMap();
-    }catch(e){if(serial===loadSerial){fail(e,$('qd-board'));if(!$('qd-map').querySelector('svg'))$('qd-map').innerHTML=empty('Map unavailable · '+e.message+'. Use the table or try again.');}}}
+      $('qd-stats').innerHTML=renderStats(next,directory);$('qd-stats-source').textContent='Directory total includes new Tape records. Activity totals are from '+formatTime(directory.snapshotAt)+'. Coverage is bounded; refresh to read the latest directory.';status(`${formatNumber(next.total)} matching hooks. Snapshot coverage is not exhaustive.`);
+    }catch(e){if(serial===loadSerial)fail(e,$('qd-board'));}}
     form.addEventListener('submit',e=>{e.preventDefault();state=filterState(new URLSearchParams({...formState(form),offset:'0'}));updateURL(state);void load();});
     $('qd-prev').onclick=()=>{state.offset=Math.max(0,state.offset-state.limit);updateURL(state);void load();};$('qd-next').onclick=()=>{state.offset+=state.limit;updateURL(state);void load();};
     addEventListener('popstate',()=>{state=filterState(location.search);fillForm();void load();});
     void requestJSON(API+'/projects').then(body=>{for(const p of body.projects || [])if(![...form.elements.project.options].some(o=>o.value===p.id))form.elements.project.add(new Option(p.name,p.id));fillForm();}).catch(e=>status('Project filter unavailable · '+e.message));
     void requestJSON(API+'?new=1&limit=12').then(body=>{$('qd-new').innerHTML=renderNewHooks(body);}).catch(e=>{$('qd-new').innerHTML=note('First-seen records unavailable · '+e.message);});
-    refresh=load;void load();
+    $('qd-refresh')?.addEventListener('click',()=>void load());refresh=load;void load();
   }
   if(main.dataset.discover==='hook') {
-    const form=$('qd-inspect');
-    async function load(){const serial=++loadSerial,p=parseHookHash(location.hash);if(!p){$('qd-profile').innerHTML='';status(location.hash?'This hook link is invalid. Enter a chain and a full 20-byte address.':'Enter an address, or open a hook from the board.');return;}if(![...form.elements.chainId.options].some(o=>o.value===String(p.chainId)))form.elements.chainId.add(new Option(chainName(p.chainId)+' · board only',String(p.chainId)));form.elements.chainId.value=p.chainId;form.elements.address.value=p.address;status('Reading the chain and matching sources…');try{const h=await requestJSON(`${API}/${p.chainId}/${p.address}`,{cache:'no-store'});if(serial!==loadSerial)return;$('qd-profile').innerHTML=renderProfile(h,watched(p.id));status(h.evidence?.status==='ok'?'Live evidence loaded. Each section keeps its own source.':`Live read unavailable · ${h.evidence?.reason || 'reason not returned'}. Snapshot records remain visible.`);}catch(e){if(serial===loadSerial){$('qd-profile').innerHTML=empty('Could not read this hook · '+e.message+'. Refresh or try another address.');status('Hook read failed. The address above identifies the requested hook.');}}}
+    const form=$('qd-inspect');let changesController=null,proofController=null,tokenControllers=new Set();
+    const clearProfileControllers=()=>{proofController?.dispose();proofController=null;changesController?.destroy?.();changesController=null;for(const c of tokenControllers)c.destroy?.();tokenControllers.clear();};
+    function wireTrade(p,h,serial){
+      let trade=normalizeTradePage(h.trade),busy=false;const seenCursors=new Set();
+      const list=$('qd-trade-tokens'),more=$('qd-more-trade'),message=$('qd-trade-status');
+      const wireDetails=root=>{for(const details of root.querySelectorAll('[data-trade-details]')){
+        if(details.dataset.tradeListening)continue;details.dataset.tradeListening='1';
+        details.addEventListener('toggle',async()=>{
+          if(!details.open)return;
+          const host=details.querySelector('[data-trade-token-host]');
+          if(host.dataset.tokenMounted)return;
+          host.dataset.tokenMounted='loading';host.innerHTML=note('Reading pools for this token…');
+          try{
+            const {renderTokenHooks}=await import('./qx-token-hooks.mjs');
+            if(serial!==loadSerial || !host.isConnected)return;
+            host.setAttribute('data-token-hooks','');
+            const controller=renderTokenHooks(host,{chainId:Number(host.dataset.chain),token:host.dataset.token});tokenControllers.add(controller);host.dataset.tokenMounted='ready';
+          }catch(e){delete host.dataset.tokenMounted;host.innerHTML=note('Token pools unavailable · '+e.message+'. Close and reopen to retry.');}
+        });
+      }};
+      if(!list || !more)return;wireDetails(list);
+      more.onclick=async()=>{
+        if(busy || !trade.nextCursor)return;
+        const cursor=trade.nextCursor;busy=true;more.disabled=true;message.textContent='Reading more token records…';
+        try{
+          const page=await requestJSON(`${API}/${p.chainId}/${p.address}?`+new URLSearchParams({tradeCursor:cursor}));
+          if(serial!==loadSerial)return;
+          if(seenCursors.has(normalizeTradePage(page.trade).nextCursor))throw new Error('The token cursor repeated. Refresh live to try again.');
+          const next=appendTradePage(trade,page.trade,cursor),before=new Set(trade.tokens.map(t=>`${t.chainId}:${t.token}`));
+          list.insertAdjacentHTML('beforeend',renderTradeTokens({tokens:next.tokens.filter(t=>!before.has(`${t.chainId}:${t.token}`))}));
+          // Newly appended details have no listener; existing token widgets keep their loaded pages.
+          wireDetails(list);
+          seenCursors.add(cursor);trade=next;more.hidden=!trade.nextCursor;
+          $('qd-trade-count').textContent=`${formatNumber(trade.tokens.length)}${trade.total===null?'':` of ${formatNumber(trade.total)}`} tokens returned by this hook’s pool records.`;
+          message.textContent=trade.nextCursor?'More token records are available.':'All returned token records loaded.';
+        }catch(e){if(serial===loadSerial)message.textContent='Could not read more tokens · '+e.message+'. Loaded records remain visible; try again.';}
+        finally{busy=false;more.disabled=false;}
+      };
+    }
+    async function load(){
+      const serial=++loadSerial,p=parseHookHash(location.hash);
+      clearProfileControllers();
+      if(!p){$('qd-profile').innerHTML='';status(location.hash?'This hook link is invalid. Enter a chain and a full 20-byte address.':'Enter an address, or open a hook from the board.');return;}
+      if(![...form.elements.chainId.options].some(o=>o.value===String(p.chainId)))form.elements.chainId.add(new Option(chainName(p.chainId)+' · board only',String(p.chainId)));
+      form.elements.chainId.value=p.chainId;form.elements.address.value=p.address;status('Reading the chain and matching sources…');
+      try{
+        const h=await requestJSON(`${API}/${p.chainId}/${p.address}`,{cache:'no-store'});if(serial!==loadSerial||parseHookHash(location.hash)?.id!==p.id)return;
+        if(!inspectorProfileMatches(h,p))throw new Error('The returned hook record did not match the requested chain and address');
+        $('qd-profile').innerHTML=renderProfile(h,watched(p.id));
+        proofController=mountInspectorRepoProof($('qd-repoproof-host'),{profile:h,selection:p,revision:serial,getSelection:()=>({...parseHookHash(location.hash),revision:loadSerial})});
+        changesController=mountHookChanges($('qd-hook-changes'),{chainId:p.chainId,hook:p.address,watched:watched(p.id)});wireTrade(p,h,serial);
+        status(h.evidence?.status==='ok'?'Live evidence loaded. Each section keeps its own source.':`Live read unavailable · ${h.evidence?.reason || 'reason not returned'}. Snapshot records remain visible.`);
+      }catch(e){if(serial===loadSerial){$('qd-profile').innerHTML=empty('Could not read this hook · '+e.message+'. Refresh or try another address.');status('Hook read failed. The address above identifies the requested hook.');}}
+    }
     form.addEventListener('submit',e=>{e.preventDefault();const p=parseHookHash(form.elements.chainId.value+':'+form.elements.address.value);if(!p){status('Enter a full 20-byte hook address.');return;}const hash=`#${p.chainId}:${p.address}`;if(location.hash===hash)void load();else location.hash=hash;});addEventListener('hashchange',()=>void load());refresh=load;void load();
   }
   if(main.dataset.discover==='projects') {
@@ -413,7 +492,7 @@ function boot() {
   }
   if(main.dataset.discover==='tape') {
     const form=$('qd-tape-filters'), initial=new URLSearchParams(location.search);
-    form.elements.chain.value=['8453','4663'].includes(initial.get('chain'))?initial.get('chain'):'';
+    form.elements.chain.value=Object.keys(CHAIN_NAMES).includes(initial.get('chain'))?initial.get('chain'):'';
     form.elements.blocks.value=['1800','10800','43200'].includes(initial.get('blocks'))?initial.get('blocks'):'1800';
     let busy=false, cursors={},generation=0,records={pools:[],swaps:[],activity:null};
     const resolver=createHookNameResolver();
@@ -430,14 +509,15 @@ function boot() {
       status('Refreshing finalized records…');$('qd-refresh').disabled=true;for(const el of form.elements)el.disabled=true;
       try{
         const p=params(),kinds=['status','pools','swaps','activity'];
-        const results=await Promise.allSettled(kinds.map(kind=>requestJSON(API+'/tape/'+kind+'?'+(kind==='activity'?p:new URLSearchParams({chain:p.get('chain'),limit:'25'})))));
+        const results=await Promise.allSettled(kinds.map(kind=>requestJSON(API+'/tape/'+kind+'?'+(kind==='activity'?p:new URLSearchParams(kind==='status'?{}:{chain:p.get('chain'),limit:'25'})))));
         if(current!==generation)return;
         const failures=[];
         for(let i=0;i<results.length;i++){
           const kind=kinds[i],result=results[i];
           if(result.status==='rejected'){failures.push(kind+': '+result.reason.message);continue;}
           const body=result.value;
-          if(kind==='status')$('qd-coverage').innerHTML=renderCoverage(body);
+          if(body.error||body.status==='unavailable'){failures.push(kind+': '+(body.reason||body.error||'read unavailable'));continue;}
+          if(kind==='status')$('qd-coverage').innerHTML=renderTapeStatusCards(body);
           if(kind==='pools'||kind==='swaps'){
             records[kind]=body[kind] || [];cursors[kind]=body.nextCursor;
             $('qd-more-'+kind).hidden=!body.nextCursor;

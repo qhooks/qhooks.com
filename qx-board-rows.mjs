@@ -1,8 +1,11 @@
 // Board rows and small formatters shared by the board page, the Community hub and profiles (no side effects on import).
 import { CHAIN_NAME, h } from '/qx-chain.mjs';
+import {memberIdentity} from './qx-member-identity.mjs';
+import {checkpointView,scoreCoverageText} from './qx-caller-score-ui.mjs';
+import {firstCallPrompt} from './qx-community-empty.mjs';
 export const num = n => Number(n || 0).toLocaleString();
-export const boardPath = b => '/board.html#' + (b.kind === 'token' ? 't=' + b.chainId + ':' + b.address : 'm=' + b.chainId + ':' + b.controller);
-export const chainName = chain => chain === 'solana' ? 'Solana' : CHAIN_NAME[chain] || chain;
+export const boardPath = b => '/board#' + (b.kind === 'token' ? 't=' + b.chainId + ':' + b.address : 'm=' + b.chainId + ':' + b.controller);
+export const chainName = chain => chain === 'solana' ? 'Solana' : String(chain)==='99901'?'Elysium':CHAIN_NAME[chain] || chain;
 // The same address mark works for EVM and case-sensitive Solana identities.
 export function addressMark(address) {
   const value = String(address || ''), n = /^0x[0-9a-f]+$/i.test(value) ? BigInt(value) : [...value].reduce((n, ch) => (n * 31n + BigInt(ch.charCodeAt(0))) & 0xffffffffn, 0n);
@@ -37,35 +40,34 @@ export function moveText(value, base = 1) {
 }
 export const qualityText = value => value == null ? '—' : moveText(1 + Number(value));
 export function callLabels(call) {
-  const labels = new Set(call?.labels || []); if (call?.soldAfter) labels.add('soldAfter');
-  if (call?.kind === 'token' || call?.boardKind === 'token') { labels.delete('soldAfter'); labels.delete('linked'); }
-  return [...labels].map(k => ({ creator_call: "Creator's call", linked: 'Linked to the creator', soldAfter: 'Sold after calling' })[k]).filter(Boolean);
+  const labels=new Set(call?.labels||[]);if(call?.scoreV2?.indexedFirstDaySales?.status==='observed')labels.add('indexedSales');else if(!call?.scoreV2&&call?.soldAfter)labels.add('legacySale');
+  return[...labels].map(key=>({creator_call:"Creator's call",linked:'Known creator link',indexedSales:'Indexed first-day sales · outcome retained',legacySale:'Legacy indexed-sale flag'})[key]).filter(Boolean);
 }
 export function callLabelPills(call) { return callLabels(call).map(label => h('span', { class: 'qb-badge qb-call-label' }, label)); }
 export function callRecord(call) {
-  const c = call || {}, top = h('div', { class: 'qb-call-head' }, h('b', {}, 'Call'), h('span', { class: 'qb-call-price' }, priceText(c.price) + ' ' + (c.quoteSymbol || '')));
-  const figures = h('div', { class: 'qb-call-figures' }, ...[['1 h', 'price1h'], ['24 h', 'price24h'], ['7 d', 'price7d'], ['now', 'priceNow']].map(([label, key]) => {
-    const value = c[key], change = moveText(value, c.price), direction = value == null ? '' : Number(value) > Number(c.price) ? ' is-up' : Number(value) < Number(c.price) ? ' is-down' : '';
-    return h('div', { class: 'qb-call-figure' + direction }, h('span', {}, label), h('b', { title: priceText(value) + ' ' + (c.quoteSymbol || '') }, priceText(value)), value == null ? null : h('small', {}, change));
-  }));
-  const labels = callLabelPills(c), ref = callRef(c.ref);
-  return h('section', { class: 'qb-call', 'aria-label': 'Call record' }, top, figures, labels.length ? h('div', { class: 'qb-call-labels' }, ...labels) : null,
-    ref ? h('a', { class: 'qb-call-ref', href: ref, rel: 'nofollow ugc noopener' }, 'Trade via this call') : null);
+  const c=call||{},top=h('div',{class:'qb-call-head'},h('b',{},c.scoreV2?'Call · record v2':'Call · legacy'),h('span',{class:'qb-call-price'},priceText(c.price)+' '+(c.quoteSymbol||'')));
+  const points=[checkpointView(c,'day'),checkpointView(c,'week')],figures=h('div',{class:'qb-call-figures'},...points.map(point=>{
+   const observed=point.status==='observed',direction=!observed?'':point.price>c.price?' is-up':point.price<c.price?' is-down':'';
+   return h('div',{class:'qb-call-figure'+direction},h('span',{},point.label),h('b',{},priceText(point.price)),observed?h('small',{},moveText(point.price,c.price)):null,h('small',{},point.note));
+  }),h('div',{class:'qb-call-figure'},h('span',{},'Legacy 1h'),h('b',{},priceText(c.price1h)),h('small',{},'Timing unavailable · unscored')),
+  h('div',{class:'qb-call-figure'},h('span',{},'Latest source quote'),h('b',{},priceText(c.priceNow)),h('small',{},'Observation time unavailable')));
+  const labels=callLabelPills(c),ref=callRef(c.ref),proof=points.filter(point=>point.provenance&&Number.isSafeInteger(point.observedAt));
+  const details=proof.length?h('details',{class:'qb-call-proof'},h('summary',{},'Indexed quote sources'),...proof.map(point=>h('p',{},point.label+' · '+point.note+' · block '+point.provenance.block+' · ',h('code',{},point.provenance.transaction)))):null;
+  return h('section',{class:'qb-call','aria-label':'Call record'},top,figures,labels.length?h('div',{class:'qb-call-labels'},...labels):null,details,ref?h('a',{class:'qb-call-ref',href:ref,rel:'nofollow ugc noopener'},'Trade via this call'):null);
 }
 function callRef(ref) {
   try {
     const u = new URL(ref), launch = /^\/l\/\d+\/0x[0-9a-f]{40}$/.test(u.pathname);
-    const token = u.pathname === '/terminal.html' && /^#t=(?:(?:8453|1|42161|56|4663):0x[0-9a-f]{40}|solana:[1-9A-HJ-NP-Za-km-z]{32,44})$/.test(u.hash);
+    const token = ['/terminal', '/terminal.html'].includes(u.pathname) && /^#t=(?:(?:8453|1|42161|56|4663):0x[0-9a-f]{40}|solana:[1-9A-HJ-NP-Za-km-z]{32,44})$/.test(u.hash);
     return u.origin === 'https://qhooks.com' && (launch || token) && /^0x[0-9a-f]{40}$/.test(u.searchParams.get('ref') || '') ? u.href : null;
   } catch { return null; }
 }
-export function callerRow(c, rank) {
-  const wallet = String(c.wallet || '');
-  return h('a', { class: 'qb-caller-row', href: '/profile.html#' + wallet, title: wallet },
-    h('span', { class: 'qb-caller-rank' }, String(rank)), h('code', { class: 'qb-caller-wallet' }, wallet.slice(0, 6) + '…' + wallet.slice(-4)),
-    h('span', { class: 'qb-caller-hit' }, h('b', {}, Math.round(Number(c.hitRate) * 100) + '%'), h('small', {}, ' hit')),
-    h('span', { class: 'qb-caller-quality' }, h('b', {}, qualityText(c.quality)), h('small', {}, ' median move')),
-    h('span', { class: 'qb-caller-count' }, num(c.counted) + ' counted'));
+export function callerRow(c,rank){
+ const wallet=String(c.wallet||''),valid=c.version===2&&c.rankEligible&&c.coverage?.completeRecordSet;
+ return h('a',{class:'qb-caller-row',href:'/profile#'+wallet,title:wallet},h('span',{class:'qb-caller-rank'},valid?String(rank):'—'),memberIdentity(wallet,{linked:false,mark:addressMark(wallet),className:'qb-caller-wallet'}),
+  h('span',{class:'qb-caller-hit'},h('b',{},valid?Math.round(c.hitRate*100)+'%':'—'),h('small',{},num(c.hits)+' / '+num(c.counted)+' timed hits')),
+  h('span',{class:'qb-caller-quality'},h('b',{},qualityText(c.quality)),h('small',{},'24h/7d median · '+num(c.qualityN)+' calls')),
+  h('span',{class:'qb-caller-count'},scoreCoverageText(c)));
 }
 /** The boards with recent posts, across launches and outside tokens. */
 export function boardRow(b) {
@@ -87,10 +89,10 @@ export function boardTabs({ limit = 50, empty = {} } = {}) {
     for (const b of bar.children) { const on = b.getAttribute('data-kind') === kind; b.setAttribute('aria-selected', String(on)); b.setAttribute('aria-pressed', String(on)); b.tabIndex = on ? 0 : -1; }
     if (!cache.has(kind)) cache.set(kind, fetch('/api/community/boards?kind=' + kind, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null));
     list.replaceChildren(h('p', { class: 'qa-loading' }, 'Reading boards…'));
-    const j = await cache.get(kind), rows = (j?.boards || []).slice(0, limit);
+    const j = await cache.get(kind), valid = Array.isArray(j?.boards), rows = valid ? j.boards.slice(0, limit) : [];
     if (current !== kind) return;
-    list.replaceChildren(...(rows.length ? rows.map(boardRow) : [emptyNote(!j ? 'The boards didn’t answer. Try again in a moment.'
-      : empty[kind] || (kind === 'launch' ? 'No QHooks launch board has posts yet.' : 'No token board has posts yet. Open any token in the terminal and start one.'))]));
+    if(!valid){const retry=h('button',{type:'button',class:'qa-btn'},'Retry boards');retry.addEventListener('click',()=>{cache.delete(kind);show(kind);});list.replaceChildren(emptyNote('The boards did not answer. Try the read again.'),retry);return;}
+    list.replaceChildren(...(rows.length?rows.map(boardRow):[firstCallPrompt(document,{text:empty[kind]||(kind==='launch'?'No QHooks launch board has posts yet.':'No token board has posts yet.')})]));
   };
   for (const [kind, label] of TABS) { const b = h('button', { type: 'button', class: 'qb-order', role: 'tab', 'data-kind': kind }, label); b.addEventListener('click', () => show(kind)); bar.append(b); }
   bar.addEventListener('keydown', e => { if (!/^Arrow(Left|Right)$/.test(e.key)) return; const next = [...bar.children].find(b => b.getAttribute('data-kind') !== current); next?.click(); next?.focus(); });

@@ -1,0 +1,52 @@
+Bundled license information:
+
+lucide-react/dist/esm/shared/src/utils.js:
+lucide-react/dist/esm/defaultAttributes.js:
+lucide-react/dist/esm/Icon.js:
+lucide-react/dist/esm/createLucideIcon.js:
+lucide-react/dist/esm/icons/ban.js:
+lucide-react/dist/esm/icons/building.js:
+lucide-react/dist/esm/icons/calendar.js:
+lucide-react/dist/esm/icons/check.js:
+lucide-react/dist/esm/icons/chevron-right.js:
+lucide-react/dist/esm/icons/circle-alert.js:
+lucide-react/dist/esm/icons/circle-check-big.js:
+lucide-react/dist/esm/icons/circle-question-mark.js:
+lucide-react/dist/esm/icons/circle-x.js:
+lucide-react/dist/esm/icons/cloud-upload.js:
+lucide-react/dist/esm/icons/copy.js:
+lucide-react/dist/esm/icons/credit-card.js:
+lucide-react/dist/esm/icons/external-link.js:
+lucide-react/dist/esm/icons/file-check.js:
+lucide-react/dist/esm/icons/file-text.js:
+lucide-react/dist/esm/icons/fingerprint-pattern.js:
+lucide-react/dist/esm/icons/globe.js:
+lucide-react/dist/esm/icons/hourglass.js:
+lucide-react/dist/esm/icons/landmark.js:
+lucide-react/dist/esm/icons/lock.js:
+lucide-react/dist/esm/icons/mail.js:
+lucide-react/dist/esm/icons/map-pin.js:
+lucide-react/dist/esm/icons/phone.js:
+lucide-react/dist/esm/icons/plus.js:
+lucide-react/dist/esm/icons/qr-code.js:
+lucide-react/dist/esm/icons/search.js:
+lucide-react/dist/esm/icons/smartphone.js:
+lucide-react/dist/esm/icons/square-pen.js:
+lucide-react/dist/esm/icons/trash-2.js:
+lucide-react/dist/esm/icons/triangle-alert.js:
+lucide-react/dist/esm/icons/undo-2.js:
+lucide-react/dist/esm/icons/user-check.js:
+lucide-react/dist/esm/icons/user.js:
+lucide-react/dist/esm/icons/wallet.js:
+lucide-react/dist/esm/icons/x.js:
+lucide-react/dist/esm/icons/chevron-down.js:
+lucide-react/dist/esm/icons/chevron-up.js:
+lucide-react/dist/esm/icons/circle-user.js:
+lucide-react/dist/esm/icons/info.js:
+lucide-react/dist/esm/lucide-react.js:
+  /**
+   * @license lucide-react v0.554.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   */

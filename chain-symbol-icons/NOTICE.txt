@@ -1,1 +1,2 @@
-Chain marks in this folder are from @web3icons/core 4.0.58 (MIT License, https://github.com/0xa3k5/web3icons). Marks remain trademarks of their owners and identify networks only.
+Except Base, chain marks in this folder are from @web3icons/core 4.0.58 (MIT License, https://github.com/0xa3k5/web3icons). Marks remain trademarks of their owners and identify networks only.
+Base is a geometric blue (#0000FF) rounded square, redrawn to the supplied Base mark specification (https://www.base.org/brand). It retains the folder's 24×24 viewBox and 18×18 inset. No third-party artwork was downloaded for this update.

@@ -44,7 +44,7 @@ $('hk-search').addEventListener('input', e => { query = e.target.value; renderGr
 $('hk-presets').append(...PRESETS.filter(p => p.id !== 'none' && presetVisible(p)).map(p => el('article', { class: 'hk-preset' },
   el('h3', { text: p.name }), el('p', { text: p.line }),
   el('ul', {}, p.on.map(id => el('li', {}, el('a', { href: '#block-' + id, text: BLOCKS.find(b => b.id === id)?.name || id })))),
-  el('a', { class: 'qx-btn qx-btn-ghost', href: 'qtoken-studio.html?blocks=' + p.id }, 'Launch with this'))));
+  el('a', { class: 'qx-btn qx-btn-ghost', href: '/qtoken-studio?blocks=' + p.id }, 'Launch with this'))));
 
 $('hk-built').append(...BUILT_IN.map(b => el('div', { class: 'hk-built-item' }, el('h3', { text: b.name }), el('p', { text: b.line }))));
 

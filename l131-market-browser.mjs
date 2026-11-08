@@ -373,6 +373,8 @@ function bindMarketBrowser({ document: d = document, target = window, client = c
   const current = (ticket) => !dead && ticket === revision;
   async function open(row) {
     if (dead || pending || !page?.rows.includes(row) || row.status === "unavailable") return;
+    // Every listed launch opens in the terminal, where the chart, holders and the trade ticket live.
+    if (/^0x[0-9a-f]{40}$/.test(String(row.controller || "")) && /^\d+$/.test(String(row.chainId || ""))) { target.location.assign("/terminal.html#m=" + row.chainId + ":" + row.controller.toLowerCase()); return; }
     const { ticket, signal } = begin();
     note("Opening market\u2026");
     try {

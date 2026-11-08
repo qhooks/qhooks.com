@@ -25,7 +25,7 @@ async function wrappingKey(password,salt){
   ensure(typeof password==='string'&&password.length<=1024,'Password must be text');
   const bytes=text.encode(password);
   try{
-    ensure(bytes.length>=16&&bytes.length<=1024,'Use a passphrase of 16–1024 UTF-8 bytes');
+    ensure(bytes.length>=12&&bytes.length<=1024,'Use a passphrase of 12–1024 UTF-8 bytes');
     const input=await crypto.subtle.importKey('raw',bytes,'PBKDF2',false,['deriveKey']);
     return await crypto.subtle.deriveKey({name:'PBKDF2',hash:'SHA-256',salt,iterations:600000},input,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
   }finally{bytes.fill(0);}

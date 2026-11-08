@@ -73,7 +73,7 @@ export function renderProductCard(item) {
   article.appendChild(action);
   const button = document.createElement('a');
   button.className = 'hook-link';
-  button.setAttribute('href', 'hook.html?id=' + encodeURIComponent(item.id));
+  button.setAttribute('href', '/hook?id=' + encodeURIComponent(item.id));
   button.textContent = 'Explore hook →';
   button.setAttribute('aria-label', 'Explore ' + copy.name);
   article.appendChild(button);

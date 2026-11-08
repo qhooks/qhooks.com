@@ -1,14 +1,23 @@
 // Discover's data contract and presentation helpers. No DOM, wallet calls or currency estimates.
+import {WINDOWS,DISCOVERY_TABS,lifecycle} from './qx-discovery-model.mjs';
 import { stockPair } from './full-launch/packages/multichain-launch/stock-pairs.mjs';
+import {safetyChecked,plainMarketError} from './qx-terminal-data.mjs';
+import {officialLogo} from './qx-official.mjs';
 
 export const DASH = '—';
 export const CHAINS = [
-  ['all', 'All', null], ['8453', 'Base', 'base'], ['1', 'Ethereum', 'ethereum'],
+  ['all', 'All', null], ['solana', 'Solana', 'solana'], ['8453', 'Base', 'base'], ['1', 'Ethereum', 'ethereum'],
   ['42161', 'Arbitrum', 'arbitrum'], ['56', 'BNB', 'bnb'],
-  ['4663', 'Robinhood', 'robinhood'], ['solana', 'Solana', 'solana'],
+  ['4663', 'Robinhood', 'robinhood'],
 ];
-export const TABS = [['trending', 'Trending'], ['new', 'New pairs'], ['gainers', 'Top gainers'], ['volume', 'Volume']];
-export const SORT_KEYS = ['price', 'm5', 'h1', 'h24', 'volume', 'liquidity', 'mcap', 'txns', 'makers'];
+export const TABS = DISCOVERY_TABS;
+export function feedSourceLabel(source){
+ if(typeof source!=='string')return '';
+ if(/dex\s*screener/i.test(source)&&/boost|promot/i.test(source))return 'Boosted tokens · DexScreener';
+ if(/geckoterminal.*trending.*pool/i.test(source))return 'Trending pools · GeckoTerminal'+(/prices from dex\s*screener/i.test(source)?' · prices from DexScreener':'');
+ return source;
+}
+export const SORT_KEYS = ['price', 'm5', 'm15', 'h1', 'h6', 'h12', 'h24', 'd7', 'move', 'volume', 'liquidity', 'mcap', 'txns', 'makers'];
 export const number = value => typeof value === 'number' && Number.isFinite(value) ? value : null;
 const nonnegative = value => number(value) !== null && value >= 0 ? value : null;
 const trim = value => value.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1');
@@ -71,8 +80,8 @@ export function age(value, now = Date.now()) {
 }
 
 export function safetyLabel(safety) {
-  const labels = { ok: 'No flags reported', warn: 'Caution', danger: 'Danger' };
-  if (!safety || !Object.hasOwn(labels, safety.flag)) return { flag: null, label: DASH, title: 'No safety data' };
+  const labels = { ok: 'No flags', warn: 'Caution', danger: 'Danger' };
+  if (!safety || !Object.hasOwn(labels, safety.flag) || safety.flag==='ok'&&!safetyChecked(safety)) return { flag: null, label: 'Not checked', title: 'Not checked' };
   const reasons = Array.isArray(safety.reasons) ? safety.reasons.filter(x => typeof x === 'string' && x.trim()) : [];
   return { flag: safety.flag, label: labels[safety.flag], title: [labels[safety.flag], ...reasons].join(' · ') };
 }
@@ -101,12 +110,12 @@ export function launchRow(market) {
   const s = market.summary || {};
   return {
     chainId: String(market.chainId), pool: market.controller, dex: 'QHooks', launch: market,
-    token: { address: market.token, symbol: market.symbol, name: market.name, logo: market.logo },
+    token: { address: market.token, symbol: market.symbol, name: market.name, logo: market.logo || officialLogo(market.chainId, market.token) },
     quote: { symbol: market.quoteSymbol }, createdAt: market.launchedAt,
     priceUsd: s.priceUsd ?? null, volumeUsd: { h24: s.volume24Usd ?? null }, liquidityUsd: s.liquidityUsd ?? null,
     marketCapUsd: s.mcapUsd ?? null, fdvUsd: s.fdvUsd ?? null,
     quoteAmounts: { price: s.price, volume: s.volume24, liquidity: s.liquidity, mcap: s.mcap, unit: market.quoteSymbol },
-    change: { m5: null, h1: null, h24: s.change24 ?? null },
+    change: { m5: null, h1: null, h6: null, h24: s.change24 ?? null },
     txns: { h24: { buys: s.buys24 ?? null, sells: s.sells24 ?? null } }, makers: { h24: null }, safety: null,
   };
 }
@@ -123,7 +132,7 @@ export function rowKey(row) {
   return String(row.chainId) + ':' + (String(row.chainId) === 'solana' ? address : address.toLowerCase()) + ':' + (row.pool || '');
 }
 
-export function rowViewModel(row, { now = Date.now(), quick = {} } = {}) {
+export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24' } = {}) {
   const chainId = String(row.chainId), token = row.token || {};
   const chain = CHAINS.find(([id]) => id === chainId);
   // Zero means the provider doesn't know the cap: fall back to FDV (tagged), else a dash.
@@ -131,7 +140,7 @@ export function rowViewModel(row, { now = Date.now(), quick = {} } = {}) {
   const cap = known(row.marketCapUsd) ?? known(row.fdvUsd);
   const buys = nonnegative(row.txns?.h24?.buys), sells = nonnegative(row.txns?.h24?.sells);
   const numeric = {
-    price: nonnegative(row.priceUsd), m5: number(row.change?.m5), h1: number(row.change?.h1), h24: number(row.change?.h24),
+    ...Object.fromEntries(WINDOWS.map(([key])=>[key,number(row.change?.[key])])),move:number(row.change?.[window]),price: nonnegative(row.priceUsd), m5: number(row.change?.m5), h1: number(row.change?.h1), h6: number(row.change?.h6), h24: number(row.change?.h24),
     volume: nonnegative(row.volumeUsd?.h24), liquidity: nonnegative(row.liquidityUsd), mcap: cap,
     txns: buys !== null && sells !== null ? buys + sells : null, makers: nonnegative(row.makers?.h24),
   };
@@ -142,9 +151,9 @@ export function rowViewModel(row, { now = Date.now(), quick = {} } = {}) {
   const address = typeof token.address === 'string' ? token.address : '';
   return {
     key: rowKey(row), row, chainId, chainName: chain?.[1] || chainId, chainIcon: chain?.[2], address,
-    symbol, name: typeof token.name === 'string' ? token.name : '', logo: safeLogo(token.logo),
+    lifecycle:lifecycle(row),move:percent(numeric.move),symbol, name: typeof token.name === 'string' ? token.name : '', logo: safeLogo(token.logo) || safeLogo(officialLogo(chainId, address)),
     letter: symbol.replace(/^\$/, '').slice(0, 1).toUpperCase() || '?', age: age(row.createdAt, now),
-    price: displayMoney('price', true), m5: percent(numeric.m5), h1: percent(numeric.h1), h24: percent(numeric.h24),
+    price: displayMoney('price', true), m5: percent(numeric.m5), h1: percent(numeric.h1), h6: percent(numeric.h6), h24: percent(numeric.h24),
     volume: displayMoney('volume'), liquidity: displayMoney('liquidity'), mcap: displayMoney('mcap'),
     capKind: known(row.marketCapUsd) === null && known(row.fdvUsd) !== null ? 'FDV' : '',
     buys: compact(buys), sells: compact(sells), makers: compact(numeric.makers), numeric,
@@ -190,24 +199,23 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000 }) {
   let generation = 0, active = null;
   const cache = new Map();
   function cancel() { generation++; active?.abort(); active = null; }
-  async function load(tab, chain) {
+  async function load(tab, chain,window='h24') {
     cancel();
-    const mine = generation, key = tab + ':' + chain, controller = new AbortController();
+    const mine = generation, key = tab + ':' + chain + ':' + window, controller = new AbortController();
     active = controller;
     changed({ key, loading: true, data: cache.get(key) || null, error: null });
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
-      const response = await fetcher('/api/terminal/x/feed?' + new URLSearchParams({ tab, chain }), { cache: 'no-store', signal: controller.signal });
+      const response = await fetcher('/api/terminal/market/feed?' + new URLSearchParams({ tab, chain,window }), { cache: 'no-store', signal: controller.signal });
       const body = await response.json();
-      if (!response.ok) throw new Error(typeof body?.error === 'string' ? body.error : 'Feed unavailable (' + response.status + ')');
-      if (body?.version !== 1 || !Array.isArray(body.rows)) throw new Error('Invalid feed response');
+      if (!response.ok || body?.version !== 1 || !Array.isArray(body.rows)) throw new Error(plainMarketError());
       const data = { ...body, rows: body.rows.filter(r => r && r.token && typeof r.token.address === 'string' && CHAINS.some(([id]) => id !== 'all' && id === String(r.chainId))) };
       if (mine !== generation) return;
       cache.set(key, data);
       changed({ key, loading: false, data, error: null });
     } catch (error) {
       if (mine !== generation) return;
-      changed({ key, loading: false, data: cache.get(key) || null, error: error.name === 'AbortError' ? 'Feed request timed out' : error.message || 'Feed unavailable' });
+      changed({ key, loading: false, data: cache.get(key) || null, error: error.name === 'AbortError' ? 'Feed request timed out. Try again.' : plainMarketError() });
     } finally {
       clearTimeout(timer);
       if (mine === generation) active = null;

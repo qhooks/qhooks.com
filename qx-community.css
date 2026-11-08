@@ -72,3 +72,5 @@ a.cx-card:hover,.cx-card:has(.cx-fill:hover){border-color:color-mix(in srgb,var(
 .cx-card-big .cx-fill{justify-content:flex-start}
 .cx-card-big .cx-fill h3{margin-top:auto!important;padding-top:48px}
 .qp-launch .qa-launch-head .qtr-badge,.qp-launch .qa-launch-head .qtr-copy{margin-left:8px}
+#cx-caller-list[hidden],#cx-ranking-note[hidden]{display:none!important}
+.qx-first-call{padding:16px 0}.qx-first-call p{margin:0 0 8px}.qx-first-call a{display:inline-flex;align-items:center;min-height:44px}

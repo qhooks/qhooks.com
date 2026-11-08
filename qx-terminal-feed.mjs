@@ -1,3 +1,7 @@
+import {WINDOWS,filterDiscovery,createMarketViews,validateDiscoveryFilters} from './qx-discovery-model.mjs';
+import {plainMarketError} from './qx-terminal-data.mjs';
+import {fetchDexPairs,pickPair,rowPatch,applyRowPatch,DEX_CHAINS} from './qx-dex-live.mjs';
+import {renderFeedFeedback} from './qx-terminal-feed-presentation.mjs';
 import {
   CHAINS, TABS, SORT_KEYS, DASH, rowViewModel, sortRows, launchRow, searchRow,
   preferences, savePreference, hasTokenHash, createFeedLoader, age,
@@ -16,26 +20,51 @@ try { storage = window.localStorage; } catch {}
 const prefs = preferences(storage);
 const state = { ...prefs, tab: prefs.tab === 'launches' ? 'trending' : prefs.tab, markets: [], data: null,
   loading: false, error: null, query: '', hits: [], searching: false, searchError: null };
+let savedWindow;try{savedWindow=storage?.getItem('qxt:discover:window');}catch{}state.window=WINDOWS.some(([k])=>k===savedWindow)?savedWindow:'h24';state.filters=validateDiscoveryFilters();
+if(WINDOWS.some(([key])=>key===state.sort.key)){state.window=state.sort.key;state.sort={...state.sort,key:'move'};savePreference(storage,'window',state.window);savePreference(storage,'sort',state.sort);}
+const savedViews=createMarketViews(storage);
 let wantedLaunch = prefs.tab === 'launches', api = null, quickRow = null, quickHome = null;
 let focusedKey = null, savedScroll = 0, savedWindowScroll = 0, opening = false, searchGeneration = 0;
 let searchTimer, searchController;
 const main = document.getElementById('qxt-main');
 const search = document.getElementById('qxt-search');
 const columns = [
-  ['token', 'Token'], ['price', 'Price'], ['m5', '5m'], ['h1', '1h'], ['h24', '24h'],
+  ['token', 'Token'], ['price', 'Price'], ['move', 'Change'],
   ['volume', 'Volume 24h'], ['liquidity', 'Liquidity'], ['mcap', 'MCap'],
-  ['txns', 'Txns 24h'], ['makers', 'Makers'], ['safety', 'Safety'], ['buy', '⚡ Buy'],
+  ['txns', 'Swaps 24h'], ['makers', 'Wallet activity'], ['safety', 'Safety'], ['buy', '⚡ Buy'],
 ];
 const nodes = new Map();
 const root = el('section', { class: 'qxfd', id: 'qxt-discover', 'aria-label': 'Tokens' });
 const tabs = el('div', { class: 'qxfd-tabs', role: 'tablist', 'aria-label': 'Token lists' });
 const chainGroup = el('div', { class: 'qxfd-chains', role: 'group', 'aria-label': 'Token chains' });
 const status = el('span', { class: 'qxfd-status', role: 'status', 'aria-live': 'polite' });
+const windows=el('div',{class:'qxfd-windows',role:'group','aria-label':'Price change window'},...WINDOWS.map(([key,label])=>button(label,{'data-window':key,'aria-pressed':String(key===state.window)})));
 const quickSlot = el('div', { class: 'qxfd-quick-slot' });
 const sortSelect = el('select', { 'aria-label': 'Sort tokens', class: 'qxfd-sort-select' },
   el('option', { value: '' }, 'Feed order'), ...columns.filter(([key]) => SORT_KEYS.includes(key)).flatMap(([key, label]) => [
     el('option', { value: key + ':desc' }, label + ' ↓'), el('option', { value: key + ':asc' }, label + ' ↑'),
   ]));
+const sortHint=el('span',{class:'qxfd-sort-hint',id:'qxfd-sort-hint'},'Sort this list');
+sortSelect.setAttribute('aria-describedby','qxfd-sort-hint');
+const filterFields={};
+const filterDetails=el('details',{class:'qxfd-filter-details'},el('summary',{},'Filters'));
+const filterGrid=el('div',{class:'qxfd-filter-grid'});
+for(const [key,label] of [['liquidityMin','Min liquidity, $'],['capMin','Min cap / FDV, $'],['capMax','Max cap / FDV, $'],['volumeMin','Min 24h volume, $'],['transactionsMin','Min 24h transactions'],['ageMaxHours','Max age, hours'],['venue','Venue']]){
+ const input=el('input',{type:'text',inputmode:key==='venue'?'text':'decimal','aria-label':label,placeholder:key==='venue'?'Any venue':'Any'});filterFields[key]=input;filterGrid.append(el('label',{},el('span',{},label),input));
+}
+const applyFilters=button('Apply filters'),resetFilters=button('Reset'),viewName=el('input',{type:'text',maxlength:32,'aria-label':'Saved view name',placeholder:'Name this view'}),saveView=button('Save view'),removeView=button('Delete view');
+const viewSelect=el('select',{'aria-label':'Saved market views'}),filterMessage=el('p',{role:'status','aria-live':'polite',class:'qxfd-filter-message'});
+const renderViews=()=>{viewSelect.replaceChildren(el('option',{value:''},'Saved views'),...savedViews.list().map(v=>el('option',{value:v.name},v.name)));};renderViews();
+filterDetails.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();filterDetails.open=false;filterDetails.querySelector('summary').focus();}});
+filterDetails.append(filterGrid,el('div',{class:'qxfd-filter-actions'},applyFilters,resetFilters),el('div',{class:'qxfd-saved-views'},viewSelect,viewName,saveView,removeView),filterMessage);
+function captureFilters(){return validateDiscoveryFilters(Object.fromEntries(Object.entries(filterFields).map(([k,v])=>[k,v.value])));}
+function updateWindow(){for(const b of windows.children)b.setAttribute('aria-pressed',String(b.dataset.window===state.window));const label=WINDOWS.find(([k])=>k===state.window)?.[1]||'24h';headers.get('move')?.querySelector('button')?.replaceChildren(label+' change');}
+windows.addEventListener('click',event=>{const key=event.target.closest('[data-window]')?.dataset.window;if(!WINDOWS.some(([k])=>k===key)||key===state.window)return;state.window=key;savePreference(storage,'window',key);updateWindow();refresh();});
+applyFilters.addEventListener('click',()=>{try{state.filters=captureFilters();filterMessage.textContent='Filters applied to this list.';renderRows();}catch(error){filterMessage.textContent=error.message;}});
+resetFilters.addEventListener('click',()=>{state.filters=validateDiscoveryFilters();for(const input of Object.values(filterFields))input.value='';filterMessage.textContent='Filters cleared.';renderRows();});
+saveView.addEventListener('click',()=>{try{state.filters=captureFilters();savedViews.save({name:viewName.value,chain:state.chain,tab:state.tab,window:state.window,filters:state.filters});renderViews();viewSelect.value=viewName.value.trim();filterMessage.textContent='View saved on this device.';renderRows();}catch(error){filterMessage.textContent=error.message;}});
+removeView.addEventListener('click',()=>{try{if(!viewSelect.value)return;savedViews.remove(viewSelect.value);renderViews();filterMessage.textContent='View deleted.';}catch(error){filterMessage.textContent=error.message;}});
+viewSelect.addEventListener('change',()=>{const v=savedViews.list().find(v=>v.name===viewSelect.value);if(!v)return;state.tab=v.tab;state.window=v.window;state.chain=CHAINS.some(([k])=>k===v.chain)?v.chain:'all';state.filters=v.filters;state.data=null;for(const [k,input]of Object.entries(filterFields))input.value=v.filters[k]||'';for(const b of chainGroup.children)b.setAttribute('aria-pressed',String(b.dataset.chain===state.chain));viewName.value=v.name;renderTabs();updateWindow();refresh();});
 const panel = el('div', { role: 'tabpanel', id: 'qxfd-panel', class: 'qxfd-panel' });
 const noticeText = el('span');
 const retry = button('Retry', { class: 'qxfd-retry' });
@@ -59,11 +88,13 @@ scroll.append(table);
 const empty = el('div', { class: 'qxfd-empty', hidden: '' });
 const count = el('span');
 const source = el('span');
+const heading = el('h1', {}, 'Tokens');
 panel.append(notice, scroll, empty);
 root.append(
-  el('div', { class: 'qxfd-heading' }, el('h1', {}, 'Tokens'), status),
+  el('div', { class: 'qxfd-heading' }, heading, status),
   el('div', { class: 'qxfd-toolbar' }, tabs, quickSlot),
-  el('div', { class: 'qxfd-filterbar' }, chainGroup, sortSelect),
+  el('div', { class: 'qxfd-filterbar' }, chainGroup, el('div',{class:'qxfd-sort-tools'},sortHint,sortSelect)),
+  el('div',{class:'qxfd-viewbar'},windows,filterDetails),
   panel,
   el('div', { class: 'qxfd-footer' }, count, source,
     el('span', { class: 'qxfd-hint' }, '↑ ↓ Navigate · Enter Open · / Search · Esc Tokens')),
@@ -123,8 +154,9 @@ function visibleRows() {
       seen.add(key); return true;
     });
   }
+  rows=filterDiscovery(rows,{tab:state.tab,window:state.window,filters:state.filters});
   return sortRows(rows.filter(r => state.chain === 'all' || String(r.chainId) === state.chain)
-    .map(r => rowViewModel(r, { quick: api?.state.quick || {} })), state.sort);
+    .map(r => rowViewModel(r, { quick: api?.state.quick || {},window:state.window })), state.sort);
 }
 
 function makeRow(vm) {
@@ -160,7 +192,7 @@ function makeRow(vm) {
 function updateRow(node, vm) {
   const old = node.vm;
   node.vm = vm;
-  text(node.letter, vm.letter); text(node.symbol, vm.symbol); text(node.name, vm.name); text(node.rowAge, vm.age);
+  text(node.letter, vm.letter); text(node.symbol, vm.symbol); text(node.name, vm.name); text(node.rowAge, vm.lifecycle.stage==='bonding'?'Bond '+Math.round(vm.lifecycle.progress*100)+'%':vm.lifecycle.stage==='migrated'?'Migrated · '+vm.age:vm.age);node.rowAge.dataset.stage=vm.lifecycle.stage;
   node.name.title = vm.name;
   node.open.setAttribute('aria-label', `Open ${vm.symbol}, ${vm.name || vm.address}, on ${vm.chainName}`);
   node.chain.hidden = !vm.chainIcon;
@@ -173,16 +205,17 @@ function updateRow(node, vm) {
     if (vm.logo) node.logo.src = vm.logo;
     else node.logo.removeAttribute('src');
   }
-  for (const key of ['price', 'm5', 'h1', 'h24', 'volume', 'liquidity', 'makers']) text(node.cells[key], vm[key]);
-  for (const key of ['m5', 'h1', 'h24']) {
+  for (const key of ['price', 'move', 'volume', 'liquidity', 'makers']) text(node.cells[key], vm[key]);
+  for (const key of ['move']) {
     node.cells[key].classList.toggle('up', vm.numeric[key] > 0);
     node.cells[key].classList.toggle('down', vm.numeric[key] < 0);
   }
+  node.cells.move.setAttribute('data-label',(WINDOWS.find(([k])=>k===state.window)?.[1]||'24h')+' change');
   text(node.cap, vm.mcap); text(node.capKind, vm.capKind);
   text(node.buys, vm.buys); text(node.sells, vm.sells);
   node.cells.txns.setAttribute('aria-label', `${vm.buys === DASH ? 'Unknown' : vm.buys} buys, ${vm.sells === DASH ? 'unknown' : vm.sells} sells in 24 hours`);
-  const labels = { ok: 'No flags', warn: 'Caution', danger: 'Danger' };
-  text(node.safe, vm.safety.flag ? labels[vm.safety.flag] : DASH);
+  node.cells.makers.title=vm.row.makersKind==='unique_wallets'?'Unique wallets in the received 24h swaps.':'Provider buyer and seller activity; a wallet may be counted on both sides.';
+  text(node.safe, vm.safety.label);
   node.cells.safety.dataset.flag = vm.safety.flag || '';
   node.cells.safety.title = vm.safety.title;
   node.cells.safety.setAttribute('aria-label', vm.safety.title);
@@ -210,7 +243,7 @@ function skeleton() {
 }
 
 function renderRows() {
-  const rows = visibleRows();
+  const rows = visibleRows(),activeFilters=Object.values(state.filters).filter(x=>x!=='').length;filterDetails.querySelector('summary').textContent=activeFilters?'Filters · '+activeFilters:'Filters';
   const previousFocus = document.activeElement;
   const previousIndex = [...nodes.keys()].indexOf(focusedKey);
   const y = scroll.scrollTop, pageY = window.scrollY;
@@ -230,26 +263,48 @@ function renderRows() {
   const initialLoading = state.tab !== 'launches' && !state.data && state.loading && !state.query;
   if (initialLoading) skeleton();
   empty.hidden = !!rows.length || initialLoading;
-  text(empty, state.query ? (state.searching ? 'Searching tokens…' : 'No tokens match this search.') : state.error ? 'The token feed could not be loaded. Retry above.' : 'No tokens in this list yet. Try another chain or tab.');
-  text(count, initialLoading ? 'Loading tokens…' : `${rows.length} token${rows.length === 1 ? '' : 's'}`);
+  const missingWindow=['gainers','losers'].includes(state.tab)&&state.data?.rows?.length&&!state.data.rows.some(r=>Number.isFinite(r.change?.[state.window]));
+  const emptyText = !state.query&&missingWindow?'No '+(WINDOWS.find(([k])=>k===state.window)?.[1]||'selected-window')+' history is available for this received set yet.':activeFilters&&!state.query?'No tokens match these filters.':!state.query&&['bonding','migrated'].includes(state.tab)&&!state.error?'No confirmed '+(state.tab==='bonding'?'curves above 80% graduation':'migrations')+' in the received market set.':state.query ? (state.searching ? 'Searching tokens…' : 'No tokens match this search.') : state.error ? 'The token feed could not be loaded. Retry above.' : 'No tokens in this list yet. Try another chain or tab.';
+  text(count, initialLoading ? 'Loading tokens…' : `${rows.length} token${rows.length === 1 ? '' : 's'} · ${rows.filter(r=>r.numeric.move!==null).length} with ${WINDOWS.find(([k])=>k===state.window)?.[1]} history`);
   panel.setAttribute('aria-busy', String(state.loading || state.searching));
-  const error = state.searchError || state.error;
-  notice.hidden = !error;
-  text(noticeText, error ? `${state.data?.rows?.length ? 'Showing the last loaded feed. ' : ''}${error}` : '');
-  text(status, error ? 'Could not refresh' : state.searching ? 'Searching…' : state.loading ? 'Refreshing…' : state.data?.stale && state.tab !== 'launches' ? 'data delayed' : state.tab === 'launches' ? 'QHooks launches' : 'Updates every 30s');
-  status.dataset.delayed = String(!!error || !!state.data?.stale);
-  text(source, state.tab === 'launches' ? '' : [state.data?.source, state.data?.generatedAt ? 'Updated ' + age(state.data.generatedAt) + ' ago' : null].filter(Boolean).join(' · '));
+  renderFeedFeedback({state,heading,status,notice,noticeText,empty,retry,emptyText});
+  text(source, state.tab === 'launches' ? '' : [state.data?.source,state.data?.coverage?.description].filter(Boolean).join(' · '));
   scroll.scrollTop = y;
   if (window.scrollY !== pageY) window.scrollTo({ top: pageY, behavior: 'instant' });
 }
 
+// Live rows: the visitor's browser refreshes the on-screen rows from DexScreener every 30 s (30 per call, per chain).
+// A server reload keeps any newer live numbers instead of going back to an older copy.
+const livePatches = new Map(), rowKey = r => r.chainId + ':' + (r.chainId === 'solana' ? r.pool : String(r.pool || '').toLowerCase());
+function withLive(rows) {
+  if (!Array.isArray(rows)) return rows;
+  return rows.map(r => { const p = livePatches.get(rowKey(r)); return p && Date.now() - p.observedAt < 90000 ? applyRowPatch(r, p) : r; });
+}
+let liveRowsBusy = false;
+async function refreshLiveRows() {
+  if (liveRowsBusy || document.hidden || root.hidden || state.tab === 'launches' || !state.data?.rows?.length) return;
+  liveRowsBusy = true;
+  try {
+    const shown = visibleRows().map(v => v?.row || v).filter(r => !r.launch && DEX_CHAINS[r.chainId] && r.token?.address).slice(0, 60), byChain = new Map();
+    for (const r of shown) { const list = byChain.get(r.chainId) || []; if (list.length < 30) list.push(r); byChain.set(r.chainId, list); }
+    let changed = false;
+    for (const [chainId, rows] of byChain) {
+      const pairs = await fetchDexPairs(chainId, rows.map(r => r.token.address)); if (!pairs) continue;
+      for (const r of rows) { const patch = rowPatch(pickPair(pairs, chainId, r.token.address, r.pool)); if (patch) { livePatches.set(rowKey(r), patch); changed = true; } }
+    }
+    if (changed && state.data?.rows) { state.data = { ...state.data, rows: withLive(state.data.rows) }; renderRows(); }
+  } finally { liveRowsBusy = false; }
+}
+setInterval(() => { void refreshLiveRows(); }, 30000);
 const loader = createFeedLoader({ fetcher: (...args) => fetch(...args), changed: update => {
+  if (update?.data?.rows) update = { ...update, data: { ...update.data, rows: withLive(update.data.rows) } };
   Object.assign(state, update); renderRows();
+  if (!livePatches.size && update?.data?.rows?.length) setTimeout(() => { void refreshLiveRows(); }, 1500);
 } });
 function refresh() {
   if (document.hidden) return;
   if (state.tab === 'launches') { state.loading = false; state.data = null; state.error = null; renderRows(); }
-  else loader.load(state.tab, state.chain);
+  else loader.load(state.tab, state.chain,state.window);updateWindow();
 }
 function setTab(tab) {
   if (!availableTabs().some(([id]) => id === tab)) return;
@@ -303,13 +358,13 @@ async function runSearch() {
   try {
     const response = await fetch('/api/terminal/x/search?' + new URLSearchParams({ q: state.query, ...(state.chain === 'all' ? {} : { chain: state.chain }) }), { cache: 'no-store', signal: controller.signal });
     const body = await response.json();
-    if (!response.ok) throw new Error(body.error || 'Token search unavailable');
+    if (!response.ok) throw new Error(plainMarketError());
     if (mine !== searchGeneration) return;
     state.hits = (Array.isArray(body.results) ? body.results : []).filter(hit => typeof hit?.address === 'string' && CHAINS.some(([id]) => id !== 'all' && id === String(hit.chainId)));
     state.searchError = null;
   } catch (error) {
     if (mine !== searchGeneration) return;
-    state.searchError = error.name === 'AbortError' ? 'Token search timed out' : error.message;
+    state.searchError = error.name === 'AbortError' ? 'Token search timed out. Try again.' : plainMarketError();
   } finally {
     clearTimeout(ceiling);
     if (mine === searchGeneration) { state.searching = false; renderRows(); }

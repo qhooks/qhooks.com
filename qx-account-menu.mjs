@@ -20,17 +20,17 @@ const fmtUsd = v => v == null ? '' : v > 0 && v < 0.01 ? '< $0.01' : '$' + v.toL
 const TYPE = { 'io.qhooks.privy': 'QHooks email wallet', 'io.qhooks.walletconnect': 'WalletConnect', 'io.qhooks.metamask-mobile': 'MetaMask Mobile' };
 const short = a => a.slice(0, 6) + '…' + a.slice(-4);
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
-let cur = null, portfolio = '/me.html', render = () => {};
+let cur = null, portfolio = '/me', render = () => {};
 const ONE_CLICK_LIVE = true; // the Trades setting; ships together with the Privy bridge and the ticket's one-click
 // Cash total + "Move to another chain" come from the terminal's Relay module once it ships (lab-public-deploys):
 // openMoveFunds({ from, to }) and cashTotal(owner) → { usd, byChain }. Until then the row stays hidden.
 // Moves between chains carry no QHooks fee, only Relay's own (Randall, 2026-11-04); the row says so.
 let moveFunds = null, probed = false;
 // Checked the first time the account menu opens (not on every page load): Portfolio (builder-marketplace) once
-// /portfolio.html answers, My QHooks until then; the move-funds row once its module exists.
+// /portfolio answers, My QHooks until then; the move-funds row once its module exists.
 function probe() {
   if (probed) return; probed = true;
-  fetch('/portfolio.html', { method: 'HEAD', cache: 'no-store' }).then(r => { if (r.ok) { portfolio = '/portfolio.html'; render(); } }).catch(() => {});
+  fetch('/portfolio', { method: 'HEAD', cache: 'no-store' }).then(r => { if (r.ok) { portfolio = '/portfolio'; render(); } }).catch(() => {});
   fetch('/qx-move-funds.mjs', { method: 'HEAD', cache: 'no-store' }).then(r => r.ok ? import('/qx-move-funds.mjs') : null).then(m => { if (m?.openMoveFunds) { moveFunds = m; render(); } }).catch(() => {});
 }
 
@@ -170,7 +170,7 @@ if (dialog) {
     card.querySelector('.qwm-short').textContent = short(cur.owner);
     card.querySelector('.qwm-wtype').textContent = TYPE[cur.entry?.rdns] || cur.entry?.name || 'Browser wallet';
     renderSwitcher();
-    links.replaceChildren(...[['My QHooks', '/me.html'], ['Portfolio', portfolio], ['Rewards', '/me.html#qa-rewards'], ['My launches', '/me.html#qa-launches']].map(([t, h]) => { const a = el('a', null, t); a.href = h; a.addEventListener('click', () => dialog.close()); return a; }));
+    links.replaceChildren(...[['My QHooks', '/me'], ['Portfolio', portfolio], ['Rewards', '/me#qa-rewards'], ['My launches', '/me#qa-launches']].map(([t, h]) => { const a = el('a', null, t); a.href = h; a.addEventListener('click', () => dialog.close()); return a; }));
     renderTrades(); loadBalances(); renderCash();
   };
   // The fund button arrives later (email-login script); keep the footer complete whenever the dialog changes.

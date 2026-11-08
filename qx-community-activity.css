@@ -1,0 +1,22 @@
+/* Community activity and explicitly device-local follow controls. */
+.qcf-control{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px 10px;min-width:0}
+.qcf-button{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 12px;border:1px solid var(--qx-line-2,#40473e);border-radius:9px;background:transparent;color:var(--qx-ink,#ecefe7);font:500 12px var(--qx-sans,sans-serif);cursor:pointer}
+.qcf-button:hover{border-color:var(--qx-brass,#d9b977)}.qcf-button[aria-pressed=true]{border-color:var(--qx-brass,#d9b977);color:var(--qx-brass,#d9b977)}
+.qcf-button:disabled{opacity:.5;cursor:default}.qcf-button:focus-visible,.qcaf select:focus-visible{outline:2px solid var(--qx-brass,#d9b977);outline-offset:3px}
+.qcf-device-note{font:400 11px/1.4 var(--qx-sans,sans-serif);color:var(--qx-muted,#a5afa0)}
+.qcaf{color:var(--qx-ink,#ecefe7);font-family:var(--qx-sans,sans-serif);min-width:0}
+.qcaf-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:9px}.qcaf-toolbar h2{flex:1 1 100%;font:500 clamp(28px,3vw,44px)/1.06 var(--qx-serif,serif);letter-spacing:-.02em;margin:0 0 10px}
+.qcaf-toolbar select{max-width:100%;min-height:38px;padding:8px 10px;border:1px solid var(--qx-line-2,#40473e);border-radius:9px;background:var(--qx-bg-2,#192019);color:inherit;font:400 12px var(--qx-sans,sans-serif)}
+.qcaf-note,.qcaf-status,.qcaf-empty{font-size:13px;line-height:1.55;color:var(--qx-muted,#a5afa0)}.qcaf-status:empty{display:none}.qcaf-note{max-width:76ch}
+.qcaf-layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(220px,.75fr);gap:22px;align-items:start;margin:16px 0}
+.qcaf-feed{display:grid;gap:12px;min-width:0}.qcaf-call{padding:18px;border:1px solid var(--qx-line,#303b2e);border-radius:13px;background:var(--qx-panel,#131a13);min-width:0}
+.qcaf-meta{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 12px;font-size:12px;line-height:1.5}.qcaf-meta>a{font-weight:650;color:var(--qx-brass,#d9b977)}.qcaf-meta time{color:var(--qx-muted,#a5afa0);font-size:11px}
+.qcaf-author{display:inline-block;font:400 11px var(--qx-mono,monospace);margin-top:10px;color:var(--qx-muted,#a5afa0)}
+.qcaf-thesis{font-size:15px;line-height:1.6;overflow-wrap:anywhere;white-space:pre-line}.qcaf-entry{font-size:11px;line-height:1.5;color:var(--qx-muted,#a5afa0)}
+.qcaf-actions,.qcaf-context{display:flex;flex-wrap:wrap;align-items:center;gap:10px 15px}.qcaf-actions{margin-top:14px}.qcaf-actions>a,.qcaf-context>a{font-size:12px;color:var(--qx-brass,#d9b977)}.qcaf-context{margin-top:12px}
+.qcaf-label{display:inline-block;border:1px solid var(--qx-line-2,#40473e);border-radius:30px;padding:3px 7px;font-size:10px;color:var(--qx-muted,#a5afa0);margin-right:6px}
+.qcaf-callers h3,.qcaf-saved h3{font-size:17px;margin:0 0 8px}.qcaf-caller{padding:14px 0;border-top:1px solid var(--qx-line,#303b2e)}.qcaf-caller>a{font:500 12px var(--qx-mono,monospace);color:var(--qx-brass,#d9b977)}.qcaf-caller p{font-size:11px;line-height:1.5;color:var(--qx-muted,#a5afa0)}
+.qcaf-new{padding:12px 0}.qcaf-new[hidden],.qcaf>button[hidden]{display:none}.qcaf-saved:empty{display:none}.qcaf-saved{padding:15px 0}.qcaf-saved-item{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--qx-line,#303b2e)}.qcaf-saved-item>a{font-size:13px;color:var(--qx-brass,#d9b977)}
+.qcaf-compact .qcaf-toolbar h3{flex:1;font-size:16px;margin:0}.qcaf-compact .qcaf-layout{grid-template-columns:minmax(0,1fr);gap:0}.qcaf-compact .qcaf-callers{display:none}.qcaf-compact .qcaf-note{font-size:11px}.qcaf-compact .qcaf-call{padding:12px}.qcaf-compact .qcaf-thesis{font-size:13px}.qcaf-compact .qcaf-entry{font-size:10px}.qcaf-compact .qcf-control{align-items:flex-start;flex-direction:column}.qcaf-compact .qcaf-actions{gap:8px 12px}
+#following,#recent-calls{scroll-margin-top:110px}
+@media(max-width:760px){.qcaf-layout{grid-template-columns:minmax(0,1fr)}.qcaf-callers{border-top:1px solid var(--qx-line,#303b2e);padding-top:18px}.qcaf-call{padding:15px}.qcaf-toolbar{gap:8px}.qcaf-toolbar .qcf-button{min-height:42px}.qcaf-actions .qcf-control{flex-basis:100%}.qcaf-meta time{flex-basis:100%}}

@@ -1,0 +1,51 @@
+// Wallet confirms always sit on top (Randall, 2026-11-07: "the confirm transaction was under the wallet + bridge popover").
+// Our wallet menu and the move/bridge dialog open with showModal(), which puts them in the browser's top layer: above
+// every z-index, and the rest of the page goes inert. The email wallet's confirm (Privy) is an ordinary fixed overlay,
+// so an open modal dialog covered it and the press sat waiting. While a Privy dialog is on screen:
+//  - the wallet menu (#qhc-dialog) closes;
+//  - any other modal dialog (move funds, etc.) steps down to a plain dialog under the confirm, keeping its progress,
+//    and goes back to modal once the confirm is gone.
+// Dialogs that step down carry data-qx-under while it lasts; their own 'close' handlers skip clean-up while it is set.
+const PRIVY = ['privy-dialog', 'privy-dialog-backdrop', 'privy-modal-content'];
+const under = new Set();
+let started = false;
+
+function confirmShown(d) {
+  return PRIVY.some(id => { const e = d.getElementById(id); return !!e && e.getClientRects().length > 0; });
+}
+function keepFlagUntilClosed(dialog) {
+  // The 'close' event fires after this task; listeners added earlier (the dialog's own) still see the flag.
+  dialog.addEventListener('close', () => { if (!under.has(dialog)) delete dialog.dataset.qxUnder; }, {once: true});
+}
+export function syncConfirmTop(d = document) {
+  if (confirmShown(d)) {
+    for (const dialog of d.querySelectorAll('dialog[open]')) {
+      let modal = false; try { modal = dialog.matches(':modal'); } catch {}
+      if (!modal) continue;
+      if (dialog.id === 'qhc-dialog') { dialog.close(); continue; }
+      dialog.dataset.qxUnder = '1'; under.add(dialog);
+      dialog.close(); dialog.show();
+    }
+  } else if (under.size) {
+    for (const dialog of [...under]) {
+      under.delete(dialog);
+      if (dialog.open && dialog.isConnected) { dialog.close(); dialog.showModal(); keepFlagUntilClosed(dialog); }
+      else delete dialog.dataset.qxUnder;
+    }
+  }
+}
+export function startConfirmTop(d = document) {
+  if (started || !d?.body || typeof MutationObserver === 'undefined') return;
+  started = true;
+  let queued = false;
+  new MutationObserver(() => {
+    if (queued) return; queued = true;
+    queueMicrotask(() => { queued = false; syncConfirmTop(d); });
+  }).observe(d.body, {childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'open', 'hidden']});
+  const css = d.createElement('style'); css.id = 'qx-confirm-top-style';
+  css.textContent = 'dialog[data-qx-under][open]{position:fixed;inset:0;margin:auto;z-index:2147483000}';
+  d.head.append(css);
+}
+if (typeof document !== 'undefined') {
+  if (document.body) startConfirmTop(document); else document.addEventListener('DOMContentLoaded', () => startConfirmTop(document), {once: true});
+}

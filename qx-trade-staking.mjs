@@ -102,6 +102,15 @@ async function show(pool) {
     const token = toAddress(w[BLOCK_FIELDS.findIndex(([k]) => k === 'token')]), quote = toAddress(w[BLOCK_FIELDS.findIndex(([k]) => k === 'quote')]);
     const payees = w.slice(BLOCK_FIELDS.length, BLOCK_FIELDS.length + 8).map(toAddress), shares = w.slice(BLOCK_FIELDS.length + 8, BLOCK_FIELDS.length + 16);
     let vault = stakeVaultAddress(token, quote), at = payees.indexOf(vault), mod = null;
+    // Simple launches (one-transaction factory) create their vault with a plain CREATE: find it among the payees by asking
+    // each one for its token() and quote() (QStakeVault exposes both; same stake/unstake/claim ABI as the CREATE2 vault).
+    if (at < 0) {
+      for (let i = 1; i < payees.length && at < 0; i++) {
+        const p = payees[i]; if (!p || BigInt(p) === 0n || !BigInt(shares[i] || 0)) continue;
+        try { const [vt, vq] = await Promise.all([ethCall(pool.chainId, p, '0xfc0c546a'), ethCall(pool.chainId, p, '0x999b93af')]);
+          if (toAddress(vt) === token && toAddress(vq) === quote) { vault = p; at = i; } } catch {}
+      }
+    }
     if (at < 0) { await loadModules(); const f = modulesAmong(payees, token, quote).find(x => x.module.panel === 'stake'); if (f) ({ address: vault, index: at, module: mod } = f); }
     if (at < 0) { if (mine === seq) card.hidden = true; return; }
     const [t, q, supply] = await Promise.all([erc20(pool.chainId, token), erc20(pool.chainId, quote), ethCall(pool.chainId, token, '0x18160ddd').then(BigInt)]);

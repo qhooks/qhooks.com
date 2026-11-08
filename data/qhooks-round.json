@@ -1,0 +1,8 @@
+{
+ "chainId": "4663",
+ "rpc": "https://rpc.mainnet.chain.robinhood.com",
+ "explorer": "https://robinhoodchain.blockscout.com",
+ "round": "0xf0ff83e91e997a9b35f2ab49aa8d857b845d7234",
+ "startCapWei": "1666666666666666752",
+ "reserveBps": 3000
+}

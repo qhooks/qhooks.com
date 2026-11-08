@@ -11,7 +11,7 @@ const copy=Object.freeze({
 });
 export function bindCompleteNetworkPicker({document:d=document,location=window.location,history=window.history}={}){
  const buttons=[...d.querySelectorAll('[data-chain]')],panel=d.getElementById('network-selection'),title=d.getElementById('network-title'),detail=d.getElementById('network-copy'),launch=d.getElementById('network-launch'),wallet=d.getElementById('network-wallet');
- function select(id,focus=false){const chain=launchChain(id);buttons.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.chain===id)));title.textContent=chain.name;detail.textContent=copy[id];launch.href='launch-workspace.html?chain='+id;wallet.href='qwallets.html?chain='+id;panel.hidden=false;if(focus)title.focus();}
+ function select(id,focus=false){const chain=launchChain(id);buttons.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.chain===id)));title.textContent=chain.name;detail.textContent=copy[id];launch.href='/launch-workspace?chain='+id;wallet.href='/qwallets?chain='+id;panel.hidden=false;if(focus)title.focus();}
  buttons.forEach(button=>button.addEventListener('click',()=>select(button.dataset.chain,true)));
  const params=new URLSearchParams(location.search);if(params.getAll('chain').length===1){try{select(params.get('chain'));}catch{/* Invalid links intentionally select nothing. */}}
  return Object.freeze({select});

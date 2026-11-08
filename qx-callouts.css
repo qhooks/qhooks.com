@@ -1,0 +1,38 @@
+/* Callouts: terminal Call it, profile follow, My QHooks inbox, Community points. Upright type only. */
+.qco-call{color:var(--qx-ink);border-color:var(--qx-brass)}
+.qco-call:hover:not(:disabled){background:var(--qx-brass);color:var(--qx-on-brass)}
+.qco-call:disabled{opacity:.7;border-color:var(--qx-line-2)}
+.qco-call.is-asked{animation:qco-pulse 1.4s var(--qx-ease,ease) 3}
+@keyframes qco-pulse{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--qx-brass) 35%,transparent)}}
+@media (prefers-reduced-motion:reduce){.qco-call.is-asked{animation:none;box-shadow:0 0 0 2px var(--qx-brass)}}
+.qco-note{font:12px/1.4 var(--qx-sans);color:var(--qx-muted);margin-left:8px}
+.qco-note a{color:var(--qx-brass)}
+.qco-profile{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:14px 0 4px}
+.qco-counts{font:14px/1.4 var(--qx-sans);color:var(--qx-muted)}.qco-counts b{color:var(--qx-ink);font-weight:600}
+.qco-follow[aria-pressed=true]{border-color:var(--qx-brass);color:var(--qx-brass)}
+.qco-profile .qco-note{margin:0;flex-basis:100%}
+.qco-section .qa-actions{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.qco-inbox{display:grid;gap:10px}
+.qco-item{border:1px solid var(--qx-line);border-radius:var(--qx-radius,12px);padding:14px 16px;background:var(--qx-panel)}
+.qco-item.is-unread{border-color:var(--qx-brass)}
+.qco-item-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;font:14px/1.4 var(--qx-sans);color:var(--qx-muted)}
+.qco-item-head a{color:var(--qx-ink)}.qco-sym{font-weight:650}
+.qco-item-head time{margin-left:auto;font-size:12px;color:var(--qx-faint)}
+.qco-text{margin:8px 0 10px;font:14px/1.5 var(--qx-sans);color:var(--qx-ink);overflow-wrap:anywhere;white-space:pre-line}
+.qco-item-links{display:flex;gap:8px}
+.qco-empty,.qco-day{font:14px/1.5 var(--qx-sans);color:var(--qx-muted)}
+.qco-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.qco-tab{border:1px solid var(--qx-line-2);background:none;color:var(--qx-muted);border-radius:999px;padding:6px 14px;font:13px var(--qx-sans);cursor:pointer}
+.qco-tab[aria-selected=true]{background:var(--qx-ink);color:var(--qx-bg);border-color:var(--qx-ink)}
+.qco-table-wrap{overflow-x:auto;border:1px solid var(--qx-line);border-radius:var(--qx-radius,12px)}
+.qco-table{width:100%;border-collapse:collapse;font:14px/1.4 var(--qx-sans);color:var(--qx-ink)}
+.qco-table th{font-weight:500;color:var(--qx-muted);text-align:left;padding:10px 14px;border-bottom:1px solid var(--qx-line)}
+.qco-table td{padding:10px 14px;border-bottom:1px solid var(--qx-line)}
+.qco-table tr:last-child td{border-bottom:0}
+.qco-table .n{text-align:right;font-variant-numeric:tabular-nums}
+.qco-table a{color:var(--qx-ink)}
+.qco-tag{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;border:1px solid var(--qx-brass);color:var(--qx-brass);font-size:11px}
+.qco-rules{margin-top:16px;font:14px/1.6 var(--qx-sans);color:var(--qx-muted)}
+.qco-rules summary{cursor:pointer;color:var(--qx-ink)}
+.qco-rules ul{margin:8px 0 0;padding-left:20px}
+@media (max-width:600px){.qco-table th:nth-child(4),.qco-table td:nth-child(4){display:none}.qco-note{display:block;margin:6px 0 0}}

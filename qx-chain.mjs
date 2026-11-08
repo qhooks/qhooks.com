@@ -142,30 +142,33 @@ async function providerFor(address) {
 }
 /// Switches the wallet to `chainId` when it is elsewhere. Wallets report a network change as a new connection,
 /// so the page is told first (qhooks:chain-switch) and can rejoin the same wallet afterwards.
-async function onChain(p, chainId, onStatus = () => {}) {
+async function onChain(p,chainId,onStatus=()=>{},assertContext=()=>{}){
   const hexChain = '0x' + Number(chainId).toString(16);
-  if ((await p.request({ method: 'eth_chainId' })).toLowerCase() === hexChain) return;
+  const activeChain=await p.request({method:'eth_chainId'});assertContext();
+  if(activeChain.toLowerCase()===hexChain)return;
   onStatus((silentActive() ? 'Switching to ' : 'Switching your wallet to ') + CHAIN_NAME[chainId] + '…');
   window.dispatchEvent(new CustomEvent('qhooks:chain-switch', { detail: { chainId: String(chainId) } }));
-  await p.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: hexChain }] });
+  assertContext();await p.request({method:'wallet_switchEthereumChain',params:[{chainId:hexChain}]});assertContext();
 }
 /// Sends one transaction from the connected wallet on the pool's chain and waits for its receipt.
-export async function send(chainId, tx, onStatus = () => {}) {
-  const from = connectedAddress(); if (!from) throw new Error('Connect your wallet first');
-  const p = await providerFor(from);
-  await onChain(p, chainId, onStatus);
+export async function send(chainId,tx,onStatus=()=>{},assertContext=()=>{}){
+  assertContext();const from=connectedAddress();if(!from)throw Error('Connect your wallet first');
+  const assert=()=>{assertContext();if(connectedAddress()!==from)throw Error('Your wallet changed. Review this action again.');};assert();
+  const p=await providerFor(from);assert();
+  await onChain(p,chainId,onStatus,assert);assert();
   // Explicit EIP-1559 fees (twice the base fee plus the wallet's tip) so no wallet pairs a tip above its own cap.
   const fees = {};
   try {
     const [block, tip] = await Promise.all([rpc(chainId, 'eth_getBlockByNumber', ['latest', false]), p.request({ method: 'eth_maxPriorityFeePerGas' }).catch(() => '0x0')]);
     if (block?.baseFeePerGas) { const t = BigInt(tip || 0); fees.maxPriorityFeePerGas = '0x' + t.toString(16); fees.maxFeePerGas = '0x' + (BigInt(block.baseFeePerGas) * 2n + t).toString(16); }
   } catch {}
+  assert();
   // Hooks whose cost depends on the block (decaying fees, clocks, per-block caps) can outrun a wallet's own
   // estimate, so the gas limit carries 30% headroom over a fresh estimate. Unused gas is not charged.
   const value = '0x' + BigInt(tx.value || 0).toString(16);
   try { const est = BigInt(await rpc(chainId, 'eth_estimateGas', [{ from, to: tx.to, data: tx.data, value }])); fees.gas = '0x' + (est * 13n / 10n).toString(16); } catch {}
-  onStatus(silentActive() ? 'Sending…' : 'Confirm in your wallet…');
-  const hash = await p.request({ method: 'eth_sendTransaction', params: [{ from, to: tx.to, data: tx.data, value, ...fees }] });
+  assert();onStatus(silentActive() ? 'Sending…' : 'Confirm in your wallet…');
+  assert();const hash = await p.request({ method: 'eth_sendTransaction', params: [{ from, to: tx.to, data: tx.data, value, ...fees }] });
   onStatus('Waiting for the transaction…');
   for (let i = 0; i < 180; i++) {
     const r = await rpc(chainId, 'eth_getTransactionReceipt', [hash]).catch(() => null);
@@ -182,19 +185,30 @@ export async function signTypedData(chainId, typed) {
   return p.request({ method: 'eth_signTypedData_v4', params: [from, JSON.stringify(typed)] });
 }
 /// Signs a plain-text message (EIP-191 personal_sign) with the connected wallet: no transaction, no fee, no network switch.
-export async function signMessage(text) {
-  const from = connectedAddress(); if (!from) throw new Error('Connect your wallet first');
-  const p = await providerFor(from);
-  const hexText = '0x' + Array.from(new TextEncoder().encode(text), b => b.toString(16).padStart(2, '0')).join('');
-  return p.request({ method: 'personal_sign', params: [hexText, from] });
+const messageHex=text=>'0x'+Array.from(new TextEncoder().encode(text),b=>b.toString(16).padStart(2,'0')).join('');
+// Hub pages use the hub's existing provider, without a second discovery or
+// permission path. The same embedded/phone facade still owns signing behavior.
+export function captureMessageWallet(getConnection) {
+  const captured=getConnection?.(),from=captured?.owner?.toLowerCase(),provider=captured?.entry?.provider,chain=String(captured?.chainId||'');
+  if(!/^0x[0-9a-f]{40}$/.test(from||'')||!provider?.request||!/^\d+$/.test(chain))throw Error('Connect a wallet first');
+  const changed=()=>Error('Your wallet changed. Review and sign in again.');
+  function assertCurrent(){const current=getConnection();if(current?.owner?.toLowerCase()!==from||current?.entry?.provider!==provider||String(current?.chainId)!==chain)throw changed();}
+  async function check(){assertCurrent();const[accounts,id]=await Promise.all([provider.request({method:'eth_accounts'}),provider.request({method:'eth_chainId'})]);assertCurrent();if(accounts?.[0]?.toLowerCase()!==from||BigInt(id).toString()!==chain)throw changed();}
+  return Object.freeze({owner:from,assertCurrent,check,async sign(text){await check();const signature=await provider.request({method:'personal_sign',params:[messageHex(text),from]});await check();return signature;}});
+}
+export async function signMessage(text,{getConnection}={}) {
+  if(getConnection)return captureMessageWallet(getConnection).sign(text);
+  const from=connectedAddress();if(!from)throw Error('Connect your wallet first');
+  const p=await providerFor(from);return p.request({method:'personal_sign',params:[messageHex(text),from]});
 }
 /// Approves `spender` for exactly `amount` when the current allowance is lower.
-export async function ensureAllowance(chainId, token, spender, amount, onStatus) {
-  const owner = connectedAddress();
+export async function ensureAllowance(chainId,token,spender,amount,onStatus,assertContext=()=>{}){
+  assertContext();const owner=connectedAddress();if(!owner)throw Error('Connect your wallet first');
+  const assert=()=>{assertContext();if(connectedAddress()!==owner)throw Error('Your wallet changed. Review this action again.');};assert();
   const current = BigInt(await ethCall(chainId, token, calldata('0xdd62ed3e', ['address', 'address'], [owner, spender])));
-  if (current >= amount) return;
+  assert();if(current>=amount)return;
   onStatus?.(silentActive() ? 'Approving…' : 'Approve the token in your wallet…');
-  await send(chainId, { to: token, data: calldata('0x095ea7b3', ['address', 'uint256'], [spender, amount]) }, onStatus);
+  await send(chainId, { to: token, data: calldata('0x095ea7b3', ['address', 'uint256'], [spender, amount]) },onStatus,assert);assert();
 }
 
 // ---- Small DOM helper shared by the panels ----

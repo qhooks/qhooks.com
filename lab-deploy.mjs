@@ -352,7 +352,7 @@ export function mountLabDeploy({ container, template, readConfig, ownerFromConfi
     const manifest = deploymentManifest({ artifact: a, hash: st.hash, inputs: plan.inputs, plan, receipts: st.entry.receipts, verification, deployer: plan.from });
     manifest.buildRequest = st.request;
     st.entry.complete = ok; st.entry.manifest = manifest; saveEntry(st.entry); renderResume();
-    const link = new URL('lab-hook.html#' + encodeManifest(manifest), location.href).href;
+    const link = new URL('/lab-hook#' + encodeManifest(manifest), location.href).href;
     const download = h('button', { type: 'button', class: 'workspace-button', onclick: () => { const x = document.createElement('a'); x.href = URL.createObjectURL(new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' })); x.download = 'qhooks-deployment-' + manifest.hook.address.slice(2, 10) + '.json'; x.click(); } }, 'Download deployment manifest');
     result.replaceChildren(
       h('p', { class: ok ? 'ld-ok' : 'ld-bad' }, ok ? `${a.templateTitle} is live on ${a.chain.name}. Hook ${manifest.hook.address}.` : 'Some checks failed. Do not use this deployment until they pass.'),
@@ -367,7 +367,7 @@ export function mountLabDeploy({ container, template, readConfig, ownerFromConfi
     resumeBox.replaceChildren(...(open.length ? [h('details', { open: open.some(e => !e.complete) },
       h('summary', {}, 'Saved deployments in this browser (' + open.length + ')'),
       h('ul', {}, open.map(e => h('li', {}, `${e.projectName} · ${CHAIN_NAME[e.chainId]} · ${e.complete ? 'deployed' : 'in progress'} `,
-        e.complete && e.manifest ? h('a', { href: 'lab-hook.html#' + encodeManifest(e.manifest) }, 'Share page') : h('button', { type: 'button', class: 'workspace-button', onclick: () => run(() => resume(e)) }, 'Continue')))))] : []));
+        e.complete && e.manifest ? h('a', { href: '/lab-hook#' + encodeManifest(e.manifest) }, 'Share page') : h('button', { type: 'button', class: 'workspace-button', onclick: () => run(() => resume(e)) }, 'Continue')))))] : []));
   }
   async function resume(e) {
     st.chainId = e.chainId; chips.querySelectorAll('input').forEach(i => { i.checked = i.value === e.chainId; });

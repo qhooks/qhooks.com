@@ -1,0 +1,1 @@
+import{a as o}from"./chunk-KC2EEYUX.js";import{f as c}from"./chunk-6DSDX2NM.js";var t=c(o(),1),u=e=>{let[r,s]=(0,t.useState)();return(0,t.useEffect)((()=>{e().then((a=>{s(a)})).catch((()=>{}))}),[]),r};export{u as a};

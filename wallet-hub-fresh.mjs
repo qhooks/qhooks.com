@@ -1,4 +1,5 @@
-import {createWalletSession} from '/full-launch/prototypes/qwallet/client/wallet-session.mjs';
+import {createWalletSession} from './full-launch/prototypes/qwallet/client/wallet-session.mjs';
+import {chainById} from './chains.mjs';
 import {discoverWallets} from './wallet-discovery.mjs';
 import {readWalletPreference,walletPreferenceText} from './wallet-preference.mjs';
 export const WALLET_PREFERENCE_KEY='qhooks:wallet-connection:v1';
@@ -12,14 +13,28 @@ export function passiveProvider(provider){
   on:(event,fn)=>provider.on(event,fn),removeListener:(event,fn)=>provider.removeListener(event,fn)
  });
 }
-export function createWalletHub(target,{discover=discoverWallets}={}){
+export function createWalletHub(target,{discover=discoverWallets,settle=()=>new Promise(resolve=>setTimeout(resolve,750))}={}){
  let entries=[],current=null,session=null,busy=false,dead=false,epoch=0,automatic=false,timer=null,attempted=null,remembered=false,allowRestore=true;
+ let requestedSwitch=null;
+ // Only chain events matching our own switch bypass the original session reset.
+ // A short grace also covers Privy's same-chain provider re-issue after the switch.
+ function sessionProvider(provider){
+  const listeners=new Map();
+  return {request:args=>passiveProvider(provider).request(args),on(event,fn){
+   const wrapped=event==='chainChanged'?value=>{
+    let id;try{id=BigInt(value).toString();}catch{}
+    if(requestedSwitch?.provider===provider&&requestedSwitch.id===id&&Date.now()<requestedSwitch.until)return;
+    fn(value);
+   }:fn;
+   if(!listeners.has(event))listeners.set(event,new Map());listeners.get(event).set(fn,wrapped);provider.on(event,wrapped);
+  },removeListener(event,fn){provider.removeListener(event,listeners.get(event)?.get(fn)||fn);listeners.get(event)?.delete(fn);}};
+ }
  const watchers=new Set(),walletWatchers=new Set();let open=()=>{};
  const stored=()=>{try{return readWalletPreference(target.localStorage.getItem(WALLET_PREFERENCE_KEY));}catch{return null;}};
  const snapshot=()=>Object.freeze({current,busy,remembered,wallets:Object.freeze([...entries])});
  const publish=()=>{for(const fn of [...watchers])try{fn(snapshot());}catch{/* One view must not break invalidation. */}};
  function forget(){remembered=false;try{target.localStorage.removeItem(WALLET_PREFERENCE_KEY);if(target.localStorage.getItem(WALLET_PREFERENCE_KEY)!==null)target.localStorage.setItem(WALLET_PREFERENCE_KEY,'');return stored()===null;}catch{return false;}}
- function reset({forgetSelection=false}={}){epoch++;current=null;automatic=false;const old=session;session=null;busy=false;const forgotten=forgetSelection?forget():true;old?.dispose();publish();return forgotten;}
+ function reset({forgetSelection=false}={}){epoch++;current=null;automatic=false;requestedSwitch=null;const old=session;session=null;busy=false;const forgotten=forgetSelection?forget():true;old?.dispose();publish();return forgotten;}
  function save(entry,c){
   remembered=false;if(!entry.rdns)return;
   try{const text=walletPreferenceText({rdns:entry.rdns,owner:c.owner,chainId:c.chainId});target.localStorage.setItem(WALLET_PREFERENCE_KEY,text);remembered=target.localStorage.getItem(WALLET_PREFERENCE_KEY)===text;}catch{/* Connecting remains usable without browser storage. */}
@@ -37,7 +52,7 @@ export function createWalletHub(target,{discover=discoverWallets}={}){
     granted=accounts[0].toLowerCase();
    }
    if(dead||revision!==epoch||!entries.includes(entry))throw Error('Wallet changed during connection');
-   next=createWalletSession(passiveProvider(entry.provider),()=>{if(current&&session===next)reset({forgetSelection:true});});session=next;
+   next=createWalletSession(sessionProvider(entry.provider),()=>{if(current&&session===next)reset({forgetSelection:true});});session=next;
    const c=await next.connect();
    if(dead||revision!==epoch||session!==next||!entries.includes(entry))throw Error('Wallet changed during connection');
    if(granted&&c.owner!==granted)throw Error('Authorized account changed. Reconnect your wallet.');
@@ -61,10 +76,43 @@ export function createWalletHub(target,{discover=discoverWallets}={}){
  });
  function storageChanged(event){if(event.key!==WALLET_PREFERENCE_KEY&&event.key!==null)return;const p=stored();if(busy||current&&(!p||p.owner!==current.owner||p.chainId!==current.chainId||p.rdns!==current.entry.rdns))reset();}
  target.addEventListener('storage',storageChanged);
- function resumeView(){if(!current||!session)return;const selected=session,revision=epoch;void selected.refresh(selected.current).then(()=>{if(revision===epoch)publish();}).catch(()=>{if(session===selected)reset({forgetSelection:true});});}
+ function resumeView(){if(busy||!current||!session)return;const selected=session,revision=epoch;void selected.refresh(selected.current).then(()=>{if(revision===epoch)publish();}).catch(()=>{if(session===selected)reset({forgetSelection:true});});}
  target.addEventListener('focus',resumeView);target.addEventListener('pageshow',resumeView);
+ async function switchChain(chainId){
+  const chain=chainById(chainId),before=current;
+  if(!chain)throw Error('Choose a supported launch network.');
+  if(dead||busy||!before)throw Error('Connect your wallet before switching networks.');
+  if(before.chainId===chain.id)return before;
+  const revision=epoch,p=before.entry.provider;
+  requestedSwitch={provider:p,id:chain.id,until:Date.now()+120000};busy=true;publish();
+  if(typeof target.CustomEvent==='function')target.dispatchEvent(new target.CustomEvent('qhooks:chain-switch',{detail:{chainId:chain.id}}));
+  let next;
+  try{
+   try{await p.request({method:'wallet_switchEthereumChain',params:[{chainId:chain.hex}]});}
+   catch(e){if(Number(e?.code)!==4902)throw e;
+    await p.request({method:'wallet_addEthereumChain',params:[{chainId:chain.hex,chainName:chain.name,nativeCurrency:{name:chain.native,symbol:chain.native,decimals:18},rpcUrls:[chain.rpc],blockExplorerUrls:[chain.explorer]}]});
+    await p.request({method:'wallet_switchEthereumChain',params:[{chainId:chain.hex}]});
+   }
+   // Embedded SDKs re-issue their handle after returning from the switch. Let
+   // that handoff finish before any workspace opens its own guarded session.
+   await settle();
+   if(dead||epoch!==revision||current!==before)throw Error('Wallet changed. Connect it again.');
+   next=createWalletSession(sessionProvider(p),()=>{if(current&&session===next)reset({forgetSelection:true});});
+   const c=await next.connect();await next.refresh(c);
+   if(dead||epoch!==revision||current!==before||c.owner!==before.owner||c.chainId!==chain.id)throw Error('Your wallet is still on the wrong network. Try switching again.');
+   const old=session;session=next;old?.dispose();
+   current=Object.freeze({...before,chainId:c.chainId});save(before.entry,c);
+   requestedSwitch.until=Date.now()+2000;return current;
+  }catch(e){next?.dispose();
+   // A declined switch must retain the connection. Any actual unexpected network
+   // change remains subject to the original reset behaviour.
+   if(epoch===revision&&Number(e?.code)===4001){requestedSwitch=null;throw Object.assign(Error('Network switch was cancelled in your wallet. Try again when ready.'),{code:4001});}
+   if(epoch===revision&&current===before){try{await session?.refresh(session.current);}catch{/* refresh resets stale connections */}}
+   throw e;
+  }finally{if(epoch===revision){busy=false;if(requestedSwitch)requestedSwitch.until=Math.min(requestedSwitch.until,Date.now()+2000);publish();}}
+ }
  return Object.freeze({
-  snapshot,preference:stored,restore,scan:()=>discovery.scan(),
+  snapshot,preference:stored,restore,switchChain,scan:()=>discovery.scan(),
   connect(uuid){const entry=entries.find(e=>e.uuid===uuid);if(!entry)return Promise.reject(Error('Select an installed EVM wallet'));allowRestore=true;forget();return establish(entry);},
   disconnect(){const rdns=current?.entry.rdns||stored()?.rdns;allowRestore=false;attempted=null;const result=reset({forgetSelection:true});if(rdns&&typeof target.CustomEvent==='function')target.dispatchEvent(new target.CustomEvent('qhooks:wallet-disconnected',{detail:{rdns}}));return result;},
   subscribe(fn){watchers.add(fn);fn(snapshot());return()=>watchers.delete(fn);},
@@ -84,8 +132,9 @@ export function bindWalletWorkspace({target,connectButton,disconnectButton,provi
   if(dead||queued||opening)return;queued=true;
   Promise.resolve().then(async()=>{
    queued=false;if(dead||opening||busy()||hasSession())return;
-   const c=hub.snapshot().current;if(!c)return;
-   const chain=chainId();if(!chain||chain!==c.chainId){if(chain)note('Wallet connected on chain '+c.chainId+'. Select the required network in your wallet.');return;}
+   let c=hub.snapshot().current;if(!c||hub.snapshot().busy)return;
+   const chain=chainId();if(!chain)return;
+   if(chain!==c.chainId){opening=true;try{note('Switching your wallet to the launch network…');c=await hub.switchChain(chain);}finally{opening=false;}}
    const identity=c.entry.provider;const key=c.owner+':'+c.chainId+':'+chain;
    if(attempt?.provider===identity&&attempt.key===key)return;attempt={provider:identity,key};opening=true;
    providerSelect.value=c.entry.uuid;
@@ -101,7 +150,7 @@ export function bindWalletWorkspace({target,connectButton,disconnectButton,provi
   try{attempt=null;await hub.connect(entry.uuid);}catch(error){note(error?.message||'Wallet connection was declined.',true);}render();
  }
  function disconnect(){if(dead||busy())return;const forgotten=hub.disconnect();if(hasSession())onDisconnect();attempt=null;render();if(!forgotten)note('Disconnected here. Browser storage is locked; clear site data to forget the saved selection permanently.',true);}
- const preference=hub.preference();if(preference)selectChain?.(preference.chainId);
+ const preference=hub.preference();if(preference&&!new URLSearchParams(target.location?.search||'').has('chain'))selectChain?.(preference.chainId);
  connectButton.addEventListener('click',connect);disconnectButton.addEventListener('click',disconnect);
  const unsubscribe=hub.subscribe(update);
  return Object.freeze({render,dispose(){dead=true;unsubscribe();connectButton.removeEventListener('click',connect);disconnectButton.removeEventListener('click',disconnect);}});

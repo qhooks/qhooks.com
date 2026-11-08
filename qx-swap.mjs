@@ -126,7 +126,7 @@ export function savedReferrer() {
   return r && /^0x[0-9a-f]{40}$/.test(r) && r !== me ? r : null;
 }
 /// A link that credits `who` as referrer.
-export const referralLink = (who, path = '/terminal.html') => 'https://qhooks.com' + path + (path.includes('?') ? '&' : '?') + 'ref=' + who.toLowerCase();
+export const referralLink = (who, path = '/terminal') => 'https://qhooks.com' + path + (path.includes('?') ? '&' : '?') + 'ref=' + who.toLowerCase();
 /// The hops for a native-coin buy, matching what quoteNative chose.
 export function nativeHops(chainId, key, quoteToken, q) {
   const route = nativeRoute(chainId, quoteToken);

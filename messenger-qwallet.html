@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Messenger request | QWallet</title><script src="theme.js"></script>
+<link rel="icon" href="qhooks-logo.jpg" type="image/jpeg">
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="product.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="workspace.css"><link rel="stylesheet" href="qwallets.css">
+<link rel="stylesheet" href="chain-symbols.css">
+<link rel="stylesheet" href="crypto-product-ui.css">
+<link rel="stylesheet" href="/wallet-site.css"><link rel="stylesheet" href="/l167-quiet-product.css"><link rel="stylesheet" href="/l167-quiet.css"><link rel="stylesheet" href="/l170-product.css"><link rel="stylesheet" href="/l170-polish.css"><link rel="stylesheet" href="messenger-wallet.css"></head><body class="q167-quiet q170-desk">
+<a class="skip-link" href="#qwallet-page">Skip to QWallet</a>
+<header class="site-header"><a class="brand" href="/" aria-label="QHooks home"><span class="mark" aria-hidden="true"><img src="qhooks-logo.jpg" alt="" width="784" height="1168"></span><span>QHooks</span></a><nav class="site-nav" aria-label="Main navigation"><a href="/launch">Launch</a><a href="/hooks">Hooks</a><a href="/lab">Lab</a><a href="/qwallets" aria-current="page">qWallets</a></nav><button type="button" id="qhc-trigger" class="qhc-trigger" aria-haspopup="dialog">Connect wallet</button><button class="theme-toggle" data-theme-toggle type="button" aria-pressed="false" hidden>Dark mode</button></header>
+<main class="guide qwallet-workspace" id="qwallet-page">
+ <div class="eyebrow">QWallet / Cross-EVM</div><h1>A second key.<br>Your control.</h1>
+ <p>Hold assets in a QWallet that requires both your connected wallet and a post-quantum signature to withdraw. Choose Base, Robinhood, Ethereum, Arbitrum, BNB or Arc.</p>
+ <p>Connect → Set up → Back up your quantum key → Enroll → Deposit.</p>
+ <div class="qwallet-grid"><section class="qwallet-panel qwallet-wide" aria-labelledby="mw-heading">
+  <h2 id="mw-heading">A payment from your messenger</h2>
+  <p>Untrusted public request details only. This page never receives chat text,
+  contact names, wallet secrets or reusable approvals. Check the address through
+  a trusted channel. Do not send directly to a QWallet custody contract.</p>
+  <pre id="mw-summary">Waiting for the trusted messenger window.</pre>
+  <div class="lab-actions"><button class="workspace-button" id="mw-load" type="button" disabled>Load unsigned withdrawal</button>
+  <button class="workspace-button" id="mw-cancel" type="button">Decline request</button></div>
+  <p id="mw-status" role="status" aria-live="polite">No wallet action has been requested.</p>
+  <p>Every signature and transaction still requires your approval below.
+  Reported inclusion is a QWallet-verified snapshot, not finality or an
+  independent messenger receipt check. Already submitted transactions cannot
+  be cancelled by closing either page.</p>
+</section>
+
+ <section class="qwallet-panel" aria-labelledby="qw-connect-heading"><h2 id="qw-connect-heading">Choose your chain</h2><div class="lab-form">
+  <label for="qw-chain">Network</label><select id="qw-chain"><option value="8453">Base · ETH gas</option><option value="4663">Robinhood Chain · ETH gas</option><option value="1">Ethereum · ETH gas</option><option value="42161">Arbitrum One · ETH gas</option><option value="56">BNB Chain · BNB gas</option><option value="5042">Arc · USDC gas</option></select>
+  <label for="qw-provider">Installed wallet</label><select id="qw-provider"><option value="">No installed wallet detected</option></select>
+  <div class="lab-actions"><button class="workspace-button" type="button" id="qw-connect" disabled>Connect wallet</button><button class="workspace-button" type="button" id="qw-disconnect" disabled>Disconnect</button></div>
+  <p id="qw-connection" role="status">Choose your network in your wallet before connecting. No automatic chain switching.</p>
+  <label for="qw-tokens">Additional token contracts, optional</label><textarea id="qw-tokens" maxlength="700" spellcheck="false" placeholder="One ERC20 address per line"></textarea><small>The native asset is always included. Add up to 16 token contracts. This list cannot change after deployment. On Arc, use native USDC, not its ERC20 alias.</small>
+  <button class="workspace-button" type="button" id="qw-setup" disabled>Prepare QWallet setup</button>
+ </div></section>
+ <section class="qwallet-panel" aria-labelledby="qw-setup-heading"><h2 id="qw-setup-heading">Set up your QWallet</h2>
+  <p>Deploy the verifier, then your custody contract. Nothing is deposited during setup.</p><p id="qw-setup-summary" role="status"></p>
+  <div class="lab-actions"><button class="workspace-button" type="button" id="qw-setup-review" disabled>Review verifier deployment</button><button class="workspace-button" type="button" id="qw-setup-check" disabled>Check deployments</button><button class="workspace-button" type="button" id="qw-open" disabled>Open QWallet</button></div>
+  <details><summary>Save or recover setup</summary><div class="lab-form"><label for="qw-setup-file">Public setup progress</label><input type="file" id="qw-setup-file" accept=".json,application/json" disabled><div class="lab-actions"><button class="workspace-button" type="button" id="qw-setup-import" disabled>Import setup</button><button class="workspace-button" type="button" id="qw-setup-download" disabled>Download setup</button><button class="workspace-button" type="button" id="qw-setup-save" disabled>Retry saving setup</button></div></div><p>Keep this public progress file when moving between devices or domains. It does not contain your keys.</p></details>
+ </section>
+ <section class="qwallet-panel" aria-labelledby="qw-key-heading">
+  <h2 id="qw-key-heading">Your quantum key</h2>
+  <p>Your quantum key is generated locally and never shared with QHooks. An encrypted backup is required to protect your assets. No seed or wallet private key is ever requested.</p>
+  <div class="lab-form">
+    <p class="qhc-key-help">Create a key, enter your passphrase and download its encrypted backup. Then choose the downloaded JSON file and re-enter the same passphrase to verify it.</p><label for="qw-password">Backup passphrase</label>
+    <input id="qw-password" type="password" autocomplete="new-password" minlength="16" maxlength="1024" disabled>
+    <small>Use at least 16 characters. Keep the passphrase separate from your backup.</small>
+    <p id="qw-key-feedback" class="qhc-key-feedback" role="status" aria-live="polite"></p><label for="qw-backup-file">Encrypted quantum-key backup</label>
+    <input id="qw-backup-file" type="file" accept=".json,application/json" disabled>
+  </div>
+  <div class="lab-actions">
+    <button type="button" class="workspace-button" id="qw-generate" disabled>Create quantum key</button>
+    <button type="button" class="workspace-button" id="qw-export-key" disabled>Download encrypted backup</button>
+    <button type="button" class="workspace-button" id="qw-verify-key" disabled>Verify saved backup</button>
+    <button type="button" class="workspace-button" id="qw-restore-key" disabled>Restore backup</button>
+    <button type="button" class="workspace-button" id="qw-lock-key" disabled>Lock key</button>
+  </div>
+  <p id="qw-key-status" role="status"></p>
+  <p>If you lose your backup or passphrase, QHooks cannot reset it. Protection applies to assets inside QWallet.</p>
+ </section>
+ <section class="qwallet-panel" aria-labelledby="qw-account-heading"><h2 id="qw-account-heading">Your protected account</h2>
+  <pre id="qw-account-summary" aria-live="polite"></pre><div class="lab-form">
+  <label for="qw-kind">Action</label><select id="qw-kind" disabled><option value="enroll">Enroll account</option><option value="deposit">Deposit</option><option value="approve-token">Set token allowance</option><option value="withdraw">Withdraw</option></select>
+  <label id="qw-asset-label" for="qw-asset" hidden>Asset<select id="qw-asset" disabled></select></label>
+  <label id="qw-amount-label" for="qw-amount" hidden>Amount<input type="text" id="qw-amount" inputmode="decimal" maxlength="100" placeholder="0.01" disabled><small id="qw-amount-unit"></small></label>
+  <label id="qw-recipient-label" for="qw-recipient" hidden>Withdrawal recipient<input type="text" id="qw-recipient" maxlength="42" spellcheck="false" placeholder="0x…" disabled></label>
+  <div class="lab-actions"><button class="workspace-button" type="button" id="qw-refresh" disabled>Refresh balance</button><button class="workspace-button" type="button" id="qw-prepare" disabled>Prepare action</button><button class="workspace-button" type="button" id="qw-clear" disabled>Clear action</button></div></div>
+  <details open><summary>Exact action</summary><pre id="qw-intent"></pre></details>
+  <div class="lab-actions"><button class="workspace-button" type="button" id="qw-approve" disabled>Approve with both keys</button><button class="workspace-button" type="button" id="qw-action-review" disabled>Review network cost</button><button class="workspace-button" type="button" id="qw-action-check" disabled>Check action receipt</button></div>
+  <small>For a token deposit, first set its exact allowance. Setting an allowance to zero revokes it. Withdrawals always require both keys.</small>
+ </section>
+ <section class="qwallet-panel qwallet-wide" aria-labelledby="qw-review-heading"><h2 id="qw-review-heading">Review, then approve in your wallet</h2>
+  <p id="qw-cost">Review a deployment or action for a fresh network-fee budget.</p><details><summary>Exact transaction</summary><pre id="qw-transaction"></pre></details>
+  <label class="qwallet-consent"><input type="checkbox" id="qw-consent" disabled> I reviewed this transaction, its destination and its maximum network budget.</label>
+  <div class="lab-actions"><button class="workspace-button" type="button" id="qw-send" disabled>Approve in wallet</button></div>
+  <p id="qw-feedback" class="lab-feedback" role="status" aria-live="polite">You approve every signature and transaction. A remembered wallet can reconnect here. New signatures and transactions always need approval.</p>
+  <div id="qw-recovery" hidden><label for="qw-hash">Transaction hash after an interrupted submission</label><input type="text" id="qw-hash" maxlength="66" spellcheck="false" placeholder="0x…" disabled><button class="workspace-button" type="button" id="qw-recover" disabled>Recover exact transaction</button><p>Recover the original transaction before trying another action. This check never resends it.</p></div>
+ </section>
+ <section class="qwallet-panel qwallet-wide" aria-labelledby="qw-progress-heading"><h2 id="qw-progress-heading">Pick up where you left off</h2><div class="lab-form">
+  <label for="qw-action-file">Public action progress</label><input type="file" id="qw-action-file" accept=".json,application/json" disabled>
+  <div class="lab-actions"><button class="workspace-button" type="button" id="qw-action-import" disabled>Import action</button><button class="workspace-button" type="button" id="qw-action-resume" disabled>Resume saved action</button><button class="workspace-button" type="button" id="qw-action-download" disabled>Download action</button><button class="workspace-button" type="button" id="qw-action-save" disabled>Retry saving action</button></div>
+  </div><p>Public progress is separate from your encrypted quantum-key backup. Imported actions are recovery-only: they cannot sign or resend.</p>
+ </section></div>
+ <details class="technical-notes"><summary>How QWallet protection works</summary><p>QWallet uses SLH-DSA-SHA2-128s post-quantum signatures alongside your connected EVM wallet. Protection applies to withdrawals from this custody contract, not your ordinary wallet, token transfers, chain consensus or assets in bridge transit. QHooks cannot reset either key.</p><p>Contracts are not independently audited. Tokens can have issuer controls, upgrades, transfer fees or blocklists; unsupported token behavior can cause a transaction to revert. QWallet does not provide yield. Use the deposit action, not a direct transfer to the contract.</p><p>Reviews expire after two minutes. Account or network changes lock your quantum key and invalidate approvals. Keep both your encrypted backup and public setup progress before moving this workspace to another site.</p></details>
+</main><footer><a class="brand" href="/"><span>QHooks</span></a><p>For the next generation of token builders.</p><nav class="q167-footer-links" aria-label="More QHooks tools"><a href="/pool">Pools</a><a href="/trade">Trade</a><a href="/markets">Marketplace</a><a href="/integrate">Integrate</a><a href="/api">API</a><a href="/pricing">Pricing</a></nav></footer>
+<script type="module" src="messenger-qwallet-entry.mjs"></script>
+<script type="module" src="chain-symbols.mjs"></script>
+<script type="module" src="crypto-product-ui.mjs"></script>
+<dialog id="qhc-dialog" class="qhc-dialog" aria-labelledby="qhc-title">
+ <div class="qhc-heading"><h2 id="qhc-title">Your wallet</h2><button id="qhc-close" type="button" aria-label="Close wallet dialog">×</button></div>
+ <section class="qhc-login"><button id="qhc-email-login" type="button" class="qhc-choice">Continue with email or Google</button><p>No wallet extension needed. Your QWallet quantum key stays separate.</p><button id="qhc-email-logout" type="button" class="qhc-secondary" hidden>Sign out of QHooks login</button><p id="qhc-login-status" role="status" aria-live="polite"></p></section><section class="qhc-mobile">
+ <label for="qhc-mobile-chain">Mobile wallet network</label><select id="qhc-mobile-chain"></select>
+ <button id="qhc-mobile-login" type="button" class="qhc-choice">MetaMask Mobile</button>
+ <p id="qhc-mobile-status" role="status" aria-live="polite">Connect your phone with a QR code.</p>
+ <button id="qhc-mobile-disconnect" type="button" class="qhc-secondary" hidden>Disconnect mobile session</button>
+ <p class="qhc-sdk-notice">Uses MetaMask Connect, copyright ConsenSys. <a href="/metamask/LICENSE.txt" target="_blank" rel="noopener">License</a></p>
+</section>
+<div id="qhc-choices">
+  <p>Choose an EVM wallet.</p>
+  <div id="qhc-wallets" class="qhc-wallets"></div>
+  <div id="qhc-empty"><p>No wallet detected in this browser.</p><p>Open <strong>qhooks.com</strong> in Chrome with your wallet extension enabled, or in your wallet app’s built-in browser.</p><p>The in-app preview cannot access Chrome’s wallet extensions. Use MetaMask Mobile above to pair your phone.</p></div>
+  <button id="qhc-rescan" type="button" class="qhc-secondary">Detect wallets again</button>
+ </div>
+ <div id="qhc-account" hidden><p id="qhc-address" class="qhc-address"></p><p id="qhc-chain"></p><p id="qhc-remembered"></p><button id="qhc-forget" type="button" class="qhc-secondary">Disconnect and forget</button></div>
+ <div id="qhc-email-network" hidden><label for="qhc-embedded-chain">Embedded wallet network</label><select id="qhc-embedded-chain"></select><button id="qhc-embedded-switch" type="button" class="qhc-secondary">Switch network</button></div><p id="qhc-status" role="status" aria-live="polite"></p>
+ <p class="qhc-footnote">Connecting does not authorize spending. Every signature and transaction needs your approval. Never enter your recovery phrase here.</p>
+</dialog>
+<script type="module" src="/wallet-site.mjs"></script><script type="module" src="/wallet-page-resume.mjs"></script><script type="module" src="/wallet-login.mjs"></script><script type="module" src="/l121-mobile-login.mjs"></script></body></html>

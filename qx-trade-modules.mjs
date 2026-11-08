@@ -44,7 +44,7 @@ async function panel(found) {
   const head = [h('h3', { class: 'qtm-name' }, m.name), m.status === 'paused' ? h('p', { class: 'qtb-note qtm-paused' }, 'QHooks has paused this module: it is no longer offered to new launches. It keeps working here; read the review note before depositing.') : null,
     h('p', { class: 'qtb-note' }, m.summary),
     h('p', { class: 'qtx-meta' }, 'Built by ' + m.builderName + ' · gets ' + pct(shares[index]) + ' of this launch\'s income · ' + (m.builderBps ? 'builder keeps ' + pct(m.builderBps) + ' of that' : 'no builder share') + ' · ',
-      h('a', { href: '/builders.html#modules' }, 'reviewed module'))];
+      h('a', { href: '/builders#modules' }, 'reviewed module'))];
   const [cq, ct] = (await Promise.all([ethCall(chainId, blocks, BLK.creatorQuote), ethCall(chainId, blocks, BLK.creatorToken)])).map(BigInt);
   const waitQ = cq * BigInt(shares[index]) / 10000n, waitT = ct * BigInt(shares[index]) / 10000n;
   const payBtn = btn('Pay out', !me || (!cq && !ct && !live));

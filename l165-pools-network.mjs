@@ -17,7 +17,7 @@ export function bindPoolsNetwork({document:d=document,location=window.location}=
   const chain=launchChain(id);
   buttons.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.poolChain===id)));
   title.textContent=chain.name;copy.textContent=custodyCopy[id];
-  custody.href='qwallets.html?chain='+id;launch.href='qtoken-studio.html?chain='+id;
+  custody.href='/qwallets?chain='+id;launch.href='/qtoken-studio?chain='+id;
   selection.hidden=false;if(focus)title.focus();
  }
  buttons.forEach(button=>button.addEventListener('click',()=>select(button.dataset.poolChain,true)));

@@ -11,7 +11,7 @@
 //   testnet  like hidden, and never switched to live: a test network for fork/testnet proofs.
 //   planned  facts only, nothing built; no surface may list it.
 // Switching a chain on = change its status to 'live', run `node scripts/chain-coverage.mjs --fix-static`
-// (rewrites the static chain copy on launch.html / index.html / pricing.json) and deploy.
+// (rewrites the static chain copy on /launch / / / pricing.json) and deploy.
 //
 // family   'arc' = native coin is also an ERC-20 sharing one balance (Arc USDC at 0x3600…): the Arc launch
 //          workspace and shared-balance accounting apply. Every other family is ordinary native gas.
@@ -36,6 +36,7 @@ const rows = [
     data: { gecko: 'base', dex: 'base', alchemy: 'base-mainnet', zeroEx: true }
   },
   {
+    simpleLaunch: '0x023623568f41c032ec2f4bba368dbafc123160cc', simpleLaunchFrom: 108170556,
     id: '4663', hex: '0x1237', key: 'robinhood', name: 'Robinhood Chain', short: 'Robinhood', icon: 'robinhood', status: 'live', family: 'nitro',
     feeModel: 'nitro', feeAccounting: 'data-fee-in-estimate-gas', feeCapWei: '10000000000', gasFloorWei: null,
     native: 'ETH', rpc: 'https://rpc.mainnet.chain.robinhood.com', logsRpc: 'https://rpc.mainnet.chain.robinhood.com', logStep: 25000, blockTime: 0.1,
@@ -108,10 +109,10 @@ const rows = [
     data: { gecko: null, dex: null, alchemy: null, zeroEx: false }
   },
   {
-    // Elysium mainnet: announced for ~2026-11-09; chain id, RPC, WHYPE and Uniswap v4 addresses are published at
-    // launch. Fill these, run scripts/pin-chain.mjs elysium to pin runtime hashes into dependencies.json, then
-    // status 'hidden' → prove on a fork → 'live'. Contract side: QLaunchBlocks fee for HYPE (else 0.0002 HYPE)
-    // and QFeeRouter._manager() need this chain id (next toolkit / extras generation). Checklist in CHAINS.md.
+    // Financial routes stay planned. Read-only chain99901 venue/generation observations are in
+    // qx-elysium-registry.mjs; no single manager/wrapped asset is valid for every venue.
+    // Exact dependencies, HYPE fees, fee recipient, native funding and recovery must pass before
+    // this becomes selectable (including hidden mode). See lead/elysium/README.md for the gaps.
     id: null, hex: null, key: 'elysium', name: 'Elysium', short: 'Elysium', icon: 'elysium', status: 'planned', family: 'nitro',
     feeModel: 'nitro', feeAccounting: 'data-fee-in-estimate-gas', feeCapWei: '10000000000', gasFloorWei: null,
     native: 'HYPE', rpc: null, logsRpc: null, logStep: 25000, blockTime: 0.13, explorer: null,

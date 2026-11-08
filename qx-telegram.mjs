@@ -1,5 +1,5 @@
 // Runs before tg-early.js so Telegram launch credentials stay in memory even when the URL is normalized.
-// This file is also valid as a classic script: terminal.html loads it synchronously before other scripts.
+// This file is also valid as a classic script: /terminal loads it synchronously before other scripts.
 (function () {
   const q = new URLSearchParams(location.search), rawHash = location.hash.slice(1);
   const hp = /(?:^|&)tgWebApp/.test(rawHash) ? new URLSearchParams(rawHash) : null;

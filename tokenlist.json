@@ -1,0 +1,17 @@
+{
+  "name": "QHooks",
+  "timestamp": "2026-11-08T02:40:00.000Z",
+  "version": {"major": 1, "minor": 0, "patch": 0},
+  "logoURI": "https://qhooks.com/token-logos/qhooks-256.png",
+  "keywords": ["qhooks", "robinhood chain"],
+  "tokens": [
+    {
+      "chainId": 4663,
+      "address": "0x20429Af7cA3b0cE4d99EDBAA0693f26C5df05195",
+      "name": "QHOOKS",
+      "symbol": "QHOOKS",
+      "decimals": 18,
+      "logoURI": "https://qhooks.com/token-logos/qhooks-256.png"
+    }
+  ]
+}

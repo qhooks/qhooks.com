@@ -13,8 +13,9 @@ export async function extras() {
 export async function extraAddress(name) { return (await extras()).contracts[name].address; }
 export async function isLive(chainId, name) { return (await codeAt(chainId, await extraAddress(name))) !== '0x'; }
 /// One-time setup on a chain: sends salt ++ init code to the deterministic deployer.
-export async function setUp(chainId, name, onStatus) {
-  const a = await extras(), c = a.contracts[name];
-  await send(chainId, { to: a.deployer, data: a.salt + c.initCode.slice(2) }, onStatus);
-  if (!(await isLive(chainId, name))) throw new Error('Setup did not land');
+export async function setUp(chainId,name,onStatus,assertContext=()=>{}){
+  assertContext();
+  const a=await extras();assertContext();const c=a.contracts[name];
+  await send(chainId, { to: a.deployer, data: a.salt + c.initCode.slice(2)},onStatus,assertContext);assertContext();
+  const live=await isLive(chainId,name);assertContext();if(!live)throw Error('Setup did not land');
 }

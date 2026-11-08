@@ -1,0 +1,14 @@
+/* Member names complement wallet identity; these rules stay inside the compact identity element. */
+.qmi{display:inline-flex;align-items:center;gap:8px;min-width:0;max-width:100%;color:var(--qx-ink);text-decoration:none;vertical-align:middle}
+.qmi-avatar{display:grid;flex:none;width:28px;height:28px;border-radius:8px;overflow:hidden}
+.qmi-avatar>*{grid-area:1/1;width:28px;height:28px;border-radius:8px}
+.qmi-avatar>[hidden],.qmi-name[hidden]{display:none}
+.qmi-avatar>.qb-mark{width:28px;height:28px;border-radius:8px}
+.qmi-default{display:grid;place-items:center;background:var(--qx-panel-2,var(--qx-panel));box-shadow:inset 0 0 0 1px var(--qx-line-2,var(--qx-line));color:var(--qx-muted);font:500 10px var(--qx-mono)}
+.qmi-photo{display:block;object-fit:cover;opacity:0}
+.qmi-photo[data-ready="true"]{opacity:1}
+.qmi-words{display:flex;flex-direction:column;min-width:0;gap:2px}
+.qmi-name{max-width:20ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--qx-ink);font:500 13px/1.25 var(--qx-sans,system-ui,sans-serif)}
+.qmi-wallet{font:400 11px/1.3 var(--qx-mono);color:var(--qx-muted);white-space:nowrap}
+a.qmi:hover .qmi-name,a.qmi:hover .qmi-wallet{color:var(--qx-brass)}
+a.qmi:focus-visible{outline:2px solid var(--qx-brass);outline-offset:4px;border-radius:8px}

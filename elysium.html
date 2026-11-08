@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <title>Explore Elysium | QHooks</title>
+ <meta name="description" content="Explore Elysium pool creations, follow a public transaction and inspect hook runtime code with QHooks.">
+ <meta property="og:title" content="Explore Elysium · QHooks"><meta property="og:description" content="Find pools. Follow a transaction. Read the hook behind a market."><meta property="og:image" content="https://qhooks.com/og/qhooks-card.png?v=2"><meta name="twitter:card" content="summary_large_image">
+ <meta name="theme-color" content="#0c100e"><link rel="icon" href="/qhooks-logo.jpg" type="image/jpeg">
+ <script src="/theme.js"></script><link rel="stylesheet" href="/qx-site.css"><link rel="stylesheet" href="/qx-elysium.css">
+</head>
+<body class="qx ey">
+ <a class="skip-link" href="#elysium-app">Skip to Elysium tools</a>
+ <header class="site-header">
+  <a class="brand" href="/" aria-label="QHooks home"><span class="mark" aria-hidden="true"><img src="/qhooks-logo.jpg" width="34" height="34" alt=""></span><span>QHooks</span></a>
+  <nav class="site-nav" id="ey-nav" aria-label="Main navigation"><a href="/terminal">Terminal</a><a href="/hook-marketplace">Hooks</a><a href="/community">Community</a><a href="/elysium" aria-current="page">Elysium</a><a href="/integrate">Integrate</a></nav>
+  <button class="theme-toggle" data-theme-toggle type="button" aria-pressed="false" hidden>Dark mode</button>
+  <button class="qx-menu ey-menu" id="ey-menu" type="button" aria-label="Open navigation" aria-controls="ey-nav" aria-expanded="false"><span></span><span></span></button>
+ </header>
+ <main id="elysium-app" class="ey-main">
+  <div class="ey-hero">
+   <div><p class="qx-eyebrow">Elysium · on-chain tools</p><h1>Explore <span class="qx-serif">Elysium.</span></h1><p class="ey-lede">Find pools. Follow a transaction.<br>Read the hook behind a market.</p></div>
+   <section class="ey-network" aria-labelledby="ey-network-title">
+    <div class="ey-network-top"><h2 id="ey-network-title">The network at a glance</h2><button id="ey-network-refresh" class="ey-text-button" type="button">Refresh <span aria-hidden="true">↻</span></button></div>
+    <div class="ey-network-facts"><div><span>Network</span><strong>Elysium <small>99901</small></strong></div><div><span>Gas currency</span><strong>HYPE</strong></div><div><span>Latest observed block</span><strong id="ey-network-head">Not read yet</strong></div></div>
+    <p id="ey-network-status" class="ey-note ey-status" role="status" aria-live="polite">Reading the network…</p>
+    <details class="ey-source"><summary>Source &amp; settlement</summary><div id="ey-network-detail"><p>Public observations are supplied by a community RPC. Execution and provider head tags do not establish parent settlement.</p></div></details>
+   </section>
+  </div>
+  <nav class="ey-jump" aria-label="Elysium tools"><a href="#ey-pools">Pool discovery <span>01</span></a><a href="#ey-transactions">Track a transaction <span>02</span></a><a href="#ey-hook">Inspect a hook <span>03</span></a></nav>
+  <p id="ey-link-errors" class="ey-status" role="status" aria-live="polite" hidden></p>
+  <div class="ey-workspace">
+   <section class="ey-pools ey-panel" id="ey-pools" aria-labelledby="ey-pools-title">
+    <div class="ey-section-head"><div><p class="ey-kicker">01 / Discover</p><h2 id="ey-pools-title">Pool discovery</h2></div><span class="ey-badge">Public reads</span></div>
+    <p class="ey-intro">Read pool creations from a published deployment. Start with the latest 100 blocks, then work back.</p>
+    <form id="ey-pools-form" class="ey-pool-controls">
+     <label for="ey-venue">Venue<select id="ey-venue" disabled><option>Loading venues…</option></select></label>
+     <label for="ey-generation">Generation<select id="ey-generation" disabled><option>Choose a deployment</option></select></label>
+     <button id="ey-pools-refresh" class="ey-button ey-primary" type="submit">Refresh <span aria-hidden="true">↻</span></button>
+    </form>
+    <p id="ey-pools-target" class="ey-target">Reading the published deployment list…</p>
+    <p id="ey-pools-status" class="ey-status" role="status" aria-live="polite">Choose a venue to read its pools.</p>
+    <div id="ey-pools-context" class="ey-window" hidden></div>
+    <div id="ey-pool-list" class="ey-pool-list"><div class="ey-empty"><span class="ey-empty-mark" aria-hidden="true">↗</span><h3>Start with the pool.</h3><p>See its pair, protocol, hook and creation block before opening the code or transaction.</p></div></div>
+    <div class="ey-pool-bottom"><div class="ey-pool-pagination"><button id="ey-pools-previous" class="ey-button" type="button" disabled><span aria-hidden="true">←</span> Previous 100 blocks</button><button id="ey-pools-copy" class="ey-button" type="button" disabled>Copy window link</button></div><p>Pool creation is observed here. A shared manager does not identify a launchpad of origin.</p></div>
+    <p id="ey-window-link" class="ey-note" hidden></p>
+    <div id="ey-activity" hidden></div>
+   </section>
+   <aside class="ey-tools" aria-label="Transaction and hook tools">
+    <section class="ey-panel" id="ey-transactions" aria-labelledby="ey-transactions-title">
+     <div class="ey-section-head"><div><p class="ey-kicker">02 / Follow</p><h2 id="ey-transactions-title">Track a transaction</h2></div><span class="ey-tool-symbol" aria-hidden="true">↗</span></div>
+     <form id="ey-tx-form" class="ey-tool-form"><label for="ey-tx-hash">Public Elysium transaction hash<input id="ey-tx-hash" name="hash" placeholder="0x…" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="66" required pattern="0[xX][0-9a-fA-F]{64}" aria-describedby="ey-tx-help"></label><p id="ey-tx-help" class="ey-note">Checks the public receipt. No wallet connection needed.</p><button class="ey-button" id="ey-tx-submit" type="submit">Check transaction <span aria-hidden="true">→</span></button></form>
+     <div id="ey-tx-result" class="ey-tool-result" aria-live="polite"></div>
+     <div class="ey-inline-actions"><button id="ey-tx-refresh" class="ey-text-button" type="button" disabled>Refresh receipt</button><button id="ey-tx-clear" class="ey-text-button" type="button" hidden>Clear selection</button></div>
+     <details id="ey-tx-history" class="ey-source" hidden><summary>Recent hashes on this browser</summary><div id="ey-tx-history-list" class="ey-history"></div></details>
+    </section>
+    <section class="ey-panel" id="ey-hook" aria-labelledby="ey-hook-title">
+     <div class="ey-section-head"><div><p class="ey-kicker">03 / Inspect</p><h2 id="ey-hook-title">Read a hook</h2></div><span class="ey-tool-symbol" aria-hidden="true">⌘</span></div>
+     <form id="ey-hook-form" class="ey-tool-form"><label for="ey-hook-address">Hook contract address<input id="ey-hook-address" name="address" placeholder="0x…" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="42" required pattern="0[xX][0-9a-fA-F]{40}"></label><button id="ey-hook-submit" class="ey-button" type="submit">Inspect hook <span aria-hidden="true">→</span></button></form>
+     <p id="ey-hook-status" class="ey-status" role="status" aria-live="polite">Enter an address, or inspect a hook from a pool.</p><div id="ey-hook-result" class="ey-tool-result"></div>
+     <p class="ey-note">Callback flags describe address permissions. They are not a security rating.</p>
+    </section>
+   </aside>
+  </div>
+  <details class="ey-developer"><summary><span>Build with these reads</span><span class="ey-note">API &amp; JavaScript SDK</span></summary><div class="ey-dev-body"><div><h2>Public data, in your product.</h2><p>The same pool, transaction and hook observations are available through the read-only API. Keep the source, timestamp and pool identity with the data.</p><a class="qx-link" href="/sdk/elysium.mjs">Open the SDK →</a><p class="ey-note">These tools do not quote trades, move funds or enable Elysium trading on QHooks.</p></div><pre><code>import { createElysiumClient } from
+  'https://qhooks.com/sdk/elysium.mjs';
+
+const elysium = createElysiumClient();
+const sources = await elysium.venues();
+const pools = await elysium.pools('kleos-v5-current');
+const network = await elysium.network();</code></pre></div></details>
+  <p id="ey-copy-status" class="ey-sr" role="status" aria-live="polite"></p>
+  <noscript><p class="ey-empty">Enable JavaScript to use the public Elysium tools. <a href="/api/elysium/venues">The deployment list is also available as JSON.</a></p></noscript>
+ </main>
+ <footer class="ey-footer"><a class="brand" href="/"><img src="/qhooks-logo.jpg" alt="" width="24" height="24"> QHooks</a><p>Launch. Trade. Bring your community.</p><a href="/api">API reference →</a></footer>
+ <script type="module" src="/qx-elysium.mjs"></script>
+</body></html>

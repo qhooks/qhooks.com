@@ -1,4 +1,4 @@
-// Verify a launch's creator on X (verify.html#m=<chain>:<controller>). The creator's wallet signs a short message
+// Verify a launch's creator on X (/verify#m=<chain>:<controller>). The creator's wallet signs a short message
 // naming the launch and the X account (free, no transaction); the site answers with a code; the creator posts the code
 // from that X account and pastes the post's link. The site reads the public post and records the link.
 // QHooks never posts to X and never asks for an X login. Without #m the page lists the connected wallet's launches.
@@ -38,7 +38,7 @@ async function render() {
   const t = await r.json(), L = t.launch, key = L.chainId + ':' + L.controller, saved = load()[key] || {};
   const head = h('div', { class: 'qvf-launch' }, h('b', {}, '$' + L.symbol), h('span', {}, L.name + ' · ' + (CHAIN_NAME[L.chainId] || L.chainId)),
     t.verified ? badge(t.verified) : h('span', { class: 'qtr-muted' }, 'Creator not verified yet'),
-    h('a', { class: 'qtr-link', href: '/terminal.html#m=' + key }, 'Open in the terminal'));
+    h('a', { class: 'qtr-link', href: '/terminal#m=' + key }, 'Open in the terminal'));
   const isCreator = me && me === L.creator;
   // 1. Wallet
   const s1 = step(1, 'Connect the wallet that launched it',

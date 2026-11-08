@@ -1,0 +1,8 @@
+.qcall-discussion-address,.qcall-record>code{display:block;overflow-wrap:anywhere;font-size:13px;color:var(--muted,#b5b7ac)}
+.qcall-discussion-reply{margin-top:16px;margin-left:20px}
+.qcall .qcall-thesis{margin:20px 0 8px}
+.qcall .qcall-thesis p{font:400 17px/1.75 var(--qx-sans);letter-spacing:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.qcall-record .qcall-caller{padding:0 0 8px}
+.qcall-caller .qcall-discussion-avatar{display:block;flex:0 0 32px;width:32px;height:32px;object-fit:cover;border-radius:50%}
+.qcall-record summary{font-size:13px;line-height:1.6;cursor:pointer}
+@media(max-width:600px){.qcall-discussion-reply{margin-left:8px}.qcall-caller{flex-wrap:wrap;gap:8px}}

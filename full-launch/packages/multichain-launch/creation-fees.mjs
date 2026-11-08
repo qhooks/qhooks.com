@@ -35,7 +35,9 @@ async function observe(request,policy,owner,data,value='0x0'){
 export async function quoteLaunchCreation({chainId,stage,request,owner,data,toolkitText,clock=Date.now}){
  const policy=launchCreationPolicy(chainId,stage);ensure(typeof request==='function'&&address(owner),'Launch quote dependencies');
  const artifact=await readLaunchToolkit(toolkitText);exactInit(artifact,stage,data,owner);const fee=launchFeeWei(chainId,stage),now=time(clock),r=await observe(request,policy,owner,data,hex(fee));
- let price=2n*r.base+r.tip;if(price<2n*r.suggested)price=2n*r.suggested;if(chainId==='5042'&&price<20000000000n)price=20000000000n;
+ // Base: the 2× suggested-price floor never lifts the price past the policy max (base + tip already guarantees inclusion).
+ let price=2n*r.base+r.tip;if(price<2n*r.suggested&&!(chainId==='8453'&&2n*r.suggested>policy.maxPrice))price=2n*r.suggested;
+ ensure(price<=policy.maxPrice,chainId==='8453'?'Base network fees are unusually high right now. Nothing was sent; wait a few minutes and retry.':'Network fees are above this flow\u2019s limit right now. Nothing was sent; wait a few minutes and retry.');if(chainId==='5042'&&price<20000000000n)price=20000000000n;
  const budget=feeBudget({estimate:r.estimate,price,value:fee,balance:U256,maxGas:policy.maxGas,maxPrice:policy.maxPrice});
  const dataFees=chainId==='8453'?await baseDataFees(request,data,hex(budget.gas)):{l1Wei:'0',operatorWei:'0'};
  const dataBound=2n*(BigInt(dataFees.l1Wei)+BigInt(dataFees.operatorWei)),maximum=budget.fee+dataBound;ensure(maximum<=U256,'Launch fee overflow');
@@ -49,7 +51,7 @@ export async function recheckLaunchCreation({request,quote,clock=Date.now}){
  const checkTime=()=>{const n=time(clock);ensure(n>=quote.reviewedAt&&n<quote.expiresAt,'Launch quote expired; review again');};checkTime();
  const t=quote.transaction,r=await observe(request,record.policy,t.from,t.data,t.value);checkTime();
  ensure(r.nonce===t.nonce,'Wallet nonce changed');ensure(r.estimate<=rpcQuantity(t.gas),'Launch gas requirement increased');
- ensure(r.base+rpcQuantity(t.maxPriorityFeePerGas)<=rpcQuantity(t.maxFeePerGas)&&r.suggested<=rpcQuantity(t.maxFeePerGas)&&r.tip<=rpcQuantity(t.maxPriorityFeePerGas),'Launch fees increased; review again');
+ ensure(r.base+rpcQuantity(t.maxPriorityFeePerGas)<=rpcQuantity(t.maxFeePerGas)&&(quote.chainId==='8453'||r.suggested<=rpcQuantity(t.maxFeePerGas))&&r.tip<=rpcQuantity(t.maxPriorityFeePerGas),'Launch fees increased. Review again.');
  if(quote.chainId==='8453'){const f=await baseDataFees(request,t.data,t.gas);ensure(BigInt(f.l1Wei)<=2n*BigInt(record.dataFees.l1Wei)&&BigInt(f.operatorWei)<=2n*BigInt(record.dataFees.operatorWei),'Base data fees increased');}
  ensure(r.balance>=BigInt(quote.maximumFee)+BigInt(t.value),'Insufficient '+quote.nativeSymbol+' for launch');requireRpcChain(quote.chainId,await request('eth_chainId',[]));checkTime();return t;
 }

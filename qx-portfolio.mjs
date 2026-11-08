@@ -9,7 +9,7 @@ export const quantity = n => known(n) ? n.toLocaleString('en-US', {maximumSignif
 export const percent = n => known(n) ? (n > 0 ? '+' : '') + (n * 100).toLocaleString('en-US', {maximumFractionDigits: 2}) + '%' : '—';
 const signedMoney = n => known(n) ? (n > 0 ? '+' : '') + money(n) : '—';
 export const chainName = c => names[c.chainId] || c.name || c.chainId;
-export const tradeHref = row => '/terminal.html#' + (row.qhooks ? 'm=' + row.chainId + ':' + row.qhooks.controller : 't=' + row.chainId + ':' + row.address);
+export const tradeHref = row => '/terminal#' + (row.qhooks ? 'm=' + row.chainId + ':' + row.qhooks.controller : 't=' + row.chainId + ':' + row.address);
 export function pnlText(cost) {
  if (!cost || !known(cost.pnlQuote)) return 'unknown';
  return (cost.pnlQuote > 0 ? '+' : '') + quantity(cost.pnlQuote) + ' ' + (cost.quoteSymbol || 'unknown') + (known(cost.pnlUsd) ? ' (≈ ' + money(cost.pnlUsd) + ')' : ' (≈ —)');

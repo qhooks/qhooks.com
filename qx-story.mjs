@@ -4,7 +4,7 @@ import {hiddenChainsOn} from './chains.mjs';
 const $ = id => document.getElementById(id);
 const CHAINS = [
  {id: '8453', name: 'Base', slug: 'base', quote: 'USDC', native: 'ETH', explorer: 'https://basescan.org'},
- {id: '4663', name: 'Robinhood Chain', slug: 'robinhood', quote: 'WETH', native: 'ETH', explorer: 'https://explorer.chain.robinhood.com'},
+ {id: '4663', name: 'Robinhood Chain', slug: 'robinhood', quote: 'WETH', native: 'ETH', explorer: 'https://robinhoodchain.blockscout.com'},
  {id: '1', name: 'Ethereum', slug: 'ethereum', quote: 'USDC', native: 'ETH', explorer: 'https://etherscan.io'},
  {id: '42161', name: 'Arbitrum One', slug: 'arbitrum', quote: 'USDC', native: 'ETH', explorer: 'https://arbiscan.io'},
  {id: '56', name: 'BNB Chain', slug: 'bnb', quote: 'WBNB', native: 'BNB', explorer: 'https://bscscan.com'},
@@ -60,7 +60,7 @@ function renderPage() {
  $('tp-facts').innerHTML = facts().filter(([, v]) => v !== '—').map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('');
  $('tp-protected').innerHTML = ['Creator-fee withdrawals', 'Liquidity graduation', 'Policy changes'].map(x => `<li>${x}</li>`).join('');
  $('tp-perks').innerHTML = u.perks.map(p => `<li>${esc(PERKS[p])}</li>`).join('');
- const links = [u.site && ['Website', u.site], u.x && ['X', 'https://x.com/' + u.x.replace(/^@/, '')], u.tg && ['Telegram', u.tg], state.deployed && ['Trade', '/trade.html' + state.deployed.link]].filter(Boolean);
+ const links = [u.site && ['Website', u.site], u.x && ['X', 'https://x.com/' + u.x.replace(/^@/, '')], u.tg && ['Telegram', u.tg], state.deployed && ['Trade', '/trade' + state.deployed.link]].filter(Boolean);
  $('tp-links').innerHTML = links.map(([k, h]) => `<a href="${esc(h)}" target="_blank" rel="noopener noreferrer">${esc(k)} ↗</a>`).join('');
  const d = state.deployed;
  $('tp-addr').innerHTML = d ? `<span>Token <a href="${ch.explorer}/address/${d.token}" target="_blank" rel="noopener noreferrer"><code>${d.token.slice(0, 6)}…${d.token.slice(-4)}</code></a></span><span>Controller <a href="${ch.explorer}/address/${d.controller}" target="_blank" rel="noopener noreferrer"><code>${d.controller.slice(0, 6)}…${d.controller.slice(-4)}</code></a></span>` : '<span>Addresses appear here after launch. Paste your trade link above.</span>';
@@ -70,7 +70,7 @@ function metadata() {
  const f = state.launch?.fields || {}, ch = chainOf(state.launch?.chainId || $('st-chain').value), u = state.ui, d = state.deployed;
  const img = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent((u.avatar ? specimenSvg(u.avatar.seed, u.avatar.index) : specimenSvg(seedFor(), 0)).svg)));
  return {schemaVersion: 1, kind: 'qhooks-token-metadata', chainId: Number(ch.id), address: d?.token || null, name: f.tokenName || '', symbol: f.symbol || '', decimals: Number(f.decimals || 18), description: u.desc, tagline: u.tagline, image: img,
-  links: {website: u.site || null, x: u.x ? 'https://x.com/' + u.x.replace(/^@/, '') : null, telegram: u.tg || null, trade: d ? 'https://qhooks.com/trade.html' + d.link : null},
+  links: {website: u.site || null, x: u.x ? 'https://x.com/' + u.x.replace(/^@/, '') : null, telegram: u.tg || null, trade: d ? 'https://qhooks.com/trade' + d.link : null},
   pool: {controller: d?.controller || null, quote: ch.quote, creatorLpFee: f.lpFeePpm ? pct(f.lpFeePpm) : null, graduationMode: f.graduationMode ?? null, noticeSeconds: f.notice ? Number(f.notice) : null, protectedActions: ['fees', 'graduation', 'policy'], authorization: 'wallet + post-quantum (SLH-DSA-SHA2-128s)'},
   holderPerks: u.perks.map(p => PERKS[p]), status: d ? 'launched' : 'draft'};
 }

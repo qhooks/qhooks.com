@@ -5,6 +5,7 @@
 // burn it to the dead address, or keep it (Trade then lists it as unlocked creator holdings).
 import { calldata, ethCall, words, parseUnits, formatUnits, erc20, send, ensureAllowance, connectedAddress, onWalletChange, CHAIN_NAME, h } from '/qx-chain.mjs';
 import { extraAddress, isLive, setUp } from '/qx-extras.mjs';
+import { allocationLockData } from './launch-allocation.mjs';
 
 const SEL = { lock: '0x806c27c7', summary: '0x9522a80a', transfer: '0xa9059cbb', balanceOf: '0x70a08231', totalSupply: '0x18160ddd' };
 const DEAD = '0x000000000000000000000000000000000000dEaD';
@@ -113,7 +114,7 @@ function render() {
       if (!(await isLive(chainId, 'locks'))) { s('Setting up QLocks on ' + CHAIN_NAME[chainId] + '…'); await setUp(chainId, 'locks', s); state.live = true; }
       await ensureAllowance(chainId, state.token, state.locksAddr, amt, s);
       s('Confirm the lock in your wallet…');
-      await send(chainId, { to: state.locksAddr, data: calldata(SEL.lock, ['address', 'address', 'uint256', 'uint64', 'uint32', 'uint32', 'uint32'], [state.token, me, amt, 0n, BigInt(draft.cliff), BigInt(draft.drip), BigInt(draft.notice)]) }, s);
+      await send(chainId, { to: state.locksAddr, data: allocationLockData(state.token, me, amt, {cliff:draft.cliff,duration:draft.drip,notice:draft.notice}) }, s);
       return 'Locked ' + fmt(amt) + '.';
     }));
     body = [h('div', { class: 'qxt-row' }, amountField, sel('Cliff', 'cliff', CLIFFS), sel('Then drip over', 'drip', DRIPS), sel('Sell notice', 'notice', NOTICES)),

@@ -22,7 +22,7 @@ export function labExportRoute(familyId,chainId){
  ensure(family,'Choose an admitted hook family');
  if(familyId===graduationFamilyId){
   const chain=recipeChain(chainId);
-  return Object.freeze({familyId,kind:'qgraduation-launch-recipe',profile:family.profile,chainId:chain.id,chainName:chain.name,localOnly:false,compiled:false,deployed:false,launchEnabled:true,builderHref:'l141-graduation-studio.html?chain='+encodeURIComponent(chain.id),downloadHref:family.download.href,notice:'Configure a public '+chain.name+' recipe, then continue explicitly to launch review.'});
+  return Object.freeze({familyId,kind:'qgraduation-launch-recipe',profile:family.profile,chainId:chain.id,chainName:chain.name,localOnly:false,compiled:false,deployed:false,launchEnabled:true,builderHref:'/l141-graduation-studio?chain='+encodeURIComponent(chain.id),downloadHref:family.download.href,notice:'Configure a public '+chain.name+' recipe, then continue explicitly to launch review.'});
  }
  ensure(family.availability==='Source toolkit','Unsupported Lab export family');
  return Object.freeze({familyId,kind:'local-source-kit',profile:family.profile,chainId:localSourceChainId,chainName:'Local development chain',localOnly:true,compiled:false,deployed:false,launchEnabled:false,builderHref:family.builder.href,downloadHref:family.download.href,notice:'This family currently exports a local-chain (31337) source kit.'});

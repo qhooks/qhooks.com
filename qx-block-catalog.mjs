@@ -118,7 +118,7 @@ export const BUILT_IN = [
 ];
 
 export const PRESETS = [
-  { id: 'none', name: 'No blocks', line: 'A plain protected pool.', on: [] },
+  { id: 'none', name: 'Memecoin', line: 'Open trading. No extra buy/sell tax, limits or launch games.', on: [] },
   { id: 'fair', name: 'Fair launch', line: 'Stops snipers and whales for the first ten minutes.',
     on: ['antiSnipe', 'walletCap', 'cooldown', 'sandwich'], guardMin: 10 },
   { id: 'degen', name: 'Degen', line: 'Launch tax, burns, a king pot, a last-buyer clock and referrals.',

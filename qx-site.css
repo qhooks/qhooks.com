@@ -320,3 +320,5 @@ html body #qhc-dialog .qhc-choice,html body #qhc-dialog .qhc-secondary{border-ra
 html body *,html body *::before,html body *::after{font-style:normal!important}
 html body :is(h1,h2,h3,h4,h5,h6) :is(.qx-serif,em,i){font-family:inherit!important;font-weight:inherit!important;font-size:inherit!important;letter-spacing:inherit!important;line-height:inherit!important}
 html body .qx-serif{font-family:inherit!important;font-weight:inherit!important;letter-spacing:inherit!important}
+.qhc-in-app{margin:8px 0 0;font-size:13px;line-height:1.5}.qhc-in-app .qhc-secondary{margin-top:6px}
+.qhc-more-wallets{margin-top:14px;border-top:1px solid var(--qx-line,rgba(255,255,255,.12));padding-top:10px}.qhc-more-wallets>summary{cursor:pointer;font-size:14px;padding:6px 0}

@@ -1,6 +1,6 @@
 // Public route availability, not permission to transact. Explicit chain IDs only.
 export const launchChains=Object.freeze([
- Object.freeze({id:'8453',slug:'base',name:'Base',gas:'ETH',feeModel:'op-stack',coreHref:'deploy.html',status:'QPool core setup available'}),
+ Object.freeze({id:'8453',slug:'base',name:'Base',gas:'ETH',feeModel:'op-stack',coreHref:'/deploy',status:'QPool core setup available'}),
  Object.freeze({id:'4663',slug:'robinhood',name:'Robinhood Chain',gas:'ETH',feeModel:'nitro',coreHref:null,status:'Integration in progress'}),
  Object.freeze({id:'1',slug:'ethereum',name:'Ethereum',gas:'ETH',feeModel:'ethereum',coreHref:null,status:'Integration in progress'}),
  Object.freeze({id:'42161',slug:'arbitrum',name:'Arbitrum One',gas:'ETH',feeModel:'nitro',coreHref:null,status:'Integration in progress'}),
