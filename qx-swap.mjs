@@ -17,7 +17,7 @@ export const ROUTES = chainMap(c => Object.assign({ router: c.contracts.router, 
 const TIERS = [[500, 10], [3000, 60], [100, 1]];
 // Stock-paired launches on Robinhood Chain: the coin goes ETH → USDG → stock → token, through the deepest plain v4
 // pools (no hooks) for the first two hops.
-const STOCK_ROUTE = { '4663': { usdg: '0x5fc5360d0400a0fd4f2af552add042d716f1d168', ethTiers: [[100, 1], [500, 10]], stockTiers: [[3000, 60], [100, 1]] } };
+const STOCK_ROUTE = { '4663': { usdg: '0x5fc5360d0400a0fd4f2af552add042d716f1d168', ethTiers: [[100, 1], [500, 10]], stockTiers: [[3000, 60], [100, 1], [10000, 200]] } };
 const PATH_T = '(address,uint24,int24,address,bytes)';
 const ADDRESS_THIS = '0x0000000000000000000000000000000000000002';
 
@@ -64,6 +64,8 @@ export async function ensurePermit2(chainId, token, amount, now, onStatus) {
 export function nativeRoute(chainId, quoteToken) {
   const route = ROUTES[chainId];
   if (route && STOCK_ROUTE[chainId] && stockPair(chainId, quoteToken)) return { ...route, wrap: null, stock: quoteToken, ...STOCK_ROUTE[chainId] };
+  // USDG-paired launches on Robinhood Chain: the coin goes ETH → USDG (best plain pool) → token.
+  if (route && STOCK_ROUTE[chainId] && String(quoteToken).toLowerCase() === STOCK_ROUTE[chainId].usdg) return { ...route, wrap: null, hop: STOCK_ROUTE[chainId].usdg, hopSymbol: 'USDG', usdg: true };
   return route && (route.hop || route.wrap) === quoteToken ? route : null;
 }
 const plainKey = (a, b, fee, tickSpacing) => { const [c0, c1] = BigInt(a) < BigInt(b) ? [a, b] : [b, a]; return { currency0: c0, currency1: c1, fee, tickSpacing, hooks: Z }; };
@@ -93,7 +95,7 @@ export async function quoteNative(chainId, key, token, quoteToken, amountIn, sym
   }));
   const best = tries.filter(Boolean).sort((a, b) => (b.out > a.out ? 1 : -1))[0];
   if (!best) throw new Error('No route for this amount');
-  return { out: best.out, path: best.path, label: NATIVE[chainId] + ' → USDC (' + best.fee / 10000 + '% pool) → ' + symbol };
+  return { out: best.out, path: best.path, label: NATIVE[chainId] + ' → ' + (route.hopSymbol || 'USDC') + ' (' + best.fee / 10000 + '% pool) → ' + symbol };
 }
 
 /// Router calldata for a native-coin buy; send it with value = amountIn.

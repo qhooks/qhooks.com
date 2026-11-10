@@ -624,7 +624,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       const native = nativeRoute(pool.chainId, quoteToken);
       paySel.replaceChildren(h('option', { value: 'quote' }, q.symbol), ...(native ? [h('option', { value: 'native' }, NATIVE[pool.chainId])] : []));
       // Wrapped-native launches default to paying in the coin people actually hold.
-      pay = native?.wrap || native?.stock ? 'native' : 'quote'; paySel.value = pay;
+      pay = native?.wrap || native?.stock || native?.usdg ? 'native' : 'quote'; paySel.value = pay;
       // QHooks launches: verified creator, copy warning, RepoProof verdict and on-chain facts (qx-trust.mjs).
       renderRisk(); const view=h('div');trustRisk(view,pool).then(()=>{if(isSelection(intent)){risk.replaceChildren(view);risk.hidden=view.hidden;}}).catch(()=>{}); await layout();return isSelection(intent);
     },

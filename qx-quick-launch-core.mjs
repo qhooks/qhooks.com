@@ -19,6 +19,8 @@ export const QUICK_PRESET = Object.freeze({fee: 10000, buyQuote: '0', minTokensO
 export const LAUNCH_SELECTOR = '0x30583324';
 // launch((…, uint16 reserveBps, bytes32 pqKey, bool lockRoles)) on the next generation (chains.mjs simpleLaunchNext.abi 'pq').
 export const LAUNCH_SELECTOR_PQ = '0x00cadb72';
+/// launchPaired(LaunchParams (the 'pq' layout), uint8 quoteIndex) on the pairs launch contract.
+export const LAUNCH_PAIRED_SELECTOR = '0x04e6619e';
 export const LAUNCHED_TOPIC = '0xb3dfc406bd21f3b0e4aec3411c79b38d392ec20d80835e456b24f42bc0ec245f';
 export const META_LIMIT = 4096;
 // Planning gas per style, measured on a Robinhood Chain fork (2026-11-08); a connected wallet's estimate replaces it.
@@ -88,6 +90,49 @@ export async function primeCleanFactory(chainId, getCode, {background = false} =
  if (background && checked) return {live: false, changed: false};
  return job;
 }
+// ---- Pairs (QSimpleLaunch v3, chains.mjs simpleLaunchPairs; Robinhood Chain) ----
+/// The pairs launch contract on a chain, or null.
+export function pairsFactory(chainId) { return addressOf(chainById(chainId)?.simpleLaunchPairs?.address); }
+/// [{index, symbol, address, decimals, risk, usdPool}] a launch on this chain can pair with (beside the standard quote).
+export function pairQuotes(chainId) {
+ return (chainById(chainId)?.simpleLaunchPairs?.quotes || []).map(([index, symbol, address, decimals, risk, usdPool]) => ({index, symbol, address, decimals, risk, usdPool: usdPool || null}));
+}
+const PAIRS_LIVE = new Set(), PAIRS_CHECKED = new Map(), PAIRS_INFLIGHT = new Map();
+/// Same as primeCleanFactory, for the pairs launch contract: pairs are offered only once it has code on the chain.
+export async function primePairsFactory(chainId, getCode, {background = false} = {}) {
+ const id = String(chainId), a = pairsFactory(id);
+ if (!a) return {live: false, changed: false};
+ if (PAIRS_LIVE.has(id)) return {live: true, changed: false};
+ const checked = PAIRS_CHECKED.get(id);
+ if (checked && Date.now() - checked < 30000) return {live: false, changed: false};
+ let job = PAIRS_INFLIGHT.get(id);
+ if (!job) {
+  job = Promise.resolve().then(() => getCode(a)).catch(() => '0x').then(code => {
+   PAIRS_INFLIGHT.delete(id);
+   if (typeof code === 'string' && /^0x[0-9a-fA-F]{2,}$/.test(code)) { PAIRS_LIVE.add(id); return {live: true, changed: true}; }
+   PAIRS_CHECKED.set(id, Date.now());
+   return {live: false, changed: false};
+  });
+  PAIRS_INFLIGHT.set(id, job);
+ }
+ if (background && checked) return {live: false, changed: false};
+ return job;
+}
+export const pairsLive = chainId => PAIRS_LIVE.has(String(chainId)) && !!pairsFactory(chainId);
+/// pairStartAt(uint8 quoteIndex, uint256 steps) -> (address quote, int24 tick0, uint256 startCap)
+export const pairStartAtCall = (quoteIndex, steps) => '0xfb079b35' + word(quoteIndex) + word(checkSteps(steps));
+export function readPairStartAt(result) {
+ if (typeof result !== 'string' || !/^0x[0-9a-f]{192}$/i.test(result)) return null;
+ return readStartAt('0x' + result.slice(66));
+}
+/// USD per whole stock token from its USDG pool's sqrtPriceX96 (USDG 6 decimals, the stock 18).
+export function usdFromSqrt(sqrtPriceX96, stockAddress, usdgAddress) {
+ const p = (Number(BigInt(sqrtPriceX96)) / 2 ** 96) ** 2; // currency1 per currency0, raw units
+ if (!(p > 0)) return null;
+ const usdgIs0 = BigInt(usdgAddress) < BigInt(stockAddress);
+ return (usdgIs0 ? 1 / p : p) * 1e12;
+}
+
 /// The QSimpleLaunch factory new launches go to on a chain, or null where none is deployed.
 export function quickFactory(chainId) { return startCapFactory(chainId) || addressOf(chainById(chainId)?.simpleLaunch); }
 /// True when new launches go to a factory whose launch() takes the post-quantum key fields.
@@ -165,7 +210,11 @@ export function validateQuick({name, symbol, image = ''}) {
 export const quickMeta = ({image = ''}) => JSON.stringify({...(image ? {image} : {}), launchedFrom: 'create-quick'});
 
 /// Calldata for QSimpleLaunch.launch from the card preset and the three typed fields.
-export function encodeQuickLaunch({name, symbol, image = '', style, snipe = 15, salt, steps = 0, startCap = false, pq = false, pqKey = null, lockRoles = false}) {
+export function encodeQuickLaunch({name, symbol, image = '', style, snipe = 15, salt, steps = 0, startCap = false, pq = false, pqKey = null, lockRoles = false, quoteIndex = 0}) {
+ const qi = Number(quoteIndex);
+ if (!Number.isInteger(qi) || qi < 0 || qi > 255) throw new TypeError('Choose a pair.');
+ if (qi && (!pq || !startCap)) throw new TypeError('Pairs need the pairs launch contract on this chain.');
+ if (qi && style === 'flywheel') throw new TypeError('Stakers’ share launches pair with ETH only.');
  const v = validateQuick({name, symbol, image});
  if (!(style in SIMPLE_STYLE_IDS)) throw new TypeError('Choose a launch idea.');
  if (!SNIPE_OPTIONS.includes(Number(snipe))) throw new TypeError('Choose a supported anti-snipe length.');
@@ -181,6 +230,8 @@ export function encodeQuickLaunch({name, symbol, image = '', style, snipe = 15, 
  const p = QUICK_PRESET;
  const tuple = offsets.map(word).join('') + word(SIMPLE_STYLE_IDS[style]) + word(p.fee) + salt.slice(2).toLowerCase() + word(p.buyQuote) + word(p.minTokensOut) +
   word(st * 65536 + Number(snipe)) + word(0) + word(p.reserveBps) + (pq ? (key ? key.slice(2) : word(0)) + word(lockRoles ? 1 : 0) : '') + tails.join('');
+ // launchPaired(params, uint8 quoteIndex): the tuple's head offset is 64, then the index, then the same tuple.
+ if (qi) return LAUNCH_PAIRED_SELECTOR + word(64) + word(qi) + tuple;
  return (pq ? LAUNCH_SELECTOR_PQ : LAUNCH_SELECTOR) + word(32) + tuple;
 }
 

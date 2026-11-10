@@ -13,6 +13,7 @@ import {quoteBaseCall,recheckBaseCall} from './qx-base-call-fees.mjs';
 const quoteCall=a=>String(a.chainId)==='8453'?quoteBaseCall(a):quoteNextChain(a),recheckCall=(chainId,a)=>String(chainId)==='8453'?recheckBaseCall(a):recheckNextChain(a);
 import {startCapFactory,START_TIERS,START_STEPS_MAX,stepsForUsd,capAtSteps,startAtCall,readStartAt,usdShort} from './qx-quick-launch-core.mjs';
 import {pqFactory,primeCleanFactory} from './qx-quick-launch-core.mjs';
+import {pairsFactory,pairQuotes,primePairsFactory,pairsLive,pairStartAtCall,readPairStartAt,usdFromSqrt} from './qx-quick-launch-core.mjs';
 import {mountAccountQuantum} from './qx-account-quantum-control.mjs';
 import {ideaCards,ideaCard,visibleGroups,quickFactory,encodeQuickLaunch,validateQuick,launchFeeWei,quickCost,ethText,launchedToken,marketPath,randomSalt,PLANNING_GAS,META_LIMIT} from './qx-quick-launch-core.mjs';
 
@@ -65,6 +66,8 @@ let usdFor=null;function readUsd(){const id=currentChain(),sym=chainById(id)?.na
 function renderIdeas(){readUsd();chainId=currentChain();renderPicker();
  // Clean-token launch contract: once it has code on this chain, new launches go to it (redraw once when it switches).
  {const id=chainId;primeClean(id).then(r=>{if(r.changed&&id===chainId){costRun++;cost=null;renderIdeas();if(pick)void refreshCost();}}).catch(()=>{});}
+ // Pairs launch contract (Robinhood): the pair picker appears once it has code on this chain.
+ {const id=chainId;primePairs(id).then(r=>{if(r.changed&&id===chainId&&pick){renderPair();renderStart();renderQuick();}}).catch(()=>{});}
  chainId=currentChain();const own=ideaCards(chainId),offChain=!own.length,cards=offChain?ideaCards(QUICK_CHAIN).filter(card=>card.id!=='arb-burns'):own,groups=visibleGroups(cards),c=chainById(chainId);
  if(!groups.some(([id])=>id===group))group='all';
  $('chips').replaceChildren(...groups.map(([id,label])=>{const b=el('button',{type:'button','aria-pressed':String(id===group),'data-group':id},label);b.addEventListener('click',()=>{group=id;renderIdeas();});return b;}));
@@ -94,25 +97,52 @@ const DEFAULT_TIER={'99901':'floor'};
 let startTier='standard',startSteps=0,startBase=null,startRun=0,startRetry=null;
 /// Floor/High are USD targets: without a live USD price their steps can't be known, so launching waits ("Refreshing price…").
 const priceBlocked=()=>startCapOn()&&(startTier==='floor'||startTier==='high')&&!startBase?.usd;
-const startCapOn=()=>!!startCapFactory(chainId);
+const startCapOn=()=>!!curPair()||!!startCapFactory(chainId);
+// ---- Pair (Robinhood Chain, pairs launch contract only) ----
+// 0 = the chain's standard quote (WETH). Stakers' share stays on ETH (the contract refuses it on a pair).
+let pairIdx=0;
+const curPair=()=>pairIdx&&pick&&pick.style!=='flywheel'&&pairsLive(chainId)?pairQuotes(chainId).find(q=>q.index===pairIdx)||null:null;
+const launchFactory=()=>curPair()?pairsFactory(chainId):quickFactory(chainId);
+const pqOnChain=()=>!!curPair()||pqFactory(chainId);
+const RISK={stable:s=>s+' is a dollar stablecoin. Its issuer can freeze any address, this pool included, and can pause it. Either one stops trading in this pool.',
+ stock:s=>s+' is a Robinhood stock token. Its issuer can block any address, this pool included, pause the token, burn from any holder, and apply splits. Blocking or pausing stops trading in this pool. Stock tokens are not offered to US persons.'};
+function renderPair(){
+ let box=$('pair');const list=pairQuotes(chainId);
+ if(!pick||!list.length||!pairsLive(chainId)){box?.remove();return;}
+ if(!box){box=el('div',{id:'qq-pair',class:'qq-startcap qq-pair'});$('style-blocks').after(box);}
+ if(pick.style==='flywheel'){box.replaceChildren(el('p',{class:'qq-start-k'},'Pair with'),el('p',{class:'qq-start-note'},'Stakers’ share launches pair with ETH. Pick another idea to pair with USDG or a stock token.'));return;}
+ const opt=(idx,label)=>{const b=el('button',{type:'button',class:'qq-start-opt','aria-pressed':String(idx===pairIdx),'data-pair':String(idx)},label);
+  b.addEventListener('click',()=>{if(busy)return;pairIdx=idx;renderPair();void readStartBase();renderStart();renderPq();renderQuick();costSoon();});return b;};
+ const p=curPair(),kids=[el('p',{class:'qq-start-k'},'Pair with'),el('div',{class:'qq-start-opts',role:'group','aria-label':'Pair with'},opt(0,'ETH'),...list.map(q=>opt(q.index,q.symbol)))];
+ if(p)kids.push(el('p',{class:'qq-start-note'},'Buyers pay in '+p.symbol+'. The terminal also takes ETH and routes it through '+(p.risk==='stable'?'USDG':'USDG and '+p.symbol)+'.'),el('p',{class:'qq-start-note qq-pair-risk'},RISK[p.risk](p.symbol)));
+ box.replaceChildren(...kids);
+}
 async function readStartBase(){
  const run=++startRun,c=chainById(chainId);startBase=null;
  try{
+  const p=curPair();
+  if(p){const r=readPairStartAt(await rpc('eth_call',[{to:pairsFactory(chainId),data:pairStartAtCall(p.index,0)},'latest']));if(!r)throw Error('no start');
+   const cap=Number(r.startCapWei)/10**p.decimals,each=p.usdPool?await stockUsd(p).catch(()=>null):1;
+   if(run===startRun)startBase={cap,unit:p.symbol,usd:each>0?cap*each:null};
+  }else{
   const r=readStartAt(await rpc('eth_call',[{to:startCapFactory(chainId),data:startAtCall(0)},'latest']));if(!r)throw Error('no start');
   const q=c.quote?.symbol||'',usd=/USD/.test(q)?1:await readCreateNativeUSD(q.replace(/^W/,'')).catch(()=>null);
   const cap=Number(r.startCapWei)/10**(c.quote?.decimals??18);
-  if(run===startRun)startBase={cap,unit:q.replace(/^W/,''),usd:usd>0?cap*usd:null};
+  if(run===startRun)startBase={cap,unit:q.replace(/^W/,''),usd:usd>0?cap*usd:null};}
  }catch{}
- if(run===startRun){renderStart();renderQuick();
+ if(run===startRun){const was=startSteps;renderStart();renderQuick();if(startSteps!==was)costSoon(); // a USD tier's steps are known only now: re-price so one tap is enough
   // A USD tier (Floor/High) never silently becomes the standard start: keep reading the price until it answers.
   clearTimeout(startRetry);if(startCapOn()&&!startBase?.usd)startRetry=setTimeout(()=>{if(run===startRun&&pick)void readStartBase().then(()=>{if(startTier!=='custom')startSteps=tierSteps(startTier);renderStart();renderQuick();costSoon();});},10000);}
 }
+// A stock token's USD price from its USDG pool (StateView.getSlot0 on the chain's own pool), for the start-cap tiers.
+async function stockUsd(p){const c=chainById(chainId),usdg=pairQuotes(chainId).find(q=>q.risk==='stable')?.address;
+ const r=await rpc('eth_call',[{to:c.contracts.stateView,data:'0xc815641c'+p.usdPool.slice(2)},'latest']);return usdg?usdFromSqrt('0x'+r.slice(2,66),p.address,usdg):null;}
 function tierSteps(t){const tier=START_TIERS.find(x=>x[0]===t);if(!tier||tier[2]===null)return startSteps;if(!tier[2])return 0;return startBase?.usd?stepsForUsd(tier[2],startBase.usd):0;}
 function capText(steps){if(!startBase)return '';const usd=startBase.usd?capAtSteps(startBase.usd,steps):null;return usd?'~'+usdShort(usd):+capAtSteps(startBase.cap,steps).toPrecision(3)+' '+startBase.unit;}
 function renderStart(){
  let box=$('startcap');
  if(!startCapOn()){box?.remove();startSteps=0;startTier='standard';return;}
- if(!box){box=el('div',{id:'qq-startcap',class:'qq-startcap'});$('style-blocks').after(box);}
+ if(!box){box=el('div',{id:'qq-startcap',class:'qq-startcap'});($('pair')||$('style-blocks')).after(box);}
  if(startTier!=='custom')startSteps=tierSteps(startTier);
  const radios=START_TIERS.map(([id,label])=>{const b=el('button',{type:'button',class:'qq-start-opt','aria-pressed':String(id===startTier)},label+(id==='standard'&&startBase?' · '+capText(tierSteps(id)):''));
   b.addEventListener('click',()=>{startTier=id;if(id==='custom'&&!startSteps)startSteps=tierSteps('floor');renderStart();renderQuick();costSoon();});return b;});
@@ -133,7 +163,7 @@ const pqKeyHex=()=>pqOn&&pqReady&&pqSigner&&!pqSigner.locked&&pqSigner.backupVer
 const pqBlocked=()=>pqOn&&!pqKeyHex();
 function renderPq(){
  let box=$('pq');
- if(!pqFactory(chainId)){box?.remove();pqOn=false;return;}
+ if(!pqOnChain()){box?.remove();pqOn=false;return;}
  pqOn=!pqOptOut;
  if(!box){box=el('div',{id:'qq-pq',class:'qq-pq'});($('startcap')||$('style-blocks')).after(box);}
  const check=el('input',{type:'checkbox',id:'qq-pq-on',checked:pqOn});
@@ -153,7 +183,7 @@ function renderPqStatus(){const p=$('pq-status');if(!p)return;const k=pqKeyHex()
 
 function openQuick(id,{scroll=false}={}){
  const card=ideaCard(chainId,id)||ideaCard(chainId,'fair');if(!card)return;pick=card;$('quick').hidden=false;
- startTier=card.startUsd?'custom':DEFAULT_TIER[chainId]||'standard';startSteps=0;if(startCapOn()){void readStartBase().then(()=>{if(card.startUsd&&startBase?.usd){startSteps=stepsForUsd(card.startUsd,startBase.usd);renderStart();renderQuick();costSoon();}});}renderStart();
+ renderPair();startTier=card.startUsd?'custom':DEFAULT_TIER[chainId]||'standard';startSteps=0;if(startCapOn()){void readStartBase().then(()=>{if(card.startUsd&&startBase?.usd){startSteps=stepsForUsd(card.startUsd,startBase.usd);renderStart();renderQuick();costSoon();}});}renderStart();
  renderPq();$('style-name').textContent=card.name;$('style-line').textContent=card.what;
  $('style-blocks').replaceChildren(...card.blocks.map(icon));
  for(const a of document.querySelectorAll('#qq-cards [data-launch]'))a.setAttribute('aria-pressed',String(a.dataset.launch===card.id));
@@ -173,7 +203,7 @@ function renderQuick(){
   box.replaceChildren(el('p',{class:'qq-total qxc-number'},ethText(cost.totalWei)+' '+c.native+dollars),
    line('Launch fee',ethText(cost.feeWei)+' '+c.native),line('Network gas · up to',ethText(cost.networkWei)+' '+c.native),
    ...(cost.live&&!cost.quote.funded?[el('p',{class:'qxc-fine qq-short','data-error':'true'},'Add '+ethText(BigInt(cost.quote.requiredBalance)-BigInt(cost.quote.balance))+' '+c.native+' on '+c.name+' to launch.')]:[]),el('p',{class:'qxc-fine'},cost.live?'Priced for this launch from your wallet’s estimate. One transaction, one confirmation.':'Planning estimate. Connect a wallet for this launch’s own estimate. One transaction, one confirmation.'));}
- appendArbRecaptureLine(box,c,pick.blocks||[],quickFactory(chainId));
+ appendArbRecaptureLine(box,c,pick.blocks||[],launchFactory());
  const b=$('launch');
  b.textContent=busy?'Launching…':!conn?'Connect wallet':conn.chainId!==chainId?'Switch to '+c.short+' and launch':priceBlocked()?'Refreshing price…':pqBlocked()?'Unlock your quantum key to launch':'Launch for '+(cost?ethText(cost.totalWei)+' '+c.native:'…');
  b.disabled=busy||!!taken||!!conn&&conn.chainId===chainId&&(!ready||!cost||priceBlocked()||pqBlocked()||cost.live&&!cost.quote.funded);
@@ -189,17 +219,18 @@ async function readFee(){
 // and that quoted transaction is what gets sent after a recheck. Otherwise: planning gas x the public gas price.
 const walletRequest=conn=>(method,params)=>conn.entry.provider.request({method,params});
 // Checks whether this chain's clean-token launch contract has code (cached; see qx-quick-launch-core primeCleanFactory).
-const primeClean=(id,o)=>primeCleanFactory(id,a=>fetch(chainById(id).rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_getCode',params:[a,'latest']})}).then(r=>r.json()).then(j=>j.result),o);
+const getCodeOn=id=>a=>fetch(chainById(id).rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_getCode',params:[a,'latest']})}).then(r=>r.json()).then(j=>j.result);
+const primeClean=(id,o)=>primeCleanFactory(id,getCodeOn(id),o),primePairs=(id,o)=>primePairsFactory(id,getCodeOn(id),o);
 async function refreshCost(){
  if(!pick)return null;
  // The launch contract must be settled before the price of the exact transaction is read.
- await primeClean(chainId,{background:true}).catch(()=>{});const run=++costRun,style=pick.style,snipe=pick.snipe,steps=startCapOn()?startSteps:0,pqKey=pqFactory(chainId)?pqKeyHex():null;
+ await primeClean(chainId,{background:true}).catch(()=>{});const run=++costRun,style=pick.style,snipe=pick.snipe,steps=startCapOn()?startSteps:0,pqKey=pqOnChain()?pqKeyHex():null,pair=curPair(),quoteIndex=pair?pair.index:0;
  try{
   const conn=hub.snapshot().current,fee=await readFee();let next=null;
   if(conn&&conn.chainId===chainId&&!pqBlocked()){let f=null;try{f=fields();validateQuick(f);}catch{f=null;}
-   if(f){const salt=randomSalt(),data=encodeQuickLaunch({...f,style,snipe,salt,steps,startCap:startCapOn(),pq:pqFactory(chainId),pqKey}),call={to:quickFactory(chainId),data,value:'0x'+fee.toString(16)};
+   if(f){const salt=randomSalt(),data=encodeQuickLaunch({...f,style,snipe,salt,steps,startCap:startCapOn(),pq:pqOnChain(),pqKey,quoteIndex}),call={to:launchFactory(),data,value:'0x'+fee.toString(16)};
     const quote=await quoteCall({chainId,request:walletRequest(conn),owner:conn.owner,call});
-    next={...quickCost({feeWei:fee,gas:quote.gas,gasPriceWei:BigInt(quote.transaction.maxFeePerGas),dataFeeWei:quote.dataFeeWei||0}),live:true,quote,owner:conn.owner,key:JSON.stringify([f,style,snipe,steps,pqKey,call.to])};}}
+    next={...quickCost({feeWei:fee,gas:quote.gas,gasPriceWei:BigInt(quote.transaction.maxFeePerGas),dataFeeWei:quote.dataFeeWei||0}),live:true,quote,owner:conn.owner,key:JSON.stringify([f,style,snipe,steps,pqKey,call.to,quoteIndex])};}}
   if(!next){const price=await rpc('eth_gasPrice',[]);next={...quickCost({feeWei:fee,gas:Math.ceil(PLANNING_GAS[style]*1.25),gasPriceWei:2n*BigInt(price)}),live:false};}
   if(run!==costRun)return cost;cost=next;
  }catch(e){if(run===costRun){cost=null;costError=/insufficient|exceeds balance/i.test(String(e?.message))?launchError(e):/review limit/i.test(String(e?.message))?launchError(e):'Reading network fees. Trying again in a few seconds.';clearTimeout(costTimer);costTimer=setTimeout(()=>void refreshCost(),10000);}}
@@ -242,7 +273,7 @@ async function launch(){
   if(conn.chainId!==chainId){note('Switching your wallet to '+chainById(chainId).name+'…');conn=await hub.switchChain(chainId);busy=false;await refreshCost();note('Check the cost, then launch.');return;}
   if(pqBlocked()){busy=false;note('Unlock your quantum key, or turn the post-quantum key off, then launch.',true);return;}
   if(priceBlocked()){busy=false;note('Refreshing price… The starting market cap needs a live price. Try again in a moment, or choose Standard.',true);return;}
-  const key=JSON.stringify([f,pick.style,pick.snipe,startCapOn()?startSteps:0,pqFactory(chainId)?pqKeyHex():null,quickFactory(chainId)]);
+  const key=JSON.stringify([f,pick.style,pick.snipe,startCapOn()?startSteps:0,pqOnChain()?pqKeyHex():null,launchFactory(),curPair()?.index||0]);
   // The person must have seen the price of this exact transaction before the wallet opens.
   if(!cost?.live||cost.key!==key||cost.owner!==conn.owner){busy=false;await refreshCost();note('Check the cost, then launch.');return;}
   const tx=await recheckCall(chainId,{request:walletRequest(conn),quote:cost.quote}).catch(async e=>{busy=false;await refreshCost();throw e;});

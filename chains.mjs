@@ -56,6 +56,17 @@ const rows = [
     // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
     // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
     simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 110390517, abi: 'pq' },
+    // Pairs launch contract (QSimpleLaunch v3: the clean contract plus launchPaired(params, quoteIndex)). /create offers the
+    // pairs below only once it has code here (Randall's one tap: /chain-setup?set=pairs&chain=4663&go=4663&factory=4663).
+    // quotes: [index, symbol, address, decimals, issuer risk, USDG pool id for its USD price]; the index is fixed in the
+    // contract (pairQuote). USDG + the 5 stocks with the deepest USDG pools on 2026-11-10.
+    simpleLaunchPairs: { address: '0xefe39a5632212911fe8e3ddcb07f08e5e220e0cc', from: 110831000, abi: 'pq', quotes: [
+      [1, 'USDG', '0x5fc5360d0400a0fd4f2af552add042d716f1d168', 6, 'stable'],
+      [2, 'SPY', '0x117cc2133c37b721f49de2a7a74833232b3b4c0c', 18, 'stock', '0xfe2a80bb5618fd14984b92ca6d45bf5ba67443ddb1435e28b2e48df2fc1526cd'],
+      [3, 'META', '0xc0d6457c16cc70d6790dd43521c899c87ce02f35', 18, 'stock', '0x5875d407a42965b0e768c8925cea290e06fa50603ef34fc99eb92a1050e6ae36'],
+      [4, 'PLTR', '0x894e1ec2d74ffe5aef8dc8a9e84686accb964f2a', 18, 'stock', '0xee430ee1003e1985e1828a01b9a20dad67ad4302994fe2abb4a173de4ac54623'],
+      [5, 'AAPL', '0xaf3d76f1834a1d425780943c99ea8a608f8a93f9', 18, 'stock', '0xc748f4671a867db48b552f6b7650bf3255e05f80f00e3f7aad1b17ccb7898fdb'],
+      [6, 'TSLA', '0x322f0929c4625ed5bad873c95208d54e1c003b2d', 18, 'stock', '0x8517f8071ae5b831b738052f12125e8e3d6c158b78728aa44ce3b25e5104d32e']] },
     feeModel: 'nitro', feeAccounting: 'data-fee-in-estimate-gas', feeCapWei: '10000000000', gasFloorWei: null,
     native: 'ETH', rpc: 'https://rpc.mainnet.chain.robinhood.com', logsRpc: 'https://rpc.mainnet.chain.robinhood.com', logStep: 25000, blockTime: 0.1,
     explorer: 'https://robinhoodchain.blockscout.com',
