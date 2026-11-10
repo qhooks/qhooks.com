@@ -70,8 +70,11 @@ export function mountBuybacks(root, {compact = false, runButton = false} = {}) {
   const go = el('a', '', 'Run it in the terminal →'); go.href = '/terminal#t=4663:' + TOKEN; go.hidden = true;
   const listHead = el('b', 'qxb-list-h', 'Recent buybacks');
   const more = el('div', 'qxb-more'); more.append(listHead, list, fly, ...(runButton ? [run, status] : [go]), note);
-  root.replaceChildren(top, grid, more);
+  const sources = el('p', 'qxb-note', 'Total includes the platform flywheel, arb recapture and anything sent to 0x…dEaD.');
+  root.replaceChildren(top, grid, sources, more);
   const cell = (k, v, sub) => { const c = el('div', 'qxb-cell'); c.append(el('span', '', k), el('b', '', v)); if (sub) c.append(el('small', '', sub)); return c; };
+  // Since 2026-11-09 the Safe's flywheel share is pulled hourly into permanent QHOOKS liquidity (QFlywheelLiquidity).
+  const toLiq = v => { const s = el('span', '', 'To QHOOKS liquidity (via the Safe) ' + v + ' QHOOKS'); s.title = "The QHooks Safe's share is added to permanent QHOOKS liquidity every hour."; s.style.cursor = 'help'; s.style.textDecoration = 'underline dotted'; return s; };
   function paint() {
     if (!data) return;
     // Chain time (block time at the read, plus time since), so a skewed device clock can't misstate the countdown.
@@ -85,13 +88,17 @@ export function mountBuybacks(root, {compact = false, runButton = false} = {}) {
     grid.replaceChildren(
       cell('Pot waiting', fmt(pot) + ' WETH', price ? usd(pot * price) : ''),
       cell('Buybacks', String(b.count), b.count ? fmt(spent) + ' WETH spent' : 'None yet'),
-      cell('Burned', big(burned) + ' QHOOKS', price && spent ? usd(spent * price) + ' spent' : ''),
-      cell('Supply burned', (data.dead.pctOfSupply || 0).toFixed(4) + '%', big(units(data.dead.balanceWei)) + ' at 0x…dEaD'));
+      cell('Burned by buybacks', big(burned) + ' QHOOKS', price && spent ? usd(spent * price) + ' spent' : ''),
+      // Everything at 0x…dEaD, from every source (holders asked why two burn numbers differ, 2026-11-10).
+      cell('Total burned, all sources', big(units(data.dead.balanceWei)) + ' QHOOKS', (data.dead.pctOfSupply || 0).toFixed(4) + '% of supply at 0x…dEaD'));
     const f = data.flywheel;
     fly.replaceChildren(el('b', '', 'Platform flywheel'), ...(f.live
-      ? [document.createTextNode('Spent ' + fmt(units(f.totalSpentWei)) + ' WETH'), document.createTextNode('Burned ' + big(units(f.totalBurnedWei)) + ' QHOOKS'), document.createTextNode('To the Safe ' + big(units(f.totalToSafeWei)) + ' QHOOKS')]
+      ? [el('span', '', 'Spent ' + fmt(units(f.totalSpentWei)) + ' WETH'), el('span', '', 'Burned ' + big(units(f.totalBurnedWei)) + ' QHOOKS'), toLiq(big(units(f.totalToSafeWei)))]
       : [document.createTextNode('Starts when the Safe names the pool')]));
-    listHead.hidden = !b.recent.length; list.hidden = !b.recent.length;
+    // Behind the chain head (the server's shared scan is catching up): say so instead of showing older rows (2026-11-10).
+    const catching = b.everRun !== false && b.complete === false && b.count > 0;
+    listHead.textContent = catching ? 'Refreshing recent buybacks…' : 'Recent buybacks';
+    listHead.hidden = !b.recent.length && !catching; list.hidden = !b.recent.length;
     list.replaceChildren(...b.recent.map(x => { const li = el('li'); const a = el('a', '', short(x.tx) + ' ↗'); a.href = data.explorer + '/tx/' + x.tx; a.target = '_blank'; a.rel = 'noopener noreferrer';
       li.append(el('span', '', x.at ? ago(Math.max(0, now - x.at)) + ' ago' : 'Block ' + x.block), el('span', '', fmt(units(x.spentWei)) + ' WETH → ' + big(units(x.burnedWei)) + ' QHOOKS burned'), a); return li; }));
     note.textContent = 'Each run spends up to ' + fmt(units(r.maxPerRunWei)) + ' WETH from the pot, buys QHOOKS and sends it to 0x…dEaD. Runs are allowed every ' + Math.round(r.cooldown / 60) + ' minutes; anyone can start one.';

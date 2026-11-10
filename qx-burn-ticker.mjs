@@ -14,7 +14,7 @@ export function burnTickerText(data, fetchedAt, now = Date.now()) {
     : cd > 0 ? 'next buyback in ' + Math.floor(cd / 60) + ':' + String(cd % 60).padStart(2, '0')
     : 'next buyback due now';
   const age = Math.max(0, Math.round((now - fetchedAt) / 1000));
-  return {main: bigQ(burned) + ' QHOOKS burned · ' + next, live: 'Live · ' + (age < 60 ? age + 's' : Math.floor(age / 60) + 'm') + ' ago'};
+  return {main: bigQ(burned) + ' QHOOKS burned, all sources · ' + next, live: 'Live · ' + (age < 60 ? age + 's' : Math.floor(age / 60) + 'm') + ' ago'};
 }
 let styled = false;
 function style() {

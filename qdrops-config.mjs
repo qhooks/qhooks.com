@@ -29,6 +29,10 @@ export const DROPS = {
       held: {kind: 'erc20', address: QHOOKS, fromBlock: 108872832},
       staked: {kind: 'vault', address: '0x6248098bfa019b9035a21722a86bdee3f6e9b934', fromBlock: 108872832},
       locks: {address: '0xb43356e71c56d07ffe825791b60eea257a4fbc7e'}, // QLocks v2 lockedOf(token, wallet): self-locks; grants never count
+      // QStakeLock timed staking (live 2026-11-09): holds every timed lock's QHOOKS staked in the vault as one address.
+      // Each lock's amount is credited to its owner at every day-end it's open (from Locked/Withdrawn events), scored at
+      // max(stakeMultiplier, lockMultiplier), so moving stake into a timed lock never earns less (main thread 2026-11-10).
+      stakeLocks: {address: '0x807390f11e52e8508636bac3c54b47b17a66dae3', fromBlock: 110600000},
       windows: [
         {id: 'launch', start: '2026-11-08', end: '2026-11-14', pot: '1000000000000000000000000', callouts: false}, // 1M QHOOKS; publishes right after the window, without waiting a day for callout points
         {id: 'bridge', start: '2026-11-14', end: '2026-11-17', pot: '0'}, // no holder drop; lines the weekly drops up to start Nov 17 (main thread 2026-11-09)
@@ -52,6 +56,7 @@ export const DROPS = {
       SAFE,
       '0xb85e67cf7728572033a9d36aee3218dadf85baa2', // QFlywheel
       '0x6248098bfa019b9035a21722a86bdee3f6e9b934', // QHOOKS stakers vault (stakers are scored separately)
+      '0x807390f11e52e8508636bac3c54b47b17a66dae3', // QStakeLock timed locks (lock owners are scored separately)
       ROUTER,
       ZERO, '0x000000000000000000000000000000000000dead',
     ],
