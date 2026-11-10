@@ -101,19 +101,27 @@ const startCapOn=()=>!!curPair()||!!startCapFactory(chainId);
 // ---- Pair (Robinhood Chain, pairs launch contract only) ----
 // 0 = the chain's standard quote (WETH). Stakers' share stays on ETH (the contract refuses it on a pair).
 let pairIdx=0;
-const curPair=()=>pairIdx&&pick&&pick.style!=='flywheel'&&pairsLive(chainId)?pairQuotes(chainId).find(q=>q.index===pairIdx)||null:null;
+// Stock-token pairs are not offered to US visitors (Robinhood stock tokens aren't available to US persons). Country from the
+// Worker (/api/geo, Cloudflare's geolocation). Fail closed: until it answers, or when it can't tell, only USDG is offered.
+let geo={country:null,read:false};
+function readGeo(){if(geo.read)return;geo.read=true;fetch('/api/geo',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{const c=typeof j?.country==='string'&&/^[A-Z]{2}$/.test(j.country)?j.country:null;if(c!==geo.country){geo.country=c;if(pick){renderPair();renderQuick();}}}).catch(()=>{});}
+const stocksOk=()=>!!geo.country&&geo.country!=='US';
+const offeredPairs=()=>pairQuotes(chainId).filter(q=>q.risk!=='stock'||stocksOk());
+const curPair=()=>pairIdx&&pick&&pick.style!=='flywheel'&&pairsLive(chainId)?offeredPairs().find(q=>q.index===pairIdx)||null:null;
 const launchFactory=()=>curPair()?pairsFactory(chainId):quickFactory(chainId);
 const pqOnChain=()=>!!curPair()||pqFactory(chainId);
 const RISK={stable:s=>s+' is a dollar stablecoin. Its issuer can freeze any address, this pool included, and can pause it. Either one stops trading in this pool.',
  stock:s=>s+' is a Robinhood stock token. Its issuer can block any address, this pool included, pause the token, burn from any holder, and apply splits. Blocking or pausing stops trading in this pool. Stock tokens are not offered to US persons.'};
 function renderPair(){
- let box=$('pair');const list=pairQuotes(chainId);
+ readGeo();let box=$('pair');const list=offeredPairs(),hiddenStocks=geo.country==='US'&&pairQuotes(chainId).some(q=>q.risk==='stock');
  if(!pick||!list.length||!pairsLive(chainId)){box?.remove();return;}
  if(!box){box=el('div',{id:'qq-pair',class:'qq-startcap qq-pair'});$('style-blocks').after(box);}
  if(pick.style==='flywheel'){box.replaceChildren(el('p',{class:'qq-start-k'},'Pair with'),el('p',{class:'qq-start-note'},'Stakers’ share launches pair with ETH. Pick another idea to pair with USDG or a stock token.'));return;}
  const opt=(idx,label)=>{const b=el('button',{type:'button',class:'qq-start-opt','aria-pressed':String(idx===pairIdx),'data-pair':String(idx)},label);
   b.addEventListener('click',()=>{if(busy)return;pairIdx=idx;renderPair();void readStartBase();renderStart();renderPq();renderQuick();costSoon();});return b;};
+ if(pairIdx&&!list.some(q=>q.index===pairIdx)){pairIdx=0;void readStartBase();renderStart();costSoon();} // not offered here: back to ETH
  const p=curPair(),kids=[el('p',{class:'qq-start-k'},'Pair with'),el('div',{class:'qq-start-opts',role:'group','aria-label':'Pair with'},opt(0,'ETH'),...list.map(q=>opt(q.index,q.symbol)))];
+ if(hiddenStocks)kids.push(el('p',{class:'qq-start-note',id:'qq-pair-region'},'Stock-token pairs aren’t available in your region.'));
  if(p)kids.push(el('p',{class:'qq-start-note'},'Buyers pay in '+p.symbol+'. The terminal also takes ETH and routes it through '+(p.risk==='stable'?'USDG':'USDG and '+p.symbol)+'.'),el('p',{class:'qq-start-note qq-pair-risk'},RISK[p.risk](p.symbol)));
  box.replaceChildren(...kids);
 }
