@@ -29,7 +29,7 @@ import { trustList, trustOf, verdictOf, badge, copyLabel } from '/qx-trust.mjs';
 import { officialFor, officialLogo, impostorOf, officialBadge, notOfficialBadge, impostorBanner, rowMark, pinOfficial } from '/qx-official.mjs';
 import { externalQuick } from '/qx-terminal-feed-core.mjs';
 import {freshnessState,historyState,loadExternalHeader,loadExternalHistory} from '/qx-terminal-data.mjs';
-import {ownChartView,ownHolderLabel,ownTapeValue,ownTapeRows} from '/qx-terminal-own.mjs';
+import {ownChartView,ownHolderLabel,ownTapeValue,ownTapeRows,ownTapePrice} from '/qx-terminal-own.mjs';
 import {fillNativeUsd,ethUsd as browserEthUsd} from '/qx-native-usd.mjs';
 import {coldPoolSpec,readColdPrice,coldMayPaint,spotFromSlot0,GET_SLOT0,COLD_CHART_MESSAGE} from '/qx-cold-price.mjs';
 import {renderMarketHolders,holderSource} from '/qx-terminal-holders.mjs';
@@ -563,7 +563,7 @@ function renderPane() {
   showTape(h('table', { class: 'qxt-table' }, h('thead', {}, h('tr', {}, ...['Age', 'Side', 'Price', 'Amount', 'Value', 'Trader', ''].map(t => h('th', {}, t)))),
     h('tbody', {}, ...rows.map(t => { const eth = t.pool === 2;
       return h('tr', { class: t.buy ? 'b' : 's' }, h('td', { title: new Date(t.ts * 1000).toLocaleString() }, age(t.ts)), h('td', { class: t.buy ? 'up' : 'down' }, t.buy ? 'Buy' : 'Sell',t.source==='QHooks data'?h('span',{class:'qxt-tag',title:'Trade source'},'Public RPC'):null),
-        h('td', {}, price(t.price)), h('td', {}, compact(t.token)), h('td', {title:t.usdObservedAt?'USD quote observed '+new Date(t.usdObservedAt).toISOString():undefined}, ownTapeValue(t,money)??(eth ? compact(t.quote) + ' ETH' : money(t.quote, q))),
+        (()=>{const tp=ownTapePrice(t,{ext:!!d.ext,quoteSymbol:eth?'ETH':q},price);return h('td',tp.title?{title:tp.title}:{},tp.text);})(), h('td', {}, compact(t.token)), h('td', {title:t.usdObservedAt?'USD quote observed '+new Date(t.usdObservedAt).toISOString():undefined}, ownTapeValue(t,money)??(eth ? compact(t.quote) + ' ETH' : money(t.quote, q))),
         t.via === 'auction' ? h('td', {}, link(m.chainId, '/address/' + t.trader, short(t.trader)), h('span', { class: 'qxt-tag' }, 'Auction batch')) : who(m.chainId, t.trader, eth ? h('span', { class: 'qxt-tag' }, 'ETH pool') : null),
         h('td', {}, link(m.chainId, '/tx/' + t.tx, '↗'))); }))));
 }

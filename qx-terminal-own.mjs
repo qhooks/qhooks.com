@@ -15,6 +15,15 @@ export function ownTapeValue(trade,money){
  // No dollar value without a dated ETH/USD sample: show the native amount alone (no "unavailable" wording).
  return Number.isFinite(trade.valueUsd)?native+' · '+money(trade.valueUsd,'USD'):native;
 }
+// Tape PRICE column (2026-11-10, holder: "the Price section should show the actual price"): USD per token at the time
+// of the trade — the trade's dated USD value ÷ its token amount; outside tokens already carry a USD price. The quote-token
+// price moves to the hover title, and is the main value only when no USD is known for that trade.
+export function ownTapePrice(trade,{ext=false,quoteSymbol=''}={},price=v=>String(v)){
+ const usd=ext?trade.price:Number.isFinite(trade.valueUsd)&&trade.token>0?trade.valueUsd/trade.token:null;
+ const quote=Number.isFinite(trade.price)&&trade.price>0&&!ext?price(trade.price)+(quoteSymbol?' '+quoteSymbol:''):null;
+ if(Number.isFinite(usd)&&usd>0)return {text:'$'+price(usd),title:quote?quote+' per token':undefined};
+ return {text:quote||(Number.isFinite(trade.price)?price(trade.price):'—'),title:undefined};
+}
 export function ownTapeRows(rows,data){
  return data.meta?.ownTransfers===1?[...rows].sort((a,b)=>b.block-a.block||b.idx-a.idx):rows;
 }
