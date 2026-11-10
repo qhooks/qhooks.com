@@ -3,6 +3,7 @@
 import {getWalletHub} from '/wallet-hub-fresh.mjs';
 import {loadArbRoutes, createArbClient, fmtEth} from '/qx-arb-open.mjs';
 export const ARB_COPY = ['You keep 85% of the gap; 15% buys QHOOKS and burns it.', 'Gaps close fast; the trade cancels itself if the gap is gone.'];
+export const ARB_COPY_LIQ = ['You keep 85% of the gap; 15% goes to the QHOOKS floor as liquidity.', 'Gaps close fast; the trade cancels itself if the gap is gone.'];
 const mounts = new WeakMap();
 export function renderArbList(host, gaps, onRun, busy) {
   const doc = host.ownerDocument, kids = [];
@@ -27,7 +28,7 @@ export function mountArbGapPanel(anchor, meta, {fetchImpl = globalThis.fetch} = 
     if (mounts.get(anchor) !== rec || !routes.length) return;
     const client = createArbClient({chainId: '4663', fetchImpl}), hub = getWalletHub(window);
     const h = doc.createElement('h3'); h.textContent = 'Arb this gap';
-    const copy = ARB_COPY.map(c => { const p = doc.createElement('p'); p.textContent = c; return p; });
+    const copy = (d.liquidity ? ARB_COPY_LIQ : ARB_COPY).map(c => { const p = doc.createElement('p'); p.textContent = c; return p; });
     const list = doc.createElement('div'), status = doc.createElement('p'); status.setAttribute('role', 'status'); status.className = 'qxa-status';
     const again = doc.createElement('button'); again.type = 'button'; again.className = 'qtx-mini'; again.textContent = 'Check again';
     let busy = false, gaps = [];

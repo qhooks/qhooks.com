@@ -15,7 +15,7 @@
 <main id="main" class="qlk qas qxa">
  <p class="eyebrow">QHooks Arb</p>
  <h1>Arb this gap</h1>
- <p class="qlk-lede">You keep 85% of the gap; 15% buys QHOOKS and burns it. Gaps close fast; the trade cancels itself if the gap is gone.</p>
+ <p class="qlk-lede"><span data-arb-liq="You keep 85% of the gap; 15% goes to the QHOOKS floor as liquidity.">You keep 85% of the gap; 15% buys QHOOKS and burns it.</span> Gaps close fast; the trade cancels itself if the gap is gone.</p>
  <section class="qlk-card" id="qxa-root"><p>Loading routes…</p></section>
  <h2>How it works</h2>
  <ul>
@@ -26,21 +26,21 @@
  <h2>Use QHooks Arb in your bot</h2>
  <dl>
   <dt>Chain</dt><dd>Robinhood Chain (4663)</dd>
-  <dt>Executor</dt><dd><code>0xD2eD120Fa0b52172E0bE8cfd4cfA034362a20A01</code></dd>
+  <dt>Executor</dt><dd><code data-arb-exec>0xD2eD120Fa0b52172E0bE8cfd4cfA034362a20A01</code></dd>
   <dt>Reviewed hook list</dt><dd><code>0x24Ca277B0b6ddCBCDEA162914970BdD08e150ad4</code> (isAllowed(hook))</dd>
   <dt>Routes</dt><dd><a href="/arb-routes-rh.json">/arb-routes-rh.json</a>: each route's pool keys and swap directions, start currency ETH or WETH</dd>
-  <dt>Function</dt><dd><code>recapture(((address,address,uint24,int24,address),bool)[] legs, uint256 amountIn, uint256 minGap) returns (uint256 gap, uint256 burned)</code></dd>
+  <dt>Function</dt><dd><code data-arb-liq="recapture(((address,address,uint24,int24,address),bool)[] legs, uint256 amountIn, uint256 minGap) returns (uint256 gap, uint256 toLiquidity)">recapture(((address,address,uint24,int24,address),bool)[] legs, uint256 amountIn, uint256 minGap) returns (uint256 gap, uint256 burned)</code></dd>
  </dl>
  <ul>
   <li>2 to 4 legs, a cycle that starts and ends in ETH or WETH; every middle token must net to zero.</li>
-  <li>The caller receives 85% of the gap in the start currency; 15% buys QHOOKS in its own pool (price-capped) and burns it.</li>
+  <li data-arb-liq="The caller receives 85% of the gap in the start currency; 15% goes, as WETH, to the QHOOKS floor, which adds it to its bid in the QHOOKS pool. Nothing is burned.">The caller receives 85% of the gap in the start currency; 15% buys QHOOKS in its own pool (price-capped) and burns it.</li>
   <li>Simulate with your real fee fields. Some hooks price a call without fee fields differently from a real transaction.</li>
   <li>You can build your own routes from any pools that meet the rules; the list is a starting point, refreshed with releases.</li>
  </ul>
 <pre><code>const routes = (await (await fetch('https://qhooks.com/arb-routes-rh.json')).json());
 // For each route: eth_call recapture(legs, amountIn, 0) on the executor at a few sizes,
 // WITH your real fee fields (maxFeePerGas / maxPriorityFeePerGas) — never a bare call.
-// A result of (gap, burned) means a gap is open; a revert means there isn't one at that size.
+// A result of (gap, …) means a gap is open; a revert means there isn't one at that size.
 // Then send the same call with minGap = ~90% of the simulated gap, from your bot's wallet.
 // Calldata: selector 0x6794ea77, then abi-encoded (legs, amountIn, minGap).</code></pre>
 </main><footer class="qx-footer qx-footer-eco"><div class="qx-wrap"><div class="qx-footer-grid"><div class="qx-footer-brand"><a class="brand" href="/"><img src="qhooks-logo.jpg" alt="" width="30" height="30">QHooks</a><p>For the next generation of token builders.</p><p class="qx-footer-social"><a class="qx-link" href="https://x.com/qHooks_" target="_blank" rel="noopener noreferrer">X @qHooks_ ↗</a><a class="qx-link" href="https://t.me/qhooks_bot" target="_blank" rel="noopener noreferrer">Telegram @qhooks_bot ↗</a></p></div><div class="qx-footer-cols"><div><h2><span>01</span>Build</h2><ul><li><a href="hooks.html">Launch blocks</a></li><li><a href="/#pq-hooks">Post-quantum hooks</a></li><li><a href="lab.html">Lab</a></li><li><a href="graduation-lab.html">QGraduation Lab</a></li><li><a href="builders.html">Builders marketplace</a></li><li><a href="builders-program.html">Builders program</a></li></ul></div><div><h2><span>02</span>Launch</h2><ul><li><a href="qtoken-studio.html">qToken Studio</a></li><li><a href="launch.html">Choose a chain</a></li><li><a href="pricing.html">Pricing</a></li><li><a href="verify.html">Verify your launch</a></li></ul></div><div><h2><span>03</span>Discover</h2><ul><li><a href="discover.html">Hook board</a></li><li><a href="discover-hook.html">Inspect a hook</a></li><li><a href="discover-projects.html">Projects</a></li><li><a href="discover-tape.html">Hook Tape</a></li><li><a href="discover-compare.html">Compare</a></li></ul></div><div><h2><span>04</span>Trade</h2><ul><li><a href="terminal.html">Terminal</a></li><li><a href="markets.html">Markets</a></li><li><a href="profile.html">Profiles</a></li><li><a href="community.html#boards">Boards</a></li></ul></div><div><h2><span>05</span>Grow</h2><ul><li><a href="portfolio.html">Portfolio</a></li><li><a href="me.html">My QHooks</a></li><li><a href="/stake">Holder staking</a></li><li><a href="hooks.html#block-buyback">Buyback and burn</a></li><li><a href="graduation.html">Graduation</a></li><li><a href="hooks.html#hk-beside-h">Team locks</a></li></ul></div><div><h2><span>06</span>Protect</h2><ul><li><a href="qwallets.html">qWallets</a></li><li><a href="/#two-keys">The two-key model</a></li></ul></div><div><h2><span>07</span>Integrate</h2><ul><li><a href="community.html">Community</a></li><li><a href="integrate.html">Integration guide</a></li><li><a href="api.html">API</a></li><li><a href="changelog.html">Changelog</a></li><li><a href="https://github.com/qhooks/qhooks.com" target="_blank" rel="noopener">GitHub</a></li><li><a href="roadmap.html">Roadmap</a></li><li><a href="https://t.me/qhooks_bot" target="_blank" rel="noopener noreferrer">Telegram bot ↗</a></li><li><a href="/#on-your-phone">Install the app</a></li></ul></div></div></div><div class="qx-footer-base"><span>© 2026 QHooks</span><span><a href="/terms">Terms of use</a> · Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a></span><span>Launch on Robinhood Chain, Base, BNB Chain, Arbitrum and Elysium</span></div></div></footer><dialog id="qhc-dialog" class="qhc-dialog" aria-labelledby="qhc-title">

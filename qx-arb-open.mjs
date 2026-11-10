@@ -11,7 +11,18 @@ export function encodeRecapture(legs, amountIn, minGap) {
     legs.map(l => A(l.key.currency0) + A(l.key.currency1) + W(l.key.fee) + W(BigInt.asUintN(256, BigInt(l.key.tickSpacing))) + A(l.key.hooks) + W(l.zeroForOne ? 1 : 0)).join('');
 }
 let routesP = null;
-export function loadArbRoutes(fetchImpl = globalThis.fetch) { routesP ||= fetchImpl(ARB_ROUTES_URL).then(r => r.json()); return routesP; }
+// When the routes file names a next executor and exactly that code is on chain, use it (the liquidity build: the non-caller
+// share goes to the QHOOKS floor instead of a burn). Otherwise the current executor, unchanged.
+async function nextLive(d, fetchImpl) {
+  const n = d?.next; if (!n?.executor || !n.runtimeSha256) return d;
+  try {
+    const r = await fetchImpl(chainById(String(d.chainId)).rpc, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({jsonrpc: '2.0', id: 1, method: 'eth_getCode', params: [n.executor, 'latest']})});
+    const code = (await r.json()).result || '0x'; if (code.length < 4) return d;
+    const h = [...new Uint8Array(await crypto.subtle.digest('SHA-256', Uint8Array.from(code.slice(2).match(/../g), x => parseInt(x, 16))))].map(x => x.toString(16).padStart(2, '0')).join('');
+    return h === n.runtimeSha256 ? {...d, executor: n.executor, callerBps: n.callerBps, abi: n.abi, liquidity: true, retired: d.executor} : d;
+  } catch { return d; }
+}
+export function loadArbRoutes(fetchImpl = globalThis.fetch) { routesP ||= fetchImpl(ARB_ROUTES_URL).then(r => r.json()).then(d => nextLive(d, fetchImpl)); return routesP; }
 export const SIZES = [2e15, 8e15, 3.2e16, 1.28e17, 5.12e17].map(x => BigInt(x));
 export const fmtEth = w => { const s = Number(w) / 1e18; return s >= 0.01 ? s.toFixed(4) : s.toPrecision(3); };
 

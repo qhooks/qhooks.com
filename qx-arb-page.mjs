@@ -6,6 +6,11 @@ import {renderArbList} from '/qx-arb-gap-panel.mjs';
 const root = document.getElementById('qxa-root'), hub = getWalletHub(window);
 const el = (t, a = {}, ...k) => { const n = document.createElement(t); for (const [x, v] of Object.entries(a)) n.setAttribute(x, v); n.append(...k); return n; };
 const d = await loadArbRoutes(), client = createArbClient({chainId: '4663'});
+// Once the liquidity executor is on chain (loadArbRoutes checks its exact code), the static copy and address follow it.
+if (d.liquidity) {
+  for (const n of document.querySelectorAll('[data-arb-liq]')) n.textContent = n.getAttribute('data-arb-liq');
+  for (const n of document.querySelectorAll('[data-arb-exec]')) n.textContent = d.executor;
+}
 const list = el('div'), status = el('p', {role: 'status', class: 'qxa-status'}), btn = el('button', {type: 'button', class: 'qtx-mini qas-go'}, 'Scan all ' + d.routes.length + ' routes');
 let busy = false, gaps = [], ctl = null;
 const say = t => { status.textContent = t; };
