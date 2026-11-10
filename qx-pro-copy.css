@@ -1,0 +1,23 @@
+/* Auto-copy page (pro terminal E3). Builds on qx-pro-orders.css; site theme tokens; phone-first; light and dark. */
+#qcp-root{max-width:560px;margin:0 auto 64px;font-family:var(--qx-sans,system-ui,sans-serif);color:var(--qx-ink)}
+.qcp-page [hidden]{display:none!important}
+.qcp-chain{margin:0 0 4px}.qcp-chain label{display:grid;gap:6px;font-size:13px;color:var(--qx-muted)}
+.qcp-h{margin:0;font-size:20px}
+.qcp-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.qcp-pill{padding:4px 12px;border-radius:999px;font:600 13px var(--qx-sans);background:var(--qx-brass);color:var(--qx-on-brass,#151512)}
+.qcp-pill.is-off{background:transparent;border:1px solid var(--qx-line-2,var(--qx-line));color:var(--qx-muted)}
+.qcp-dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:14px}
+.qcp-dl dt{color:var(--qx-muted)}.qcp-dl dd{margin:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.qcp-check{display:flex!important;grid-template-columns:none;align-items:center;gap:8px;color:var(--qx-ink)!important;font-size:14px!important;min-height:44px}
+.qcp-check input{width:20px;height:20px;accent-color:var(--qx-brass)}
+.qcp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qcp-add{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+.qcp-actions{display:grid;gap:10px}
+.qcp-stop{border-color:var(--qpo-down);color:var(--qpo-down)}
+.qcp-leaders h3{font-size:16px;margin:24px 0 8px}
+.qcp-leader{display:grid;gap:10px;padding:14px 2px;border-top:1px solid var(--qx-line)}
+.qcp-leader label{display:grid;gap:6px;font-size:13px;color:var(--qx-muted)}
+.qcp-who{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.qcp-who .qpo-link{font-size:15px;font-weight:600}
+.qcp-page small.qpo-note{font-size:12px}
+@media (max-width:380px){.qcp-grid{grid-template-columns:1fr}}

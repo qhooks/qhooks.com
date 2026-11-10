@@ -225,7 +225,8 @@ export async function openCard(wallet, { windowKey = '30d', chainId = null } = {
       if (!boardSession()) { try { await signIn(); await loadFollows(); } catch { return; } }
       followBtn.disabled = true; try { await follow(wallet, f ? {} : { label: '' }, !f); draw(w); } catch (e) { followBtn.disabled = false; followBtn.after(el('p', { class: 'qpw-note' }, say(e))); }
     });
-    const links = el('div', { class: 'qpw-io' }, followBtn, explorer ? el('a', { class: 'qpw-btn', href: explorer + '/address/' + wallet, target: '_blank', rel: 'noopener' }, 'Explorer') : null);
+    const copyLink = me && me.toLowerCase() !== wallet ? el('a', { class: 'qpw-btn', href: '/copy?w=' + wallet + (chainId ? '&chain=' + chainId : '') }, 'Copy trades') : null;
+    const links = el('div', { class: 'qpw-io' }, followBtn, copyLink, explorer ? el('a', { class: 'qpw-btn', href: explorer + '/address/' + wallet, target: '_blank', rel: 'noopener' }, 'Explorer') : null);
     sheet.replaceChildren(el('div', { class: 'qpw-sheet-in' }, head, windows, body, links));
     if (!sheet.open) sheet.showModal();
     try {
