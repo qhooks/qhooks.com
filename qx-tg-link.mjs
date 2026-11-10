@@ -14,7 +14,34 @@ export async function linkRequest(initData, body, fetchImpl = globalThis.fetch) 
   return data;
 }
 
-export function mountWalletLink({ document: doc, hub, telegram, fetchImpl = globalThis.fetch, storage = null, force = false }) {
+// Silent link (2026-11-10): a wallet the signed-in Privy account owns links itself to this Telegram user, with no card
+// or signature. The server checks Telegram initData, the Privy access token and Privy's record of the user's wallets.
+export function privyAccessToken(storage) {
+  try {
+    for (let i = 0; i < (storage?.length || 0); i++) {
+      const key = storage.key(i);
+      if (!/^privy:(?:[^:]+:)?token$/.test(key || '')) continue;
+      const raw = storage.getItem(key); if (!raw) continue;
+      let token = raw; try { token = JSON.parse(raw); } catch {}
+      if (typeof token === 'string' && token.split('.').length === 3) return token;
+    }
+  } catch {}
+  return null;
+}
+export async function silentLink({ initData, address, storage, explicit = false, fetchImpl = globalThis.fetch }) {
+  const privyToken = privyAccessToken(storage);
+  if (!privyToken) return 'fallback';
+  try {
+    const r = await fetchImpl('/api/tg/autolink', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ initData, address, privyToken, explicit }) });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok && data.linked) return 'linked';
+    if (r.ok && data.reason === 'unlinked_before') return 'skip';
+    if (data.error === 'sign_in') return 'retry';
+    return 'fallback';
+  } catch { return 'fallback'; }
+}
+
+export function mountWalletLink({ document: doc, hub, telegram, fetchImpl = globalThis.fetch, storage = null, force = false, privyStorage = storage }) {
   if (!telegram?.inTelegram || !telegram.getInitData()) return () => {};
   const host = doc.querySelector('#qxt-trade');
   if (!host) return () => {};
@@ -28,14 +55,21 @@ export function mountWalletLink({ document: doc, hub, telegram, fetchImpl = glob
     strip?.remove(); strip = null;
     if (!connection || !/^0x[0-9a-fA-F]{40}$/.test(connection.owner)) return;
     const address = connection.owner.toLowerCase();
-    if (!force && seen(address)) return;
     let linked = null;
     try {
       const r = await fetchImpl('/api/tg/me', { headers: { Authorization: 'tma ' + telegram.getInitData() }, cache: 'no-store' });
       if (!r.ok) return;
       const me = await r.json(); userId = String(me.userId || ''); linked = me.wallets?.find(w => w.address.toLowerCase() === address) || null;
     } catch { return; }
-    if (version !== revision || !force && (linked || seen(address))) return;
+    if (version !== revision || !force && linked) return;
+    if (!linked) {
+      let outcome = await silentLink({ initData: telegram.getInitData(), address, storage: privyStorage, explicit: force, fetchImpl });
+      if (outcome === 'retry') { await new Promise(r => setTimeout(r, 2500)); if (version !== revision) return; outcome = await silentLink({ initData: telegram.getInitData(), address, storage: privyStorage, explicit: force, fetchImpl }); }
+      if (version !== revision) return;
+      if (outcome === 'skip' && !force || outcome === 'linked' && !force) return;
+      if (outcome === 'linked') linked = { address, label: '' };
+    }
+    if (!force && seen(address)) return;
     const title = make('b', {}, linked ? 'Wallet linked to Telegram' : 'Link this wallet to Telegram');
     const description = make('span', {}, linked ? 'Use this address for positions, referrals and wallet alerts.' : 'See your positions and referrals in the bot. Confirm ownership with a wallet signature.');
     const status = make('p', { class: 'qtx-status', role: 'status', 'aria-live': 'polite' });
