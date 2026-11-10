@@ -3,7 +3,8 @@
  --qxt-h:52px;font-size:13px;line-height:1.4;height:100vh;overflow:hidden}
 body.qx.qxt{font-size:13px;line-height:1.4}
 .qxt-empty[hidden]{display:none!important}
-:root[data-theme="light"] .qxt{--qxt-up:#2f7d5a;--qxt-down:#b04a3b;--qxt-up-a:rgba(47,125,90,.3);--qxt-down-a:rgba(176,74,59,.3);--qxt-grid:rgba(27,32,29,.06)}
+/* Light (2026-11-10): up/down and faint text darkened to pass AA (≥ 4.5:1) on every light terminal background. */
+:root[data-theme="light"] .qxt{--qxt-up:#28704f;--qxt-down:#a3412f;--qxt-up-a:rgba(40,112,79,.32);--qxt-down-a:rgba(163,65,47,.32);--qxt-grid:rgba(27,32,29,.07);--qx-faint:#626860}
 .qxt-sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .qxt-muted{color:var(--qx-muted)}
 .qxt .up{color:var(--qxt-up)}.qxt .down{color:var(--qxt-down)}
@@ -431,6 +432,22 @@ body.qx.qxt{font-size:13px;line-height:1.4}
 .qxt-launch-actions{display:flex;flex-wrap:wrap;gap:8px}
 .qxt-launch-actions>[hidden]{display:none}
 .qxt #qxt-check-coverage:empty{display:none}
+.qxt-builder{border-top:1px solid var(--qx-line);padding-top:6px;font-size:11px;min-width:0}
+.qxt-builder-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;color:var(--qx-faint);font-size:10px;cursor:pointer;list-style:none}
+.qxt-builder-head::-webkit-details-marker{display:none}
+.qxt-builder-head::after{content:'+';font:12px var(--qx-mono);margin-left:2px;order:9}
+.qxt-builder[open]>.qxt-builder-head::after{content:'\2212'}
+.qxt-builder-head b{color:var(--qx-muted);font-weight:500}
+.qxt-builder-head a{margin-left:auto;color:var(--qx-muted);text-decoration:underline;text-underline-offset:2px}
+.qxt-builder-tag{font:9px var(--qx-mono);text-transform:uppercase;letter-spacing:.04em;border:1px solid var(--qx-line-2);border-radius:4px;padding:1px 5px;color:var(--qx-muted)}
+.qxt-builder dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:7px 18px;margin:8px 0 0}
+.qxt-builder dl>div{min-width:0}
+.qxt-builder dt{font:9px var(--qx-mono);text-transform:uppercase;letter-spacing:.04em;color:var(--qx-faint);margin-bottom:2px}
+.qxt-builder dd{margin:0;font-size:10px;color:var(--qx-muted);overflow-wrap:anywhere}
+.qxt-builder dd a{color:var(--qx-muted)}
+.qxt-builder-note{margin:7px 0 0;font-size:10px;line-height:1.45;color:var(--qx-faint)}
+.qxt-builder-fine{margin:5px 0 0;font-size:9px;line-height:1.4;color:var(--qx-faint)}
+@media(max-width:760px){.qxt-builder-head{min-height:32px;align-items:center}.qxt-builder-head a{min-height:32px;display:inline-flex;align-items:center}}
 @media(max-width:1180px){.qxt-grid{grid-template-columns:minmax(0,1fr) 320px}.qxt-feed{max-height:60vh}.qxt-memory-row .qxt-row{grid-template-columns:30px minmax(0,1fr)}}
 @media(max-width:760px){
  .qxt-grid{grid-template-columns:minmax(0,1fr)}
@@ -491,3 +508,13 @@ body.qx.qxt{font-size:13px;line-height:1.4}
 
 /* Buybacks panel under the token header (official QHOOKS only). */
 #qxt-buybacks{grid-column:1/-1;min-width:0;margin:4px 0 0}
+/* walk1 */@media(max-width:760px){.qxt-head>.qx-burn-ticker,.qxt-head>.qxt-launch-caps,.qxt-head>.qop-warn,.qxt-head>.qx-relaunch-badge,.qxt-head>.qxa-panel,.qxt-head>.qxr-panel{grid-column:1/-1;min-width:0}}
+
+/* Price impact + low-liquidity lines under the ticket quote (2026-11-10). Amber above 5%. */
+.qxt-impact{display:block;font-size:12px;color:var(--qx-muted)}
+.qxt-impact.warn{color:var(--qx-brass);font-weight:600}
+
+/* Day/night toggle in the terminal header (2026-11-10): the site's shared theme.js + qhooks.theme key. */
+.qxt-theme-toggle{flex:none;display:inline-grid;place-items:center;width:34px;height:34px;padding:0;border-radius:50%;border:1px solid var(--qx-line-2);background:transparent;color:var(--qx-ink);cursor:pointer}
+.qxt-theme-toggle[hidden]{display:none}.qxt-theme-toggle:hover{background:var(--qx-panel-2)}.qxt-theme-toggle:focus-visible{outline:2px solid var(--qx-brass);outline-offset:2px}
+.qxt-theme-toggle svg{width:16px;height:16px}

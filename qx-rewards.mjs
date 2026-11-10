@@ -45,10 +45,12 @@ function scan(me, generation) {
   if (pending?.owner === me && pending.epoch === generation) return pending.promise;
   const job = { owner: me, epoch: generation };
   job.promise = (async () => {
-    const target = router || await extraAddress('feeRouter');
-    if (!/^0x[0-9a-f]{40}$/i.test(target || '') || BigInt(target) === 0n) throw Error('Rewards router unavailable');
-    router = target;
-    const snapshot = await readEvmRewardSnapshot(me, { quotes: QUOTES, native: NATIVE, router: target, codeAt, cashbackOf });
+    // One router per chain (a chain may name its own build in chains.mjs extras).
+    const routers = router || Object.fromEntries(await Promise.all(Object.keys(QUOTES).map(async id => [id, await extraAddress('feeRouter', id)])));
+    if (Object.values(routers).some(a => !/^0x[0-9a-f]{40}$/i.test(a || '') || BigInt(a) === 0n)) throw Error('Rewards router unavailable');
+    router = routers;
+    const target = await extraAddress('feeRouter');
+    const snapshot = await readEvmRewardSnapshot(me, { quotes: QUOTES, native: NATIVE, router: id => routers[id], codeAt, cashbackOf });
     if (owns(me, generation)) {
       for (const chain of snapshot.chains) if (chain.status === 'not_deployed') {
         for (const [id, row] of known) if (row.chainId === chain.chainId) known.delete(id);
@@ -122,7 +124,7 @@ async function load(notice = '') {
       try {
         // The displayed balance is never authority to send from a different wallet.
         if (!owns(me, generation)) { sync(); return; }
-        await send(x.chainId, { to: target, data: claimCall(x.address) }, text => {
+        await send(x.chainId, { to: x.router || target, data: claimCall(x.address) }, text => {
           if (current(me, generation, mine)) status.textContent = text;
         });
         if (owns(me, generation)) { confirmed = true; document.dispatchEvent(new CustomEvent('qhooks:rewards-claimed')); }

@@ -227,7 +227,7 @@ async function show(pool) {
   if (!card || !pool?.chainId || !MANAGER[pool.chainId]) { if (card) card.hidden = true; return; }
   try {
     const c = pool.constructor, quoteToken = c.quote, token = c.currency0 === quoteToken ? c.currency1 : c.currency0;
-    const [key, t, q, address] = await Promise.all([livePoolKey(pool.chainId, pool.controller), erc20(pool.chainId, token), erc20(pool.chainId, quoteToken), extraAddress('limitOrders')]);
+    const [key, t, q, address] = await Promise.all([livePoolKey(pool.chainId, pool.controller), erc20(pool.chainId, token), erc20(pool.chainId, quoteToken), extraAddress('limitOrders', pool.chainId)]);
     if (mine !== seq) return;
     const blocks = c.blocks && BigInt(c.blocks) !== 0n ? c.blocks : null;
     state = { chainId: pool.chainId, key, token, quoteToken, symbol: t.symbol || 'token', tdec: t.decimals, qsym: q.symbol || 'quote', qdec: q.decimals, address, blocks };

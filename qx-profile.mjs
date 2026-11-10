@@ -111,7 +111,10 @@ async function launchCard(L, T) {
       const b = await blocksOf(L.chainId, blocks);
       const [q] = await Promise.all([erc20(L.chainId, b.quote).catch(() => ({ symbol: '?' }))]);
       const mods = modulesAmong(b.payees, b.token, b.quote).map(m => m.module.name);
-      if (b.payees.includes(stakeVaultAddress(b.token, b.quote))) mods.push('Holder staking');
+      // Holder staking: a payee of this launch's own blocks that answers token() = this token (a Simple Flywheel vault
+      // need not sit at the predicted address).
+      const staking = b.payees.includes(stakeVaultAddress(b.token, b.quote)) || (await Promise.all(b.payees.map(p => ethCall(L.chainId, p, '0xfc0c546a').then(t => typeof t === 'string' && ('0x' + t.slice(-40)).toLowerCase() === b.token.toLowerCase() && ethCall(L.chainId, p, '0x008cc262' + '0'.repeat(64)).then(e => typeof e === 'string' && e.length === 130)).catch(() => false)))).some(Boolean);
+      if (staking) mods.push('Holder staking');
       rows.push(['Paired with', q.symbol], ['Modules', mods.length ? mods.join(', ') : 'none'], ['Payees', String(b.payees.length)]);
     } else rows.push(['Modules', 'none']);
     if (L.summary) rows.push(['Holders', String(L.summary.holders ?? '—')]);

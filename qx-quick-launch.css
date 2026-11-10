@@ -28,3 +28,18 @@
 .qq-or::after{content:"";flex:1;height:1px;background:var(--qx-line-2)}
 @media(max-width:760px){.qq-fields{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.qq-image{grid-column:1/-1}}
 @media(max-width:560px){.qq-head{flex-direction:column;align-items:stretch}.qq-head h2{font-size:19px}.qq-cards{grid-template-columns:minmax(0,1fr)}.qq-fields{grid-template-columns:minmax(0,1fr)}.qq-preset{flex-direction:column}.qq-none{flex-direction:column;align-items:stretch}}
+
+/* Starting market cap (start-cap generation only) */
+.qq-chip{display:inline-block;margin:2px 0 6px;padding:2px 9px;border-radius:99px;border:1px solid var(--qx-brass,#b88a3e);color:var(--qx-brass,#b88a3e);font:600 11.5px var(--qx-sans,inherit);font-style:normal}
+.qq-startcap{display:grid;gap:8px;margin:10px 0 4px}
+.qq-start-k{margin:0;font-weight:600;font-size:14px}
+.qq-start-opts{display:flex;flex-wrap:wrap;gap:6px}
+.qq-start-opt{min-height:40px;padding:7px 12px;border-radius:99px;border:1px solid var(--qx-line-2,rgba(127,127,127,.35));background:transparent;color:inherit;font:500 13px var(--qx-sans,inherit);cursor:pointer}
+.qq-start-opt[aria-pressed="true"]{border-color:var(--qx-brass,#b88a3e);background:color-mix(in srgb,var(--qx-brass,#b88a3e) 14%,transparent);font-weight:600}
+.qq-start-custom{display:flex;align-items:center;gap:10px}.qq-start-custom input{flex:1;min-width:0}
+.qq-start-val{font-variant-numeric:tabular-nums;font-weight:600;min-width:64px;text-align:right}
+.qq-start-note,.qq-start-sum{margin:0;font-size:12.5px;line-height:1.5;color:var(--qx-muted,#888)}.qq-start-sum{color:inherit;font-weight:600}
+.qq-pq{display:grid;gap:8px;margin:10px 0 4px}.qq-pq-toggle{display:flex;gap:8px;align-items:center}.qq-pq-key{display:grid;gap:8px;padding:10px;border:1px solid var(--qx-line,#ddd);border-radius:10px;min-width:0}.qq-pq-key input,.qq-pq-key textarea{max-width:100%}
+.qq-chain{display:flex;gap:8px;align-items:center;margin:0 0 10px;font-size:13px;font-weight:600}.qq-chain select{min-height:36px;padding:4px 10px;border-radius:8px;max-width:100%}
+.qq-pq-skip{justify-self:start;background:none;border:0;padding:4px 0;font:inherit;font-size:12.5px;color:var(--qx-muted,#888);text-decoration:underline;cursor:pointer}.qq-pq-skip:hover{color:inherit}
+.qxc-main .qq-pq-skip,.qq-pq-skip{justify-self:start;min-height:44px;background:none;border:0;box-shadow:none;padding:0;font:inherit;font-size:13px;font-weight:500;color:var(--qx-muted,#888);text-decoration:underline;text-underline-offset:3px;cursor:pointer}.qxc-main .qq-pq-skip:hover{background:none;color:inherit}

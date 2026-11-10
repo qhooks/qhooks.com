@@ -1,12 +1,19 @@
+import {appendArbRecaptureLine} from './qx-create-display.mjs';
+import {readLaunchPrefill,launchPostLink} from './qx-launch-prefill.mjs';
 // Quick launch and launch-idea cards on /create. An extra path beside the guided flow, which it never changes.
 // One transaction: QSimpleLaunch.launch with the card's preset. The person types name and ticker and picks an image.
 import {checkTicker,assertTickerFree,TickerTaken,tickerBlockNodes} from '/qx-ticker-guard.mjs';
-import {chainById} from './chains.mjs';
+import {chainById,visibleChains} from './chains.mjs';
 import {getWalletHub} from './wallet-hub-fresh.mjs';
 import {CREATE_EXECUTION_ENABLED,CREATE_EXECUTION_HOLD} from './qx-create-release.mjs';
 import {readCreateNativeUSD} from './qx-create-prices.mjs';
 import {launchError} from './qx-create-plan.mjs';
 import {quoteNextChain,recheckNextChain} from './full-launch/packages/multichain/fees.mjs';
+import {quoteBaseCall,recheckBaseCall} from './qx-base-call-fees.mjs';
+const quoteCall=a=>String(a.chainId)==='8453'?quoteBaseCall(a):quoteNextChain(a),recheckCall=(chainId,a)=>String(chainId)==='8453'?recheckBaseCall(a):recheckNextChain(a);
+import {startCapFactory,START_TIERS,START_STEPS_MAX,stepsForUsd,capAtSteps,startAtCall,readStartAt,usdShort} from './qx-quick-launch-core.mjs';
+import {pqFactory,primeCleanFactory} from './qx-quick-launch-core.mjs';
+import {mountAccountQuantum} from './qx-account-quantum-control.mjs';
 import {ideaCards,ideaCard,visibleGroups,quickFactory,encodeQuickLaunch,validateQuick,launchFeeWei,quickCost,ethText,launchedToken,marketPath,randomSalt,PLANNING_GAS,META_LIMIT} from './qx-quick-launch-core.mjs';
 
 const $=id=>document.getElementById('qq-'+id),hub=getWalletHub(window),LAST='qhooks:create:quick:v1';
@@ -27,7 +34,22 @@ const QUICK_CHAIN='4663';
 let taken=null,tickerRun=0,tickerTimer=0;
 let costError='',chainId=null,group='all',pick=null,image='',cost=null,costRun=0,busy=false,usd=null,feeRead=new Map();
 const chainSelect=document.getElementById('qc-chainId');
-const currentChain=()=>chainSelect?.value||new URLSearchParams(location.search).get('chain')||'4663';
+// One-tap has its own chain picker (2026-11-09): ?chain= wins over the wallet's network and over the guided form
+// (which an unfinished guided launch can lock to another chain). Launch asks the wallet to switch (adding the chain if needed).
+const urlChain=()=>new URLSearchParams(location.search).get('chain');
+let quickChain=null;
+const currentChain=()=>quickChain||chainSelect?.value||urlChain()||'4663';
+const quickChains=()=>visibleChains().filter(c=>ideaCards(c.id).length);
+function setQuickChain(id){quickChain=id;try{const u=new URL(location.href);u.searchParams.set('chain',id);history.replaceState(history.state,'',u);}catch{}
+ renderIdeas();if(pick)openQuick(pick.id);checkTickerSoon();costSoon();}
+function renderPicker(){
+ let sel=$('chain');
+ if(!sel){const label=el('label',{class:'qq-chain'},el('span',{},'Chain'));sel=el('select',{id:'qq-chain','aria-label':'Chain for one-tap launch'});label.append(sel);$('chips').before(label);
+  sel.addEventListener('change',()=>setQuickChain(sel.value));}
+ const list=quickChains(),want=chainId;
+ if(sel.options.length!==list.length||[...sel.options].some((o,i)=>o.value!==list[i].id))sel.replaceChildren(...list.map(c=>el('option',{value:c.id},c.name+' · '+c.native)));
+ if(list.some(c=>c.id===want))sel.value=want;
+}
 const note=(text,error=false)=>{$('message').textContent=text;$('message').dataset.error=String(error);};
 // Anti-copycat ticker block: a ticker already launched through QHooks is refused before the wallet opens.
 const noteNodes=(nodes,error=true)=>{$('message').replaceChildren(...nodes);$('message').dataset.error=String(error);};
@@ -37,8 +59,13 @@ function checkTickerSoon(){clearTimeout(tickerTimer);const run=++tickerRun;ticke
  const r=await checkTicker({symbol,chainId,creator:owner});if(run!==tickerRun)return;
  if(!r.available)showTaken(r);else if(taken){taken=null;note('');}renderQuick();},350);}
 
-function renderIdeas(){
- chainId=currentChain();const own=ideaCards(chainId),offChain=!own.length,cards=offChain?ideaCards(QUICK_CHAIN):own,groups=visibleGroups(cards),c=chainById(chainId);
+// USD for the cost line in the chain's own coin (ETH, BNB, HYPE): the price of the selected chain, read again on change.
+let usdFor=null;function readUsd(){const id=currentChain(),sym=chainById(id)?.native||'ETH';if(usdFor===id)return;usdFor=id;usd=null;
+ void readCreateNativeUSD(sym).then(v=>{if(usdFor===id){usd=v;renderQuick();}}).catch(()=>{});}
+function renderIdeas(){readUsd();chainId=currentChain();renderPicker();
+ // Clean-token launch contract: once it has code on this chain, new launches go to it (redraw once when it switches).
+ {const id=chainId;primeClean(id).then(r=>{if(r.changed&&id===chainId){costRun++;cost=null;renderIdeas();if(pick)void refreshCost();}}).catch(()=>{});}
+ chainId=currentChain();const own=ideaCards(chainId),offChain=!own.length,cards=offChain?ideaCards(QUICK_CHAIN).filter(card=>card.id!=='arb-burns'):own,groups=visibleGroups(cards),c=chainById(chainId);
  if(!groups.some(([id])=>id===group))group='all';
  $('chips').replaceChildren(...groups.map(([id,label])=>{const b=el('button',{type:'button','aria-pressed':String(id===group),'data-group':id},label);b.addEventListener('click',()=>{group=id;renderIdeas();});return b;}));
  $('chips').hidden=!cards.length;
@@ -46,7 +73,7 @@ function renderIdeas(){
   const btn=el('button',{type:'button',class:'qq-launch-card','data-launch':card.id},'Launch this');btn.addEventListener('click',()=>launchCard(card.id));
   const blocks=card.blocks.length?el('div',{class:'qq-blocks'},...card.blocks.map(icon)):el('div',{class:'qq-blocks qq-blocks-none'},el('span',{},'No extra rules'));
   return el('article',{class:'qq-card','data-card':card.id,'data-group':card.group,hidden:group!=='all'&&card.group!==group},
-   el('h3',{},card.name),el('p',{class:'qq-what'},card.what),el('p',{class:'qq-why'},card.why),blocks,btn);
+   el('h3',{},card.name),card.chip?el('span',{class:'qq-chip'},card.chip):null,el('p',{class:'qq-what'},card.what),el('p',{class:'qq-why'},card.why),blocks,btn);
  }));
  // Off Robinhood Chain the cards stay visible (lead, 2026-11-08); "Launch this" switches the chain first.
  $('none').hidden=!offChain;$('use-robinhood').hidden=true;$('open').hidden=false;
@@ -56,13 +83,78 @@ function renderIdeas(){
 
 // A card picked while another chain is selected: switch the page to Robinhood Chain, then open that card.
 function launchCard(id){
- if(!ideaCards(currentChain()).length&&chainSelect){chainSelect.value=QUICK_CHAIN;chainSelect.dispatchEvent(new Event('change'));}
+ if(!ideaCards(currentChain()).length){setQuickChain(QUICK_CHAIN);}
  openQuick(id,{scroll:true});
 }
 
+// ---- Starting market cap (start-cap generation only; DESIGN.md §6) ----
+// Standard keeps today's start. A higher start costs bundlers and snipers more; the price can't fall below it.
+// Randall 2026-11-08: Elysium launches default to the Floor start (~$20K).
+const DEFAULT_TIER={'99901':'floor'};
+let startTier='standard',startSteps=0,startBase=null,startRun=0,startRetry=null;
+/// Floor/High are USD targets: without a live USD price their steps can't be known, so launching waits ("Refreshing price…").
+const priceBlocked=()=>startCapOn()&&(startTier==='floor'||startTier==='high')&&!startBase?.usd;
+const startCapOn=()=>!!startCapFactory(chainId);
+async function readStartBase(){
+ const run=++startRun,c=chainById(chainId);startBase=null;
+ try{
+  const r=readStartAt(await rpc('eth_call',[{to:startCapFactory(chainId),data:startAtCall(0)},'latest']));if(!r)throw Error('no start');
+  const q=c.quote?.symbol||'',usd=/USD/.test(q)?1:await readCreateNativeUSD(q.replace(/^W/,'')).catch(()=>null);
+  const cap=Number(r.startCapWei)/10**(c.quote?.decimals??18);
+  if(run===startRun)startBase={cap,unit:q.replace(/^W/,''),usd:usd>0?cap*usd:null};
+ }catch{}
+ if(run===startRun){renderStart();renderQuick();
+  // A USD tier (Floor/High) never silently becomes the standard start: keep reading the price until it answers.
+  clearTimeout(startRetry);if(startCapOn()&&!startBase?.usd)startRetry=setTimeout(()=>{if(run===startRun&&pick)void readStartBase().then(()=>{if(startTier!=='custom')startSteps=tierSteps(startTier);renderStart();renderQuick();costSoon();});},10000);}
+}
+function tierSteps(t){const tier=START_TIERS.find(x=>x[0]===t);if(!tier||tier[2]===null)return startSteps;if(!tier[2])return 0;return startBase?.usd?stepsForUsd(tier[2],startBase.usd):0;}
+function capText(steps){if(!startBase)return '';const usd=startBase.usd?capAtSteps(startBase.usd,steps):null;return usd?'~'+usdShort(usd):+capAtSteps(startBase.cap,steps).toPrecision(3)+' '+startBase.unit;}
+function renderStart(){
+ let box=$('startcap');
+ if(!startCapOn()){box?.remove();startSteps=0;startTier='standard';return;}
+ if(!box){box=el('div',{id:'qq-startcap',class:'qq-startcap'});$('style-blocks').after(box);}
+ if(startTier!=='custom')startSteps=tierSteps(startTier);
+ const radios=START_TIERS.map(([id,label])=>{const b=el('button',{type:'button',class:'qq-start-opt','aria-pressed':String(id===startTier)},label+(id==='standard'&&startBase?' · '+capText(tierSteps(id)):''));
+  b.addEventListener('click',()=>{startTier=id;if(id==='custom'&&!startSteps)startSteps=tierSteps('floor');renderStart();renderQuick();costSoon();});return b;});
+ const kids=[el('p',{class:'qq-start-k'},'Starting market cap'),el('div',{class:'qq-start-opts',role:'group','aria-label':'Starting market cap'},...radios)];
+ if(startTier==='custom'){const r=el('input',{type:'range',min:'0',max:String(START_STEPS_MAX),step:'1',value:String(startSteps),'aria-label':'Starting market cap'});
+  r.addEventListener('input',()=>{startSteps=Number(r.value);out.textContent=capText(startSteps);renderQuick();costSoon();});
+  const out=el('span',{class:'qq-start-val'},capText(startSteps));kids.push(el('div',{class:'qq-start-custom'},r,out));}
+ kids.push(el('p',{class:'qq-start-note'},'A higher start makes bundling and sniping cost more: buyers pay more for the same share of the supply. The price can’t go below where it starts, and Bonded comes at 25× the start.'));
+ if(startSteps>0&&startBase)kids.push(el('p',{class:'qq-start-sum'},'Starts at '+capText(startSteps)+' · Bonded at '+capText(startSteps+161)));
+ box.replaceChildren(...kids);
+}
+
+// ---- Optional post-quantum key (next-generation factory only, chains.mjs simpleLaunchNext.abi 'pq') ----
+// On by default for new launches (2026-11-09, Randall); one tap opts out. On: the launch's creator role (where its LP fees go, handing the role on) is held by the shared
+// QPQCreator, so changing it needs the creator's wallet AND this account quantum key. Fees keep flowing either way.
+let pqOn=false,pqOptOut=false,pqSigner=null,pqReady=false,pqControl=null,pqPanel=null;
+const pqKeyHex=()=>pqOn&&pqReady&&pqSigner&&!pqSigner.locked&&pqSigner.backupVerified&&/^0x[0-9a-f]{64}$/i.test(pqSigner.publicKeyHex||'')?pqSigner.publicKeyHex.toLowerCase():null;
+const pqBlocked=()=>pqOn&&!pqKeyHex();
+function renderPq(){
+ let box=$('pq');
+ if(!pqFactory(chainId)){box?.remove();pqOn=false;return;}
+ pqOn=!pqOptOut;
+ if(!box){box=el('div',{id:'qq-pq',class:'qq-pq'});($('startcap')||$('style-blocks')).after(box);}
+ const check=el('input',{type:'checkbox',id:'qq-pq-on',checked:pqOn});
+ check.addEventListener('change',()=>{pqOptOut=!check.checked;renderPq();renderQuick();costSoon();});
+ const kids=[el('label',{class:'qxc-check qq-pq-toggle'},check,el('strong',{},'Add a post-quantum key')),
+  el('p',{class:'qq-start-note'},'Optional. With it on, changing where this launch’s LP fees go, or handing that role on, needs your wallet and your QHooks quantum key. Fees keep flowing whatever happens to either key.')];
+ if(pqOn){
+  if(!pqPanel){pqPanel=el('div',{class:'qq-pq-key'});pqControl=mountAccountQuantum(pqPanel,{hub,id:'qqk',mode:'launch',enabled:()=>!busy,onChange:st=>{pqSigner=st.signer||null;pqReady=!!st.ready;renderPqStatus();renderQuick();costSoon();}});}
+  const skip=el('button',{type:'button',id:'qq-pq-skip',class:'qq-pq-skip'},'Launch without a post-quantum key');
+  skip.addEventListener('click',()=>{pqOptOut=true;renderPq();renderQuick();costSoon();});
+  kids.push(pqPanel,el('p',{id:'qq-pq-status',class:'qxc-fine'}),skip);
+ }
+ box.replaceChildren(...kids);renderPqStatus();
+}
+function renderPqStatus(){const p=$('pq-status');if(!p)return;const k=pqKeyHex();
+ p.textContent=k?'Key ready: '+k.slice(0,10)+'…'+k.slice(-6)+'. It is set in the same launch transaction.':'Unlock your quantum key above, with its backup saved, to launch with it.';}
+
 function openQuick(id,{scroll=false}={}){
  const card=ideaCard(chainId,id)||ideaCard(chainId,'fair');if(!card)return;pick=card;$('quick').hidden=false;
- $('style-name').textContent=card.name;$('style-line').textContent=card.what;
+ startTier=card.startUsd?'custom':DEFAULT_TIER[chainId]||'standard';startSteps=0;if(startCapOn()){void readStartBase().then(()=>{if(card.startUsd&&startBase?.usd){startSteps=stepsForUsd(card.startUsd,startBase.usd);renderStart();renderQuick();costSoon();}});}renderStart();
+ renderPq();$('style-name').textContent=card.name;$('style-line').textContent=card.what;
  $('style-blocks').replaceChildren(...card.blocks.map(icon));
  for(const a of document.querySelectorAll('#qq-cards [data-launch]'))a.setAttribute('aria-pressed',String(a.dataset.launch===card.id));
  if(!$('done').hidden){$('done').hidden=true;$('launch').hidden=false;$('name').value='';$('symbol').value='';note('');}
@@ -81,9 +173,10 @@ function renderQuick(){
   box.replaceChildren(el('p',{class:'qq-total qxc-number'},ethText(cost.totalWei)+' '+c.native+dollars),
    line('Launch fee',ethText(cost.feeWei)+' '+c.native),line('Network gas · up to',ethText(cost.networkWei)+' '+c.native),
    ...(cost.live&&!cost.quote.funded?[el('p',{class:'qxc-fine qq-short','data-error':'true'},'Add '+ethText(BigInt(cost.quote.requiredBalance)-BigInt(cost.quote.balance))+' '+c.native+' on '+c.name+' to launch.')]:[]),el('p',{class:'qxc-fine'},cost.live?'Priced for this launch from your wallet’s estimate. One transaction, one confirmation.':'Planning estimate. Connect a wallet for this launch’s own estimate. One transaction, one confirmation.'));}
+ appendArbRecaptureLine(box,c,pick.blocks||[],quickFactory(chainId));
  const b=$('launch');
- b.textContent=busy?'Launching…':!conn?'Connect wallet':conn.chainId!==chainId?'Switch to '+c.short+' and launch':'Launch for '+(cost?ethText(cost.totalWei)+' '+c.native:'…');
- b.disabled=busy||!!taken||!!conn&&conn.chainId===chainId&&(!ready||!cost||cost.live&&!cost.quote.funded);
+ b.textContent=busy?'Launching…':!conn?'Connect wallet':conn.chainId!==chainId?'Switch to '+c.short+' and launch':priceBlocked()?'Refreshing price…':pqBlocked()?'Unlock your quantum key to launch':'Launch for '+(cost?ethText(cost.totalWei)+' '+c.native:'…');
+ b.disabled=busy||!!taken||!!conn&&conn.chainId===chainId&&(!ready||!cost||priceBlocked()||pqBlocked()||cost.live&&!cost.quote.funded);
 }
 
 async function rpc(method,params){const c=chainById(chainId);const r=await fetch(c.rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});const j=await r.json();if(j.error||typeof j.result!=='string')throw Error(j.error?.message||'RPC error');return j.result;}
@@ -95,14 +188,18 @@ async function readFee(){
 // own fee quote (quoteNextChain: wallet estimate +25%, 2 x base fee + tip, review caps) prices this exact transaction,
 // and that quoted transaction is what gets sent after a recheck. Otherwise: planning gas x the public gas price.
 const walletRequest=conn=>(method,params)=>conn.entry.provider.request({method,params});
+// Checks whether this chain's clean-token launch contract has code (cached; see qx-quick-launch-core primeCleanFactory).
+const primeClean=(id,o)=>primeCleanFactory(id,a=>fetch(chainById(id).rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_getCode',params:[a,'latest']})}).then(r=>r.json()).then(j=>j.result),o);
 async function refreshCost(){
- if(!pick)return null;const run=++costRun,style=pick.style,snipe=pick.snipe;
+ if(!pick)return null;
+ // The launch contract must be settled before the price of the exact transaction is read.
+ await primeClean(chainId,{background:true}).catch(()=>{});const run=++costRun,style=pick.style,snipe=pick.snipe,steps=startCapOn()?startSteps:0,pqKey=pqFactory(chainId)?pqKeyHex():null;
  try{
   const conn=hub.snapshot().current,fee=await readFee();let next=null;
-  if(conn&&conn.chainId===chainId){let f=null;try{f=fields();validateQuick(f);}catch{f=null;}
-   if(f){const salt=randomSalt(),data=encodeQuickLaunch({...f,style,snipe,salt}),call={to:quickFactory(chainId),data,value:'0x'+fee.toString(16)};
-    const quote=await quoteNextChain({chainId,request:walletRequest(conn),owner:conn.owner,call});
-    next={...quickCost({feeWei:fee,gas:quote.gas,gasPriceWei:BigInt(quote.transaction.maxFeePerGas)}),live:true,quote,owner:conn.owner,key:JSON.stringify([f,style,snipe])};}}
+  if(conn&&conn.chainId===chainId&&!pqBlocked()){let f=null;try{f=fields();validateQuick(f);}catch{f=null;}
+   if(f){const salt=randomSalt(),data=encodeQuickLaunch({...f,style,snipe,salt,steps,startCap:startCapOn(),pq:pqFactory(chainId),pqKey}),call={to:quickFactory(chainId),data,value:'0x'+fee.toString(16)};
+    const quote=await quoteCall({chainId,request:walletRequest(conn),owner:conn.owner,call});
+    next={...quickCost({feeWei:fee,gas:quote.gas,gasPriceWei:BigInt(quote.transaction.maxFeePerGas),dataFeeWei:quote.dataFeeWei||0}),live:true,quote,owner:conn.owner,key:JSON.stringify([f,style,snipe,steps,pqKey,call.to])};}}
   if(!next){const price=await rpc('eth_gasPrice',[]);next={...quickCost({feeWei:fee,gas:Math.ceil(PLANNING_GAS[style]*1.25),gasPriceWei:2n*BigInt(price)}),live:false};}
   if(run!==costRun)return cost;cost=next;
  }catch(e){if(run===costRun){cost=null;costError=/insufficient|exceeds balance/i.test(String(e?.message))?launchError(e):/review limit/i.test(String(e?.message))?launchError(e):'Reading network fees. Trying again in a few seconds.';clearTimeout(costTimer);costTimer=setTimeout(()=>void refreshCost(),10000);}}
@@ -126,7 +223,7 @@ async function thumbnail(file){
 const rememberLast=v=>{try{localStorage.setItem(LAST,JSON.stringify(v));}catch{/* the receipt is still shown on this page */}};
 function showDone(token,hash){
  const c=chainById(chainId);$('done').hidden=false;$('launch').hidden=true;$('done-name').textContent=$('name').value.trim()+' ('+$('symbol').value.trim().toUpperCase()+') · '+c.name;
- $('token').textContent=token;$('open-market').href=marketPath(chainId,token);$('tx').href=c.explorer+'/tx/'+hash;$('done').focus?.();
+ $('token').textContent=token;$('open-market').href=marketPath(chainId,token);$('tx').href=c.explorer+'/tx/'+hash;{const x=launchPostLink({name:$('name').value,ticker:$('symbol').value,chainName:c.name,chainId,token}),px=$('post-x');if(px){px.hidden=!x;if(x)px.href=x;}}$('done').focus?.();
 }
 async function receipt(provider,hash){
  for(let i=0;i<240;i++){
@@ -143,11 +240,13 @@ async function launch(){
  busy=true;note('');renderQuick();
  try{
   if(conn.chainId!==chainId){note('Switching your wallet to '+chainById(chainId).name+'…');conn=await hub.switchChain(chainId);busy=false;await refreshCost();note('Check the cost, then launch.');return;}
-  const key=JSON.stringify([f,pick.style,pick.snipe]);
+  if(pqBlocked()){busy=false;note('Unlock your quantum key, or turn the post-quantum key off, then launch.',true);return;}
+  if(priceBlocked()){busy=false;note('Refreshing price… The starting market cap needs a live price. Try again in a moment, or choose Standard.',true);return;}
+  const key=JSON.stringify([f,pick.style,pick.snipe,startCapOn()?startSteps:0,pqFactory(chainId)?pqKeyHex():null,quickFactory(chainId)]);
   // The person must have seen the price of this exact transaction before the wallet opens.
   if(!cost?.live||cost.key!==key||cost.owner!==conn.owner){busy=false;await refreshCost();note('Check the cost, then launch.');return;}
-  const tx=await recheckNextChain({request:walletRequest(conn),quote:cost.quote}).catch(async e=>{busy=false;await refreshCost();throw e;});
-  const factory=quickFactory(chainId),sent={from:conn.owner,to:tx.to,data:tx.data,value:tx.value,gas:tx.gas,maxFeePerGas:tx.maxFeePerGas,maxPriorityFeePerGas:tx.maxPriorityFeePerGas};
+  const tx=await recheckCall(chainId,{request:walletRequest(conn),quote:cost.quote}).catch(async e=>{busy=false;await refreshCost();throw e;});
+  const factory=String(tx.to).toLowerCase(),sent={from:conn.owner,to:tx.to,data:tx.data,value:tx.value,gas:tx.gas,maxFeePerGas:tx.maxFeePerGas,maxPriorityFeePerGas:tx.maxPriorityFeePerGas};
   note('Confirm '+ethText(cost.totalWei)+' '+chainById(chainId).native+' or less in your wallet: the launch fee plus network gas.');
   const hash=await conn.entry.provider.request({method:'eth_sendTransaction',params:[sent]});
   rememberLast({chainId,hash,name:f.name.trim(),symbol:f.symbol.trim().toUpperCase(),at:Date.now()});
@@ -163,9 +262,10 @@ async function launch(){
 
 function mount(){
  if(!$('ideas'))return;
+ {const u=urlChain();if(u&&ideaCards(u).length)quickChain=u;}
  renderIdeas();
  chainSelect?.addEventListener('change',()=>{renderIdeas();if(pick)openQuick(pick.id);checkTickerSoon();});
- $('use-robinhood')?.addEventListener('click',()=>{if(!chainSelect)return;chainSelect.value='4663';chainSelect.dispatchEvent(new Event('change'));});
+ $('use-robinhood')?.addEventListener('click',()=>setQuickChain('4663'));
  $('open').addEventListener('click',()=>launchCard(pick?.id||'fair'));
  for(const id of ['name','symbol'])$(id).addEventListener('input',()=>{if(id==='symbol'){$('symbol').value=$('symbol').value.toUpperCase();checkTickerSoon();}renderQuick();costSoon();});
  $('image').addEventListener('change',async()=>{const file=$('image').files?.[0];if(!file)return;
@@ -173,8 +273,14 @@ function mount(){
   catch(e){image='';$('preview').hidden=true;$('image-status').textContent=e.message;}renderQuick();costSoon();});
  $('launch').addEventListener('click',()=>void launch());
  $('change').addEventListener('click',()=>$('ideas').scrollIntoView({block:'start'}));
- hub.subscribe(()=>{renderQuick();if(pick)costSoon();checkTickerSoon();});
- void readCreateNativeUSD('ETH').then(v=>{usd=v;renderQuick();});
- const h=/^#quick(?:-([a-z-]+))?$/.exec(location.hash);if(h)openQuick(h[1]||'fair',{scroll:true});
+ hub.subscribe(()=>{void pqControl?.refresh();renderQuick();if(pick)costSoon();checkTickerSoon();});
+ readUsd();
+ const prefill=readLaunchPrefill(location);
+ if(prefill){
+  if(prefill.chain&&ideaCards(prefill.chain).length){quickChain=prefill.chain;renderIdeas();}
+  if(prefill.name!==undefined)$('name').value=prefill.name;
+  if(prefill.ticker!==undefined)$('symbol').value=prefill.ticker;
+  openQuick(prefill.style,{scroll:true});checkTickerSoon();costSoon();
+ }else{const h=/^#quick(?:-([a-z-]+))?$/.exec(location.hash);if(h)openQuick(h[1]||'fair',{scroll:true});}
 }
 mount();

@@ -171,13 +171,14 @@ export async function vestSection(me, opened, refresh = () => {}) {
 export async function rewardsSection(me, refresh = () => {}) {
   const action = (label, run, options = {}) => sharedAction(label, run, {...options, refresh});
   const router = await extraAddress('feeRouter');
-  const snapshot=await readEvmRewardSnapshot(me,{quotes:QUOTES,native:NATIVE,router,codeAt,cashbackOf});
+  const routers = Object.fromEntries(await Promise.all(Object.keys(QUOTES).map(async id => [id, await extraAddress('feeRouter', id)])));
+  const snapshot=await readEvmRewardSnapshot(me,{quotes:QUOTES,native:NATIVE,router:id=>routers[id],codeAt,cashbackOf});
   const rows=snapshot.claimable.map(x=>h('div',{class:'qa-row'},h('div',{},h('b',{},'Available to claim'),h('span',{class:'qa-sub'},CHAIN_NAME[x.chainId]||x.chainId)),
     h('div',{},h('span',{},amount(x.amount,x.decimals)+' '+x.symbol),h('span',{class:'qa-sub'},'Cashback and referral credits in this asset')),
     h('div',{class:'qa-actions'},action('Claim',async say=>{
       if(!sameRewardOwner(connectedAddress(),me))throw Error('Reconnect the wallet that owns these rewards.');
       say('Confirm the claim in your wallet. Network gas is paid on '+(CHAIN_NAME[x.chainId]||x.chainId)+'.');
-      await send(x.chainId,{to:router,data:claimCall(x.address)},say);
+      await send(x.chainId,{to:x.router||router,data:claimCall(x.address)},say);
     },{primary:true})),h('p',{class:'qa-status',role:'status'})));
   const unavailable=snapshot.balances.filter(row=>row.status==='unavailable');
   const coverage=h('div',{class:'qa-reward-coverage'},h('p',{class:'qa-muted'},unavailable.length

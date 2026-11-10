@@ -112,6 +112,8 @@ async function predictRound() {
   predicted = null; const p = roundParams(), now = await chainNow(), bad = roundProblem(p, now);
   const sum = $('ld-round-summary');
   if (bad) { sum.textContent = bad; return; }
+  const tier = await tierStartCap();
+  if (tier.problem) { sum.textContent = tier.problem; return; }
   let text = `Opens ${ct(p.start)}, closes ${ct(p.end)}, launch deadline ${ct(p.deadline)}. Minimum ${eth(p.minTotal)}, group buy up to ${eth(p.maxBuy)}. Launcher and creator ${short(me)}; the Safe ${short(cfg.safe)} can call it off.`;
   sum.textContent = text;
   const data = cfg.round.salt + cfg.round.init.slice(2) + roundArgs(p);
@@ -136,9 +138,23 @@ async function readRound(addr) {
   } catch { return null; }
 }
 
+// Start-cap tier (start-cap generation): the steps ride in the high 16 bits of the round's snipeSeconds term.
+const roundSteps = () => Number(BigInt(cfg.round.terms.snipeSeconds || 0) >> 16n);
+const START_AT = '0xf691877e'; // startAt(uint256) -> (int24 tick0, uint256 startCap); reverts above 161 steps
+/// The start cap for this round's tier, or a plain refusal. A QLaunchRound doesn't check the steps itself: a round with a
+/// tier its factory can't launch would take deposits and never launch, so check before deploying it.
+async function tierStartCap() {
+  const steps = roundSteps();
+  if (!steps) return {steps, startCap: null};
+  if (steps > 161) return {steps, problem: 'This round asks for a starting market cap above 25x the standard start. Nothing was deployed.'};
+  try { return {steps, startCap: words(await call(cfg.factory.address, START_AT + w32(steps)))[1]}; }
+  catch { return {steps, problem: 'This launch contract can’t start at the chosen market cap. Nothing was deployed.'}; }
+}
 async function chainFacts() {
   const w = words(await call(cfg.factory.address, SEL.chain));
-  return {launchFee: w[3], startCap: w[6]};
+  // With a tier, the first buy is priced from that tier's start cap; the standard one would set the minimum too high.
+  const t = await tierStartCap();
+  return {launchFee: w[3], startCap: t.startCap ?? w[6]};
 }
 function curveTokens(buy, startCap) {
   const keep = 10_000n - BigInt(cfg.round.terms.reserveBps);

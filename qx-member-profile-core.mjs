@@ -22,7 +22,7 @@ export const CALLER_METHOD=Object.freeze({version:2,minimum:5,hitHours:24,qualit
  'Indexed first-day sales are shown separately. Selling does not erase the call’s price outcome. Hiding a call or removing launch metadata does not remove its retained record.',
  'At least five observed eligible 24h outcomes are needed to rank. Each caller shows observed, eligible and total record counts. Incomplete source sets withhold percentages and ranking.',
  'The median 24h/7d move uses only calls with both timely checkpoints. Each move is capped between −100% and +200%, then averaged per call before the median. Its completed sample count can differ from the 24h hit-rate sample.',
- 'External or other untimed checkpoint prices remain visible as legacy calculations and are unscored in v2. Legacy APIs remain available; stored calls and historical board standing are unchanged.',
+ 'Market prices without a timed quote are shown on the call but not counted. Calls on a token with a QHooks pool are timed from that pool. Stored calls and board standing are unchanged.',
  'These are source price comparisons, not realized profit. Gas, slippage, taxes and position size are excluded. Thanks never changes caller rank. Physically erased database rows cannot be reconstructed from this record set.'
 ]});
 

@@ -62,21 +62,29 @@ export function tokenPoolFee(pool = {}) {
   if (mode==='fixed' || mode==='static') return `Fixed LP fee · ${fee!=null&&fee!==''&&Number.isFinite(Number(fee))?number(Number(fee)/10000)+'%':'rate not reported'}`;
   return `LP fee mode not reported${fee!=null&&fee!==''&&Number.isFinite(Number(fee))?' · '+number(Number(fee)/10000)+'%':''}`;
 }
-function poolHTML(pool, key) {
+function poolHTML(pool, key, tags = null) {
   const hook=pool.hook, hookAddress=typeof hook?.address==='string'?hook.address.toLowerCase():null;
   const hasHook=hookAddress && ADDRESS.test(hookAddress) && hookAddress!==ZERO;
   const noHook=hook===null || hookAddress===ZERO;
   const label=hasHook?hook.name||compact(hookAddress):noHook?'No hook':'Hook not reported';
   const capabilities=hasHook&&Array.isArray(hook.capabilities)?hook.capabilities:[];
-  return `<li class="qth-pool"><div class="qth-pool-top"><strong>${escapeHTML(label)}</strong><span class="qth-fee">${escapeHTML(tokenPoolFee(pool))}</span></div><p class="qth-pair">${currencyHTML(pool.currency0)} <span aria-label="paired with">/</span> ${currencyHTML(pool.currency1)}</p><div class="qth-capabilities" aria-label="Permission capabilities">${capabilities.map(cap=>`<span title="${escapeHTML([cap.title,cap.detail].filter(Boolean).join(' · '))}">${escapeHTML(marks[cap.id]||cap.title||'Capability')}</span>`).join('') || `<span class="qth-muted">${hasHook?'No capability tokens reported':noHook?'No hook callbacks':'Capabilities not reported'}</span>`}</div><div class="qth-pool-bottom"><span class="qth-muted" title="${escapeHTML(pool.poolId)}">Pool ${escapeHTML(compact(pool.poolId))}${pool.initializedAt?.block!=null?' · block '+escapeHTML(number(pool.initializedAt.block)):''}${pool.initializedAt?.at?' · '+escapeHTML(time(pool.initializedAt.at)):''}</span>${hasHook?`<span class="qth-links"><a href="/discover-hook#${key.chainId}:${hookAddress}">Profile ↗</a><a href="/discover?chain=${key.chainId}&amp;q=${hookAddress}">Hook board ↗</a></span>`:''}</div></li>`;
+  return `<li class="qth-pool"><div class="qth-pool-top"><strong>${escapeHTML(label)}</strong>${officialTagHTML(pool, tags)}<span class="qth-fee">${escapeHTML(tokenPoolFee(pool))}</span></div><p class="qth-pair">${currencyHTML(pool.currency0)} <span aria-label="paired with">/</span> ${currencyHTML(pool.currency1)}</p><div class="qth-capabilities" aria-label="Permission capabilities">${capabilities.map(cap=>`<span title="${escapeHTML([cap.title,cap.detail].filter(Boolean).join(' · '))}">${escapeHTML(marks[cap.id]||cap.title||'Capability')}</span>`).join('') || `<span class="qth-muted">${hasHook?'No capability tokens reported':noHook?'No hook callbacks':'Capabilities not reported'}</span>`}</div><div class="qth-pool-bottom"><span class="qth-muted" title="${escapeHTML(pool.poolId)}">Pool ${escapeHTML(compact(pool.poolId))}${pool.initializedAt?.block!=null?' · block '+escapeHTML(number(pool.initializedAt.block)):''}${pool.initializedAt?.at?' · '+escapeHTML(time(pool.initializedAt.at)):''}</span>${hasHook?`<span class="qth-links"><a href="/discover-hook#${key.chainId}:${hookAddress}">Profile ↗</a><a href="/discover?chain=${key.chainId}&amp;q=${hookAddress}">Hook board ↗</a></span>`:''}</div></li>`;
 }
 
-export function tokenHooksHTML(state, input) {
+// For a QHooks launch token: its own pools say "Official QHooks pool"; any other pool "Unofficial · <fee>%".
+function officialTagHTML(pool, tags) {
+  if (!tags?.official) return '';
+  const id = String(pool.poolId || '').toLowerCase();
+  if (tags.own.has(id)) return '<span class="qth-official">Official QHooks pool</span>';
+  const fee = Number.isSafeInteger(pool.fee) && !(pool.fee & 0x800000) ? pool.fee / 10000 : null;
+  return '<span class="qth-unofficial">Unofficial' + (fee != null ? ' · ' + escapeHTML(String(Math.round(fee * 10) / 10)) + '%' : '') + '</span>';
+}
+export function tokenHooksHTML(state, input, tags = null) {
   const key=tokenHooksKey(input);
   if (!key) return '<div class="qth-widget"><p class="qth-message" role="status">Choose a chain and a complete token address.</p></div>';
   const history=state.complete===false?'History is still being read.':state.complete===true?'History read complete.':'History coverage not reported.';
   const source=state.loaded?`${sourceName(state.source)} · ${time(state.observedAt)} · ${history}`:'Reading finalized pool records…';
-  const body=state.pools.length?`<ul class="qth-pools">${state.pools.map(pool=>poolHTML(pool,key)).join('')}</ul>`:state.loaded?`<p class="qth-message">${state.complete===true?'No v4 pools found for this token.':state.complete===false?'No v4 pools found so far. History is still being read.':'No v4 pools were returned. History coverage not reported.'}</p>`:'';
+  const body=state.pools.length?`<ul class="qth-pools">${state.pools.map(pool=>poolHTML(pool,key,tags)).join('')}</ul>`:state.loaded?`<p class="qth-message">${state.complete===true?'No v4 pools found for this token.':state.complete===false?'No v4 pools found so far. History is still being read.':'No v4 pools were returned. History coverage not reported.'}</p>`:'';
   const action=state.error?'retry':state.paginationPaused?'reload':state.nextCursor!=null?'more':state.loaded&&state.complete!==true?'reload':null;
   const actionLabel=state.error?'Retry':state.paginationPaused?'Refresh history':action==='more'?'Load more':'Read more history';
   return `<div class="qth-widget" aria-label="Hooks this token trades through"><div class="qth-heading"><span>V4 pools <span class="qth-muted">· ${escapeHTML(chains[key.chainId]||'Chain '+key.chainId)}</span></span>${state.loaded?`<span class="qth-count">${state.pools.length} shown</span>`:''}</div><p class="qth-source" role="status">${escapeHTML(source)}</p>${body}${state.paginationPaused?'<p class="qth-message">The history cursor has not advanced. Refresh to try again.</p>':''}${state.error?`<p class="qth-message qth-error" role="status">Pool read unavailable · ${escapeHTML(state.error)}${state.pools.length?'. Previously read pools remain visible.':''}</p>`:''}${action?`<button type="button" class="qth-more" data-qth-action="${action}"${state.loading?' disabled':''}>${state.loading?'Reading…':actionLabel}</button>`:''}</div>`;
@@ -93,8 +101,9 @@ export function renderTokenHooks(el, {chainId, token, fetcher = globalThis.fetch
   if (previous && previous.key===JSON.stringify(key)) return previous;
   previous?.destroy();
   loadStyles(el.ownerDocument || globalThis.document);
-  let state=createTokenHooksState(), destroyed=false, controller, retryCursor=null, retryReset=false, request;
-  const draw=()=>{if(!destroyed){el.innerHTML=tokenHooksHTML(state,key);el.setAttribute('aria-busy',String(state.loading));}};
+  let state=createTokenHooksState(), destroyed=false, controller, retryCursor=null, retryReset=false, request, tags=null;
+  if (key) fetcher('/api/terminal/official-pools?chain='+key.chainId+'&token='+key.token,{headers:{Accept:'application/json'}}).then(r=>r.ok?r.json():null).then(d=>{if(d?.official){tags={official:true,own:new Set((d.officialPools||[]).map(p=>String(p.id).toLowerCase()))};draw();}}).catch(()=>{});
+  const draw=()=>{if(!destroyed){el.innerHTML=tokenHooksHTML(state,key,tags);el.setAttribute('aria-busy',String(state.loading));}};
   const load=async(cursor=null, reset=false)=>{
     if (destroyed || state.loading || !key) return;
     state={...state,loading:true,error:null}; retryCursor=cursor; retryReset=reset; draw();

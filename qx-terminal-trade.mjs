@@ -8,10 +8,12 @@ import {resolveTradingTolerance} from './qx-trading-preferences.mjs';
 import { rpc, livePoolKey, parseUnits, formatUnits, erc20, send, ensureAllowance, connectedAddress, onWalletChange, NATIVE, CHAIN_NAME, h } from '/qx-chain.mjs';
 import { quoteSingle, nativeRoute, quoteNative, FEE_BPS, feeSwapCall, viaSwapCall, nativeHops, cashbackOf, referralLink, claimCall } from '/qx-swap.mjs';
 import { extraAddress, isLive, setUp } from '/qx-extras.mjs';
+import { hasDirectRoute, resolveDirectPool, refusalText } from '/qx-elysium-direct.mjs';
 import { holderMinTokens, shortText } from '/qx-holder-min.mjs';
 import { solAddress, solWallets, connectSol, signSol, onSolChange } from '/qx-solana.mjs';
 import { renderRisk as trustRisk } from '/qx-trust.mjs';
 import { oneClickPlan, withOneClick, pressGate, silentActive } from '/qx-instant-bridge.mjs';
+import { impactFromQuotes, impactLines, impactGate, confirmCopy } from '/qx-trade-impact.mjs';
 import { getWalletHub } from '/wallet-hub.mjs';
 import { relayWallet } from './qx-relay-wallet.mjs';
 import { createFundingRow, fundingAsset, destinationCosts, runCrossChainBuy, retryLanded, recoveryView,
@@ -39,7 +41,7 @@ function feeLine(chainId, extra = "") {
 const TOL = [['50', '0.5%'], ['100', '1%'], ['300', '3%'], ['1000', '10%']];
 /// Amount with at least three significant digits, so small WETH or WBNB cashback never reads as 0.
 const small = (v, d) => { let max = 4; while (max < d && v > 0n && formatUnits(v, d, max) === '0') max++; return formatUnits(v, d, Math.min(d, max + 2)); };
-const unitClass = sym => /^W?ETH$/.test(sym) ? 'eth' : /^W?BNB$/.test(sym) ? 'bnb' : /^W?SOL$/.test(sym) ? 'sol' : 'usd';
+const unitClass = sym => /^W?ETH$/.test(sym) ? 'eth' : /^W?BNB$/.test(sym) ? 'bnb' : /^W?SOL$/.test(sym) ? 'sol' : /^W?HYPE$/.test(sym) ? 'hype' : 'usd';
 const SOL_MINT = 'So11111111111111111111111111111111111111112', SOL_USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 // Outside tokens (any token, routed by 0x): the chain's coin and its main dollar token as payment.
 const XNATIVE = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', ZERO = '0x0000000000000000000000000000000000000000';
@@ -52,7 +54,7 @@ export const validTradeTolerance = value => /^\d{1,5}$/.test(String(value ?? '')
 export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) {
   const savedTolerance = store('tol');
   let st = null, side = 'buy', pay = 'quote', tol = validTradeTolerance(savedTolerance) ? String(Number(savedTolerance)) : '100', current = null, qseq = 0, timer = null, busy = false;
-  let priceUsd = null, armedAt = null, armTimer = null, sellCash = false, recovery = null;
+  let priceUsd = null, armedAt = null, armTimer = null, sellCash = false, recovery = null, impactArmedAt = null;
   let sellPrefillOwner = null, pendingSellPrefill = false;
   let selection=null, selectionRevision=0, layoutRevision=0;
   let quoteLoading = false, quoteAgeTimer = null;
@@ -178,12 +180,25 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       return { token: BigInt(t.token || 0), quote: BigInt(q.token || 0), native: BigInt(t.sol || 0) };
     }
     const me = connectedAddress(); if (!me || !st) return null;
-    const [t, q, n] = await Promise.all([erc20(st.chainId, st.token, me), st.quote ? erc20(st.chainId, st.quote, me) : { balance: 0n }, rpc(st.chainId, 'eth_getBalance', [me, 'latest'])]);
+    const [t, q, n] = await Promise.all([erc20(st.chainId, st.token, me), st.quote && !st.nativePool ? erc20(st.chainId, st.quote, me) : { balance: 0n }, rpc(st.chainId, 'eth_getBalance', [me, 'latest'])]);
     return { token: t.balance, quote: q.balance, native: BigInt(n) };
   }
   const spendable = b => side === 'sell' ? b.token : pay === 'native' ? b.native : b.quote;
   const buttonText = () => sellCash ? 'Sell all to cash' : (side === 'buy' ? 'Buy ' : 'Sell ') + (st?.symbol || '');
-  function clearArmed() { clearTimeout(armTimer); armedAt = null; go.textContent = buttonText(); }
+  function clearArmed() { clearTimeout(armTimer); armedAt = null; impactArmedAt = null; go.textContent = buttonText(); }
+  // Pool depth in USD for the low-liquidity line: the direct route's pool, else the open market's header (same token only).
+  function poolLiquidityUsd() {
+    if (Number.isFinite(st?.liquidityUsd) && st.liquidityUsd > 0) return st.liquidityUsd;
+    const d = globalThis.qxTerminal?.state?.data, token = String(d?.meta?.token || '').toLowerCase();
+    if (!d || !st || token !== String(st.token || '').toLowerCase()) return null;
+    const v = Number(d.summary?.liquidityUsd ?? (d.ext ? d.summary?.liquidity : null));
+    return Number.isFinite(v) && v > 0 ? v : null;
+  }
+  // Impact %, the low-liquidity line and the amber warning, under the quote. Never blocks: minOut is enforced on chain.
+  function impactNodes(impactPct) {
+    if (current) current.impactPct = impactPct;
+    return impactLines({ impactPct, liquidityUsd: poolLiquidityUsd() }).map(l => h('span', { class: 'qxt-impact' + (l.level === 'warn' ? ' warn' : '') }, l.text));
+  }
   function tradeUsd(c) {
     const dollars = sym => unitClass(sym) === 'usd' && /^(USDC|USDT|USDG)$/i.test(sym || '');
     const units = (v, d) => Number(formatUnits(v, d, d).replace(/,/g, ''));
@@ -246,19 +261,23 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const q = new URLSearchParams({ chain: st.chainId, sell, buy, amount: xSpend(a).toString(), taker: me, side, slippageBps: String(tolerance), via: 'router' });
     const r = await fetch('/api/terminal/x/quote?' + q, { cache: 'no-store' });
     const body = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(body.error === 'trading_off' ? 'Trading outside tokens is not switched on yet.' : body.error === 'no_route' ? 'No route for this trade right now.' : body.detail || 'No quote right now.');
+    if (!r.ok) throw new Error(body.error === 'official_pool' ? (body.detail || 'Trade this token through its official QHooks pool.') + ' Open it from the terminal search.' : body.error === 'trading_off' ? 'Trading outside tokens is not switched on yet.' : body.error === 'no_route' ? 'No route for this trade right now.' : body.detail || 'No quote right now.');
     return body;
   }
   async function extQuote(mine, a, read) {
     if (!connectedAddress()) { out.textContent = 'Connect a wallet to get a quote.'; return; }
     try {
-      const q = await fetchXQuote(a,read.toleranceBps);
+      const small = a / 100n > 0n ? a / 100n : null;
+      // Impact: the same route for a hundredth of the amount (fees are proportional, so they cancel out of the ratio).
+      const [q, rq] = await Promise.all([fetchXQuote(a,read.toleranceBps), small ? fetchXQuote(small,read.toleranceBps).catch(() => null) : null]);
       if (!quoteReadIsCurrent(read)) return;
       const { outDec, outSym } = xTokens(), cut = v => side === 'sell' ? v - v * FEE_BPS / 10000n : v;
       const got = cut(BigInt(q.buyAmount)), minOut = cut(BigInt(q.minBuyAmount));
+      const impactPct = rq?.buyAmount ? impactFromQuotes(BigInt(q.buyAmount), a, BigInt(rq.buyAmount), small) : null;
       current = bindQuote({ side, pay, a, got, minOut, x: true },mine,read.owner,read.toleranceBps);
       out.replaceChildren(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
         h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4) + (q.sources?.length ? ' · via ' + q.sources.map(s => s.replace(/_/g, ' ')).join(', ') : '')),
+        ...impactNodes(impactPct),
         feeLine(st.chainId, ' · routed by 0x'));
       await offerFunding(mine);
     } catch (e) { if (mine === qseq) {current=null;go.disabled=true;out.textContent = e.message;} }
@@ -270,7 +289,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       if (spendable(b) < c.a) throw new Error('Not enough ' + payUnit());
       s('Refreshing the route…');
       const q = await fetchXQuote(c.a,c.toleranceBps); // Keep the reviewed tolerance while refreshing the route.
-      const { sell, buy } = xTokens(), router = await extraAddress('feeRouter');
+      const { sell, buy } = xTokens(), router = await extraAddress('feeRouter', chainId);
       assertTradeOwner(c);
       const cut = v => c.side === 'sell' ? v - v * FEE_BPS / 10000n : v, quotedMin = cut(BigInt(q.minBuyAmount));
       const minOut = c.minOut > quotedMin ? c.minOut : quotedMin;
@@ -314,7 +333,8 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       const { outDec, outSym } = solMints(), got = BigInt(o.outAmount), minOut = BigInt(o.minOut);
       current = bindQuote({ side, pay, a, got, minOut, sol: true },mine,read.owner,read.toleranceBps);
       out.replaceChildren(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
-        h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4) + (o.priceImpact != null ? ' · impact ' + Math.abs(o.priceImpact).toFixed(2) + '%' : '')),
+        h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4)),
+        ...impactNodes(o.priceImpact != null && Number.isFinite(Number(o.priceImpact)) ? Math.abs(Number(o.priceImpact)) : null),
         h('span', { class: 'qxt-fee' }, 'Jupiter route · 1% trading fee · Solana rewards not active'));
       go.disabled = busy || (st.safety?.verdict === 'danger' && !risk.querySelector('input')?.checked);
     } catch (e) { if (mine === qseq) {current=null;go.disabled=true;out.textContent = e.message;} }
@@ -348,19 +368,22 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   onSolChange(() => { if (st?.sol&&!busy&&!recovery) { if(sellPrefillOwner&&sellPrefillOwner!==solAddress()){amount.value='';sellPrefillOwner=null;} refresh(); layout(); } });
 
   function renderRisk() {
-    const v = st?.ext ? st.safety : null;
+    const v = st?.ext || st?.direct ? st.safety : null;
+    // Elysium direct-route tokens whose launchpad hook has an owner (qx-elysium-direct.mjs REVIEWED_HOOKS).
+    const note = st?.hookOwner ? h('p', { class: 'qxt-risk-note' }, 'This token’s launchpad can change its tax.') : null;
     risk.dataset.key = '';
-    risk.hidden = !v; if (!v) return;
+    if (!v) { risk.hidden = !note; if (note) { risk.className = 'qxt-risk caution'; risk.replaceChildren(note); } return; }
+    risk.hidden = false;
     const flags = (v.flags || []).slice(0, 4);
     risk.className = 'qxt-risk ' + (v.verdict === 'ok' ? 'unknown' : v.verdict);
-    const title = { ok: 'No flags returned by available checks', caution: 'Trade with care', danger: 'High risk: this token may not be sellable', unknown: 'No safety scan for this token' }[v.verdict] || 'Safety unknown';
-    const report=[h('b', {}, title), ...(flags.length ? [h('ul', {}, ...flags.map(f => h('li', {}, f)))] : []),
-      h('p', { class: 'qxt-muted' }, 'Source: ' + (typeof v.source === 'string' ? v.source.slice(0, 48) : 'unavailable') + '.'),
+    const title = { ok: 'No flags returned by available checks', caution: 'Trade with care', danger: 'High risk: this token may not be sellable', unknown: 'No safety scan for this token' }[v.verdict] || (v.unsupported ? 'No automated checks on this chain yet' : 'Safety unknown');
+    const report=[...(note ? [note] : []), h('b', {}, title), ...(flags.length ? [h('ul', {}, ...flags.map(f => h('li', {}, f)))] : []),
+      h('p', { class: 'qxt-muted' }, 'Source: ' + (typeof v.source === 'string' ? v.source.slice(0, 48) : 'not reported') + '.'),
       ...(v.verdict === 'danger' ? [h('label', {}, h('input', { type: 'checkbox', onchange: () => { if (current) go.disabled = busy || !risk.querySelector('input').checked || (funding.required && !funding.quote); } }), ' I understand and still want to trade')] : []),
       h('a', { href: 'https://repoproof.online/proof?q=' + encodeURIComponent(st.token), target: '_blank', rel: 'noopener' }, 'Full check on RepoProof ↗')];
     if(!flags.length&&(v.verdict==='ok'||v.verdict==='unknown')){
       risk.classList.add('qxt-risk-compact');
-      risk.replaceChildren(h('details',{},h('summary',{},v.verdict==='ok'?'Limited checks · no flags returned':'Refreshing checks…'),h('div',{class:'qxt-risk-report'},...report)));
+      risk.replaceChildren(...(note ? [note] : []), h('details',{},h('summary',{},v.verdict==='ok'?'Limited checks · no flags returned':'No safety scan returned'),h('div',{class:'qxt-risk-report'},...report.filter(x => x !== note))));
     }else risk.replaceChildren(...report);
   }
 
@@ -378,7 +401,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     cash.replaceChildren(h('p', {}, link));
     try {
     if (!(await isLive(activeState.chainId, 'feeRouter'))) { if(!alive())return;cash.replaceChildren(h('p', {}, link)); return; }
-    const router = await extraAddress('feeRouter'), Z = '0x0000000000000000000000000000000000000000';
+    const router = await extraAddress('feeRouter', activeState.chainId), Z = '0x0000000000000000000000000000000000000000';
     const [q, n] = await Promise.all([cashbackOf(activeState.chainId, router, me, activeState.quote), cashbackOf(activeState.chainId, router, me, Z)]);
     if(!alive())return;
     const items = [[activeState.quote, q, activeState.quoteDecimals, activeState.quoteSymbol], [Z, n, 18, NATIVE[activeState.chainId]]].filter(x => x[1] > 0n);
@@ -424,27 +447,30 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       if(st.sol&&!solAddress()){solConnectPrompt();return;}
       try { a = parseUnits(amount.value, payDecimals()); if (a <= 0n) throw 0; } catch { out.textContent = 'Enter an amount or pick a preset.'; return; }
       out.textContent = st.ext ? 'Finding the best route…' : 'Quoting through the pool…';
+      if (st.noRoute) { out.textContent = st.noRoute; current = null; go.disabled = true; return; }
       if (st.sol) return await solQuote(mine, a,read);
       if (st.ext) return await extQuote(mine, a,read);
       const { chainId, key, token, quote: qt } = st;
-      let got, route = null, ref;
+      let got, route = null, refGot = null;
       // Buys pay the fee out of the input, sells out of the output.
       const spend = side === 'buy' ? a - a * FEE_BPS / 10000n : a;
-      if (side === 'buy' && pay === 'native') { route = await quoteNative(chainId, key, token, qt, spend, st.symbol); got = route.out; }
+      // Impact on every pool route: the same path for a thousandth of the amount (flat charges cancel out of the ratio).
+      const small = spend / 1000n > 0n ? spend / 1000n : 1n;
+      if (st.nativePool) { const z = BigInt(key.currency0) === BigInt(side === 'buy' ? qt : token); [got, refGot] = await Promise.all([quoteSingle(chainId, key, z, spend), quoteSingle(chainId, key, z, small).catch(() => null)]); route = { label: side === 'buy' ? NATIVE[chainId] + ' → ' + st.symbol : st.symbol + ' → ' + NATIVE[chainId] }; }
+      else if (side === 'buy' && pay === 'native') { const [r, rr] = await Promise.all([quoteNative(chainId, key, token, qt, spend, st.symbol), quoteNative(chainId, key, token, qt, small, st.symbol).catch(() => null)]); route = r; got = r.out; refGot = rr?.out ?? null; }
       else {
         const zeroForOne = key.currency0 === (side === 'buy' ? qt : token);
-        const small = spend / 1000n > 0n ? spend / 1000n : 1n;
-        [got, ref] = await Promise.all([quoteSingle(chainId, key, zeroForOne, spend), quoteSingle(chainId, key, zeroForOne, small).catch(() => null)]);
-        // Impact against a trade a thousandth the size; flat charges cancel out of the ratio.
-        if (ref) ref = Number(got * small * 10000n / (ref * spend)) / 10000;
+        [got, refGot] = await Promise.all([quoteSingle(chainId, key, zeroForOne, spend), quoteSingle(chainId, key, zeroForOne, small).catch(() => null)]);
       }
+      const impactPct = refGot != null ? impactFromQuotes(got, spend, refGot, small) : null;
       if (side === 'sell') got -= got * FEE_BPS / 10000n;
       if (!quoteReadIsCurrent(read)) return;
       const minOut = got * (10000n - BigInt(read.toleranceBps)) / 10000n;
       const outDec = side === 'buy' ? st.decimals : st.quoteDecimals, outSym = side === 'buy' ? st.symbol : st.quoteSymbol;
       current = bindQuote({ side, pay, a, got, minOut, route },mine,read.owner,read.toleranceBps);
       out.replaceChildren(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
-        h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4) + (ref != null ? ' · impact ' + Math.max(0, (1 - ref) * 100).toFixed(2) + '%' : '') + ' · block charges included'),
+        h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4) + ' · block charges included'),
+        ...impactNodes(impactPct),
         feeLine(chainId),
         ...(route ? [h('span', {}, route.label)] : []));
       go.disabled = !connectedAddress() || busy;
@@ -455,7 +481,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   }
 
   async function poolSubmit(c) {
-        const { chainId, key, token, quote: qt } = st, router = await extraAddress('feeRouter');
+        const { chainId, key, token, quote: qt } = st, router = await extraAddress('feeRouter', chainId);
         const me = connectedAddress(), b = await balances();
         if (spendable(b) < c.a) throw new Error('Not enough ' + payUnit());
         const now = BigInt((await rpc(chainId, 'eth_getBlockByNumber', ['latest', false])).timestamp), deadline = now + 1200n;
@@ -465,7 +491,11 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         const live = await isLive(chainId, 'feeRouter');
         assertContext();
         if (!live) { s('One-time setup of trading on ' + CHAIN_NAME[chainId] + '…'); await setUp(chainId, 'feeRouter', s, assertContext); }
-        if (c.side === 'buy' && c.pay === 'native') {
+        if (c.side === 'buy' && st.nativePool) {
+          // Native-HYPE pool: HYPE goes straight in (router checks currency0 is native); no wrap.
+          assertTradeOwner(c);
+          await send(chainId, { to: router, data: feeSwapCall(chainId, [{ key, zeroForOne: BigInt(key.currency0) === 0n }], c.a, c.minOut, null, true, deadline), value: c.a }, s, assertContext);
+        } else if (c.side === 'buy' && c.pay === 'native') {
           const { hops, wrap } = nativeHops(chainId, key, qt, c.route);
           assertTradeOwner(c);
           await send(chainId, { to: router, data: feeSwapCall(chainId, hops, c.a, c.minOut, wrap, true, deadline), value: c.a }, s, assertContext);
@@ -492,7 +522,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       if (b && spendable(b) >= current.a) { funding.clear(); return; }
       const asset = payAsset(), owner = current.owner, chainId = st.chainId, amountNeeded = current.a;
       await funding.update({ owner, chainId, asset, amountNeeded, balance: b ? spendable(b) : undefined, review: async () => destinationCosts({ owner, chainId, asset, amountNeeded,
-        spender: await extraAddress('feeRouter'), setup: await isLive(chainId, 'feeRouter') ? 0 : 1 }) });
+        spender: await extraAddress('feeRouter', chainId), setup: await isLive(chainId, 'feeRouter') ? 0 : 1 }) });
     } catch (e) { status.textContent = e.message; go.disabled = true; }
   }
   async function arrivedTrade(c, a) {
@@ -518,6 +548,15 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     if(!quoteMatches(c)){go.disabled=true;status.textContent='This token selection changed. Review a fresh quote before trading.';return;}
     if (!st.sol && c.owner && connectedAddress()?.toLowerCase() !== c.owner.toLowerCase()) { refresh(); return; }
     if (c.funding && !recovery && !funding.fresh()) { status.textContent = 'Refresh funding to review the current fees.'; go.disabled = true; return; }
+    // Above 15% impact: one extra tap ("Buy anyway"), for every wallet including one-click. That tap also counts as the
+    // one-click "Confirm $X" press, so the trade needs exactly one extra tap. Nothing is blocked: minOut stays on chain.
+    if (impactGate({ impactPct: c.impactPct, armedAt: impactArmedAt, now: Date.now() }) === 'arm') {
+      const copy = confirmCopy(c.side, c.impactPct);
+      clearArmed(); impactArmedAt = Date.now(); go.textContent = copy.button; status.textContent = copy.status;
+      armTimer = setTimeout(() => { clearArmed(); if (status.textContent === copy.status) status.textContent = ''; }, 15000);
+      return;
+    }
+    if (impactArmedAt) { armedAt = Date.now(); impactArmedAt = null; }
     const plan = st.sol ? null : ticketPlan(c);
     if (!st.sol && !plan) return;
     if (st.sol) { lock(true); return solSubmit(c); }
@@ -602,13 +641,26 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       }
       const meta = t.decimals == null ? await erc20(t.chainId, t.address).catch(() => ({ decimals: 18 })) : { decimals: t.decimals };
       if(!isSelection(intent))return false;
+      // Elysium (no 0x): trade the token's deepest canonical v4 pool directly through the chain's QFee router.
+      if (hasDirectRoute(t.chainId)) {
+        const d = await resolveDirectPool(t.chainId, t.address, t.pools || []).catch(() => ({ refused: 'read' }));
+        if(!isSelection(intent))return false;
+        const native = !d.refused && BigInt(d.quote) === 0n;
+        st = d.refused ? { ext: true, direct: true, noRoute: refusalText(d), chainId: String(t.chainId), token: t.address, symbol: t.symbol || 'token', decimals: Number(meta.decimals ?? 18), quote: null, quoteSymbol: null, quoteDecimals: 18, safety: t.safety || null }
+          : { direct: true, nativePool: native, chainId: String(t.chainId), key: d.key, token: t.address, quote: d.quote, symbol: t.symbol || 'token', decimals: Number(meta.decimals ?? 18),
+            quoteSymbol: native ? NATIVE[t.chainId] : 'W' + NATIVE[t.chainId], quoteDecimals: 18, safety: t.safety || null, hookNote: d.hookNote, hookOwner: d.hookOwner, liquidityUsd: Number(d.liquidityUsd) || null };
+        const wrapRoute = !native && !d.refused && nativeRoute(t.chainId, d.quote);
+        paySel.replaceChildren(h('option', { value: 'native' }, NATIVE[t.chainId]), ...(wrapRoute ? [h('option', { value: 'quote' }, st.quoteSymbol)] : []));
+        pay = 'native'; paySel.value = pay;
+        renderRisk(); await layout(); if (st.noRoute) { out.textContent = st.noRoute; go.disabled = true; } return isSelection(intent);
+      }
       const [qa, qs, qd] = STABLE[t.chainId] || [null, null, null];
       st = { ext: true, chainId: String(t.chainId), token: t.address, symbol: t.symbol || 'token', decimals: Number(meta.decimals ?? 18), quote: qa, quoteSymbol: qs, quoteDecimals: qd, safety: t.safety || null };
       paySel.replaceChildren(h('option', { value: 'native' }, NATIVE[t.chainId]), ...(qa ? [h('option', { value: 'quote' }, qs)] : []));
       pay = 'native'; paySel.value = pay;
       renderRisk(); await layout();return isSelection(intent);
     },
-    setSafety(v,intent=selection) { if (isSelection(intent)&&st?.ext) { st.safety = v; renderRisk(); } },
+    setSafety(v,intent=selection) { if (isSelection(intent)&&(st?.ext||st?.direct)) { st.safety = v; renderRisk(); } },
     // The market poll updates this every few seconds; a price tick must not disarm a pending "Confirm $X".
     setPriceUsd(p,intent=selection) { if(!isSelection(intent))return; const v = Number(p); priceUsd = Number.isFinite(v) && v > 0 ? v : null;if(priceUsd){marketPrices.push({price:priceUsd,at:now()});marketPrices=marketPrices.slice(-12);} },
     setSide, preset, submit,
@@ -650,7 +702,8 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       side = 'buy'; sellCash = false;
       const native = nativeRoute(st.chainId, st.quote);
       // Any-token tickets with no stable quote (Robinhood Chain) pay in the native coin, their only option.
-      pay = st.ext && !st.quote ? 'native' : unitClass(st.quoteSymbol) === cls ? 'quote' : native && unitClass(NATIVE[st.chainId]) === cls ? 'native' : 'quote';
+      // HYPE (Elysium): pay in the coin people hold (native HYPE, wrapped by the router), as the ticket defaults to.
+      pay = st.ext && !st.quote ? 'native' : st.nativePool ? 'native' : cls === 'hype' && native?.wrap && unitClass(NATIVE[st.chainId]) === 'hype' ? 'native' : unitClass(st.quoteSymbol) === cls ? 'quote' : native && unitClass(NATIVE[st.chainId]) === cls ? 'native' : 'quote';
       paySel.value = pay; amount.value = value;
       await layout();if(!isSelection(intent))return; clearTimeout(timer); await quote();
       if (isSelection(intent)&&quoteMatches(current)) await submit();

@@ -1,3 +1,6 @@
+import {mountRecapturePanel} from '/qx-recapture-panel.mjs';
+import {mountArbGapPanel} from '/qx-arb-gap-panel.mjs';
+import {mountRelaunchBadge} from '/qx-relaunch-badge.mjs';
 import {createProviderChartRenderer,directProviderChart} from '/qx-provider-chart.mjs';
 import {mountPriceAlerts} from '/qx-price-alerts.mjs';
 import {mountChartTools} from '/qx-chart-tools.mjs';
@@ -9,10 +12,12 @@ import {createExternalHolderPanel} from '/qx-market-holders.mjs';
 // the Trade page's own panels, mounted here unchanged and fed the same pool event.
 import { CHAIN_NAME, h, connectedAddress, rpc } from '/qx-chain.mjs';
 import { menuChains, chainMap, chainById } from '/chains.mjs';
+import { hasDirectRoute } from '/qx-elysium-direct.mjs';
 import { fetchDexPairs, pickPair, headerPatch } from '/qx-dex-live.mjs';
 import { createChart, CrosshairMode } from '/vendor/lightweight-charts/lightweight-charts.standalone.production.mjs';
 import { mountTicket } from '/qx-terminal-trade.mjs';
 import {createWorkspaceMemory,createWorkspaceSearch,workspaceSearchRows,workspaceAsset,createMarketWorkspace,renderWorkspaceContext,nativeMarketView} from '/qx-terminal-workspace.mjs';
+import {syncBuilder} from '/qx-hey-builder.mjs';
 import {createPositionsPanel} from '/qx-terminal-positions.mjs';
 import {solAddress,onSolChange} from '/qx-solana.mjs';
 import {mountTokenConversation} from '/qx-community-activity.mjs';
@@ -30,15 +35,20 @@ import {coldPoolSpec,readColdPrice,coldMayPaint,spotFromSlot0,GET_SLOT0,COLD_CHA
 import {renderMarketHolders,holderSource} from '/qx-terminal-holders.mjs';
 import {renderChartHistory,renderTapeHistory,tapeHistoryState,refreshHistoryPresentation} from '/qx-terminal-history.mjs';
 import {createOnchainEvmFallback,renderOnchainHolderSample} from '/qx-terminal-onchain.mjs';
-import { parseTerminalHash, applyTradePrefill, readTokenBalance, openTerminalView } from '/qx-tg-prefill.mjs';
+import { parseTerminalHash, applyTradePrefill, readTokenBalance, openTerminalView, applyTokenQuery } from '/qx-tg-prefill.mjs';
+// ?chain=&token= deep links become #t= before anything reads the hash (shared with qx-terminal-feed.mjs).
+let paneReady=false;
+globalThis.__qxTokenQuery = globalThis.__qxTokenQuery || applyTokenQuery();
 
 // Chain filter: live chains, plus hidden/testnet ones with the hidden-chain flag (chains.mjs).
-const CHAINS = [['all', 'All'],['solana','Solana'], ...menuChains().map(c => [c.id, c.short])];
+// Header chain chips follow the feed's order (Randall, 2026-11-09: "sol-rh-bnb-Elysium-eth-base-arb"); other chains after.
+const CHIP_ORDER = ['4663', '56', '99901', '1', '8453', '42161'];
+const CHAINS = [['all', 'All'],['solana','Solana'], ...menuChains().map((c, i) => [c, CHIP_ORDER.indexOf(c.id) < 0 ? 99 + i : CHIP_ORDER.indexOf(c.id)]).sort((x, y) => x[1] - y[1]).map(([c]) => [c.id, c.short])];
 const ICON = { ...chainMap(c => c.icon), solana: 'solana' };
 const EXPLORER = { ...chainMap(c => c.explorer), solana: 'https://solscan.io' };
 const TFS = [[1, '1s'], [60, '1m'], [300, '5m'], [900, '15m'], [3600, '1h'], [14400, '4h'], [86400, '1D']];
 const BITS = ['Opening bell', 'Anti-snipe', 'Wallet cap', 'Max trade', 'Cooldown', 'Holder gate', 'Exit clock', 'Sandwich guard', 'Impact fee', 'Storm fee', 'Session fee', 'Tax', 'Whale tiers', 'Auto burn', 'King', 'Last buyer wins', 'Buyback', 'Referrals', 'Points'];
-const QUICK = { usd: '10', eth: '0.01', bnb: '0.05' };
+const QUICK = { usd: '10', eth: '0.01', bnb: '0.05', hype: '0.1' }; // hype: Elysium (2026-11-09), same first preset as the ticket
 const $ = id => document.getElementById(id);
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem('qhooks:terminal:' + k); localStorage.setItem('qhooks:terminal:' + k, v); } catch {} return null; };
 const now = () => Math.floor(Date.now() / 1000);
@@ -82,8 +92,10 @@ const avLogo = (chainId, token) => { const src = officialLogo(chainId, token); i
 const avatar = (m, size = '') => h('span', { class: 'qxt-av ' + size, style: '--h:' + hue(m.token || m.controller), 'aria-hidden': 'true' }, h('span', {}, (m.symbol || '?').replace(/^\$/, '').slice(0, 1).toUpperCase()), avLogo(m.chainId, m.token), icon(m.chainId));
 const icon = id => h('img', { src: '/chain-symbol-icons/' + ICON[id] + '.svg', alt: CHAIN_NAME[id] || '', width: 14, height: 14, class: 'qxt-ci' });
 const keyOf = m => m.chainId + ':' + m.controller;
-const unitOf = m => /^W?ETH$/.test(m.quoteSymbol || '') ? 'eth' : /^W?BNB$/.test(m.quoteSymbol || '') ? 'bnb' : 'usd';
-const QUNIT = { usd: 'USDC', eth: 'ETH', bnb: 'BNB' };
+// A row without a quote symbol falls back to its chain's quote (WHYPE on Elysium), never to a dollar default.
+const quoteSym = m => m.quoteSymbol || chainById(m.chainId)?.quote?.symbol || '';
+const unitOf = m => /^W?ETH$/.test(quoteSym(m)) ? 'eth' : /^W?BNB$/.test(quoteSym(m)) ? 'bnb' : /^W?HYPE$/.test(quoteSym(m)) ? 'hype' : 'usd';
+const QUNIT = { usd: 'USDC', eth: 'ETH', bnb: 'BNB', hype: 'HYPE' };
 function selectedContext() {
  if(!state.sel)return null;
  const meta=state.data?.meta,constructor=state.pool?.constructor,launchToken=constructor?(constructor.currency0===constructor.quote?constructor.currency1:constructor.currency0):null,token=state.sel.ext||launchToken||meta?.token||null,summary=marketDisplay()?.summary||{};
@@ -111,12 +123,13 @@ function renderWorkspace() {
  renderedWorkspaceKey=key;renderedWorkspacePhone=phone;
  $('qxt-data-health').replaceChildren(view.data);if(view.checks)view.checks.open=!!keepOpen;$('qxt-check-coverage').replaceChildren(...(view.checks?[view.checks]:[]));
  if(summaryFocused)view.checks?.querySelector('summary')?.focus({preventScroll:true});
+ syncBuilder($('qxt-builder'),asset?{chainId:asset.chainId,token:asset.token}:{});
 }
 function clearConversation(){conversationView?.dispose();conversationView=null;conversationKey=null;$('qxt-conversation').hidden=true;$('qxt-launch-actions').hidden=true;$('qxt-launch-actions').open=false;}
 function syncConversation(){
  const selected=selectedContext(),asset=workspaceAsset(selected);if(!asset||!state.data)return;
  const key=asset.key+':'+selected.revision;if(key===conversationKey)return;clearConversation();conversationKey=key;
- conversationView=mountTokenConversation($('qxt-conversation-body'),asset.kind==='launch'?{kind:'launch',chainId:asset.chainId,controller:asset.controller,name:asset.name,symbol:asset.symbol}:{kind:'token',chainId:asset.chainId,address:asset.token,name:asset.name,symbol:asset.symbol});
+ conversationView=mountTokenConversation($('qxt-conversation-body'),asset.kind==='launch'?{kind:'launch',chainId:asset.chainId,controller:asset.controller,token:asset.token||null,name:asset.name,symbol:asset.symbol}:{kind:'token',chainId:asset.chainId,address:asset.token,name:asset.name,symbol:asset.symbol});
  $('qxt-conversation').hidden=false;
 }
 function renderLaunchActions(){
@@ -128,12 +141,28 @@ function renderLaunchActions(){
  let same=false;try{const id=localStorage.getItem('qhooks:create:active:v1'),record=JSON.parse(localStorage.getItem('qhooks:create:launch:v1:'+id)||'null');same=record?.status==='done'&&String(record.chainId)===state.sel.chainId&&record.addresses?.controller?.toLowerCase()===state.sel.controller;}catch{}
  $('qxt-launch-actions').querySelector('a[href="/create"]').hidden=!same;
 }
+// The safety scan has no Elysium (400). RepoProof's own check covers outside tokens there once its release is live, and
+// queues a token on first view (2026-11-10, via the main thread). Until it accepts the chain: "No automated checks…".
+// Chains where RepoProof's token check answers. Add '99901' when RepoProof's release supports Elysium (until then its
+// check answers 400 and the page would log an error): the terminal then asks it instead of showing the unsupported copy.
+const REPOPROOF_TOKEN_CHAINS=new Set([]);
+const SAFETY_SKIP=new Set(['99901']); // /api/terminal/x/safety has no Elysium (400).
+async function repoproofTokenChecks(selected,signal){
+ if(!REPOPROOF_TOKEN_CHAINS.has(String(selected.chainId)))return {unsupported:true,chainId:selected.chainId,address:selected.token};
+ const none={unsupported:true,chainId:selected.chainId,address:selected.token};
+ try{const r=await fetch('/api/repoproof/check?'+new URLSearchParams({kind:'token',chainId:String(selected.chainId),address:String(selected.token).toLowerCase()}),{cache:'no-store',signal});if(!r.ok)return none;
+  const v=await r.json();if(v?.version!==1||v.subject?.kind!=='token'||String(v.subject?.chainId)!==String(selected.chainId)||String(v.subject?.address).toLowerCase()!==String(selected.token).toLowerCase())return none;
+  const rep=v.report&&['danger','caution','clear','unknown'].includes(v.report.level)&&Array.isArray(v.report.checks)?v.report:null;
+  return {...(rep||{}),level:rep?.level??null,verdict:rep?(rep.level==='clear'?'ok':rep.level):undefined,unavailable:!rep,state:v.state,retryAt:v.retryAt??null,source:'RepoProof via QHooks',checkedAt:v.checkedAt||rep?.completedAt||null,chainId:String(selected.chainId),address:String(selected.token).toLowerCase()};
+ }catch(e){if(signal?.aborted)throw e;return none;}
+}
 async function refreshSelectedChecks() {
  const selected=selectedContext(),run=selectionFlow?.current();if(!selected||!run||!state.data)return;
  try{
   let checks;
   if(selected.kind==='launch')checks=await verdictOf(selected.chainId,selected.controller);
-  else {const response=await fetch(`/api/terminal/x/safety/${selected.chainId}/${selected.token}`,{cache:'no-store',signal:run.controller.signal});if(!response.ok)throw Error('Check provider is unavailable.');checks=await response.json();}
+  else if(SAFETY_SKIP.has(String(selected.chainId)))checks=await repoproofTokenChecks(selected,run.controller.signal);
+  else {const response=await fetch(`/api/terminal/x/safety/${selected.chainId}/${selected.token}`,{cache:'no-store',signal:run.controller.signal});if(response.status===400){checks=await repoproofTokenChecks(selected,run.controller.signal);}else{if(!response.ok)throw Error('Checks paused. Refresh data to retry.');checks=await response.json();}}
   if(!run.active())return;if(!checks)throw Error('Check provider returned no coverage.');if(selected.kind==='external'){state.data.safety=checks;ticket.setSafety(checks,run.intent);}
   marketWorkspace.receiveRisk(selected,checks);renderHead();
  }catch(error){if(run.active()){marketWorkspace.failRisk(selected,error);if(state.data)renderHead();}}
@@ -311,6 +340,15 @@ function ensureChart() {
   chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
   chartTools=mountChartTools({h,chart,candles,volume,element:el,storage:memoryStorage});
 }
+// Day/night (2026-11-10): the chart reads its colours from the theme's CSS variables; re-read them when the theme flips,
+// then re-render (volume bars and the provider embed take theme colours/params per render).
+function applyChartTheme() {
+  if (!chart) return;
+  const line = css('--qxt-grid'), up = css('--qxt-up'), down = css('--qxt-down');
+  chart.applyOptions({ layout: { textColor: css('--qx-muted') }, grid: { vertLines: { color: line }, horzLines: { color: line } }, rightPriceScale: { borderColor: line }, timeScale: { borderColor: line } });
+  candles.applyOptions({ upColor: up, downColor: down, wickUpColor: up, wickDownColor: down });
+}
+new MutationObserver(() => { try { applyChartTheme(); if (state.data) renderChart(); } catch {} }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 let lastChartKey = '';
 function marketDisplay() {
  const raw=state.data;if(!raw)return null;const view=nativeMarketView(raw);
@@ -329,7 +367,8 @@ function renderChart() {
   const embedSelection=d.ext?{chainId:d.meta.chainId,token:d.meta.token,pool:d.token?.pools?.[0]?.address,quote:d.token?.pools?.[0]?.quoteAddress,asset:d.meta.symbol,tf:d.tf}:null;
   // Outside tokens: when our candles are missing or behind, show the live provider chart instead of a stale one.
   const candlesBehind=!!d.ext&&!!d.candles?.length&&historyState('candles',d.historyFreshness?.candles).stale;
-  if((!d.candles?.length||candlesBehind)&&providerChart.render(d.chartSurface||directProviderChart(embedSelection),embedSelection)){chartUnits.hidden=true;const status=$('qxt-candles-freshness');if(status)status.hidden=true;return;}
+  // Our candles first: no provider embed while the history read is still running (2026-11-10, TradingView switch).
+  if((!d.candles?.length||candlesBehind)&&d.marketCoverage?.candles!=='loading'&&providerChart.render(d.chartSurface||directProviderChart(embedSelection),embedSelection)){chartUnits.hidden=true;const status=$('qxt-candles-freshness');if(status)status.hidden=true;return;}
   providerChart.clear();chartUnits.hidden=false;
   renderHistoryStatus('candles',d);
   ensureChart();
@@ -369,6 +408,9 @@ function headTrust() {
 }
 /// Official badge or impostor mark next to the name, and the impostor banner under the header and above the trade ticket (qx-official.mjs).
 function syncOfficial(m) {
+  mountRecapturePanel($('qxt-stats'),m&&!state.sel?.ext?m:null);
+  mountArbGapPanel($('qxt-stats'),m);
+  mountRelaunchBadge($('qxt-stats'),m);
   let mark = $('qxt-official'); if (!mark) { mark = h('span', { id: 'qxt-official', class: 'qxt-trust' }); $('qxt-name').after(mark); }
   const o = m && officialFor(m.chainId, m.token), f = m && !o ? impostorOf(m.chainId, m.token, m.name, m.symbol) : null;
   mark.replaceChildren(...[o ? officialBadge(o) : f ? notOfficialBadge(f) : null].filter(Boolean));
@@ -382,12 +424,36 @@ function syncOfficial(m) {
   if (bb && bb.dataset.key !== bk) { bb._unmount?.(); bb.remove(); bb = null; }
   if (o && !bb && $('qxt-stats')) { bb = h('section', { id: 'qxt-buybacks', 'aria-label': 'Buybacks and burns' }); bb.dataset.key = bk; $('qxt-stats').after(bb);
     import('/qx-buybacks.mjs').then(x => { if (bb.isConnected) bb._unmount = x.mountBuybacks(bb, { compact: true, runButton: true }); }).catch(() => {}); }
+    // Every QHooks launch: warn about third-party look-alike pools (shown only when some exist).
+    const pk = m && /^\d+$/.test(String(m.chainId)) && /^0x[0-9a-fA-F]{40}$/.test(String(m.token || '')) ? m.chainId + ':' + String(m.token).toLowerCase() : '';
+    let pw = $('qxt-pool-warning'); if (pw && pw.dataset.key !== pk) { pw.remove(); pw = null; }
+    if (pk && !pw && $('qxt-market-identity')) { pw = h('div', { id: 'qxt-pool-warning', hidden: true }); pw.dataset.key = pk; $('qxt-market-identity').after(pw); import('/qx-official-pools.mjs').then(x => { if (pw.isConnected) x.mountPoolWarning(pw, { chainId: String(m.chainId), token: String(m.token).toLowerCase(), tradeHref: null }); }).catch(() => {}); }
+    // Simple launches: "Started at $X · Bonded at $Y" under the identity line.
+    const ck = m && m.kind === 'simple' ? m.chainId + ':' + String(m.token).toLowerCase() : '';
+    let lc = $('qxt-launch-caps'); if (lc && lc.dataset.key !== ck) { lc.remove(); lc = null; }
+    if (ck && !lc && $('qxt-market-identity')) { lc = h('p', { id: 'qxt-launch-caps', class: 'qxt-launch-caps', hidden: true }); lc.dataset.key = ck; $('qxt-market-identity').after(lc); import('/qx-launch-caps.mjs').then(x => { if (lc.isConnected) x.mountLaunchCaps(lc, { chainId: String(m.chainId), token: String(m.token).toLowerCase() }); }).catch(() => {}); }
+    // Burn ticker in the official token's header: "N QHOOKS burned · next buyback in m:ss".
+    let bt = $('qxt-burn-ticker'); if (bt && bt.dataset.key !== bk) { bt._unmount?.(); bt.remove(); bt = null; }
+    if (o && !bt && $('qxt-market-identity')) { bt = h('p', { id: 'qxt-burn-ticker' }); bt.dataset.key = bk; $('qxt-market-identity').after(bt); import('/qx-burn-ticker.mjs').then(x => { if (bt.isConnected) bt._unmount = x.mountBurnTicker(bt, { href: null }); }).catch(() => {}); }
+}
+// Tab title (2026-11-10, holder report "the Tab price is not showing correctly"): people read tab prices as USD. USD with
+// 4 significant digits written out (no subscript); the quote-token price only when it can't become USD (a non-native
+// quote); otherwise just the symbol until a USD price lands, so a stale native-quote price never flashes in the tab.
+export function plainPrice(p) {
+  if (!(p > 0) || !Number.isFinite(p)) return '';
+  if (p >= 1) return Number(p.toPrecision(6)).toLocaleString('en-US', {maximumFractionDigits: p >= 1000 ? 2 : 4});
+  return p.toFixed(Math.min(20, 3 - Math.floor(Math.log10(p)))).replace(/(\.\d*?[1-9])0+$/, '$1');
+}
+export function tabTitle(symbol, {priceUsd = null, priceQuote = null, quoteSymbol = ''} = {}) {
+  const sym = symbol || 'Token', native = /^W?(ETH|BNB|HYPE)$/i.test(quoteSymbol || '');
+  const shown = priceUsd > 0 ? '$' + plainPrice(priceUsd) : !native && priceQuote > 0 ? plainPrice(priceQuote) + (quoteSymbol ? ' ' + quoteSymbol : '') : '';
+  return sym + (shown ? ' ' + shown : '') + ' | QHooks Terminal';
 }
 function renderHead() {
   const d = marketDisplay(), m = d.meta, s = d.summary || {};
   $('qxt-symbol').textContent = m.symbol; $('qxt-symbol').title=m.symbol; $('qxt-name').textContent = m.name; $('qxt-name').title=m.name;
   syncOfficial(m);
-  document.title = m.symbol + ' ' + price(s.price) + ' | QHooks Terminal';
+  document.title = tabTitle(m.symbol, {priceUsd: s.priceUsd ?? (d.ext ? s.price : null), priceQuote: s.price, quoteSymbol: d.ext ? 'USD' : m.quoteSymbol});
   const ci = $('qxt-chain-icon'); ci.src = '/chain-symbol-icons/' + ICON[m.chainId] + '.svg'; ci.alt = CHAIN_NAME[m.chainId]; ci.hidden = false;
   const av = $('qxt-av'); if (av) { av.hidden = false; av.style.setProperty('--h', hue(m.token || state.sel?.controller)); av.firstChild.textContent = (m.symbol || '?').replace(/^\$/, '').slice(0, 1).toUpperCase(); av.querySelector('.qxt-av-logo')?.remove(); const lg = avLogo(m.chainId ?? state.sel?.chainId, m.token); if (lg) av.firstChild.after(lg); }
   const copy = $('qxt-copy'); copy.hidden = false; copy.textContent = short(m.token); copy.title = 'Copy ' + m.token;
@@ -401,7 +467,7 @@ function renderHead() {
       ...cell('Price', s.price!=null?'$'+price(s.price):'—'), ...cell('24h', pct(s.change24), s.change24 > 0 ? 'up' : s.change24 < 0 ? 'down' : ''),
       ...cell('MCap', money(s.mcap, 'USD')), ...cell('Liquidity', money(s.liquidity, 'USD')), ...cell('Vol 24h', money(s.volume24, 'USD')),
       ...cell('Buys / sells · 24h', Number.isFinite(s.buys24)&&Number.isFinite(s.sells24)?s.buys24+' / '+s.sells24:'—'), ...cell('Checks', verdict[0], verdict[1]));
-    $('qxt-sync').textContent = 'Chart pool '+short(d.token?.pools?.[0]?.address)+' · execution via '+(m.chainId==='solana'?'Jupiter':'0x');
+    $('qxt-sync').textContent = 'Chart pool '+short(d.token?.pools?.[0]?.address)+' · execution via '+(m.chainId==='solana'?'Jupiter':hasDirectRoute(m.chainId)?'the pool · QHooks router':'0x');
     return;
   }
   headTrust();
@@ -419,18 +485,22 @@ function labelFor(addr) { return ownHolderLabel(state.data,addr)||tradeAddressLa
 
 const link = (chainId, path, text) => h('a', { href: EXPLORER[chainId] + (chainId === 'solana' ? path.replace(/^\/address\//, '/account/') : path), target: '_blank', rel: 'noopener' }, text);
 // ---- Tracked wallets ----
-function saveTracked() { store('tracked', JSON.stringify(state.tracked)); loadActivity(true); renderPane(); if (state.feed === 'wallets') renderFeed(); if (state.data) renderChart(); }
+function saveTracked() { store('tracked', JSON.stringify(state.tracked)); loadActivity(true); renderPane(); if (state.feed === 'wallets') renderFeed(); if (state.data) renderChart(); window.dispatchEvent(new CustomEvent('qhooks:tracked-change', { detail: { tracked: { ...state.tracked } } })); }
+// Wallets page / card sync (pro terminal W1): replace the tracked list (names) without echoing a change event back.
+window.addEventListener('qhooks:tracked-set', e => { const t = e.detail?.tracked; if (!t || typeof t !== 'object') return; state.tracked = Object.fromEntries(Object.entries(t).filter(([a]) => /^0x[0-9a-f]{40}$/.test(a)).map(([a, l]) => [a, String(l || '').slice(0, 24) || 'Wallet ' + a.slice(2, 6)])); store('tracked', JSON.stringify(state.tracked)); loadActivity(true); renderPane(); if (state.feed === 'wallets') renderWallets(); if (state.data) renderChart(); });
+const openWallet = (chainId, wallet) => window.dispatchEvent(new CustomEvent('qhooks:wallet-open', { detail: { chainId, wallet } }));
 function track(addr, label) { state.tracked[addr] = (label || '').trim().slice(0, 24) || 'Wallet ' + addr.slice(2, 6); saveTracked(); toast('Tracking ' + state.tracked[addr] + '.'); }
 function untrack(addr) { delete state.tracked[addr]; saveTracked(); }
 /// An address cell: explorer link, its label, and a one-click Track for addresses nobody named yet.
 function who(chainId, addr, extra = null, systemLabel = null) {
   if (!addr) return h('td', {}, '—');
   const label = systemLabel||labelFor(addr), tracked = !!state.tracked[addr], person = !label || tracked;
-  return h('td', {}, link(chainId, '/address/' + addr, short(addr)), label ? h('span', { class: 'qxt-tag' + (tracked ? ' tracked' : '') }, label) : null, extra,
+  return h('td', {}, link(chainId, '/address/' + addr, short(addr)), label ? (tracked ? h('button', { type: 'button', class: 'qxt-tag tracked qxt-tag-open', title: 'Open wallet card', onclick: () => openWallet(chainId, addr) }, label) : h('span', { class: 'qxt-tag' }, label)) : null, extra,
     person && !tracked && addr !== state.me ? h('button', { type: 'button', class: 'qxt-track', title: 'Track this wallet', onclick: () => track(addr) }, '+ Track') : null);
 }
 const tradeTape=createTradeTape();
 const tapeControls=mountTapeControls({h,container:$('qxt-pane'),onChange:()=>renderPane(),onPause:()=>{if(tradeTape.status().paused)tradeTape.resume();else tradeTape.pause();renderPane();}});
+paneReady=true;
 const holderPanel=createExternalHolderPanel({h,who,link,short,pct});
 const onchainEvm=createOnchainEvmFallback();
 const priceAlerts=mountPriceAlerts({h,after:$('qxt-ticket'),storage:memoryStorage,onError:e=>{$('qxt-sync').textContent=e.message;},onReached:(target,alert)=>toast((alert.state==='target'?'Target':'Stop')+' reached for '+(target.symbol||'this token')+'.', ['Review sell',async()=>{if(!state.sel?.ext||state.sel.chainId!==target.chainId||state.sel.ext!==target.token)await selectExternal(target.chainId,target.token);const owner=target.chainId==='solana'?solAddress():state.me;if(owner)await ticket.prefillSell({percent:100,owner,chainId:target.chainId,token:target.token});else $('qxt-sync').textContent='Connect the holding wallet to prepare a sell.';}])});
@@ -442,11 +512,12 @@ function renderHistoryStatus(kind,d){
  if(node.hidden)return;
  // Providers are credited at the bottom of the page; near the chart only say when it is behind.
  const details=d.historyFreshness?.[kind],status=historyState(kind,details);
- if(kind==='candles'){node.hidden=!status.stale;node.textContent=status.stale?'Chart is behind · '+status.label:'';}else node.textContent=status.label;
+ if(kind==='candles'){node.hidden=!status.stale;node.textContent=status.stale?'Chart refreshing · '+status.label:'';}else node.textContent=status.label;
  node.dataset.stale=String(status.stale);
 }
 
 function renderPane() {
+  if(!paneReady)return; // a remembered wallet's subscribe callback can run before the pane controls below exist
   const pane = $('qxt-pane'), d = marketDisplay();pane.dataset.mode=state.pane;
   renderHistoryStatus('trades',d);
   $('qxt-trade-filters').hidden = state.pane !== 'trades';tapeControls.element.hidden=state.pane!=='trades';
@@ -562,7 +633,7 @@ function renderWallets() {
   for (const a of addrs) {
     const stats = h('span', { class: 'qxt-r2' }, 'Loading…');
     loadWalletStats(a).then(v => { stats.replaceChildren(...(v ? [h('span', { class: v.pnl > 0 ? 'up' : v.pnl < 0 ? 'down' : '' }, h('i', {}, 'PnL '), (v.pnl > 0 ? '+' : '') + money(v.pnl, v.sym || 'USDC')), h('span', {}, h('i', {}, 'Spent '), money(v.spent, v.sym || 'USDC')), h('span', {}, h('i', {}, 'Open '), String(v.open))] : ['—'])); });
-    items.push(h('li', { class: 'qxt-wallet-row' }, h('div', { class: 'qxt-row' }, h('span', { class: 'qxt-r1' }, h('b', {}, state.tracked[a]), h('span', { class: 'qxt-muted qxt-trunc' }, short(a))), stats),
+    items.push(h('li', { class: 'qxt-wallet-row' }, h('div', { class: 'qxt-row' }, h('span', { class: 'qxt-r1' }, h('button', { type: 'button', class: 'qxt-wallet-name', title: 'Open wallet card', onclick: () => openWallet(null, a) }, state.tracked[a]), h('span', { class: 'qxt-muted qxt-trunc' }, short(a))), stats),
       h('button', { type: 'button', class: 'qxt-x', title: 'Stop tracking', ariaLabel: 'Stop tracking ' + state.tracked[a], onclick: () => untrack(a) }, '×')));
   }
   if (!addrs.length) items.push(h('li', { class: 'qxt-empty' }, 'Track wallets from any trades, holders or top-traders list (+ Track), or paste an address above. Their trades across every chain show here, with alerts.'));
@@ -672,7 +743,7 @@ async function paintColdPrice(record,chainId,mine){
  const q=cold.quoteSymbol||'WETH',cell=(k,v)=>[h('div',{},h('dt',{},k),h('dd',{},v))];
  if(spec.symbol){$('qxt-symbol').textContent=spec.symbol;$('qxt-symbol').title=spec.symbol;}
  if(spec.name){$('qxt-name').textContent=spec.name;$('qxt-name').title=spec.name;}
- document.title=(spec.symbol||'Token')+' '+price(cold.price)+' | QHooks Terminal';
+ document.title=tabTitle(spec.symbol,{priceUsd:cold.priceUsd,priceQuote:cold.price,quoteSymbol:cold.quoteSymbol||'WETH'});
  $('qxt-stats').replaceChildren(
   ...cell('Price',cold.priceUsd!=null?'$'+price(cold.priceUsd)+' · '+price(cold.price)+' '+q:price(cold.price)+' '+q),...cell('24h','—'),
   ...cell('MCap',cold.mcapUsd!=null?money(cold.mcapUsd,'USD'):money(cold.mcap,q)),...cell('Vol 24h','—'),...cell('Buys / sells · 24h','—'),
@@ -704,7 +775,11 @@ async function loadExternal({signal,strict=false}={}) {
   const mine=mseq,read=++externalRead,{chainId,ext}=state.sel;
   try {
     if(state.tf<60){state.tf=60;store('tf',60);for(const b of $('qxt-tf').querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.tf==='60'));}
-    const tf=state.tf,data=await loadExternalHeader({chainId,address:ext,tf,signal});
+    let tf=state.tf;const data=await loadExternalHeader({chainId,address:ext,tf,signal});
+    // Quiet tokens open on 5m (Randall, 2026-11-10: "looks good to me - go ahead"): under one trade per 5 minutes in 24 h,
+    // 1m candles are mostly empty. Only when the visitor hasn't picked a timeframe in this visit.
+    const trades24=(Number(data?.summary?.buys24)||0)+(Number(data?.summary?.sells24)||0);
+    if(!tfPicked&&tf===60&&data?.summary&&trades24<288){tf=300;state.tf=300;data.tf=300;pressGroup($('qxt-tf'),'tf',300);}
     if(mine!==mseq||read!==externalRead)return false;
     const prior=state.data,pool=data.token.pools?.[0]?.address;
     if(prior?.ext&&prior.meta.token===ext&&prior.meta.chainId===chainId){
@@ -721,7 +796,7 @@ async function loadExternal({signal,strict=false}={}) {
     const fillOnchain=panels=>onchainEvm.fill({selection,panels,signal,isCurrent,getData:()=>state.data,onData:updated=>{state.data=updated;paintMarket();}}).catch(()=>{});
     void fillOnchain(['holders']);
     // History is independent: a delayed chart/tape cannot hold up ticket setup.
-    void loadExternalHistory({chainId,pool,tf,signal}).then(history=>{
+    void loadExternalHistory({chainId,pool,tf,signal,token:ext,quote:selection.quote}).then(history=>{
       if(!isCurrent())return;
       state.data={...state.data,...history,...(history.candles?.length?{chartSurface:null}:{})};paintMarket();
       void fillOnchain(['candles','trades']);
@@ -754,7 +829,7 @@ async function selectExternal(chainId,address,{quiet=false}={}) {
   return selectionFlow.open({kind:'external',chainId,address,quiet},async run=>{
     await loadExternal({signal:run.controller.signal,strict:true});if(!run.active()||!state.data)return false;
     const t=state.data.token;
-    if(!await ticket.setExternal({chainId,address,symbol:t.symbol,decimals:t.decimals},run.intent)||!run.active())return false;
+    if(!await ticket.setExternal({chainId,address,symbol:t.symbol,decimals:t.decimals,pools:t.pools||[]},run.intent)||!run.active())return false;
     ticket.setPriceUsd(state.data.summary.price,run.intent);
     refreshSelectedChecks();
     poll=setInterval(()=>{if(!document.hidden)loadExternal();},15000);liveHeader=null;void refreshLiveHeader();
@@ -810,13 +885,20 @@ $('qxt-feed-tabs').addEventListener('click',e=>{const b=e.target.closest('button
 pressGroup($('qxt-feed-tabs'),'feed',['opening','trending'].includes(state.feed)?'new':state.feed);
 $('qxt-launch-sort').addEventListener('change',event=>{state.feed=event.target.value;state.cursor=-1;store('feed',state.feed);renderFeed();});
 $('qxt-tf').replaceChildren(...TFS.map(([t, label]) => h('button', { type: 'button', 'data-tf': String(t), ariaPressed: String(t === state.tf) }, label)));
-const setTf = t => { if(!state.sel||state.loading)return;if(state.sel.ext&&t<60){$('qxt-sync').textContent='Outside-token candles start at one minute.';return;} state.tf = t; store('tf', String(t)); pressGroup($('qxt-tf'), 'tf', t); mseq++; providerChart.clear();chartUnits.hidden=false;loadMarket(); };
+let tfPicked=false;
+const setTf = t => { if(!state.sel||state.loading)return;tfPicked=true;if(state.sel.ext&&t<60){$('qxt-sync').textContent='Outside-token candles start at one minute.';return;} state.tf = t; store('tf', String(t)); pressGroup($('qxt-tf'), 'tf', t); mseq++; providerChart.clear();chartUnits.hidden=false;loadMarket(); };
 $('qxt-tf').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setTf(Number(b.dataset.tf)); });
 document.querySelector('[aria-label="Chart units"]').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.unit = b.dataset.unit; pressGroup(b.parentElement, 'unit', state.unit); renderChart(); });
 $('qxt-data-tabs').addEventListener('click', e => { const b = e.target.closest('button[role="tab"]'); if (!b) return; state.pane = b.dataset.pane; pressGroup($('qxt-data-tabs'), 'pane', state.pane); if (state.pane === 'positions') loadPositions(); renderPane(); });
 $('qxt-trade-filters').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.filter = b.dataset.filter; pressGroup($('qxt-trade-filters'), 'filter', state.filter); renderPane(); });
-const workspaceSearch=createWorkspaceSearch({onChange:result=>{state.xhits=result.results;state.xq=result.query;state.xchain=result.chain;state.xstatus=result.status;state.xerror=result.error;renderFeed();}});
-$('qxt-search').addEventListener('input',()=>{state.cursor=-1;workspaceSearch.search($('qxt-search').value,state.chain);});
+const workspaceSearch=createWorkspaceSearch({onChange:result=>{state.xhits=result.results;state.xq=result.query;state.xchain=result.chain;state.xstatus=result.status;state.xerror=result.error;renderFeed();
+ if(result.status==='received'&&/^0x[0-9a-fA-F]{40}$/.test(result.query)){const q=result.query.toLowerCase(),chains=[...new Set(result.results.filter(r=>String(r.address).toLowerCase()===q).map(r=>String(r.chainId)))];
+  if(chains.length===1&&$('qxt-search').value.trim().toLowerCase()===q){$('qxt-search').value='';workspaceSearch.search('',state.chain);location.hash='#t='+chains[0]+':'+q;}}}});
+// A complete pasted contract opens the token (2026-11-10): at once when one chain is chosen, otherwise when the search
+// finds it on exactly one chain (see the workspace search onChange below).
+$('qxt-search').addEventListener('input',()=>{state.cursor=-1;const v=$('qxt-search').value.trim();
+ if(/^0x[0-9a-fA-F]{40}$/.test(v)&&state.chain!=='all'&&state.chain!=='solana'){$('qxt-search').value='';workspaceSearch.search('',state.chain);location.hash='#t='+state.chain+':'+v.toLowerCase();return;}
+ workspaceSearch.search(v,state.chain);});
 $('qxt-star').addEventListener('click',()=>{const selected=selectedContext();if(!selected||!state.data)return;const watched=workspaceMemory.toggle(selected);if(selected.kind==='launch'){const key=keyOf(state.sel);watched?state.watch.add(key):state.watch.delete(key);store('watch',JSON.stringify([...state.watch]));}renderHead();renderFeed();});
 // Share: a qhooks.com/l/<chain>/<controller> link that shows a preview card on X and in chats.
 $('qxt-share').addEventListener('click', async () => {
@@ -836,8 +918,13 @@ quickRow.replaceChildren(h('span', {}, '⚡ Quick buy'), ...Object.keys(QUICK).m
 // Launch tools: one tab per shared panel that has something to show for this launch.
 const TOOLS = [['qta', 'Auction'], ['qts', 'TP/SL'], ['qtb', 'Rules'], ['qtt', 'Terms'], ['qto', 'Limit'], ['qtp', 'ETH pool'], ['qtz', 'Staking'], ['qtm', 'Modules'], ['qtv', 'Vesting'], ['qtl', 'Team'], ['qtk', 'Keys']];
 let tool = null, chosen = false;
+// A link can open a tab: #t=<chain>:<token>&tab=staking (any TOOLS label, lowercased, spaces as dashes). Read before the
+// terminal rewrites the hash to its canonical #m= form; applied once the panel has something to show.
+const toolFromLink = h => { const want = new URLSearchParams(String(h || "").replace(/^#/, "")).get("tab"); return TOOLS.find(([, label]) => label.toLowerCase().replace(/\s+/g, "-") === String(want || "").toLowerCase())?.[0] || null; };
+let linkTool = toolFromLink(location.hash);
 function renderTools() {
   const shown = state.sel&&!state.sel.ext&&!state.loading?TOOLS.filter(([id]) => !$(id).hidden):[];
+  if (linkTool && shown.some(([id]) => id === linkTool)) { tool = linkTool; chosen = true; linkTool = null; requestAnimationFrame(() => document.querySelector(".qxt-tools")?.scrollIntoView({ block: "start", behavior: "auto" })); }
   // Until someone picks a tab, the first panel in TOOLS order wins (auction, then rules), whichever loads first.
   if (!chosen || !shown.some(([id]) => id === tool)) tool = shown[0]?.[0] || null;
   $('qxt-tool-tabs').replaceChildren(...shown.map(([id, label]) => h('button', { role: 'tab', type: 'button', 'data-tool': id, ariaSelected: String(id === tool), onclick: () => { tool = id; chosen = true; renderTools(); } }, label)));
@@ -905,6 +992,9 @@ let linkRevision = 0;
 // which reads price and trades from the pool instead of outside data providers.
 export async function qhooksMarketFor(chain,token,fetcher=fetch){
   if(chain==='solana')return null;
+  // The market directory rejects Elysium (400): find Elysium launches in the launch feed instead (2026-11-10).
+  if(chain==='99901'){try{const r=await fetcher('/api/terminal/feed?chain=99901',{headers:{accept:'application/json'},signal:AbortSignal.timeout(4000)});if(!r.ok)return null;
+   const m=((await r.json()).markets||[]).find(x=>String(x.chainId)==='99901'&&String(x.token||'').toLowerCase()===token&&/^0x[0-9a-f]{40}$/.test(String(x.controller||'').toLowerCase()));return m?String(m.controller).toLowerCase():null;}catch{return null;}}
   try{const r=await fetcher('/api/markets?chain='+encodeURIComponent(chain)+'&q='+encodeURIComponent(token)+'&limit=5',{headers:{accept:'application/json'},signal:AbortSignal.timeout(4000)});if(!r.ok)return null;
    const j=await r.json();const row=(j.rows||[]).find(x=>String(x.chainId)===String(chain)&&String(x.token||'').toLowerCase()===token&&/^0x[0-9a-f]{40}$/.test(String(x.controller||'').toLowerCase()));
    return row?String(row.controller).toLowerCase():null;}catch{return null;}
@@ -938,6 +1028,7 @@ async function openTerminalHash(hash) {
 addEventListener('hashchange', event => {
  if(!ticket.canSelect()){selectionFlow.clear();event.stopImmediatePropagation();return;}
  if(!parseTerminalHash(location.hash)){backToTokens();return;}
+ linkTool = toolFromLink(location.hash);
  openTerminalHash(location.hash).catch(e=>{$('qxt-sync').textContent=e.message||'Could not open that token';});
 },true);
 

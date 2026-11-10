@@ -34,3 +34,18 @@ export function bindFundWallet(link,{hub,chainId,note,loadMove=()=>import('./qx-
  };
  link.addEventListener('click',open);return()=>link.removeEventListener('click',open);
 }
+
+// The executor covers one-tap launches from the factory it trusts and every Studio
+// launch (each proven on chain), and refuses launches running a KING or CLOCK pot.
+const GAME_BLOCKS=new Set(['king','clockPot']);
+// factory: the Simple-launch factory a one-tap launch goes to (the executor trusts
+// exactly one, arbRecapture.simpleLaunch), or 'studio' for a guided Studio launch.
+export function arbRecaptureLine(chain,blocks=[],factory=null){
+ const own=chain?.arbRecapture?.simpleLaunch;
+ if(!chain?.arbRecapture?.executor||!/^0x[0-9a-f]{40}$/i.test(own||'')||!factory||factory!=='studio'&&String(factory).toLowerCase()!==own.toLowerCase()||blocks.some(b=>GAME_BLOCKS.has(b?.id??b)))return null;
+ return "Arb recapture: on — when your token's price drifts apart between pools, a shared contract brings it back in line and burns your token with the difference.";
+}
+export function appendArbRecaptureLine(container,chain,blocks=[],factory=null){
+ const text=arbRecaptureLine(chain,blocks,factory);if(!text)return null;
+ const line=container.ownerDocument.createElement('p');line.className='qxc-fine';line.textContent=text;container.append(line);return line;
+}

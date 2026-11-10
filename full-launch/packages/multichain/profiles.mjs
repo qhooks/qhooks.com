@@ -6,6 +6,8 @@ const rows = [
  ['42161','0xa4b1','arbitrum','Arbitrum One','nitro','data-fee-in-estimate-gas','https://arb1.arbitrum.io/rpc','https://arbiscan.io','ETH'],
  ['56','0x38','bnb','BNB Chain','bsc','bsc-execution','https://bsc-dataseed.bnbchain.org','https://bscscan.com','BNB'],
  ['5042','0x13b2','arc','Arc','arc-stablecoin','execution-only-native-usdc','https://rpc.mainnet.arc.io','https://explorer.arc.io','USDC'],
+ // Elysium mainnet (2026-11-09; Kinetiq docs). Hidden in public/chains.mjs until go-public.
+ ['99901','0x1863d','elysium','Elysium','nitro','data-fee-in-estimate-gas','https://rpc.elysium.kinetiq.xyz','https://elysium.kinetiq.xyz','HYPE'],
  // Elysium testnet: hidden test profile (public/chains.mjs status 'testnet'); resolves on the fork harness only.
  ['99801','0x185d9','elysium-testnet','Elysium Testnet','nitro','data-fee-in-estimate-gas','https://testnet-rpc.elysium.kinetiq.xyz','https://explorer-elysium-testnet.t.conduit.xyz','HYPE']
 ];

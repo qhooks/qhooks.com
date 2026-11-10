@@ -188,3 +188,26 @@ export function openTerminalView(view, doc) {
   observer.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
   return () => observer.disconnect();
 }
+
+// ?token=<contract>[&chain=<id or key>] deep links (2026-11-10, Randall pasting an Elysium token): rewritten to the
+// terminal's own #t=chain:address hash before the terminal reads it. Without a chain the address goes to search,
+// which opens it when one chain has it. Returns {hash} when rewritten, {search} for search, else null.
+const CHAIN_KEYS = Object.freeze({ base: '8453', ethereum: '1', eth: '1', arbitrum: '42161', arb: '42161', bnb: '56', bsc: '56', robinhood: '4663', rh: '4663', elysium: '99901', solana: 'solana', sol: 'solana' });
+export function tokenQueryRoute(search) {
+  const params = new URLSearchParams(String(search || '')), token = (params.get('token') || params.get('ca') || '').trim();
+  if (!token || !(EVM.test(token) || MINT.test(token))) return null;
+  const raw = String(params.get('chain') || '').trim().toLowerCase(), chain = /^\d+$/.test(raw) ? raw : CHAIN_KEYS[raw] || (MINT.test(token) && !EVM.test(token) ? 'solana' : null);
+  if (!chain) return { search: token };
+  if (chain === 'solana' ? !MINT.test(token) : !EVM.test(token)) return null;
+  return { hash: '#t=' + chain + ':' + (chain === 'solana' ? token : token.toLowerCase()) };
+}
+export function applyTokenQuery(loc = globalThis.location, hist = globalThis.history) {
+  if (!loc || hasHash(loc.hash)) return null;
+  const route = tokenQueryRoute(loc.search);
+  if (!route) return null;
+  const params = new URLSearchParams(loc.search); params.delete('token'); params.delete('ca'); params.delete('chain');
+  const rest = params.toString(), next = loc.pathname + (rest ? '?' + rest : '') + (route.hash || '');
+  try { hist?.replaceState(hist.state, '', next); } catch {}
+  return route;
+}
+const hasHash = hash => /^#(?:t|m|pool)=/.test(hash || '');

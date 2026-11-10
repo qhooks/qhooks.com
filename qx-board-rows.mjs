@@ -41,16 +41,17 @@ export function moveText(value, base = 1) {
 export const qualityText = value => value == null ? '—' : moveText(1 + Number(value));
 export function callLabels(call) {
   const labels=new Set(call?.labels||[]);if(call?.scoreV2?.indexedFirstDaySales?.status==='observed')labels.add('indexedSales');else if(!call?.scoreV2&&call?.soldAfter)labels.add('legacySale');
-  return[...labels].map(key=>({creator_call:"Creator's call",linked:'Known creator link',indexedSales:'Indexed first-day sales · outcome retained',legacySale:'Legacy indexed-sale flag'})[key]).filter(Boolean);
+  return[...labels].map(key=>({creator_call:"Creator's call",linked:'Known creator link',indexedSales:'Indexed first-day sales · outcome retained',legacySale:'Indexed sale'})[key]).filter(Boolean);
 }
 export function callLabelPills(call) { return callLabels(call).map(label => h('span', { class: 'qb-badge qb-call-label' }, label)); }
+function agoText(at){const s=Math.max(0,Math.round((Date.now()-at)/1000));return s<90?'Live · '+s+'s ago':s<5400?'Live · '+Math.round(s/60)+'m ago':'Live · '+Math.round(s/3600)+'h ago';}
 export function callRecord(call) {
-  const c=call||{},top=h('div',{class:'qb-call-head'},h('b',{},c.scoreV2?'Call · record v2':'Call · legacy'),h('span',{class:'qb-call-price'},priceText(c.price)+' '+(c.quoteSymbol||'')));
+  const c=call||{},top=h('div',{class:'qb-call-head'},h('b',{},'Call'),h('span',{class:'qb-call-price'},priceText(c.price)+' '+(c.quoteSymbol||'')));
   const points=[checkpointView(c,'day'),checkpointView(c,'week')],figures=h('div',{class:'qb-call-figures'},...points.map(point=>{
    const observed=point.status==='observed',direction=!observed?'':point.price>c.price?' is-up':point.price<c.price?' is-down':'';
    return h('div',{class:'qb-call-figure'+direction},h('span',{},point.label),h('b',{},priceText(point.price)),observed?h('small',{},moveText(point.price,c.price)):null,h('small',{},point.note));
-  }),h('div',{class:'qb-call-figure'},h('span',{},'Legacy 1h'),h('b',{},priceText(c.price1h)),h('small',{},'Timing unavailable · unscored')),
-  h('div',{class:'qb-call-figure'},h('span',{},'Latest source quote'),h('b',{},priceText(c.priceNow)),h('small',{},'Observation time unavailable')));
+  }),c.price1h!=null?h('div',{class:'qb-call-figure'+(c.price1h>c.price?' is-up':c.price1h<c.price?' is-down':'')},h('span',{},'1h'),h('b',{},priceText(c.price1h)),h('small',{},moveText(c.price1h,c.price))):null,
+  c.priceNow!=null?h('div',{class:'qb-call-figure'+(c.priceNow>c.price?' is-up':c.priceNow<c.price?' is-down':'')},h('span',{},'Now'),h('b',{},priceText(c.priceNow)),h('small',{},moveText(c.priceNow,c.price)+(Number.isSafeInteger(c.priceNowAt)?' · '+agoText(c.priceNowAt):''))):null);
   const labels=callLabelPills(c),ref=callRef(c.ref),proof=points.filter(point=>point.provenance&&Number.isSafeInteger(point.observedAt));
   const details=proof.length?h('details',{class:'qb-call-proof'},h('summary',{},'Indexed quote sources'),...proof.map(point=>h('p',{},point.label+' · '+point.note+' · block '+point.provenance.block+' · ',h('code',{},point.provenance.transaction)))):null;
   return h('section',{class:'qb-call','aria-label':'Call record'},top,figures,labels.length?h('div',{class:'qb-call-labels'},...labels):null,details,ref?h('a',{class:'qb-call-ref',href:ref,rel:'nofollow ugc noopener'},'Trade via this call'):null);

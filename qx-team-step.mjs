@@ -3,9 +3,15 @@
 // Before launch the creator picks what happens to the rest; once every stage is confirmed this step reads the
 // wallet's remaining balance and carries the choice out: lock it in the chain's ownerless QLocks contract,
 // burn it to the dead address, or keep it (Trade then lists it as unlocked creator holdings).
-import { calldata, ethCall, words, parseUnits, formatUnits, erc20, send, ensureAllowance, connectedAddress, onWalletChange, CHAIN_NAME, h } from '/qx-chain.mjs';
+// QLocks v2 (staged 2026-11-08): where v2 is set up on the chain, the lock uses it and offers step schedules
+// (monthly, quarterly) next to cliff + drip. Where it is not, this step keeps using v1 exactly as before.
+import { calldata, ethCall, words, parseUnits, formatUnits, erc20, send, ensureAllowance, connectedAddress, onWalletChange, CHAIN_NAME, codeAt, h } from '/qx-chain.mjs';
 import { extraAddress, isLive, setUp } from '/qx-extras.mjs';
-import { allocationLockData } from './launch-allocation.mjs';
+import { PRESETS, describeSchedule } from '/qx-qlocks-core.mjs';
+
+let v2art;
+const v2 = () => (v2art ||= fetch('/full-launch/qlocks-v2.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(a => a?.contracts?.locksV2 || null).catch(() => null));
+const v2Live = async chainId => { const c = await v2(); return c && (await codeAt(chainId, c.address)) !== '0x' ? c : null; };
 
 const SEL = { lock: '0x806c27c7', summary: '0x9522a80a', transfer: '0xa9059cbb', balanceOf: '0x70a08231', totalSupply: '0x18160ddd' };
 const DEAD = '0x000000000000000000000000000000000000dEaD';
@@ -59,14 +65,15 @@ renderPlan();
 // ---- After launch: the step itself ----
 const card = $('qxt');
 let state = null, loading = 0, statusText = '';
-const draft = { amount: null, cliff: '7776000', drip: '15552000', notice: '259200', sure: false };
+const draft = { amount: null, cliff: '7776000', drip: '15552000', notice: '259200', preset: 'monthly-12', sure: false };
 
 async function read(chainId, token, me) {
-  const [t, supplyHex, locksAddr] = await Promise.all([erc20(chainId, token, me), ethCall(chainId, token, SEL.totalSupply), extraAddress('locks')]);
+  const [t, supplyHex, locksAddr] = await Promise.all([erc20(chainId, token, me), ethCall(chainId, token, SEL.totalSupply), extraAddress('locks', chainId)]);
   const balOf = async who => BigInt(await ethCall(chainId, token, calldata(SEL.balanceOf, ['address'], [who])));
-  const live = await isLive(chainId, 'locks');
-  const [burned, locked] = await Promise.all([balOf(DEAD), live ? ethCall(chainId, locksAddr, calldata(SEL.summary, ['address'], [token])).then(r => words(r)[0]) : 0n]);
-  return { chainId, token, me, symbol: t.symbol || 'tokens', decimals: t.decimals, bal: t.balance, supply: BigInt(supplyHex), locksAddr, live, burned, locked };
+  const [live, two] = await Promise.all([isLive(chainId, 'locks'), v2Live(chainId)]);
+  const lockedIn = (addr, on) => on ? ethCall(chainId, addr, calldata(SEL.summary, ['address'], [token])).then(r => words(r)[0]) : 0n;
+  const [burned, l1, l2] = await Promise.all([balOf(DEAD), lockedIn(locksAddr, live), lockedIn(two?.address, !!two)]);
+  return { chainId, token, me, symbol: t.symbol || 'tokens', decimals: t.decimals, bal: t.balance, supply: BigInt(supplyHex), locksAddr: two ? two.address : locksAddr, v2: two, live: live || !!two, burned, locked: l1 + l2 };
 }
 
 async function act(btn, fn) {
@@ -108,17 +115,23 @@ function render() {
   if (choice === 'lock') {
     const sel = (lab, key, opts) => { const s = h('select', { ariaLabel: lab }, ...opts.map(([v, t]) => h('option', { value: v, selected: v === draft[key] }, t))); s.addEventListener('change', () => { draft[key] = s.value; render(); }); return h('label', { class: 'qxt-field' }, h('span', {}, lab), s); };
     const schedule = (draft.cliff === '0' ? 'Vesting starts now' : 'Nothing vests for ' + label(CLIFFS, draft.cliff)) + (draft.drip === '0' ? (draft.cliff === '0' ? ' and all of it is vested at once' : ', then all of it at once') : ', then it drips out over ' + label(DRIPS, draft.drip)) + '. Every sale needs a ' + label(NOTICES, draft.notice) + ' public notice first. Nobody can cancel or shorten the lock, including you.';
+    const presetSel = h('select', { ariaLabel: 'Schedule' }, ...PRESETS.map(p => h('option', { value: p.key, selected: p.key === draft.preset }, p.label)), h('option', { value: 'drip', selected: draft.preset === 'drip' }, 'Cliff, then drip (pick below)'));
+    presetSel.addEventListener('change', () => { draft.preset = presetSel.value; render(); });
+    const preset = state.v2 && draft.preset !== 'drip' ? PRESETS.find(p => p.key === draft.preset) : null;
     const btn = h('button', { type: 'button', class: 'workspace-button' }, live ? 'Lock tokens' : 'Set up QLocks and lock');
     btn.addEventListener('click', () => act(btn, async s => {
       const amt = parsed();
       if (!(await isLive(chainId, 'locks'))) { s('Setting up QLocks on ' + CHAIN_NAME[chainId] + '…'); await setUp(chainId, 'locks', s); state.live = true; }
       await ensureAllowance(chainId, state.token, state.locksAddr, amt, s);
       s('Confirm the lock in your wallet…');
-      await send(chainId, { to: state.locksAddr, data: allocationLockData(state.token, me, amt, {cliff:draft.cliff,duration:draft.drip,notice:draft.notice}) }, s);
+      if (preset?.steps) await send(chainId, { to: state.locksAddr, data: calldata(state.v2.selectors.lockSteps, ['address', 'address', 'uint256', 'uint64', 'uint32', 'uint32', 'uint16', 'uint32'], [state.token, me, amt, 0n, BigInt(preset.cliff), BigInt(preset.span), BigInt(preset.steps), BigInt(draft.notice)]) }, s);
+      else await send(chainId, { to: state.locksAddr, data: calldata(SEL.lock, ['address', 'address', 'uint256', 'uint64', 'uint32', 'uint32', 'uint32'], [state.token, me, amt, 0n, BigInt(preset ? preset.cliff : draft.cliff), BigInt(preset ? preset.span : draft.drip), BigInt(draft.notice)]) }, s);
       return 'Locked ' + fmt(amt) + '.';
     }));
-    body = [h('div', { class: 'qxt-row' }, amountField, sel('Cliff', 'cliff', CLIFFS), sel('Then drip over', 'drip', DRIPS), sel('Sell notice', 'notice', NOTICES)),
-      h('p', { class: 'qxt-note' }, schedule + ' Vested tokens go to your wallet ' + me.slice(0, 6) + '…' + me.slice(-4) + '.'),
+    body = [state.v2
+        ? h('div', { class: 'qxt-row' }, amountField, h('label', { class: 'qxt-field' }, h('span', {}, 'Schedule'), presetSel), ...(preset ? [] : [sel('Cliff', 'cliff', CLIFFS), sel('Then drip over', 'drip', DRIPS)]), sel('Sell notice', 'notice', NOTICES))
+        : h('div', { class: 'qxt-row' }, amountField, sel('Cliff', 'cliff', CLIFFS), sel('Then drip over', 'drip', DRIPS), sel('Sell notice', 'notice', NOTICES)),
+      h('p', { class: 'qxt-note' }, (preset ? describeSchedule(preset).replace(/^./, c => c.toUpperCase()) + '.' : schedule) + ' Vested tokens go to your wallet ' + me.slice(0, 6) + '…' + me.slice(-4) + '.'),
       live ? null : h('p', { class: 'qxt-fine' }, 'QLocks is not on ' + CHAIN_NAME[chainId] + ' yet. Your first transaction sets it up for everyone on this chain; it has no owner.'),
       h('div', { class: 'qxt-go' }, btn)];
   } else if (choice === 'burn') {

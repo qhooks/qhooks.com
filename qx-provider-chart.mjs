@@ -1,6 +1,6 @@
 // Provider display only: no candle extraction, analytics, wallet or execution.
 // Canonical surface contract: the index's provider-embed chart surface.
-const CHAINS=Object.freeze({'8453':'base','1':'ethereum','56':'bsc','4663':'robinhood','42161':'arbitrum',solana:'solana'});
+const CHAINS=Object.freeze({'8453':'base','1':'ethereum','56':'bsc','4663':'robinhood','42161':'arbitrum','99901':'elysium',solana:'solana'});
 const SOL=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const TFS=Object.freeze({60:'1m',300:'5m',900:'15m',3600:'1h',14400:'4h',86400:'1d'});
 const ADDRESS=/^0x[0-9a-f]{40}$/i,POOL=/^0x(?:[0-9a-f]{40}|[0-9a-f]{64})$/i;
@@ -9,7 +9,7 @@ const stale=value=>value.stale===true||['stale','retained','delayed'].includes(v
 
 // Kept equivalent to the index's constructor, including its closed interval map.
 export function dexscreenerChartSurface({chain,pairAddress,tokenAddress,quoteAddress,timeframe='1m'}={}){
- if(!['solana','base','bsc','ethereum','robinhood','arbitrum'].includes(chain))throw Error('chart_embed_chain_unsupported');
+ if(!['solana','base','bsc','ethereum','robinhood','arbitrum','elysium'].includes(chain))throw Error('chart_embed_chain_unsupported');
  const address=chain==='solana'?/^[1-9A-HJ-NP-Za-km-z]{32,44}$/:/^0x[0-9a-fA-F]{40}$/;
  const pool=chain==='solana'?address:/^0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/;
  if(!pool.test(pairAddress||'')||!address.test(tokenAddress||'')||!address.test(quoteAddress||''))throw Error('chart_embed_identity_invalid');
@@ -65,9 +65,11 @@ export function createProviderChartRenderer({document:doc=globalThis.document,na
   const s=selected(selection),own=selected(view?.selection);
   if(!s||!own||view?.kind!=='provider_embed'||view.provider!=='dexscreener'||!['QHooks data','direct'].includes(view.source)||view.key!==key(s)||key(own)!==key(s)||own.asset!==s.asset||!Number.isSafeInteger(view.observedAt)||!matchingSurface(view.surface,s)){clear();return false;}
   const safe=dexscreenerChartSurface(args(s));currentView=view;
-  if(currentKey!==view.key){
-   iframe?.remove();iframe=doc.createElement('iframe');iframe.className='qxt-provider-frame';iframe.setAttribute('sandbox','allow-scripts allow-same-origin');iframe.setAttribute('referrerpolicy','no-referrer');iframe.setAttribute('allow',"camera 'none'; microphone 'none'; geolocation 'none'; payment 'none'");iframe.setAttribute('loading','eager');iframe.setAttribute('src',safe.url);host.append(iframe);currentKey=view.key;
-   const frame=iframe;frame.addEventListener('error',()=>{if(iframe===frame&&currentView&&currentKey===currentView.key)caption.textContent=providerChartStatus(currentView,now())+' · If the chart is blocked, use Open full chart.';});
+  // Day/night (2026-11-10): the embed follows the site theme; a theme change reloads it.
+  const light=doc.documentElement?.dataset?.theme==='light',src=light?safe.url.replace('theme=dark','theme=light'):safe.url,themedKey=view.key+(light?':light':':dark');
+  if(currentKey!==themedKey){
+   iframe?.remove();iframe=doc.createElement('iframe');iframe.className='qxt-provider-frame';iframe.setAttribute('sandbox','allow-scripts allow-same-origin');iframe.setAttribute('referrerpolicy','no-referrer');iframe.setAttribute('allow',"camera 'none'; microphone 'none'; geolocation 'none'; payment 'none'");iframe.setAttribute('loading','eager');iframe.setAttribute('src',src);host.append(iframe);currentKey=themedKey;void view.key;
+   const frame=iframe;frame.addEventListener('error',()=>{if(iframe===frame&&currentView&&String(currentKey).startsWith(currentView.key+":"))caption.textContent=providerChartStatus(currentView,now())+' · If the chart is blocked, use Open full chart.';});
   }
   iframe.setAttribute('title',s.asset+' USD chart by DexScreener · '+s.chain+' · pool '+s.pool);
   caption.textContent=providerChartStatus(view,now());caption.title=(view.marketObservedAt?'Market snapshot: '+new Date(view.marketObservedAt).toISOString()+'. ':'')+'Provider chart content updates independently; QHooks does not read its candles.';

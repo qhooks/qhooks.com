@@ -1,6 +1,6 @@
 // Public preferences only. No wallet identity, permissions, orders or execution.
 export const TRADING_PROFILE_KEY='qhooks:terminal:profiles:v1';
-export const PROFILE_CHAINS=['8453','1','42161','56','4663','solana'];
+export const PROFILE_CHAINS=['8453','1','42161','56','4663','99901','solana'];
 const copy=x=>JSON.parse(JSON.stringify(x));
 const ensure=(ok,message)=>{if(!ok)throw new TypeError(message);};
 const integer=(n,min,max)=>Number.isInteger(n)&&n>=min&&n<=max;
@@ -12,14 +12,15 @@ export function validateExitSettings(raw=defaultExitSettings()){
  ensure(!raw.autoAfterBuy||raw.takeProfitPct>0||raw.stopLossPct>0,'Set a target or stop before enabling TP/SL after a buy.');
  return {takeProfitPct:raw.takeProfitPct,stopLossPct:raw.stopLossPct,minimumBps:raw.minimumBps,executorTipBps:raw.executorTipBps,autoAfterBuy:raw.autoAfterBuy};
 }
-export function defaultTradingProfile(){return {id:'default',name:'Default',buy:{mode:'auto',manualBps:100,maxBps:100},sell:{mode:'auto',manualBps:100,maxBps:100},amounts:{usd:['10','50','100','500'],eth:['0.01','0.05','0.1','0.5'],bnb:['0.05','0.1','0.5','1'],sol:['0.1','0.25','0.5','1']},sellPercentages:[25,50,75,100],exit:defaultExitSettings()};}
+export function defaultTradingProfile(){return {id:'default',name:'Default',buy:{mode:'auto',manualBps:100,maxBps:100},sell:{mode:'auto',manualBps:100,maxBps:100},amounts:{usd:['10','50','100','500'],eth:['0.01','0.05','0.1','0.5'],bnb:['0.05','0.1','0.5','1'],sol:['0.1','0.25','0.5','1'],hype:['0.1','0.5','1','5']},sellPercentages:[25,50,75,100],exit:defaultExitSettings()};}
 export function validateTradingProfile(raw){
  ensure(plain(raw),'A profile is required.');
  ensure(typeof raw.id==='string'&&/^[a-z0-9-]{1,64}$/.test(raw.id),'Invalid profile identity.');
  ensure(typeof raw.name==='string'&&raw.name.trim().length>=1&&raw.name.trim().length<=32&&!/[\u0000-\u001f]/.test(raw.name),'Use a profile name of 1–32 characters.');
  const side=key=>{const x=raw[key];ensure(plain(x)&&['auto','manual'].includes(x.mode)&&integer(x.manualBps,1,10000)&&integer(x.maxBps,1,5000),'Auto maximum must be 0.01–50%; manual tolerance must be 0.01–100%.');return {mode:x.mode,manualBps:x.manualBps,maxBps:x.maxBps};};
  const amounts={};
- for(const unit of ['usd','eth','bnb','sol']){const a=raw.amounts?.[unit];ensure(Array.isArray(a)&&a.length===4&&a.every(v=>typeof v==='string'&&/^(?:0|[1-9]\d{0,11})(?:\.\d{1,18})?$/.test(v)&&/[1-9]/.test(v)),'Enter four positive amounts for '+unit.toUpperCase()+'.');ensure(new Set(a).size===4,'Use four different amounts for '+unit.toUpperCase()+'.');amounts[unit]=[...a];}
+ // hype (Elysium, 2026-11-09) is optional so profiles saved before it keep validating; missing = the default.
+ for(const unit of ['usd','eth','bnb','sol','hype']){const a=unit==='hype'&&raw.amounts?.hype===undefined?defaultTradingProfile().amounts.hype:raw.amounts?.[unit];ensure(Array.isArray(a)&&a.length===4&&a.every(v=>typeof v==='string'&&/^(?:0|[1-9]\d{0,11})(?:\.\d{1,18})?$/.test(v)&&/[1-9]/.test(v)),'Enter four positive amounts for '+unit.toUpperCase()+'.');ensure(new Set(a).size===4,'Use four different amounts for '+unit.toUpperCase()+'.');amounts[unit]=[...a];}
  const sell=raw.sellPercentages;ensure(Array.isArray(sell)&&sell.length===4&&sell.every((v,i)=>integer(v,1,100)&&(!i||v>sell[i-1]))&&sell[3]===100,'Sell presets must increase and end at 100%.');
  return {id:raw.id,name:raw.name.trim(),buy:side('buy'),sell:side('sell'),amounts,sellPercentages:[...sell],exit:validateExitSettings(raw.exit)};
 }

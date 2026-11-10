@@ -1,6 +1,8 @@
 import {getWalletHub} from './wallet-hub.mjs';
 import {embeddedWalletProvider,EMBEDDED_RDNS,EMBEDDED_UUID,PHONE_RDNS,PHONE_UUID} from './embedded-wallet-provider.mjs';
-import {launchChains} from './chain-catalog.mjs';
+import {visibleChains} from './chains.mjs';
+// Embedded-wallet networks: the visible chains (public ones; hidden and test chains only with ?chains=all), 2026-11-09.
+const launchChains=visibleChains().map(c=>Object.freeze({id:c.id,name:c.name,gas:c.native}));
 import './qx-confirm-top.mjs';
 
 const DROP_GRACE_MS=1500;

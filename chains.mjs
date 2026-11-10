@@ -26,6 +26,9 @@
 const rows = [
   {
     id: '8453', hex: '0x2105', key: 'base', name: 'Base', short: 'Base', icon: 'base', status: 'live', family: 'op-stack',
+    // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
+    // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
+    simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 55351284, abi: 'pq' },
     feeModel: 'op-stack', feeAccounting: 'separate-data-and-operator-fees', feeCapWei: null, gasFloorWei: null,
     native: 'ETH', rpc: 'https://mainnet.base.org', logsRpc: 'https://base-rpc.publicnode.com', logStep: 4000, blockTime: 2,
     explorer: 'https://basescan.org',
@@ -33,11 +36,26 @@ const rows = [
     quote: { address: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', symbol: 'USDC', decimals: 6, wrapNative: false },
     wrappedNative: '0x4200000000000000000000000000000000000006', usdc: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
     launchFee: '0.0002', launchFeeWei: '200000000000000', router: true, lab: true,
+    // Next-generation QSimpleLaunch (start cap + optional post-quantum creator key; pays Base's own fee Safe 0x20ed…87Cb).
+    // Deployed 2026-11-09 via /chain-setup, block 55185578. abi 'pq': launch() takes pqKey + lockRoles (selector 0x00cadb72).
+    simpleLaunchNext: { address: '0xfb5a559886fccba6400cc52905ba3aa4658ba0cc', from: 55185578, abi: 'pq' },
+    // Arb recapture v3 (3% plain side-pool cap), deployed block 55185754, trusts only the factory above.
+    arbRecapture: { executor: '0x89f4e0c905737de81c6691ec5254ee429132c788', simpleLaunch: '0xfb5a559886fccba6400cc52905ba3aa4658ba0cc', fromBlock: 55185754,
+      maxSideFee: 30000, gasReserveWei: '100000000000000',
+      bridges: [{ currency0: '0x4200000000000000000000000000000000000006', currency1: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', fee: 3000, tickSpacing: 60, hooks: '0x0000000000000000000000000000000000000000' },
+        { currency0: '0x4200000000000000000000000000000000000006', currency1: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', fee: 500, tickSpacing: 10, hooks: '0x0000000000000000000000000000000000000000' }] },
     data: { gecko: 'base', dex: 'base', alchemy: 'base-mainnet', zeroEx: true }
   },
   {
     simpleLaunch: '0x023623568f41c032ec2f4bba368dbafc123160cc', simpleLaunchFrom: 108170556,
+    // Next-generation QSimpleLaunch on Robinhood (start cap + optional PQ creator key), Randall 2026-11-09 "upgrade robinhood";
+    // deployed via /chain-setup at block 110156527. Same RH settings as the factory above (fee wallet QFlywheel 0xb85e…,
+    // 0.0002 ETH, same start): chain() identical. New one-tap launches go here; launches on 0x0236… stay listed and tradable.
+    simpleLaunchNext: { address: '0xfb5a559886fccba6400cc52905ba3aa4658ba0cc', from: 110156527, abi: 'pq' },
     id: '4663', hex: '0x1237', key: 'robinhood', name: 'Robinhood Chain', short: 'Robinhood', icon: 'robinhood', status: 'live', family: 'nitro',
+    // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
+    // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
+    simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 110390517, abi: 'pq' },
     feeModel: 'nitro', feeAccounting: 'data-fee-in-estimate-gas', feeCapWei: '10000000000', gasFloorWei: null,
     native: 'ETH', rpc: 'https://rpc.mainnet.chain.robinhood.com', logsRpc: 'https://rpc.mainnet.chain.robinhood.com', logStep: 25000, blockTime: 0.1,
     explorer: 'https://robinhoodchain.blockscout.com',
@@ -45,10 +63,22 @@ const rows = [
     quote: { address: '0x0bd7d308f8e1639fab988df18a8011f41eacad73', symbol: 'WETH', decimals: 18, wrapNative: true },
     wrappedNative: '0x0bd7d308f8e1639fab988df18a8011f41eacad73', usdc: null,
     launchFee: '0.0002', launchFeeWei: '200000000000000', router: true, lab: true,
+    // Arb recapture executor (QArbRecapture, CREATE2 via 0x4e59…). Ship this row only after the deploy tx has landed: the
+    // keeper skips an address with no code, but the Create line and card follow this config. Gas reserve keeps about a day of
+    // buybacks in the shared keeper wallet.
+    // Two executors (2026-11-09): v3 (3% plain side-pool cap) for the next-gen one-tap factory new launches go to, and the
+    // first v2 executor for launches made on the first factory and for Studio launches (QCAT is proven in its constructor).
+    arbRecapture: { executor: '0x622011a2be0727c0840c0b1089771ed480d53320', simpleLaunch: '0xfb5a559886fccba6400cc52905ba3aa4658ba0cc', fromBlock: 110156527,
+      maxSideFee: 30000, bridges: [], gasReserveWei: '500000000000000' },
+    arbRecaptureMore: [{ executor: '0x256870174d3322c4c7f9bd2ed227c07b84e035da', simpleLaunch: '0x023623568f41c032ec2f4bba368dbafc123160cc', fromBlock: 109631000, bridges: [], gasReserveWei: '500000000000000', studio: true }],
+    ownIndex: { confirmations: 128, statelessHistory: true, rpcOnly: true, ownHistory: true, ownTransfers: true, nativeSample: true, onlySource: true },
     data: { gecko: 'robinhood', dex: 'robinhood', alchemy: 'robinhood-mainnet', zeroEx: true }
   },
   {
     id: '1', hex: '0x1', key: 'ethereum', name: 'Ethereum', short: 'Ethereum', icon: 'ethereum', status: 'live', family: 'ethereum',
+    // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
+    // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
+    simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 26380174, abi: 'pq' },
     feeModel: 'ethereum', feeAccounting: 'execution-only', feeCapWei: '1000000000000', gasFloorWei: null,
     native: 'ETH', rpc: 'https://ethereum-rpc.publicnode.com', logsRpc: 'https://ethereum-rpc.publicnode.com', logStep: 2000, blockTime: 12,
     explorer: 'https://etherscan.io',
@@ -56,10 +86,14 @@ const rows = [
     quote: { address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', symbol: 'USDC', decimals: 6, wrapNative: false },
     wrappedNative: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', usdc: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
     launchFee: '0.0002', launchFeeWei: '200000000000000', router: true, lab: true,
+    arbRecapture: null,
     data: { gecko: 'eth', dex: 'ethereum', alchemy: 'eth-mainnet', zeroEx: true }
   },
   {
     id: '42161', hex: '0xa4b1', key: 'arbitrum', name: 'Arbitrum One', short: 'Arbitrum', icon: 'arbitrum', status: 'live', family: 'nitro',
+    // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
+    // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
+    simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 522799540, abi: 'pq' },
     feeModel: 'nitro', feeAccounting: 'data-fee-in-estimate-gas', feeCapWei: '10000000000', gasFloorWei: null,
     native: 'ETH', rpc: 'https://arb1.arbitrum.io/rpc', logsRpc: 'https://arb1.arbitrum.io/rpc', logStep: 25000, blockTime: 0.25,
     explorer: 'https://arbiscan.io',
@@ -67,10 +101,19 @@ const rows = [
     quote: { address: '0xaf88d065e77c8cc2239327c5edb3a432268e5831', symbol: 'USDC', decimals: 6, wrapNative: false },
     wrappedNative: '0x82af49447d8a07e3bd95bd0d56f35241523fbab1', usdc: '0xaf88d065e77c8cc2239327c5edb3a432268e5831',
     launchFee: '0.0002', launchFeeWei: '200000000000000', router: true, lab: true,
+    // Next-generation QSimpleLaunch (start cap + optional PQ creator key; pays Arbitrum's own fee Safe 0x27c3…94b2), block 522677810.
+    simpleLaunchNext: { address: '0xfb5a559886fccba6400cc52905ba3aa4658ba0cc', from: 522677810, abi: 'pq' },
+    // Arb recapture v3 (3% plain side-pool cap), block 522677843; gas valued through WETH/USDC 0.05%.
+    arbRecapture: { executor: '0x188066c795e0da43d0a06b9a48aeaceb579c51ea', simpleLaunch: '0xfb5a559886fccba6400cc52905ba3aa4658ba0cc', fromBlock: 522677843,
+      maxSideFee: 30000, gasReserveWei: '100000000000000',
+      bridges: [{ currency0: '0x82af49447d8a07e3bd95bd0d56f35241523fbab1', currency1: '0xaf88d065e77c8cc2239327c5edb3a432268e5831', fee: 500, tickSpacing: 10, hooks: '0x0000000000000000000000000000000000000000' }] },
     data: { gecko: 'arbitrum', dex: 'arbitrum', alchemy: 'arb-mainnet', zeroEx: true }
   },
   {
     id: '56', hex: '0x38', key: 'bnb', name: 'BNB Chain', short: 'BNB', icon: 'bnb', status: 'live', family: 'bsc',
+    // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
+    // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
+    simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 132660352, abi: 'pq' },
     feeModel: 'bsc', feeAccounting: 'bsc-execution', feeCapWei: '10000000000', gasFloorWei: null,
     native: 'BNB', rpc: 'https://bsc-dataseed.bnbchain.org', logsRpc: 'https://bsc-rpc.publicnode.com', logStep: 5000, blockTime: 0.45,
     explorer: 'https://bscscan.com',
@@ -78,6 +121,11 @@ const rows = [
     quote: { address: '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c', symbol: 'WBNB', decimals: 18, wrapNative: true },
     wrappedNative: '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c', usdc: null,
     launchFee: '0.0007', launchFeeWei: '700000000000000', router: true, lab: true,
+    // Next-generation QSimpleLaunch (start cap + optional PQ creator key; pays BNB's own fee Safe 0xB6C1…C3bB), block 132585433.
+    simpleLaunchNext: { address: '0xfb5a559886fccba6400cc52905ba3aa4658ba0cc', from: 132585433, abi: 'pq' },
+    // Arb recapture v3, block 132585454. Launches are WBNB-quoted (the wrapped native), so gas needs no bridge.
+    arbRecapture: { executor: '0x47be6b8b6345f22b56b44008020ef0543fcbb90d', simpleLaunch: '0xfb5a559886fccba6400cc52905ba3aa4658ba0cc', fromBlock: 132585454,
+      maxSideFee: 30000, gasReserveWei: '1000000000000000', bridges: [] },
     data: { gecko: 'bsc', dex: 'bsc', alchemy: 'bnb-mainnet', zeroEx: true }
   },
   {
@@ -91,6 +139,7 @@ const rows = [
     quote: { address: '0x3600000000000000000000000000000000000000', symbol: 'USDC', decimals: 6, wrapNative: false },
     wrappedNative: null, usdc: '0x3600000000000000000000000000000000000000',
     launchFee: '0.5', launchFeeWei: '500000000000000000', router: true, lab: false,
+    arbRecapture: null,
     data: { gecko: 'arc', dex: 'arc', alchemy: null, zeroEx: true }
   },
   {
@@ -106,18 +155,39 @@ const rows = [
     quote: { address: '0xcd57f65c2b0e5881cfc2e609f7cd53b746e1f234', symbol: 'WHYPE', decimals: 18, wrapNative: true },
     wrappedNative: '0xcd57f65c2b0e5881cfc2e609f7cd53b746e1f234', usdc: '0x7d29d8047b905000459c0e80c34a26ceedcb47b2',
     launchFee: '0.0002', launchFeeWei: '200000000000000', router: false, lab: false,
+    arbRecapture: null,
     data: { gecko: null, dex: null, alchemy: null, zeroEx: false }
   },
   {
-    // Financial routes stay planned. Read-only chain99901 venue/generation observations are in
-    // qx-elysium-registry.mjs; no single manager/wrapped asset is valid for every venue.
-    // Exact dependencies, HYPE fees, fee recipient, native funding and recovery must pass before
-    // this becomes selectable (including hidden mode). See lead/elysium/README.md for the gaps.
-    id: null, hex: null, key: 'elysium', name: 'Elysium', short: 'Elysium', icon: 'elysium', status: 'planned', family: 'nitro',
+    // Elysium mainnet (launch expected Mon 2026-11-09). Staged 2026-11-08 from work/qhooks-elysium-mainnet-20261108/RUNBOOK.md §2.
+    // Stays 'planned' (excluded from BUILT, so nothing on the site or worker sees it) until launch day. To switch it to
+    // hidden: fill rpc, logsRpc, explorer, contracts (Uniswap's 99901 deployments), quote.address / wrappedNative (WHYPE,
+    // official), launchFee / launchFeeWei (Randall: proposal 0.006 HYPE), simpleLaunch / simpleLaunchFrom and
+    // extras.feeRouter (the Elysium builds Randall deploys), then set status: 'hidden', and router: true once the
+    // Elysium QFeeRouter has code. data.alchemy: 'elysium-mainnet' once enabled on the QHooks app.
+    // Elysium mainnet (Kinetiq, Arbitrum Orbit on HyperEVM), live 2026-11-09. Hidden: ?chains=all until Randall's go-public.
+    // Sources: elysium.kinetiq.xyz/docs/connecting-to-elysium (chain, RPC), /docs/contract-addresses (Permit2, deployer, Safe),
+    // Uniswap/contracts PR #179 deployments/json/99901.json (v4), Uniswap/universal-router PR #534 (weth9 = WHYPE).
+    id: '99901', hex: '0x1863d', key: 'elysium', name: 'Elysium', short: 'Elysium', icon: 'elysium', status: 'live', family: 'nitro',
+    // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
+    // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
+    simpleLaunchClean: { address: '0xc7faaf2e1b01e5e2cae4f967a020b49b290ca0cc', from: 3539046, abi: 'pq' },
     feeModel: 'nitro', feeAccounting: 'data-fee-in-estimate-gas', feeCapWei: '10000000000', gasFloorWei: null,
-    native: 'HYPE', rpc: null, logsRpc: null, logStep: 25000, blockTime: 0.13, explorer: null,
-    contracts: null, quote: { address: null, symbol: 'WHYPE', decimals: 18, wrapNative: true }, wrappedNative: null, usdc: null,
-    launchFee: null, launchFeeWei: null, router: false, lab: false,
+    native: 'HYPE', rpc: 'https://rpc.elysium.kinetiq.xyz', logsRpc: 'https://rpc.elysium.kinetiq.xyz', logStep: 2000, blockTime: 0.13, explorer: 'https://elysium.kinetiq.xyz',
+    contracts: { manager: '0xe2e105d3f7209a9da11f83ccf3e7398a753823f1', stateView: '0x27ed73ae0652fdcf71d6793412a7525f32be9dfe', quoter: '0x379f556c5a748bd7cc9baf0f7a344094ac1814f5', router: '0xa13f7611115752deb2b13813bdde16a5073e4b45', permit2: '0x000000000022d473030f116ddee9f6b43ac78ba3', extended: false },
+    quote: { address: '0xba876237b0f021a6c6d852d6c26e107997cc5e81', symbol: 'WHYPE', decimals: 18, wrapNative: true }, wrappedNative: '0xba876237b0f021a6c6d852d6c26e107997cc5e81', usdc: null,
+    launchFee: '0.006', launchFeeWei: '6000000000000000', router: true, lab: false,
+    simpleLaunch: null, simpleLaunchFrom: null,
+    // Next-generation QSimpleLaunch, Elysium's own build (start cap + optional PQ creator key; pays Elysium's own fee Safe
+    // 0x2d45…8037; fee 0.006 HYPE). Official facts: Kinetiq docs + Uniswap/contracts PR #179 (2026-11-09). Deployed 2026-11-09 via /chain-setup: factory block 3239822, fee router 3239918, fee Safe 3238882.
+    simpleLaunchNext: { address: '0x8223f9ce8998fb436fc32bdf541cc34d668420cc', from: 3239822, abi: 'pq' },
+    // Elysium QFeeRouter build (terminal 1% fee; cashback/referral split as elsewhere; pays the Elysium Safe).
+    extras: { feeRouter: '0xff208831ed6f0c4e3e3224effa45fae7906dc6c2' },
+    // QHooks arb executor v3 for the Elysium launch contract (deployed 2026-11-09 via /chain-setup, block 3532414). WHYPE quote, so gas is valued directly.
+    arbRecapture: { executor: '0x4ecf92ee8985f734c613a91d37b2a0bf00420119', simpleLaunch: '0x8223f9ce8998fb436fc32bdf541cc34d668420cc', fromBlock: 3532414,
+      maxSideFee: 30000, gasReserveWei: '5000000000000000', bridges: [] },
+    // Own-pool index (charts, tape, holders): GeckoTerminal/DexScreener don't list Elysium, so like Robinhood it is the only source.
+    ownIndex: { confirmations: 128, statelessHistory: true, ownHistory: true, ownTransfers: true, nativeSample: true, onlySource: true },
     data: { gecko: null, dex: null, alchemy: 'elysium-mainnet', zeroEx: false }
   },
   {
@@ -129,6 +199,7 @@ const rows = [
     contracts: { manager: '0x1f98400000000000000000000000000000000004', stateView: '0x86e8631a016f9068c3f085faf484ee3f5fdee8f2', quoter: '0xf885781cb68a0be66aa2ac7eda5fe72bde7da907', router: '0xef740bf23acae26f6492b10de645d6b98dc8eaf3', permit2: '0x000000000022d473030f116ddee9f6b43ac78ba3', extended: false },
     quote: { address: null, symbol: 'USDC', decimals: 6, wrapNative: false }, wrappedNative: '0x4200000000000000000000000000000000000006', usdc: null,
     launchFee: '0.0002', launchFeeWei: '200000000000000', router: false, lab: false,
+    arbRecapture: null,
     data: { gecko: 'unichain', dex: 'unichain', alchemy: 'unichain-mainnet', zeroEx: true }
   }
 ];

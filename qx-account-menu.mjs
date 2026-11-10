@@ -10,6 +10,7 @@ import { getWalletHub } from '/wallet-hub.mjs';
 import { tradePrefs, setTradePrefs, instantCapable, DEFAULT_CAP_USD } from '/qx-trade-prefs.mjs';
 import { chainById, visibleChains } from '/chains.mjs';
 import { cachedBalances, refreshBalances } from '/qx-balances.mjs';
+import { walletActions } from '/qx-wallet-actions.mjs';
 
 const hub = getWalletHub(window);
 const $ = id => document.getElementById(id);
@@ -49,10 +50,10 @@ if (dialog) {
   const card = el('section', 'qwm-card');
   card.innerHTML = '<div class="qwm-id"><span class="qwm-avatar" aria-hidden="true"></span><div><b class="qwm-short"></b><span class="qwm-type"><span class="qwm-wtype"></span><span aria-hidden="true">·</span>'
     + '<label class="qwm-net"><select aria-label="Network: switch your wallet to another chain"></select></label></span></div></div>'
+    + '<div class="qwm-cash" hidden><span class="qwm-cash-total"></span><button type="button" class="qwm-move">Move funds between chains</button>'
+    + '<p class="qwm-move-note">No QHooks fee on moves. Only Relay’s own fee.</p></div>'
     + '<section class="qwm-bals" aria-label="Balances on every chain"><div class="qwm-total"><b></b><span></span></div>'
-    + '<ul class="qwm-chains"></ul><button type="button" class="qwm-more" hidden></button><p class="qwm-bal-status" role="status" aria-live="polite"></p></section>'
-    + '<div class="qwm-cash" hidden><span class="qwm-cash-total"></span><button type="button" class="qwm-move">Move to another chain</button>'
-    + '<p class="qwm-move-note">No QHooks fee on moves. Only Relay’s own fee.</p></div>';
+    + '<ul class="qwm-chains"></ul><button type="button" class="qwm-more" hidden></button><p class="qwm-bal-status" role="status" aria-live="polite"></p></section>';
   card.querySelector('.qwm-move').addEventListener('click', () => { if (cur && moveFunds) { dialog.close(); moveFunds.openMoveFunds({ from: Number(cur.chainId) }); } });
   const links = el('nav', 'qwm-links'); links.setAttribute('aria-label', 'Your QHooks');
   const trades = el('section', 'qwm-trades');
@@ -92,8 +93,8 @@ if (dialog) {
     if (!list.some(c => c.id === here)) { const o = el('option', null, chainName(here)); o.value = here; o.disabled = true; opts.unshift(o); }
     netSel.replaceChildren(...opts); netSel.value = switching ? switching.chainId : here; netSel.disabled = !!switching;
   }
-  const value = r => (r.native.usd ?? (r.native.amount > 0 ? 1e-9 : 0)) + (r.stable?.usd || 0);
-  const empty = r => !r.error && !(r.native.amount > 0) && !(r.stable?.amount > 0);
+  const value = r => (r.native.usd ?? (r.native.amount > 0 ? 1e-9 : 0)) + (r.stable?.usd || 0) + (r.tokens || []).reduce((a, t) => a + (t.usd ?? (t.amount > 0 ? 1e-9 : 0)), 0);
+  const empty = r => !r.error && !(r.native.amount > 0) && !(r.stable?.amount > 0) && !(r.tokens || []).some(t => t.amount > 0);
   function chainRow(r, here) {
     const b = el('button', 'qwm-chain'); b.type = 'button'; b.dataset.chain = r.chainId;
     const img = el('img'); img.src = '/chain-symbol-icons/' + r.icon + '.svg'; img.alt = ''; img.width = img.height = 18;
@@ -101,13 +102,31 @@ if (dialog) {
     const amts = el('span', 'qwm-amts'), line = (a, sym, usd) => { const s = el('span', 'qwm-amt'); s.append(el('b', null, fmtAmt(a) + ' ' + sym), el('small', null, fmtUsd(usd))); return s; };
     amts.append(line(r.native.amount, r.native.symbol, r.native.usd));
     if (r.stable?.amount > 0) amts.append(line(r.stable.amount, r.stable.symbol, r.stable.usd));
+    for (const t of r.tokens || []) if (t.amount > 0) amts.append(line(t.amount, t.symbol, t.usd));
     if (r.error) amts.append(el('small', 'qwm-err', 'Didn’t answer'));
     if (here) { b.setAttribute('aria-current', 'true'); b.title = 'Your wallet is on ' + r.name; }
     else { b.title = 'Switch your wallet to ' + r.name; b.disabled = !!switching; b.addEventListener('click', () => switchTo(r.chainId)); }
-    b.append(img, name, amts); const li = el('li'); li.append(b); return li;
+    b.append(img, name, amts); const li = el('li'); li.append(b);
+    // Send / Unwrap for this chain's balances (the wallet confirms each one).
+    const acts = walletActions(r, { explorer: chainById(String(r.chainId))?.explorer || null, onDone: () => { if (cur) { renderBalances(); refreshBalances(cur.owner).then(renderBalances, () => {}); } },
+      wallet: cur && { provider: cur.entry?.provider, from: cur.owner, here, switchTo } });
+    if (acts) li.append(acts);
+    // One-tap Move from this chain (pro terminal phase A, 2026-11-10): opens the Relay move sheet with this chain as the
+    // source; the sheet picks the row's largest coin or stablecoin and asks the wallet to sign. Funded Relay chains only.
+    if (moveFunds && !r.error && (r.native.amount > 0 || r.stable?.amount > 0) &&(moveFunds.MOVE_CHAINS || []).some(c => c && String(c.id) === String(r.chainId))) {
+      const mv = el('button', 'qwm-act qwm-row-move', 'Move'); mv.type = 'button'; mv.setAttribute('aria-label', 'Move to another chain'); mv.title = 'Move from ' + r.name + ' to another chain';
+      mv.addEventListener('click', () => { if (cur) { dialog.close(); moveFunds.openMoveFunds({ from: { chainId: Number(r.chainId) } }); } });
+      const bar = acts?.querySelector('.qwm-act-bar');
+      if (bar) bar.append(mv); else { const box = el('div', 'qwm-acts'), b = el('div', 'qwm-act-bar'); b.append(mv); box.append(b); li.append(box); }
+    }
+    return li;
   }
+  // An open Send/Unwrap form is never rebuilt under the user: a refresh that lands meanwhile waits until it closes.
+  let heldRender = false;
+  list.addEventListener('qwm:panel', () => { if (heldRender && !list.querySelector('.qwm-act-panel:not([hidden])')) { heldRender = false; renderBalances(); } });
   function renderBalances() {
     if (!cur) return;
+    if (list.querySelector('.qwm-act-panel:not([hidden])')) { heldRender = true; return; }
     const { data } = cachedBalances(cur.owner), total = bals.querySelector('.qwm-total');
     if (!data) { total.firstChild.textContent = '…'; total.lastChild.textContent = 'Reading your balances on every chain'; list.replaceChildren(); more.hidden = true; return; }
     const here = String(cur.chainId), rows = [...data.rows].sort((a, b) => value(b) - value(a));
@@ -170,7 +189,7 @@ if (dialog) {
     card.querySelector('.qwm-short').textContent = short(cur.owner);
     card.querySelector('.qwm-wtype').textContent = TYPE[cur.entry?.rdns] || cur.entry?.name || 'Browser wallet';
     renderSwitcher();
-    links.replaceChildren(...[['My QHooks', '/me'], ['Portfolio', portfolio], ['Rewards', '/me#qa-rewards'], ['My launches', '/me#qa-launches']].map(([t, h]) => { const a = el('a', null, t); a.href = h; a.addEventListener('click', () => dialog.close()); return a; }));
+    links.replaceChildren(...[['My QHooks', '/me'], ['Portfolio', portfolio], ['Rewards', '/me#qa-rewards'], ['My launches', '/me#qa-launches'], ['Wallets', '/wallets']].map(([t, h]) => { const a = el('a', null, t); a.href = h; a.addEventListener('click', () => dialog.close()); return a; }));
     renderTrades(); loadBalances(); renderCash();
   };
   // The fund button arrives later (email-login script); keep the footer complete whenever the dialog changes.

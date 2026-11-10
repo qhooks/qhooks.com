@@ -1,8 +1,9 @@
 import {checkTicker,assertTickerFree,TickerTaken,tickerBlockNodes} from '/qx-ticker-guard.mjs';
 import {CREATE_EXECUTION_ENABLED,CREATE_EXECUTION_HOLD} from './qx-create-release.mjs';
-import {createCostView,walletStepLabel,showRequiredQuantum,bindFundWallet} from './qx-create-display.mjs';
+import {appendArbRecaptureLine,createCostView,walletStepLabel,showRequiredQuantum,bindFundWallet} from './qx-create-display.mjs';
 import {readCreateNativeUSD} from './qx-create-prices.mjs';
 import {visibleChains,chainById} from './chains.mjs';
+import {launchChains as guidedChains} from './chain-catalog.mjs';
 import {getWalletHub} from './wallet-hub-fresh.mjs';
 import {EMBEDDED_RDNS} from './embedded-wallet-provider.mjs';
 import {withLaunchSession} from './qx-instant-bridge.mjs';
@@ -91,6 +92,7 @@ function summaryNode(){const c=chainById(config.chainId),a=allocationAmounts(con
  if(config.banner)box.append(el('img',{class:'qxc-review-banner',src:config.banner,alt:config.symbol+' token banner'}));
  if(config.image)box.append(el('img',{src:config.image,alt:config.symbol+' token image',width:48,height:48}));
  box.append(line('Token',config.name+' · '+config.symbol),line('Chain',c.name),line('Supply',BigInt(whole).toLocaleString('en-US')+(fraction?'.'+fraction:'')),line('In the pool',quantity(human(a.pool))+' '+config.symbol+' · '+human(a.poolBps,2)+'%'),line('Style',CREATE_STYLES.find(p=>p.id===config.style)?.name||config.style),line('Second key',config.quantum?'Required for protected creator actions':'Off'),el('p',{class:'qxc-fine'},$('style-summary').textContent));
+ appendArbRecaptureLine(box,c,CREATE_STYLES.find(p=>p.id===config.style)?.on||[],'studio');
  for(const r of config.allocations)box.append(line(r.label,r.pct+'% · '+(r.cliff?r.cliff/MONTH+' month cliff, ':'')+(r.duration?r.duration/MONTH+' months vesting':'available at launch')+' · '+r.notice/86400+' day notice'),line('Beneficiary',r.wallet));
  const lp=Number(workspaceFieldsForReview().lpFeePpm);box.append(el('p',{class:'qxc-fine'},'Creator LP fee: '+lp/10000+'%. Protocol pool fee: '+Math.floor(lp/5)/10000+'%. Selected block charges are shown above. Graduation needs your approval and both keys.'));
  if(config.description)box.append(el('p',{},config.description));for(const[k,label]of Object.entries({x:'X',discord:'Discord',telegram:'Telegram',website:'Website'}))if(config[k])box.append(line(label,config[k]));return box;
@@ -126,7 +128,18 @@ function renderProgress(){const label=walletStepLabel(record,record?plan(record.
   }
  }
 }
-function render(){
+// Guided Create runs only on chain-catalog rollout chains; elsewhere (Elysium) one-tap is the way (2026-11-09).
+const guidedOff=()=>!guidedChains.some(c=>c.id===String(config.chainId));
+function renderChainNote(){
+ let n=$('chain-note');if(!n){n=el('div',{id:'qc-chain-note',class:'qxc-chain-note',role:'status'});$('chainId').closest('label').after(n);}
+ const open=!!record&&record.status!=='done',c=chainById(config.chainId);
+ if(open){const b=el('button',{type:'button'},'Start over');b.addEventListener('click',startOver);
+  n.replaceChildren(el('p',{},'This form is holding your unfinished launch of “'+(record.config?.name||'your token')+'” on '+(chainById(record.chainId)?.name||'its chain')+', so its fields are locked. Finish it on step 3, or start over to change the chain.'),b);n.hidden=false;return;}
+ if(guidedOff()){const a=el('a',{href:'#qq-ideas'},'Use one-tap above');a.addEventListener('click',e=>{e.preventDefault();document.getElementById('qq-ideas')?.scrollIntoView({block:'start'});});
+  n.replaceChildren(el('p',{},'Guided Create isn’t on '+(c?.name||'this chain')+' yet. '),a);n.firstChild.append(a);n.hidden=false;return;}
+ n.replaceChildren();n.hidden=true;
+}
+function render(){renderChainNote();
  const liquidity=liquidityStatus();if(!record&&liquidity.blocked)reviewGate.invalidate(liquidity.message);
  reviewGate.check();
  for(let n=1;n<=3;n++)$('screen-'+n).hidden=screen!==n;for(const b of document.querySelectorAll('[data-screen]')){if(Number(b.dataset.screen)===screen)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');b.disabled=busy||!record&&liquidity.blocked&&Number(b.dataset.screen)>screen;b.title=b.disabled&&!busy?liquidity.message:'';}
@@ -137,14 +150,14 @@ function render(){
  showRequiredQuantum($('quantum'));
  for(const field of $('profile-slot').querySelectorAll('input,textarea,button'))field.disabled=busy||!!record;for(const field of $('allocations').querySelectorAll('input,button'))field.disabled=busy||!!record;
  for(const id of ['next-1','next-2','back-2','back-3','refresh-cost'])$(id).disabled=busy;
- for(const id of ['next-1','next-2']){$(id).disabled=busy||!record&&liquidity.blocked;$(id).title=!record&&liquidity.blocked?liquidity.message:'';$(id).setAttribute('aria-describedby','qc-liquidity-note');}
+ for(const id of ['next-1','next-2']){$(id).disabled=busy||!record&&(liquidity.blocked||guidedOff());$(id).title=!record&&liquidity.blocked?liquidity.message:'';$(id).setAttribute('aria-describedby','qc-liquidity-note');}
  renderSavedLaunch();$('execution-hold').hidden=CREATE_EXECUTION_ENABLED;$('key-panel').hidden=!CREATE_EXECUTION_ENABLED||record?.status==='done';$('launch').hidden=record?.status==='done';$('launch').textContent=record?'Resume launch':'Launch';
  let valid=true;try{validateConfig(config,c?.owner||'0x'+'1'.repeat(40));}catch{valid=false;}
- $('launch').disabled=!CREATE_EXECUTION_ENABLED||busy||!c||!signer?.backupVerified||signer.locked||!quantumReady||!cost||!valid||!!record&&record.owner!==c?.owner||!record&&liquidity.blocked;
+ $('launch').disabled=!CREATE_EXECUTION_ENABLED||busy||!c||!record&&guidedOff()||!signer?.backupVerified||signer.locked||!quantumReady||!cost||!valid||!!record&&record.owner!==c?.owner||!record&&liquidity.blocked;
  $('launch').title=!record&&liquidity.blocked?liquidity.message:'';
  quantumControl?.render();
  renderStyle();$('current-rules').textContent='Current draft: '+(CREATE_STYLES.find(p=>p.id===config.style)?.name||config.style)+'. '+$('style-summary').textContent;assistedPanel?.refresh();
- if(screen===3){try{$('summary').replaceChildren(summaryNode());}catch{$('summary').textContent='Check the token and allocation values.';}$('cost').replaceChildren(costNode());$('gas-steps').replaceChildren(...(cost?.steps||[]).map(step=>el('li',{},step.label+' · '+(BigInt(step.estimatedGas)>0n?Number(step.estimatedGas).toLocaleString('en-US')+' gas · estimate':'no transaction'))));$('confirmations').textContent=c?.entry.rdns===EMBEDDED_RDNS?'Email wallet: one review.':cost?'External wallet: up to '+cost.walletConfirmations+' confirmations ('+cost.txCount+' transactions + 1 signature), plus a network switch if needed.':'Connect your wallet to see confirmation details.';}
+ if(screen===3){try{$('summary').replaceChildren(summaryNode());}catch{$('summary').textContent='Check the token and allocation values.';}$('cost').replaceChildren(costNode());$('gas-steps').replaceChildren(...(cost?.steps||[]).map(step=>el('li',{},step.label+' · '+(BigInt(step.estimatedGas)>0n?Number(step.estimatedGas).toLocaleString('en-US')+' gas · estimate':'no transaction'))));$('confirmations').textContent=c?.entry.rdns===EMBEDDED_RDNS?'Email wallet: one review.':cost?'Studio: the full guided setup for custom launches, in '+cost.txCount+' transactions and 1 signature, plus a network switch if needed. For most launches, one-tap above is all you need.':'Connect your wallet to see confirmation details.';}
  renderProgress();
  for(const id of ['confirm','retry','recover'])if(!CREATE_EXECUTION_ENABLED)$(id).disabled=true;
 }

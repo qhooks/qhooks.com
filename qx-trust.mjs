@@ -14,7 +14,9 @@ const ZERO = '0x' + '0'.repeat(40);
 if (!document.querySelector('link[href="/qx-trust.css"]')) document.head.append(Object.assign(document.createElement('link'), { rel: 'stylesheet', href: '/qx-trust.css' }));
 const pad = v => BigInt(v).toString(16).padStart(64, '0');
 const cache = new Map();
-const once = (key, ms, fn) => { const c = cache.get(key); if (c && Date.now() - c.at < ms) return c.p; const p = fn().catch(e => { cache.delete(key); throw e; }); cache.set(key, { at: Date.now(), p }); return p; };
+// A 404 (not listed) is an answer, not a failure: keep it for 10 minutes instead of asking again on every render
+// (2026-11-10: QHOOKS asked /api/trust/market every few seconds). Other failures are retried on the next call.
+const once = (key, ms, fn) => { const c = cache.get(key); if (c && Date.now() - c.at < (c.missing ? 600000 : ms)) return c.p; const entry = { at: Date.now(), p: null, missing: false }; entry.p = fn().catch(e => { if (e?.message === '404') { entry.missing = true; throw e; } cache.delete(key); throw e; }); cache.set(key, entry); return entry.p; };
 const getJson = async url => { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(String(r.status)); return r.json(); };
 const pct = bps => (Number(bps) / 100).toFixed(2).replace(/\.?0+$/, '') + '%';
 const share = (n, d) => { if (!d) return '0%'; const p = Number(n * 1000000n / d) / 10000; return (p === 0 ? '0' : p < 1 ? p.toFixed(2) : p.toFixed(1).replace(/\.0$/, '')) + '%'; };
@@ -96,7 +98,7 @@ export function factsOf(pool) {
   let locked=null,lockState='unavailable';
   try{
    const live=await isLive(chainId,'locks');reads['QLocks presence']='observed';
-   if(live){locked=await read('QLocks summary',await extraAddress('locks'),calldata(SEL.locksSummary,['address'],[token]),hex=>abiWords(hex,5)[0]);lockState=locked===null?'unavailable':'observed';}
+   if(live){locked=await read('QLocks summary',await extraAddress('locks',chainId),calldata(SEL.locksSummary,['address'],[token]),hex=>abiWords(hex,5)[0]);lockState=locked===null?'unavailable':'observed';}
    else lockState='not_deployed';
   }catch{reads['QLocks presence']='unavailable';}
   const lockText=lockState==='not_deployed'?'QLocks is not deployed at its listed address; lock coverage unavailable':locked===null?'QLocks balance unavailable':supply===null?'QLocks share unavailable because total supply could not be read':supply===0n?'QLocks holds '+locked+' raw token units':share(locked,supply)+' of supply in QLocks across all beneficiaries, with public notice';
@@ -163,7 +165,8 @@ export async function renderRisk(el, pool) {
   const title = t?.copyOf ? 'Copy warning: same ' + t.copyOf.same + ' as $' + t.copyOf.symbol + ' by @' + t.copyOf.handle
     : v?.level === 'danger' ? 'RepoProof: ' + v.headline : v?.level === 'caution' ? 'Trade with care: ' + v.headline : v?.level === 'clear' ? v.stale?'Refreshing RepoProof check…':!checkTime(v)?'Refreshing RepoProof check…':!completeCoverage(v)?'RepoProof: no flags · partial checks':'No flags returned by available RepoProof checks' : 'Refreshing market checks…';
   const partialReads=!f||f.coverage.unavailable>0||f.facts.some(fact=>/unavailable|could not be read|could not be checked/i.test(fact.v));
-  const summary=!v?.level?'Refreshing market checks…':v.stale?'Refreshing checks…':!checkTime(v)?'Refreshing checks…':!completeCoverage(v)||v.level==='unknown'?'Checks: no flags · partial checks':partialReads?'Checks: no flags · partial reads':!t?'Checks: no flags · creator unknown':'Checks returned no flags';
+  // checks-rel 2026-11-10 (walkthrough item 3): final states instead of an endless "Refreshing" — this one line only.
+  const summary=!v?'Checks paused · retry':!v.level?(v.state==='not_checked'?'Not checked yet · run a check below':['queued','running','pending','checking'].includes(v.state)?'Refreshing market checks…':'Checks paused · retry'):v.stale?'Refreshing checks…':!checkTime(v)?'Refreshing checks…':!completeCoverage(v)||v.level==='unknown'?'Checks: no flags · partial checks':partialReads?'Checks: no flags · partial reads':!t?'Checks: no flags · creator unknown':'Checks returned no flags';
   const creator=h('li',{},...(t?.verified?['Creator verified on X: ',badge(t.verified,{compact:true})]:[t?'Creator not verified on X':'Creator not verified on X']));
   const factLine=fact=>h('li',{},h('b',{},fact.k+': '),fact.v);
   const body=h('div',{class:'qtr-risk-detail-body'},

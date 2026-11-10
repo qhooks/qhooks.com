@@ -1,4 +1,4 @@
-// Wallet confirms always sit on top (Randall, 2026-11-07: "the confirm transaction was under the wallet + bridge popover").
+// Wallet confirms always sit on top (Randall, 2026-11-07 and 2026-11-10: "the confirm transaction was under the wallet + bridge popover").
 // Our wallet menu and the move/bridge dialog open with showModal(), which puts them in the browser's top layer: above
 // every z-index, and the rest of the page goes inert. The email wallet's confirm (Privy) is an ordinary fixed overlay,
 // so an open modal dialog covered it and the press sat waiting. While a Privy dialog is on screen:
@@ -10,8 +10,12 @@ const PRIVY = ['privy-dialog', 'privy-dialog-backdrop', 'privy-modal-content'];
 const under = new Set();
 let started = false;
 
+// Privy's confirm is a Headless UI dialog in a portal at the end of <body> (not a top-layer <dialog>): match its ids, or any
+// Headless UI portal dialog in case the ids change.
 function confirmShown(d) {
-  return PRIVY.some(id => { const e = d.getElementById(id); return !!e && e.getClientRects().length > 0; });
+  if (PRIVY.some(id => { const e = d.getElementById(id); return !!e && e.getClientRects().length > 0; })) return true;
+  for (const e of d.querySelectorAll('[data-headlessui-portal] [role="dialog"]')) if (e.getClientRects().length > 0) return true;
+  return false;
 }
 function keepFlagUntilClosed(dialog) {
   // The 'close' event fires after this task; listeners added earlier (the dialog's own) still see the flag.
@@ -43,7 +47,9 @@ export function startConfirmTop(d = document) {
     queueMicrotask(() => { queued = false; syncConfirmTop(d); });
   }).observe(d.body, {childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'open', 'hidden']});
   const css = d.createElement('style'); css.id = 'qx-confirm-top-style';
-  css.textContent = 'dialog[data-qx-under][open]{position:fixed;inset:0;margin:auto;z-index:2147483000}';
+  // Just above our own UI (qx-site.css tops out at 1000) and below Privy's confirm layer (z-index 999999). It was 2147483000,
+  // which put the stepped-down sheet over Privy's approve button on desktop (Randall, 2026-11-10).
+  css.textContent = 'dialog[data-qx-under][open]{position:fixed;inset:0;margin:auto;z-index:1001}';
   d.head.append(css);
 }
 if (typeof document !== 'undefined') {

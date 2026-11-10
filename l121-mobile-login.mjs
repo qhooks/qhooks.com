@@ -1,5 +1,8 @@
 import {getWalletHub} from './wallet-hub.mjs';
-import {networkProfiles,networkProfile} from '/full-launch/packages/multichain/profiles.mjs';
+import {networkProfiles as allProfiles,networkProfile} from '/full-launch/packages/multichain/profiles.mjs';
+import {visibleChains} from './chains.mjs';
+// Phone-wallet networks: only visible chains (Elysium Testnet and other test rows stay off public lists), 2026-11-09.
+const shown=new Set(visibleChains().map(c=>c.id)),networkProfiles=allProfiles.filter(p=>shown.has(String(p.id)));
 import {mobileStatus} from './l121-mobile-status.mjs';
 import {mobileWalletProvider,MOBILE_RDNS,MOBILE_UUID} from './l121-mobile-provider.mjs';
 

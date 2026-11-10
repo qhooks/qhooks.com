@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+ <title>QHooks changelog</title>
+ <subtitle>What changed on QHooks, newest first.</subtitle>
+ <id>https://qhooks.com/changelog</id>
+ <link rel="alternate" type="text/html" href="https://qhooks.com/changelog"/>
+ <link rel="self" type="application/atom+xml" href="https://qhooks.com/changelog.xml"/>
+ <updated>2026-11-10T00:00:00Z</updated>
+ <author><name>QHooks</name><uri>https://qhooks.com</uri></author>
+ <entry>
+  <title>Clean tokens on every chain</title>
+  <id>tag:qhooks.com,2026-11-10:clean-tokens-on-every-chain</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#clean-tokens-on-every-chain"/>
+  <published>2026-11-10T00:00:00Z</published>
+  <updated>2026-11-10T00:00:00Z</updated>
+  <category term="Launch"/>
+  <content type="html">&lt;p&gt;New one-tap launches on Base, Robinhood Chain, BNB Chain, Arbitrum and Elysium are standalone, full ERC-20 tokens. No proxy, no clone.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Timed staking</title>
+  <id>tag:qhooks.com,2026-11-10:timed-staking</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#timed-staking"/>
+  <published>2026-11-10T00:00:00Z</published>
+  <updated>2026-11-10T00:00:00Z</updated>
+  <category term="Earn"/>
+  <content type="html">&lt;p&gt;Lock QHOOKS for 1 week, 2 weeks or 30 days to share a 1,000,000 QHOOKS bonus pot, paid over 60 days, on top of normal staking rewards. Already staking? Move your staked QHOOKS into a lock in one go.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>QHOOKS liquidity grows every hour</title>
+  <id>tag:qhooks.com,2026-11-10:qhooks-liquidity-grows-every-hour</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#qhooks-liquidity-grows-every-hour"/>
+  <published>2026-11-10T00:00:00Z</published>
+  <updated>2026-11-10T00:00:00Z</updated>
+  <category term="Earn"/>
+  <content type="html">&lt;p&gt;Platform flywheel WETH and buyback QHOOKS go into permanent QHOOKS liquidity and a rising buy wall every hour.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Limit orders, take-profit and stop-loss</title>
+  <id>tag:qhooks.com,2026-11-10:limit-orders-take-profit-and-stop-loss</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#limit-orders-take-profit-and-stop-loss"/>
+  <published>2026-11-10T00:00:00Z</published>
+  <updated>2026-11-10T00:00:00Z</updated>
+  <category term="Trade"/>
+  <content type="html">&lt;p&gt;Set a price from your own wallet and the order fills while you’re away.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Wallets</title>
+  <id>tag:qhooks.com,2026-11-10:wallets</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#wallets"/>
+  <published>2026-11-10T00:00:00Z</published>
+  <updated>2026-11-10T00:00:00Z</updated>
+  <category term="Trade"/>
+  <content type="html">&lt;p&gt;Follow wallets and see who is trading QHooks launches, from &lt;a href=&quot;https://qhooks.com/wallets&quot;&gt;/wallets&lt;/a&gt;.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Liquidity proof</title>
+  <id>tag:qhooks.com,2026-11-10:liquidity-proof</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#liquidity-proof"/>
+  <published>2026-11-10T00:00:00Z</published>
+  <updated>2026-11-10T00:00:00Z</updated>
+  <category term="Protect"/>
+  <content type="html">&lt;p&gt;&lt;a href=&quot;https://qhooks.com/lp-proof&quot;&gt;/lp-proof&lt;/a&gt; shows each launch’s liquidity held by its launch contract, with no way to remove it.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Elysium is live</title>
+  <id>tag:qhooks.com,2026-11-09:elysium-is-live</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#elysium-is-live"/>
+  <published>2026-11-09T00:00:00Z</published>
+  <updated>2026-11-09T00:00:00Z</updated>
+  <category term="Launch"/>
+  <content type="html">&lt;p&gt;One-tap launches on Elysium, paid in HYPE, with the same launch protections as our other chains.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>One-tap on Base, BNB and Arbitrum</title>
+  <id>tag:qhooks.com,2026-11-09:one-tap-on-base-bnb-and-arbitrum</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#one-tap-on-base-bnb-and-arbitrum"/>
+  <published>2026-11-09T00:00:00Z</published>
+  <updated>2026-11-09T00:00:00Z</updated>
+  <category term="Launch"/>
+  <content type="html">&lt;p&gt;Launch in one transaction on Base, BNB Chain and Arbitrum, alongside Robinhood Chain.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>QHooks Arb</title>
+  <id>tag:qhooks.com,2026-11-09:qhooks-arb</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#qhooks-arb"/>
+  <published>2026-11-09T00:00:00Z</published>
+  <updated>2026-11-09T00:00:00Z</updated>
+  <category term="Trade"/>
+  <content type="html">&lt;p&gt;When a launch trades at a different price on another pool on Robinhood Chain, anyone can close the gap from &lt;a href=&quot;https://qhooks.com/arb&quot;&gt;/arb&lt;/a&gt; and keep 85% of it; 15% buys and burns QHOOKS.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Relaunch your token</title>
+  <id>tag:qhooks.com,2026-11-09:relaunch-your-token</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#relaunch-your-token"/>
+  <published>2026-11-09T00:00:00Z</published>
+  <updated>2026-11-09T00:00:00Z</updated>
+  <category term="Launch"/>
+  <content type="html">&lt;p&gt;Move an existing token to a QHooks launch on Robinhood Chain, Base, Arbitrum or BNB Chain. Holders swap old for new at a fixed ratio; only the token’s own team can start one.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Post-quantum creator keys, on by default</title>
+  <id>tag:qhooks.com,2026-11-09:post-quantum-creator-keys</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#post-quantum-creator-keys"/>
+  <published>2026-11-09T00:00:00Z</published>
+  <updated>2026-11-09T00:00:00Z</updated>
+  <category term="Protect"/>
+  <content type="html">&lt;p&gt;New launches set a post-quantum key with the creator role, so changing where LP fees go needs your wallet and your quantum key. One tap turns it off.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Launch-week QHOOKS drop</title>
+  <id>tag:qhooks.com,2026-11-09:launch-week-qhooks-drop</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#launch-week-qhooks-drop"/>
+  <published>2026-11-09T00:00:00Z</published>
+  <updated>2026-11-09T00:00:00Z</updated>
+  <category term="Earn"/>
+  <content type="html">&lt;p&gt;1,000,000 QHOOKS for QHOOKS holders and stakers averaging 100K+ during launch week. The list publishes after the window closes on November 14, 00:00 UTC; claims open 24 hours later.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Verify your launch</title>
+  <id>tag:qhooks.com,2026-11-09:verify-your-launch</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#verify-your-launch"/>
+  <published>2026-11-09T00:00:00Z</published>
+  <updated>2026-11-09T00:00:00Z</updated>
+  <category term="Protect"/>
+  <content type="html">&lt;p&gt;Show traders a launch is yours: link your launch to your X account from &lt;a href=&quot;https://qhooks.com/verify&quot;&gt;/verify&lt;/a&gt;.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Your balances on every chain</title>
+  <id>tag:qhooks.com,2026-11-05:your-balances-on-every-chain</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#your-balances-on-every-chain"/>
+  <published>2026-11-05T00:00:00Z</published>
+  <updated>2026-11-05T00:00:00Z</updated>
+  <category term="Protect"/>
+  <content type="html">&lt;p&gt;The account menu shows a total and your native coin and dollar stablecoin on each chain, in dollars. Empty chains fold away, and tapping a chain switches your wallet to it.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>One-click trades with an email wallet</title>
+  <id>tag:qhooks.com,2026-11-05:one-click-trades-with-an-email-wallet</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#one-click-trades-with-an-email-wallet"/>
+  <published>2026-11-05T00:00:00Z</published>
+  <updated>2026-11-05T00:00:00Z</updated>
+  <category term="Trade"/>
+  <content type="html">&lt;p&gt;If you sign in with email or Google, pressing Buy or Sell is the confirmation: no extra wallet pop-ups. Trades above your limit ($50 unless you change it) ask once more inside the ticket, and you can switch back to confirming in a pop-up at any time.&lt;/p&gt;&lt;p&gt;A new account menu in the header shows your address, network and balance, with copy, explorer, portfolio, rewards and your launches in one place.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Every v4 hook, with the evidence</title>
+  <id>tag:qhooks.com,2026-11-05:every-v4-hook-with-the-evidence</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#every-v4-hook-with-the-evidence"/>
+  <published>2026-11-05T00:00:00Z</published>
+  <updated>2026-11-05T00:00:00Z</updated>
+  <category term="Discover"/>
+  <content type="html">&lt;p&gt;New: Discover. Browse Uniswap v4 hooks across chains on one board, see what each hook&amp;#x27;s permissions let it do, and open a live read of its code, owner and shared code.&lt;/p&gt;&lt;p&gt;The Hook Tape follows new pools and swaps on Base and Robinhood Chain from finalized blocks, and new hooks join the board as the Tape finds them.&lt;/p&gt;&lt;p&gt;Follow any hook on Telegram with /hook, or compare up to four hooks side by side.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Trade from Telegram</title>
+  <id>tag:qhooks.com,2026-11-05:trade-from-telegram</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#trade-from-telegram"/>
+  <published>2026-11-05T00:00:00Z</published>
+  <updated>2026-11-05T00:00:00Z</updated>
+  <category term="Trade"/>
+  <content type="html">&lt;p&gt;Paste any token address or chart link into @qhooks_bot to get a live card: price, market cap, liquidity, safety flags and your position.&lt;/p&gt;&lt;p&gt;Buy and sell buttons open the terminal inside Telegram with the trade filled in. Your own wallet confirms it; the bot never holds keys.&lt;/p&gt;&lt;p&gt;Positions, price and wallet alerts, per-chain buy amounts and slippage, and your referral link all live in the bot.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Holder engine launch style</title>
+  <id>tag:qhooks.com,2026-11-04:holder-engine-launch-style</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#holder-engine-launch-style"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Launch"/>
+  <content type="html">&lt;p&gt;A new launch style with a 2% trade tax: 0.75% buys the token back and burns it every 15 minutes, 0.25% goes to referrers, and 1% goes to the creator, a quarter of which is shared with stakers. Fair-launch guards run for the first 10 minutes.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>The terminal opens to a token feed</title>
+  <id>tag:qhooks.com,2026-11-04:the-terminal-opens-to-a-token-feed</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#the-terminal-opens-to-a-token-feed"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Trade"/>
+  <content type="html">&lt;p&gt;The terminal now opens on a live feed of tokens across Base, Ethereum, Arbitrum, BNB Chain, Robinhood Chain and Solana: trending, new pairs, top gainers and volume, with price moves, liquidity, market cap, buys and sells, and one-tap quick buy. QHooks launches come first once they are live.&lt;/p&gt;&lt;p&gt;Stablecoins and wrapped majors are left out of the feed, and a missing market cap shows a dash instead of $0.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Copy your wallet address anywhere</title>
+  <id>tag:qhooks.com,2026-11-04:copy-your-wallet-address-anywhere</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#copy-your-wallet-address-anywhere"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Protect"/>
+  <content type="html">&lt;p&gt;The wallet window on every page can copy your address or open it on the chain&amp;#x27;s explorer, whichever way you signed in.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Clearer copy and pricing</title>
+  <id>tag:qhooks.com,2026-11-04:clearer-copy-and-pricing</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#clearer-copy-and-pricing"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Site"/>
+  <content type="html">&lt;p&gt;Shorter, clearer wording across the site, easier-to-read menus, and a pricing table that shows the current launch fee of about $0.45.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>A pool fee that rises when the price runs</title>
+  <id>tag:qhooks.com,2026-11-04:a-pool-fee-that-rises-when-the-price-runs</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#a-pool-fee-that-rises-when-the-price-runs"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Build"/>
+  <content type="html">&lt;p&gt;New in the Lab: the Volatility Fee hook gives one pool an LP fee that follows the market. Quiet trading pays the base fee; a trade that follows a large move, like the back half of a sandwich or an arbitrage chasing a jump, pays more, up to a cap you set.&lt;/p&gt;&lt;p&gt;Every swap adds how far it moved the price to a movement score that fades with time, so the fee falls back on its own once the market calms. There is no owner and no key: nothing can be changed after deployment.&lt;/p&gt;&lt;p&gt;Build it for a local chain and download it, or deploy it to Base, Robinhood Chain, Ethereum, Arbitrum One or BNB Chain from the same page.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Every Lab hook can go to a public chain</title>
+  <id>tag:qhooks.com,2026-11-04:every-lab-hook-can-go-to-a-public-chain</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#every-lab-hook-can-go-to-a-public-chain"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Build"/>
+  <content type="html">&lt;p&gt;TWAP Oracle, Price Bands, Volume Epochs, Directional Fees, Circuit Recovery and Revenue Split now deploy from the Lab to Base, Robinhood Chain, Ethereum, Arbitrum One and BNB Chain, like Creator Revenue and Dynamic Fees: build for the chain, approve each transaction in your own wallet, and the Lab checks the deployed code against the build byte for byte.&lt;/p&gt;&lt;p&gt;Every policy change on a governed hook needs your wallet and your post-quantum key, the same two keys token launches use. Move a price band, open the next volume epoch, schedule new directional fees or resume a tripped circuit from the hook&amp;#x27;s share page.&lt;/p&gt;&lt;p&gt;Revenue Split pays two payees into two separate vaults; each withdraws their own share with their own wallet and their own post-quantum key, which payee 2 creates in their own browser.&lt;/p&gt;&lt;p&gt;The TWAP Oracle has no owner and no keys: deploy it, and any contract can read the pool&amp;#x27;s time-weighted price.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Know who made a token before you buy</title>
+  <id>tag:qhooks.com,2026-11-04:know-who-made-a-token-before-you-buy</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#know-who-made-a-token-before-you-buy"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Trade"/>
+  <content type="html">&lt;p&gt;Creators can link their X account to their launch: their wallet signs a short message and they post the code it gives them. Verified launches show the creator&amp;#x27;s handle on the token page, in the terminal list and on share cards.&lt;/p&gt;&lt;p&gt;A launch that reuses the ticker or name of an earlier verified launch is labelled as a copy and listed below the rest. Nothing is blocked; you can still buy and sell it.&lt;/p&gt;&lt;p&gt;Every token page now shows a pre-buy check from RepoProof next to the launch&amp;#x27;s own facts, read from its contracts: blocks switched on, what a buy and a sell pay right now, permanent liquidity, team tokens, creator keys and modules.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Creator profiles and a community hub</title>
+  <id>tag:qhooks.com,2026-11-04:creator-profiles-and-a-community-hub</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#creator-profiles-and-a-community-hub"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Grow"/>
+  <content type="html">&lt;p&gt;Every wallet that launched on QHooks has a public profile showing its launches, their pools and modules. A new Builders program page explains how to propose modules, launch blocks, hooks and tools, and a Community page gathers our X account, the Telegram bot, builder docs and how to install the app.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Public API and SDK for developers</title>
+  <id>tag:qhooks.com,2026-11-04:public-api-and-sdk-for-developers</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#public-api-and-sdk-for-developers"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Integrate"/>
+  <content type="html">&lt;p&gt;A read-only public API lists every launch, its pools, trades, holders and candles, and quotes a trade through the pool&amp;#x27;s own rules. A small JavaScript SDK builds swaps through Uniswap&amp;#x27;s Universal Router or the QHooks fee router. Routers and aggregators can see, per pool, when its launch rules allow outside routing.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>My QHooks and creator dashboards</title>
+  <id>tag:qhooks.com,2026-11-04:my-qhooks-and-creator-dashboards</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#my-qhooks-and-creator-dashboards"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Grow"/>
+  <content type="html">&lt;p&gt;One page for your wallet across every chain: the launches you created and the income waiting for them, your stakes, raffle entries, vesting streams, cashback and referral rewards, modules you built and your holdings, each with its claim button.&lt;/p&gt;&lt;p&gt;Each launch has a creator dashboard with its payouts, holders, traders and every tool its creator uses.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Deploy Lab hooks to public chains</title>
+  <id>tag:qhooks.com,2026-11-04:deploy-lab-hooks-to-public-chains</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#deploy-lab-hooks-to-public-chains"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Build"/>
+  <content type="html">&lt;p&gt;The Creator Revenue and Dynamic Fees templates now deploy from the Lab to Base, Robinhood Chain, Ethereum, Arbitrum One and BNB Chain, from your own wallet. The Lab checks the deployed code byte for byte against the build and gives you a share page anyone can re-check.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Vesting streams and a TWAP oracle template</title>
+  <id>tag:qhooks.com,2026-11-04:vesting-streams-and-a-twap-oracle-template</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#vesting-streams-and-a-twap-oracle-template"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Build"/>
+  <content type="html">&lt;p&gt;Any payee in a launch&amp;#x27;s revenue split can be paid over 30, 90 or 180 days or a year instead of at once. The stream pays only its beneficiary and anyone can push payouts.&lt;/p&gt;&lt;p&gt;The Lab has a new template: a TWAP price oracle hook for one pool.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Builder marketplace</title>
+  <id>tag:qhooks.com,2026-11-04:builder-marketplace</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#builder-marketplace"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Build"/>
+  <content type="html">&lt;p&gt;Outside builders can now write revenue modules that launches add to their revenue split, and earn up to 10% of what each module receives. QHooks reviews every module before it is offered in Studio. The first two are holder staking and a daily no-loss holder raffle.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>A new home page and navigation</title>
+  <id>tag:qhooks.com,2026-11-04:a-new-home-page-and-navigation</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#a-new-home-page-and-navigation"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Site"/>
+  <content type="html">&lt;p&gt;New navigation on every page, organised as Build, Launch, Trade, Grow, Protect and Integrate, and a new homepage that starts with launching a token on your own hooks.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Holder staking</title>
+  <id>tag:qhooks.com,2026-11-04:holder-staking</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#holder-staking"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Grow"/>
+  <content type="html">&lt;p&gt;A launch can share part of its income with holders who stake. Rewards stream over a day, and the terminal has a Staking tab to stake, unstake and claim.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Trade any token from the terminal</title>
+  <id>tag:qhooks.com,2026-11-04:trade-any-token-from-the-terminal</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#trade-any-token-from-the-terminal"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Trade"/>
+  <content type="html">&lt;p&gt;Search any token on Base, Ethereum, Arbitrum and BNB Chain, or on Solana, and trade it from the terminal. Outside tokens show a safety scan before you trade, and a high-risk result asks you to confirm.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Install QHooks, or open it in Telegram</title>
+  <id>tag:qhooks.com,2026-11-04:install-qhooks-or-open-it-in-telegram</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#install-qhooks-or-open-it-in-telegram"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Trade"/>
+  <content type="html">&lt;p&gt;Add QHooks to your phone&amp;#x27;s home screen like an app, or open the terminal inside Telegram from the QHooks bot.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Terminal rewards and polish</title>
+  <id>tag:qhooks.com,2026-11-04:terminal-rewards-and-polish</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#terminal-rewards-and-polish"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Trade"/>
+  <content type="html">&lt;p&gt;A Rewards button in the terminal shows the cashback and referral rewards you can claim on every chain. Token rows, charts for young launches, the stats bar and the trade ticket are cleaner, on desktop and on phones.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Lower launch fee</title>
+  <id>tag:qhooks.com,2026-11-04:lower-launch-fee</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#lower-launch-fee"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Launch"/>
+  <content type="html">&lt;p&gt;Launching a token now costs about 45 cents, paid in Studio.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Share links with preview cards</title>
+  <id>tag:qhooks.com,2026-11-04:share-links-with-preview-cards</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#share-links-with-preview-cards"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Launch"/>
+  <content type="html">&lt;p&gt;Every launch has a short share link that shows a preview card on X and in chat apps and opens the launch in the terminal.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Quick launch</title>
+  <id>tag:qhooks.com,2026-11-04:quick-launch</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#quick-launch"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Launch"/>
+  <content type="html">&lt;p&gt;Launch a token in a few steps: pick a chain and a style (fair launch, degen, community, burn engine or market hours), name it and confirm. Studio does the rest in order.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Community boards, profiles and calls</title>
+  <id>tag:qhooks.com,2026-11-04:community-boards-profiles-and-calls</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#community-boards-profiles-and-calls"/>
+  <published>2026-11-04T00:00:00Z</published>
+  <updated>2026-11-04T00:00:00Z</updated>
+  <category term="Community"/>
+  <content type="html">&lt;p&gt;Every listed launch has a board: creator announcements, replies and reactions, with badges for creators, early buyers, stakers and holders. Posting is free with a wallet signature.&lt;/p&gt;&lt;p&gt;Creators can ask for a minimum holding to post and can hide posts on their own board.&lt;/p&gt;&lt;p&gt;Profiles now work for any wallet: launches, holdings, badges, calls and posts.&lt;/p&gt;&lt;p&gt;Calls record the price when they are made and keep a public track record. Callers earn through their referral link.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Sign in with email, Google or any phone wallet</title>
+  <id>tag:qhooks.com,2026-11-03:sign-in-with-email-google-or-any-phone-wallet</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#sign-in-with-email-google-or-any-phone-wallet"/>
+  <published>2026-11-03T00:00:00Z</published>
+  <updated>2026-11-03T00:00:00Z</updated>
+  <category term="Protect"/>
+  <content type="html">&lt;p&gt;Connect with email or Google (no extension needed), MetaMask Mobile, any phone wallet through WalletConnect, or a browser wallet. The wallet window opens instantly and stays connected when a trade switches networks.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Telegram alerts</title>
+  <id>tag:qhooks.com,2026-11-03:telegram-alerts</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#telegram-alerts"/>
+  <published>2026-11-03T00:00:00Z</published>
+  <updated>2026-11-03T00:00:00Z</updated>
+  <category term="Trade"/>
+  <content type="html">&lt;p&gt;Follow a launch from its page and get Telegram alerts for its key events. The terminal also got a phone pass with a jump bar.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Creator key rotation and recovery</title>
+  <id>tag:qhooks.com,2026-11-03:creator-key-rotation-and-recovery</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#creator-key-rotation-and-recovery"/>
+  <published>2026-11-03T00:00:00Z</published>
+  <updated>2026-11-03T00:00:00Z</updated>
+  <category term="Protect"/>
+  <content type="html">&lt;p&gt;Creators can replace their keys, and recover from a lost wallet or a lost post-quantum key. A recovery takes 90 days and the other key can cancel it; every launch page shows when one is under way.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Liquidity is permanent</title>
+  <id>tag:qhooks.com,2026-11-03:liquidity-is-permanent</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#liquidity-is-permanent"/>
+  <published>2026-11-03T00:00:00Z</published>
+  <updated>2026-11-03T00:00:00Z</updated>
+  <category term="Launch"/>
+  <content type="html">&lt;p&gt;Launch liquidity can never be withdrawn, by anyone, and graduation moves all of it to the new pool at the current price. The platform&amp;#x27;s share of pool fees is paid inside every swap. Each launch page has a Launch terms card that reads these rules from its contracts.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Platform fees go to a multi-signature wallet</title>
+  <id>tag:qhooks.com,2026-11-03:platform-fees-go-to-a-multi-signature-wallet</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#platform-fees-go-to-a-multi-signature-wallet"/>
+  <published>2026-11-03T00:00:00Z</published>
+  <updated>2026-11-03T00:00:00Z</updated>
+  <category term="Protect"/>
+  <content type="html">&lt;p&gt;Every platform fee is paid to a QHooks multi-signature wallet that needs two signers to move funds.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Terminal fees with cashback</title>
+  <id>tag:qhooks.com,2026-11-03:terminal-fees-with-cashback</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#terminal-fees-with-cashback"/>
+  <published>2026-11-03T00:00:00Z</published>
+  <updated>2026-11-03T00:00:00Z</updated>
+  <category term="Trade"/>
+  <content type="html">&lt;p&gt;Terminal trades carry a 1% fee, and part of it comes back to you as cashback you can claim. Launching charges a small flat fee.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Take-profit, stop-loss and wallet tracking</title>
+  <id>tag:qhooks.com,2026-11-03:take-profit-stop-loss-and-wallet-tracking</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#take-profit-stop-loss-and-wallet-tracking"/>
+  <published>2026-11-03T00:00:00Z</published>
+  <updated>2026-11-03T00:00:00Z</updated>
+  <category term="Trade"/>
+  <content type="html">&lt;p&gt;Set take-profit and stop-loss orders on any launch, track wallets with alerts when they trade, copy a tracked wallet&amp;#x27;s buy in one click, and see each launch&amp;#x27;s top traders.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>The trading terminal</title>
+  <id>tag:qhooks.com,2026-11-03:the-trading-terminal</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#the-trading-terminal"/>
+  <published>2026-11-03T00:00:00Z</published>
+  <updated>2026-11-03T00:00:00Z</updated>
+  <category term="Trade"/>
+  <content type="html">&lt;p&gt;Every QHooks launch across our chains in one place: a live feed, candle charts, the trade tape, holders, your positions and a trade ticket that quotes through each pool and its rules. Keyboard shortcuts included.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Opening auctions, second pools and team tokens</title>
+  <id>tag:qhooks.com,2026-11-03:opening-auctions-second-pools-and-team-tokens</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#opening-auctions-second-pools-and-team-tokens"/>
+  <published>2026-11-03T00:00:00Z</published>
+  <updated>2026-11-03T00:00:00Z</updated>
+  <category term="Launch"/>
+  <content type="html">&lt;p&gt;A launch can open with a short auction where everyone gets the same price, add a token/ETH pool next to its main pool, and lock, burn or keep its team tokens right after launch.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Buy with ETH, limit orders and team locks</title>
+  <id>tag:qhooks.com,2026-11-03:buy-with-eth-limit-orders-and-team-locks</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#buy-with-eth-limit-orders-and-team-locks"/>
+  <published>2026-11-03T00:00:00Z</published>
+  <updated>2026-11-03T00:00:00Z</updated>
+  <category term="Trade"/>
+  <content type="html">&lt;p&gt;Buy any launch with ETH, place limit orders, and see team tokens locked on a public schedule with a sell notice before any of them can move.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Arc launches paused</title>
+  <id>tag:qhooks.com,2026-11-03:arc-launches-paused</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#arc-launches-paused"/>
+  <published>2026-11-03T00:00:00Z</published>
+  <updated>2026-11-03T00:00:00Z</updated>
+  <category term="Launch"/>
+  <content type="html">&lt;p&gt;Launching on Arc is paused until a live launch there proves pool funding works. The contracts still support it.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>Launch blocks</title>
+  <id>tag:qhooks.com,2026-11-02:launch-blocks</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#launch-blocks"/>
+  <published>2026-11-02T00:00:00Z</published>
+  <updated>2026-11-02T00:00:00Z</updated>
+  <category term="Build"/>
+  <content type="html">&lt;p&gt;Build a launch&amp;#x27;s rules from blocks: protection against bots and whales, fees that follow the market or the clock, creator income, burns, pots and referrals. Every trade&amp;#x27;s quote includes what the blocks charge.&lt;/p&gt;</content>
+ </entry>
+ <entry>
+  <title>A redesigned qhooks.com</title>
+  <id>tag:qhooks.com,2026-11-02:a-redesigned-qhooks-com</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#a-redesigned-qhooks-com"/>
+  <published>2026-11-02T00:00:00Z</published>
+  <updated>2026-11-02T00:00:00Z</updated>
+  <category term="Site"/>
+  <content type="html">&lt;p&gt;A new look across the site, and the Launch page now starts with choosing your chain.&lt;/p&gt;</content>
+ </entry>
+</feed>

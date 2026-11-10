@@ -1,0 +1,815 @@
+{
+ "version": 1,
+ "note": "Each QHooks launch contract adds a launch\u2019s tokens (the supply minus any creator reserve, at most 30%) to its Uniswap v4 pool as one position owned by the launch contract itself (PoolManager position key: owner = launch contract, salt 0). Its verified source has exactly two calls that modify that position: one adds liquidity at launch, one changes it by 0 to collect fees. No function decreases or withdraws liquidity, and the contract has no owner, admin, upgrade, delegatecall or selfdestruct.",
+ "versions": {
+  "4663:0x0236": {
+   "sourcePath": "src-l200/prototypes/simple-launch/src/QSimpleLaunch.sol",
+   "seedLine": 399,
+   "collectLine": 447,
+   "unlockLine": 367,
+   "functions": [
+    {
+     "name": "BOND_TICKS",
+     "sig": "BOND_TICKS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "BURN",
+     "sig": "BURN()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "COMMUNITY",
+     "sig": "COMMUNITY()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "DEFAULT_SNIPE",
+     "sig": "DEFAULT_SNIPE()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "DEGEN",
+     "sig": "DEGEN()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "FAIR",
+     "sig": "FAIR()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "FLYWHEEL_STYLE",
+     "sig": "FLYWHEEL_STYLE()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "HOURS",
+     "sig": "HOURS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "MAX_RESERVE_BPS",
+     "sig": "MAX_RESERVE_BPS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "NONE",
+     "sig": "NONE()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "REQUIRED_FLAGS",
+     "sig": "REQUIRED_FLAGS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "SUPPLY",
+     "sig": "SUPPLY()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "TICK_SPACING",
+     "sig": "TICK_SPACING()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "afterAddLiquidity",
+     "sig": "afterAddLiquidity(address,tuple,tuple,int256,int256,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "afterDonate",
+     "sig": "afterDonate(address,tuple,uint256,uint256,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "afterInitialize",
+     "sig": "afterInitialize(address,tuple,uint160,int24)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "afterRemoveLiquidity",
+     "sig": "afterRemoveLiquidity(address,tuple,tuple,int256,int256,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "afterSwap",
+     "sig": "afterSwap(address,tuple,tuple,int256,bytes)",
+     "write": true,
+     "effect": "Swap hook: charges and launch rules. No liquidity change."
+    },
+    {
+     "name": "beforeAddLiquidity",
+     "sig": "beforeAddLiquidity(address,tuple,tuple,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "beforeDonate",
+     "sig": "beforeDonate(address,tuple,uint256,uint256,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "beforeInitialize",
+     "sig": "beforeInitialize(address,tuple,uint160)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "beforeRemoveLiquidity",
+     "sig": "beforeRemoveLiquidity(address,tuple,tuple,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "beforeSwap",
+     "sig": "beforeSwap(address,tuple,tuple,bytes)",
+     "write": true,
+     "effect": "Swap hook: charges and launch rules. No liquidity change."
+    },
+    {
+     "name": "chain",
+     "sig": "chain()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "collect",
+     "sig": "collect(tuple)",
+     "write": true,
+     "effect": "Modifies the position by 0 to collect its LP fees, which go to the pool payout. Anyone can call it."
+    },
+    {
+     "name": "launch",
+     "sig": "launch(tuple)",
+     "write": true,
+     "effect": "Creates a token and adds its launch supply (everything except an optional creator reserve of at most 30%) as liquidity, once. The only liquidity increase."
+    },
+    {
+     "name": "launchOf",
+     "sig": "launchOf(bytes32)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "launches",
+     "sig": "launches()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "predictToken",
+     "sig": "predictToken(address,bytes32)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "preset",
+     "sig": "preset(uint8,uint32,address)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "progress",
+     "sig": "progress(bytes32)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "setCreator",
+     "sig": "setCreator(bytes32,address)",
+     "write": true,
+     "effect": "Creator role: hands the role on. No liquidity change."
+    },
+    {
+     "name": "setPayout",
+     "sig": "setPayout(bytes32,address)",
+     "write": true,
+     "effect": "Creator role: sets where LP fees go. No liquidity change."
+    },
+    {
+     "name": "sweep",
+     "sig": "sweep(address)",
+     "write": true,
+     "effect": "Pays protocol fees held here to the platform wallet. No liquidity change."
+    },
+    {
+     "name": "sweepNative",
+     "sig": "sweepNative()",
+     "write": true,
+     "effect": "Pays launch fees held here to the platform wallet. No liquidity change."
+    },
+    {
+     "name": "unlockCallback",
+     "sig": "unlockCallback(bytes)",
+     "write": true,
+     "effect": "Runs only for the PoolManager during this contract\u2019s own calls: the launch add, fee collection, or paying out protocol fees it holds. None reduces a position."
+    }
+   ]
+  },
+  "fb5a": {
+   "sourcePath": "src-l200/prototypes/simple-launch/src/QSimpleLaunch.sol",
+   "seedLine": 459,
+   "collectLine": 507,
+   "unlockLine": 427,
+   "functions": [
+    {
+     "name": "BOND_TICKS",
+     "sig": "BOND_TICKS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "BURN",
+     "sig": "BURN()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "COMMUNITY",
+     "sig": "COMMUNITY()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "DEFAULT_SNIPE",
+     "sig": "DEFAULT_SNIPE()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "DEGEN",
+     "sig": "DEGEN()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "FAIR",
+     "sig": "FAIR()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "FLYWHEEL_STYLE",
+     "sig": "FLYWHEEL_STYLE()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "HOURS",
+     "sig": "HOURS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "MAX_CAP_STEPS",
+     "sig": "MAX_CAP_STEPS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "MAX_RESERVE_BPS",
+     "sig": "MAX_RESERVE_BPS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "NONE",
+     "sig": "NONE()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "REQUIRED_FLAGS",
+     "sig": "REQUIRED_FLAGS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "SUPPLY",
+     "sig": "SUPPLY()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "TICK_SPACING",
+     "sig": "TICK_SPACING()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "afterAddLiquidity",
+     "sig": "afterAddLiquidity(address,tuple,tuple,int256,int256,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "afterDonate",
+     "sig": "afterDonate(address,tuple,uint256,uint256,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "afterInitialize",
+     "sig": "afterInitialize(address,tuple,uint160,int24)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "afterRemoveLiquidity",
+     "sig": "afterRemoveLiquidity(address,tuple,tuple,int256,int256,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "afterSwap",
+     "sig": "afterSwap(address,tuple,tuple,int256,bytes)",
+     "write": true,
+     "effect": "Swap hook: charges and launch rules. No liquidity change."
+    },
+    {
+     "name": "beforeAddLiquidity",
+     "sig": "beforeAddLiquidity(address,tuple,tuple,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "beforeDonate",
+     "sig": "beforeDonate(address,tuple,uint256,uint256,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "beforeInitialize",
+     "sig": "beforeInitialize(address,tuple,uint160)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "beforeRemoveLiquidity",
+     "sig": "beforeRemoveLiquidity(address,tuple,tuple,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "beforeSwap",
+     "sig": "beforeSwap(address,tuple,tuple,bytes)",
+     "write": true,
+     "effect": "Swap hook: charges and launch rules. No liquidity change."
+    },
+    {
+     "name": "chain",
+     "sig": "chain()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "collect",
+     "sig": "collect(tuple)",
+     "write": true,
+     "effect": "Modifies the position by 0 to collect its LP fees, which go to the pool payout. Anyone can call it."
+    },
+    {
+     "name": "launch",
+     "sig": "launch(tuple)",
+     "write": true,
+     "effect": "Creates a token and adds its launch supply (everything except an optional creator reserve of at most 30%) as liquidity, once. The only liquidity increase."
+    },
+    {
+     "name": "launchOf",
+     "sig": "launchOf(bytes32)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "launches",
+     "sig": "launches()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "predictToken",
+     "sig": "predictToken(address,bytes32)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "preset",
+     "sig": "preset(uint8,uint32,address)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "progress",
+     "sig": "progress(bytes32)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "setCreator",
+     "sig": "setCreator(bytes32,address)",
+     "write": true,
+     "effect": "Creator role: hands the role on. No liquidity change."
+    },
+    {
+     "name": "setPayout",
+     "sig": "setPayout(bytes32,address)",
+     "write": true,
+     "effect": "Creator role: sets where LP fees go. No liquidity change."
+    },
+    {
+     "name": "startAt",
+     "sig": "startAt(uint256)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "sweep",
+     "sig": "sweep(address)",
+     "write": true,
+     "effect": "Pays protocol fees held here to the platform wallet. No liquidity change."
+    },
+    {
+     "name": "sweepNative",
+     "sig": "sweepNative()",
+     "write": true,
+     "effect": "Pays launch fees held here to the platform wallet. No liquidity change."
+    },
+    {
+     "name": "unlockCallback",
+     "sig": "unlockCallback(bytes)",
+     "write": true,
+     "effect": "Runs only for the PoolManager during this contract\u2019s own calls: the launch add, fee collection, or paying out protocol fees it holds. None reduces a position."
+    }
+   ]
+  },
+  "34ac": {
+   "sourcePath": "src-l200/prototypes/simple-launch/src/QSimpleLaunch.sol",
+   "seedLine": 468,
+   "collectLine": 516,
+   "unlockLine": 436,
+   "functions": [
+    {
+     "name": "BOND_TICKS",
+     "sig": "BOND_TICKS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "BURN",
+     "sig": "BURN()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "COMMUNITY",
+     "sig": "COMMUNITY()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "DEFAULT_SNIPE",
+     "sig": "DEFAULT_SNIPE()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "DEGEN",
+     "sig": "DEGEN()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "FAIR",
+     "sig": "FAIR()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "FLYWHEEL_STYLE",
+     "sig": "FLYWHEEL_STYLE()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "HOURS",
+     "sig": "HOURS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "MAX_CAP_STEPS",
+     "sig": "MAX_CAP_STEPS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "MAX_RESERVE_BPS",
+     "sig": "MAX_RESERVE_BPS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "NONE",
+     "sig": "NONE()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "REQUIRED_FLAGS",
+     "sig": "REQUIRED_FLAGS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "SUPPLY",
+     "sig": "SUPPLY()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "TICK_SPACING",
+     "sig": "TICK_SPACING()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "afterAddLiquidity",
+     "sig": "afterAddLiquidity(address,tuple,tuple,int256,int256,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "afterDonate",
+     "sig": "afterDonate(address,tuple,uint256,uint256,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "afterInitialize",
+     "sig": "afterInitialize(address,tuple,uint160,int24)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "afterRemoveLiquidity",
+     "sig": "afterRemoveLiquidity(address,tuple,tuple,int256,int256,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "afterSwap",
+     "sig": "afterSwap(address,tuple,tuple,int256,bytes)",
+     "write": true,
+     "effect": "Swap hook: charges and launch rules. No liquidity change."
+    },
+    {
+     "name": "beforeAddLiquidity",
+     "sig": "beforeAddLiquidity(address,tuple,tuple,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "beforeDonate",
+     "sig": "beforeDonate(address,tuple,uint256,uint256,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "beforeInitialize",
+     "sig": "beforeInitialize(address,tuple,uint160)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "beforeRemoveLiquidity",
+     "sig": "beforeRemoveLiquidity(address,tuple,tuple,bytes)",
+     "write": false,
+     "effect": "Hook callback for other liquidity actions: not enabled (reverts). Read-only here."
+    },
+    {
+     "name": "beforeSwap",
+     "sig": "beforeSwap(address,tuple,tuple,bytes)",
+     "write": true,
+     "effect": "Swap hook: charges and launch rules. No liquidity change."
+    },
+    {
+     "name": "chain",
+     "sig": "chain()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "collect",
+     "sig": "collect(tuple)",
+     "write": true,
+     "effect": "Modifies the position by 0 to collect its LP fees, which go to the pool payout. Anyone can call it."
+    },
+    {
+     "name": "launch",
+     "sig": "launch(tuple)",
+     "write": true,
+     "effect": "Creates a token and adds its launch supply (everything except an optional creator reserve of at most 30%) as liquidity, once. The only liquidity increase."
+    },
+    {
+     "name": "launchOf",
+     "sig": "launchOf(bytes32)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "launches",
+     "sig": "launches()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "predictToken",
+     "sig": "predictToken(address,bytes32)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "preset",
+     "sig": "preset(uint8,uint32,address)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "progress",
+     "sig": "progress(bytes32)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "setCreator",
+     "sig": "setCreator(bytes32,address)",
+     "write": true,
+     "effect": "Creator role: hands the role on. No liquidity change."
+    },
+    {
+     "name": "setPayout",
+     "sig": "setPayout(bytes32,address)",
+     "write": true,
+     "effect": "Creator role: sets where LP fees go. No liquidity change."
+    },
+    {
+     "name": "startAt",
+     "sig": "startAt(uint256)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "sweep",
+     "sig": "sweep(address)",
+     "write": true,
+     "effect": "Pays protocol fees held here to the platform wallet. No liquidity change."
+    },
+    {
+     "name": "sweepNative",
+     "sig": "sweepNative()",
+     "write": true,
+     "effect": "Pays launch fees held here to the platform wallet. No liquidity change."
+    },
+    {
+     "name": "tokenParams",
+     "sig": "tokenParams()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "unlockCallback",
+     "sig": "unlockCallback(bytes)",
+     "write": true,
+     "effect": "Runs only for the PoolManager during this contract\u2019s own calls: the launch add, fee collection, or paying out protocol fees it holds. None reduces a position."
+    }
+   ]
+  }
+ },
+ "chains": {
+  "56": [
+   {
+    "address": "0xFB5a559886fCCbA6400cC52905ba3AA4658ba0CC",
+    "version": "fb5a",
+    "source": [
+     [
+      "Sourcify",
+      "https://repo.sourcify.dev/56/0xFB5a559886fCCbA6400cC52905ba3AA4658ba0CC"
+     ],
+     [
+      "BscScan",
+      "https://bscscan.com/address/0xFB5a559886fCCbA6400cC52905ba3AA4658ba0CC#code"
+     ]
+    ]
+   }
+  ],
+  "4663": [
+   {
+    "address": "0x023623568f41c032EC2f4bBa368DBAFC123160CC",
+    "version": "4663:0x0236",
+    "source": [
+     [
+      "Sourcify",
+      "https://repo.sourcify.dev/4663/0x023623568f41c032EC2f4bBa368DBAFC123160CC"
+     ],
+     [
+      "Blockscout",
+      "https://robinhoodchain.blockscout.com/address/0x023623568f41c032EC2f4bBa368DBAFC123160CC?tab=contract"
+     ]
+    ]
+   },
+   {
+    "address": "0xFB5a559886fCCbA6400cC52905ba3AA4658ba0CC",
+    "version": "fb5a",
+    "source": [
+     [
+      "Sourcify",
+      "https://repo.sourcify.dev/4663/0xFB5a559886fCCbA6400cC52905ba3AA4658ba0CC"
+     ],
+     [
+      "Blockscout",
+      "https://robinhoodchain.blockscout.com/address/0xFB5a559886fCCbA6400cC52905ba3AA4658ba0CC?tab=contract"
+     ]
+    ]
+   }
+  ],
+  "8453": [
+   {
+    "address": "0xFB5a559886fCCbA6400cC52905ba3AA4658ba0CC",
+    "version": "fb5a",
+    "source": [
+     [
+      "Sourcify",
+      "https://repo.sourcify.dev/8453/0xFB5a559886fCCbA6400cC52905ba3AA4658ba0CC"
+     ],
+     [
+      "Basescan",
+      "https://basescan.org/address/0xFB5a559886fCCbA6400cC52905ba3AA4658ba0CC#code"
+     ]
+    ]
+   },
+   {
+    "address": "0x34ac8C4E6CA3D5B70A5321b648D0Db9451C060Cc",
+    "version": "34ac",
+    "source": [
+     [
+      "Sourcify",
+      "https://repo.sourcify.dev/8453/0x34ac8C4E6CA3D5B70A5321b648D0Db9451C060Cc"
+     ],
+     [
+      "Basescan",
+      "https://basescan.org/address/0x34ac8C4E6CA3D5B70A5321b648D0Db9451C060Cc#code"
+     ]
+    ]
+   }
+  ],
+  "42161": [
+   {
+    "address": "0xFB5a559886fCCbA6400cC52905ba3AA4658ba0CC",
+    "version": "fb5a",
+    "source": [
+     [
+      "Sourcify",
+      "https://repo.sourcify.dev/42161/0xFB5a559886fCCbA6400cC52905ba3AA4658ba0CC"
+     ],
+     [
+      "Arbiscan",
+      "https://arbiscan.io/address/0xFB5a559886fCCbA6400cC52905ba3AA4658ba0CC#code"
+     ]
+    ]
+   }
+  ],
+  "99901": [
+   {
+    "address": "0x8223F9ce8998fB436fc32Bdf541CC34d668420Cc",
+    "version": "fb5a",
+    "note": "Same external functions as the verified 0xFB5a build, with the Elysium chain row.",
+    "source": [
+     [
+      "Elysium explorer",
+      "https://elysium.kinetiq.xyz/address/0x8223F9ce8998fB436fc32Bdf541CC34d668420Cc"
+     ]
+    ]
+   }
+  ]
+ }
+}

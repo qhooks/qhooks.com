@@ -3,7 +3,7 @@ import { chainById } from './chains.mjs';
 
 const ADDRESS = /^0x[0-9a-f]{40}$/i;
 const HASH = /^0x[0-9a-f]{64}$/i;
-const SUPPORTED = new Set([1, 8453, 42161, 56, 4663]);
+const SUPPORTED = new Set([1, 8453, 42161, 56, 4663, 99901]); // + Elysium (2026-11-09)
 const fail = (code, message, extra = {}) => Object.assign(new Error(message), { code, ...extra });
 const hex = n => '0x' + n.toString(16);
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -11,7 +11,7 @@ const same = (a, b) => typeof a === 'string' && typeof b === 'string' && a.toLow
 
 export function relayChainId(value) {
   const n = typeof value === 'number' || /^(?:[1-9]\d*|0x[0-9a-f]+)$/i.test(String(value)) ? Number(value) : NaN;
-  if (!SUPPORTED.has(n)) throw fail('unsupported_chain', 'Choose Base, Ethereum, Arbitrum, BNB Chain or Robinhood Chain.');
+  if (!SUPPORTED.has(n)) throw fail('unsupported_chain', 'Choose Base, Ethereum, Arbitrum, BNB Chain, Robinhood Chain or Elysium.');
   return n;
 }
 

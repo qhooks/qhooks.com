@@ -1,0 +1,29 @@
+{
+ "version": 1,
+ "chainId": "4663",
+ "token": "0x20429af7ca3b0ce4d99edbaa0693f26c5df05195",
+ "lock": "0x807390f11e52e8508636bac3c54b47b17a66dae3",
+ "runtimeSha256": "3bb092a95d1facd44c1291370c996de9ab623c19c39f55d9adbc60f0372e3bbe",
+ "fromBlock": 110500000,
+ "lockedTopic": "0xd15b6fc8773f8d5df574ed800605aaf51e9c5114414c9155c7cddae43d318425",
+ "sel": {
+  "lock": "0x998e4242",
+  "upgrade": "0x7dfe5b92",
+  "claimBase": "0xd33b604a",
+  "withdraw": "0x2e1a7d4d",
+  "locks": "0xf4dadc61",
+  "pending": "0xaf6e6238",
+  "bonusPerDay": "0xb3013eae",
+  "potHeld": "0x245a6c70",
+  "potRate": "0xd2f7c805",
+  "potFinish": "0xd66eedf1",
+  "totalLocked": "0x56891412",
+  "totalWeight": "0x96c82e57",
+  "staked": "0x98807d84",
+  "unstake": "0x2e17de78",
+  "balanceOf": "0x70a08231",
+  "allowance": "0xdd62ed3e",
+  "approve": "0x095ea7b3"
+ },
+ "vault": "0x6248098bfa019b9035a21722a86bdee3f6e9b934"
+}

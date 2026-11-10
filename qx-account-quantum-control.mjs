@@ -45,7 +45,7 @@ export function mountAccountQuantum(target,{hub,id='qc',mode='launch',getExpecte
   signIn.hidden=true;refresh.hidden=mode==='launch'||!s.wallet||s.needsSignIn;
   form.hidden=!s.wallet||s.ready||s.needsImport||!s.checked||!passphrasePath;
   if(mode==='account'&&!s.hasKey)form.hidden=true;
-  enrollPasskey.hidden=mode==='launch'||!s.canEnrollPasskey||!!s.passkeyVerified;unlockPasskey.hidden=mode==='launch'||!s.canUnlockPasskey||s.unlocked;
+  enrollPasskey.hidden=mode==='launch'||!s.canEnrollPasskey||!!s.passkeyVerified;unlockPasskey.hidden=!s.canUnlockPasskey||s.unlocked||s.ready;
   passkeyHelp.hidden=mode==='launch'||!s.passkeySupported;passkeyHelp.textContent=s.passkeyVerified?'Face ID / Touch ID is ready on this browser. Your passphrase remains available.':'Set up after unlocking with your passphrase. Your passphrase always works as a fallback.';
   again.label.hidden=!creating;password.input.autocomplete=creating?'new-password':'current-password';again.input.autocomplete='new-password';username.value=s.wallet||'';
   password.input.setAttribute('aria-invalid',String(failed));again.input.setAttribute('aria-invalid',String(failed&&creating));

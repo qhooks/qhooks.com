@@ -1,14 +1,16 @@
 // Discover's data contract and presentation helpers. No DOM, wallet calls or currency estimates.
 import {WINDOWS,DISCOVERY_TABS,lifecycle} from './qx-discovery-model.mjs';
 import { stockPair } from './full-launch/packages/multichain-launch/stock-pairs.mjs';
+import { chainById } from './chains.mjs';
+import { DIRECT_CHAINS } from './qx-elysium-direct.mjs';
 import {safetyChecked,plainMarketError} from './qx-terminal-data.mjs';
 import {officialLogo} from './qx-official.mjs';
 
 export const DASH = '—';
+// Chip order (Randall, 2026-11-09): "sol-rh-bnb-Elysium-eth-base-arb".
 export const CHAINS = [
-  ['all', 'All', null], ['solana', 'Solana', 'solana'], ['8453', 'Base', 'base'], ['1', 'Ethereum', 'ethereum'],
-  ['42161', 'Arbitrum', 'arbitrum'], ['56', 'BNB', 'bnb'],
-  ['4663', 'Robinhood', 'robinhood'],
+  ['all', 'All', null], ['solana', 'Solana', 'solana'], ['4663', 'Robinhood', 'robinhood'], ['56', 'BNB', 'bnb'],
+  ['99901', 'Elysium', 'elysium'], ['1', 'Ethereum', 'ethereum'], ['8453', 'Base', 'base'], ['42161', 'Arbitrum', 'arbitrum'],
 ];
 export const TABS = DISCOVERY_TABS;
 export function feedSourceLabel(source){
@@ -90,19 +92,24 @@ export function safetyLabel(safety) {
 // its launch-native routing check falls back to the dollar quote on BNB and Solana.
 export function externalQuick(chainId, address, quick = {}) {
   const chain = String(chainId);
-  const cls = ['8453', '1', '42161', '4663'].includes(chain) ? 'eth' : 'usd';
-  const unit = cls === 'eth' ? 'ETH' : chain === '56' ? 'USDT' : 'USDC';
+  // HYPE chains (Elysium): pools quote in (W)HYPE, so quick buy is in HYPE like the ticket's own presets (2026-11-09).
+  const cls = ['8453', '1', '42161', '4663'].includes(chain) ? 'eth' : chainById(chain)?.native === 'HYPE' ? 'hype' : 'usd';
+  const unit = cls === 'eth' ? 'ETH' : cls === 'hype' ? 'HYPE' : chain === '56' ? 'USDT' : 'USDC';
   return {
-    cls, unit, value: String(quick[cls] ?? (cls === 'eth' ? '0.01' : '10')),
+    cls, unit, value: String(quick[cls] ?? (cls === 'eth' ? '0.01' : cls === 'hype' ? '0.1' : '10')),
     stock: !!stockPair(chain, address),
-      supported: CHAINS.some(([id]) => id !== 'all' && id === chain),
+      // Outside tokens buy through 0x; a chain without it (Elysium) has no proven route, so no quick buy there (2026-11-09).
+      // Elysium outside tokens go through the direct pool route (qx-elysium-direct.mjs); a token without an allowed pool gets
+      // the ticket's "coming" message and nothing is sent.
+      supported: CHAINS.some(([id]) => id !== 'all' && id === chain) && (chainById(chain)?.data?.zeroEx !== false || DIRECT_CHAINS.includes(chain)),
   };
 }
 
 export function launchQuick(market, quick = {}) {
-  const cls = /^W?ETH$/.test(market.quoteSymbol || '') ? 'eth' : /^W?BNB$/.test(market.quoteSymbol || '') ? 'bnb' : 'usd';
-  return { cls, value: String(quick[cls] ?? ({ eth: '0.01', bnb: '0.05', usd: '10' })[cls]),
-    unit: cls === 'eth' ? 'ETH' : cls === 'bnb' ? 'BNB' : market.quoteSymbol || 'USDC',
+  const q = market.quoteSymbol || chainById(market.chainId)?.quote?.symbol || '';
+  const cls = /^W?ETH$/.test(q) ? 'eth' : /^W?BNB$/.test(q) ? 'bnb' : /^W?HYPE$/.test(q) ? 'hype' : 'usd';
+  return { cls, value: String(quick[cls] ?? ({ eth: '0.01', bnb: '0.05', usd: '10', hype: '0.1' })[cls]),
+    unit: cls === 'eth' ? 'ETH' : cls === 'bnb' ? 'BNB' : cls === 'hype' ? 'HYPE' : market.quoteSymbol || 'USDC',
     stock: !!stockPair(String(market.chainId), market.token), supported: true };
 }
 
@@ -182,7 +189,8 @@ export function preferences(storage) {
   let sort;
   try { sort = JSON.parse(read('sort')); } catch {}
   return {
-    tab: ['launches', ...TABS.map(([id]) => id)].includes(read('tab')) ? read('tab') : 'trending',
+    // First open: Gainers (Randall, 2026-11-09: "auto open to top gainers 6h"); a saved choice wins.
+    tab: ['launches', ...TABS.map(([id]) => id)].includes(read('tab')) ? read('tab') : 'gainers',
     chain: CHAINS.some(([id]) => id === read('chain')) ? read('chain') : 'all',
     sort: SORT_KEYS.includes(sort?.key) ? { key: sort.key, direction: sort.direction === 'asc' ? 'asc' : 'desc' } : { key: null, direction: 'desc' },
   };
@@ -195,30 +203,98 @@ export function savePreference(storage, key, value) {
 export const hasTokenHash = hash => /^#(?:t|m|pool)=/.test(hash || '');
 
 // One in-flight request per selection. A late response must never replace a newer tab's rows.
-export function createFeedLoader({ fetcher, changed, timeout = 12000 }) {
+// The server list and the visitor's own browser read (qx-browser-market.mjs) race: the browser read starts once the
+// server has not answered with a full, current list within browserDelay (or at once when the server fails), and
+// whichever answers first paints. Server rows stay first once both are in (dedupe by chain + token). The last good
+// list per view is kept on the device, so a reload paints it at once and a failed refresh keeps it ("Refreshing…").
+export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTimeout = 12000, browserDelay = 2500, browser = null, storage = null, minRows = 12, cacheRead = null, cacheWrite = null }) {
   let generation = 0, active = null;
   const cache = new Map();
   function cancel() { generation++; active?.abort(); active = null; }
+  const usable = rows => (Array.isArray(rows) ? rows : []).filter(r => r && r.token && typeof r.token.address === 'string' && CHAINS.some(([id]) => id !== 'all' && id === String(r.chainId)));
+  const full = data => !!data && data.rows.length >= minRows && data.stale !== true;
+  // The server's discovery feed has no Elysium list (400 invalid_query, polled every 30 s): read it in the browser only.
+  const SERVER_SKIP = new Set(['99901']);
+  // Gainers/Losers rank the whole received set by the window's move; dust (under $10k liquidity or 24 h volume) can't top it.
+  const FLOOR = 10000;
+  const MOVERS = ['gainers', 'losers'];
+  function rankRows(rows, tab, window) {
+    const move = r => { const v = r.change?.[window]; return typeof v === 'number' && Number.isFinite(v) ? v : null; };
+    const ok = r => !r.launch ? (Number(r.liquidityUsd) >= FLOOR && Number(r.volumeUsd?.h24) >= FLOOR) : true;
+    return rows.filter(r => move(r) !== null && (tab === 'gainers' ? move(r) > 0 : move(r) < 0) && ok(r))
+      .sort((a, b) => tab === 'gainers' ? move(b) - move(a) : move(a) - move(b));
+  }
+  function ranked(data, tab, window) {
+    if (!data || !MOVERS.includes(tab)) return data;
+    const rows = rankRows(data.rows, tab, window);
+    return rows.length ? { ...data, rows } : data;
+  }
+  async function serverRead(tab, chain, window, parent) {
+    if (SERVER_SKIP.has(String(chain))) return null;
+    const controller = new AbortController(), abort = () => controller.abort(), timer = setTimeout(abort, serverTimeout);
+    parent.addEventListener('abort', abort, { once: true });
+    try {
+      const response = await fetcher('/api/terminal/market/feed?' + new URLSearchParams({ tab, chain,window }), { cache: 'no-store', signal: controller.signal });
+      const body = await response.json();
+      if (!response.ok || body?.version !== 1 || !Array.isArray(body.rows)) return null;
+      return { ...body, rows: usable(body.rows) };
+    } catch { return null; } finally { clearTimeout(timer); parent.removeEventListener('abort', abort); }
+  }
+  function merged(server, own, tab, chain, window) {
+    const extra = usable(own?.rows);
+    if (!extra.length) return server?.rows.length ? server : null;
+    const seen = new Set(), rows = [];
+    for (const r of [...(server?.rows || []), ...extra]) { const k = String(r.chainId) + ':' + (String(r.chainId) === 'solana' ? r.token.address : r.token.address.toLowerCase()); if (!seen.has(k)) { seen.add(k); rows.push(r); } }
+    const serverFresh = server && server.rows.length && server.stale !== true;
+    return { version: 1, ...(server || {}), tab, chain, window, rows, browser: true, status: undefined, error: undefined, fallback: undefined,
+      source: [server?.rows.length ? feedSourceLabel(server.source) : null, ...String(own.source || '').split(' · ')].filter((v, i, all) => v && !all.slice(0, i).some(p => p && p.includes(v))).join(' · ') || null,
+      observedAt: serverFresh ? server.observedAt : own.observedAt, stale: serverFresh ? !!server.stale : false };
+  }
   async function load(tab, chain,window='h24') {
     cancel();
     const mine = generation, key = tab + ':' + chain + ':' + window, controller = new AbortController();
     active = controller;
-    changed({ key, loading: true, data: cache.get(key) || null, error: null });
+    const retained = cache.get(key) || cacheRead?.(storage, key) || null;
+    changed({ key, loading: true, data: retained, error: null });
     const timer = setTimeout(() => controller.abort(), timeout);
+    let server = null, serverDone = false, own = null, ownRun = null, early;
+    const live = () => mine === generation;
+    const paintPartial = () => { const data = ranked(merged(server, own, tab, chain, window), tab, window); if (live() && data?.rows.length) changed({ key, loading: true, data, error: null }); };
+    const startOwn = () => {
+      if (!browser) return Promise.resolve();
+      return ownRun ||= browser({ tab, chain, window, signal: controller.signal, onPartial: d => { if (!own) { own = d; paintPartial(); own = null; } } }).catch(() => null).then(d => { own = d; if (!serverDone) paintPartial(); });
+    };
     try {
-      const response = await fetcher('/api/terminal/market/feed?' + new URLSearchParams({ tab, chain,window }), { cache: 'no-store', signal: controller.signal });
-      const body = await response.json();
-      if (!response.ok || body?.version !== 1 || !Array.isArray(body.rows)) throw new Error(plainMarketError());
-      const data = { ...body, rows: body.rows.filter(r => r && r.token && typeof r.token.address === 'string' && CHAINS.some(([id]) => id !== 'all' && id === String(r.chainId))) };
-      if (mine !== generation) return;
-      cache.set(key, data);
+      if (browser) early = setTimeout(() => { if (!serverDone) void startOwn(); }, browserDelay);
+      server = await serverRead(tab, chain, window, controller.signal); serverDone = true;
+      if (!live()) return;
+      // Movers count as full only when enough rows survive the ranking (the server's All list is mostly unranked boosts).
+      const enough = d => full(d) && (!MOVERS.includes(tab) || rankRows(d.rows, tab, window).length >= minRows);
+      if (browser && !enough(server)) {
+        // Paint whatever the server had while the browser read finishes.
+        if (server?.rows.length) paintPartial();
+        await startOwn();
+        if (!live()) return;
+      }
+      let data = ranked(enough(server) ? server : merged(server, own, tab, chain, window), tab, window);
+      // A provider limit can make one refresh much thinner than the last good list: keep those rows behind the new ones
+      // and say "Refreshing…" (stale) until a full read lands, instead of shrinking the list on screen.
+      if (data?.rows.length && retained?.rows?.length && data.rows.length < retained.rows.length / 2) {
+        const seen = new Set(data.rows.map(r => String(r.chainId) + ':' + String(r.token.address).toLowerCase()));
+        data = { ...data, rows: [...data.rows, ...retained.rows.filter(r => r?.token?.address && !seen.has(String(r.chainId) + ':' + String(r.token.address).toLowerCase()))], stale: true };
+      }
+      if (!data?.rows.length) {
+        if (retained?.rows?.length) { changed({ key, loading: false, data: { ...retained, stale: true }, error: null }); return; }
+        throw new Error(plainMarketError());
+      }
+      cache.set(key, data); cacheWrite?.(storage, key, data);
       changed({ key, loading: false, data, error: null });
     } catch (error) {
-      if (mine !== generation) return;
-      changed({ key, loading: false, data: cache.get(key) || null, error: error.name === 'AbortError' ? 'Feed request timed out. Try again.' : plainMarketError() });
+      if (!live()) return;
+      changed({ key, loading: false, data: retained, error: error.name === 'AbortError' ? 'Feed request timed out. Try again.' : plainMarketError() });
     } finally {
-      clearTimeout(timer);
-      if (mine === generation) active = null;
+      clearTimeout(timer); clearTimeout(early);
+      if (live()) active = null;
     }
   }
   return { load, cancel };

@@ -1,11 +1,14 @@
 // Scanner flag explained (Randall, 2026-11-08: "Caution flag explanation sure").
 // GoPlus reports "Owner can change balances" (owner_change_balance=1) for Simple launches because the token's one-time
 // setup minted the supply. The flag stays visible exactly as the scanner returns it; this only adds one plain line under
-// it, and only when the token's runtime code on chain is the EIP-1167 clone of QSimpleToken. Code is checked, never a list,
+// it, and only when the token's runtime code on chain is the EIP-1167 clone of QSimpleToken or the clean QSimpleToken2. Code is checked, never a list,
 // so every Simple launch is covered and an impostor never is.
 import {chainById} from '/chains.mjs';
 const IMPL = 'db3b3544d95cf445e869bf3bb9a2d1dfb1d7007f';
 export const CLONE_CODE = '0x363d3d373d3d3d363d73' + IMPL + '5af43d82803e903d91602b57fd5bf3';
+// QSimpleToken2 runtime (clean-token launch contract 0x34ac…60cc / Elysium 0xc7fa…a0cc): keccak 0x5d2fef37…de9813, 1,471 bytes.
+export const CLEAN_TOKEN_SHA256 = 'ef949d36d2ec6051b5f561cb3249e77b350ba6075f68d8e6b714e4a4480988ee', CLEAN_TOKEN_BYTES = 1471;
+const sha256Hex = async hex => { const b = Uint8Array.from((hex.slice(2).match(/../g) || []).map(x => parseInt(x, 16))); return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', b)), x => x.toString(16).padStart(2, '0')).join(''); };
 const FLAG = /owner can change balances/i;
 export const NOTE = 'Scanner flag explained: the one-time setup that created the supply at launch can’t run again. No owner, mint, pause or blacklist.';
 const verdicts = new Map();
@@ -23,7 +26,11 @@ export async function isSimpleClone(chainId, token, {fetchImpl = (...a) => fetch
     const r = await fetchImpl(url, {method: 'POST', headers: {'content-type': 'application/json'},
       body: JSON.stringify({jsonrpc: '2.0', id: 1, method: 'eth_getCode', params: [token, 'latest']})});
     const j = await r.json();
-    return typeof j?.result === 'string' && j.result.toLowerCase() === CLONE_CODE;
+    if (typeof j?.result !== 'string') return false;
+    const code = j.result.toLowerCase();
+    if (code === CLONE_CODE) return true;
+    // The clean-token generation (QSimpleToken2, a full ERC-20 per launch): same code for every token, no immutables.
+    return code.length === 2 + 2 * CLEAN_TOKEN_BYTES && await sha256Hex(code) === CLEAN_TOKEN_SHA256;
   })().catch(() => { verdicts.delete(key); return false; }));
   return verdicts.get(key);
 }

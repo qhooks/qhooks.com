@@ -2,6 +2,9 @@ import {WINDOWS,filterDiscovery,createMarketViews,validateDiscoveryFilters} from
 import {plainMarketError} from './qx-terminal-data.mjs';
 import {fetchDexPairs,pickPair,rowPatch,applyRowPatch,DEX_CHAINS} from './qx-dex-live.mjs';
 import {renderFeedFeedback} from './qx-terminal-feed-presentation.mjs';
+import {browserFeed,browserSearch,readCachedFeed,writeCachedFeed} from './qx-browser-market.mjs';
+import {applyTokenQuery} from './qx-tg-prefill.mjs';
+globalThis.__qxTokenQuery = globalThis.__qxTokenQuery || applyTokenQuery();
 import {
   CHAINS, TABS, SORT_KEYS, DASH, rowViewModel, sortRows, launchRow, searchRow,
   preferences, savePreference, hasTokenHash, createFeedLoader, age,
@@ -20,7 +23,7 @@ try { storage = window.localStorage; } catch {}
 const prefs = preferences(storage);
 const state = { ...prefs, tab: prefs.tab === 'launches' ? 'trending' : prefs.tab, markets: [], data: null,
   loading: false, error: null, query: '', hits: [], searching: false, searchError: null };
-let savedWindow;try{savedWindow=storage?.getItem('qxt:discover:window');}catch{}state.window=WINDOWS.some(([k])=>k===savedWindow)?savedWindow:'h24';state.filters=validateDiscoveryFilters();
+let savedWindow;try{savedWindow=storage?.getItem('qxt:discover:window');}catch{}state.window=WINDOWS.some(([k])=>k===savedWindow)?savedWindow:'h6'; /* first open: 6h (Randall, 2026-11-09) */state.filters=validateDiscoveryFilters();
 if(WINDOWS.some(([key])=>key===state.sort.key)){state.window=state.sort.key;state.sort={...state.sort,key:'move'};savePreference(storage,'window',state.window);savePreference(storage,'sort',state.sort);}
 const savedViews=createMarketViews(storage);
 let wantedLaunch = prefs.tab === 'launches', api = null, quickRow = null, quickHome = null;
@@ -103,7 +106,18 @@ main.prepend(root);
 const back = button('← Tokens', { class: 'qxfd-back', 'aria-label': 'Back to tokens' });
 document.getElementById('qxt-head').prepend(back);
 
-const availableTabs = () => state.markets.some(m => m.live) ? [['launches', 'QHooks launches'], ...TABS] : TABS;
+// QHooks launches on every chain, read by Discover itself: the rail's list (state.markets) follows the rail's own chain,
+// so the tab showed one chain's launches, or none (2026-11-10). Falls back to the rail list until this answers.
+let allLaunches = null;
+async function loadLaunches() {
+  try {
+    const r = await fetch('/api/terminal/feed?chain=all', { cache: 'no-store' });
+    const j = r.ok ? await r.json() : null;
+    if (Array.isArray(j?.markets)) { allLaunches = j.markets; renderTabs(); renderRows(); setTimeout(() => { void refreshLiveRows(); }, 500); }
+  } catch {}
+}
+const launchMarkets = () => allLaunches || state.markets;
+const availableTabs = () => launchMarkets().some(m => m.live) ? [['launches', 'QHooks launches'], ...TABS] : TABS;
 function renderTabs() {
   const active = document.activeElement?.dataset.tab;
   tabs.replaceChildren(...availableTabs().map(([id, label]) => button(label, {
@@ -140,9 +154,12 @@ sortSelect.addEventListener('change', () => {
 });
 
 function visibleRows() {
-  const launches = state.markets.filter(m => m.live).map(launchRow);
+  const seenLaunch = new Set(), launches = launchMarkets().filter(m => m.live && !seenLaunch.has(m.chainId + ':' + m.controller) && seenLaunch.add(m.chainId + ':' + m.controller)).map(launchRow).map(r => { const p = livePatches.get(launchKey(r)); return p && Date.now() - p.observedAt < 120000 && r.priceUsd == null ? applyRowPatch(r, p) : r; });
   let rows = state.tab === 'launches' ? launches : state.data?.rows || [];
   const q = state.query.toLowerCase();
+  // The tab's own filter (Gainers needs a positive move in the chosen window, etc.) applies to the list, never to search
+  // hits: a hit carries only a 24 h change, so on Gainers 6h every pasted contract read "No tokens match" (2026-11-10).
+  rows = filterDiscovery(rows,{tab:state.tab,window:state.window,filters:state.filters});
   if (q) {
     rows = [...rows, ...launches].filter(r => [r.token?.symbol, r.token?.name, r.token?.address, r.launch?.controller]
       .some(value => typeof value === 'string' && value.toLowerCase().includes(q)));
@@ -154,7 +171,6 @@ function visibleRows() {
       seen.add(key); return true;
     });
   }
-  rows=filterDiscovery(rows,{tab:state.tab,window:state.window,filters:state.filters});
   return sortRows(rows.filter(r => state.chain === 'all' || String(r.chainId) === state.chain)
     .map(r => rowViewModel(r, { quick: api?.state.quick || {},window:state.window })), state.sort);
 }
@@ -225,7 +241,7 @@ function updateRow(node, vm) {
   text(node.buy, label);
   node.buy.setAttribute('aria-label', vm.quick.supported ? `Buy ${vm.symbol} with ${vm.quick.value} ${vm.quick.unit}` : `Open ${vm.symbol} in the trade ticket; quick buy is unavailable`);
   node.buy.title = vm.quick.supported ? `Buy ${vm.symbol} with ${vm.quick.value} ${vm.quick.unit}` : 'Open the trade ticket; quick buy is unavailable for this token';
-  node.buy.hidden = vm.quick.stock;
+  node.buy.hidden = vm.quick.stock || !vm.quick.supported; // no button where quick buy can't run (outside Elysium tokens)
   node.blocked.hidden = !vm.quick.stock;
   const p = vm.numeric.price ?? vm.row.quoteAmounts?.price;
   const before = old?.numeric.price ?? old?.row.quoteAmounts?.price;
@@ -275,6 +291,7 @@ function renderRows() {
 
 // Live rows: the visitor's browser refreshes the on-screen rows from DexScreener every 30 s (30 per call, per chain).
 // A server reload keeps any newer live numbers instead of going back to an older copy.
+const launchKey = r => 'launch:' + r.chainId + ':' + String(r.token?.address || '').toLowerCase();
 const livePatches = new Map(), rowKey = r => r.chainId + ':' + (r.chainId === 'solana' ? r.pool : String(r.pool || '').toLowerCase());
 function withLive(rows) {
   if (!Array.isArray(rows)) return rows;
@@ -282,27 +299,29 @@ function withLive(rows) {
 }
 let liveRowsBusy = false;
 async function refreshLiveRows() {
-  if (liveRowsBusy || document.hidden || root.hidden || state.tab === 'launches' || !state.data?.rows?.length) return;
+  if (liveRowsBusy || document.hidden || root.hidden || (state.tab !== 'launches' && !state.data?.rows?.length)) return;
   liveRowsBusy = true;
   try {
-    const shown = visibleRows().map(v => v?.row || v).filter(r => !r.launch && DEX_CHAINS[r.chainId] && r.token?.address).slice(0, 60), byChain = new Map();
+    const shown = visibleRows().map(v => v?.row || v).filter(r => (!r.launch || r.priceUsd == null) && DEX_CHAINS[r.chainId] && r.token?.address).slice(0, 60), byChain = new Map();
     for (const r of shown) { const list = byChain.get(r.chainId) || []; if (list.length < 30) list.push(r); byChain.set(r.chainId, list); }
     let changed = false;
     for (const [chainId, rows] of byChain) {
       const pairs = await fetchDexPairs(chainId, rows.map(r => r.token.address)); if (!pairs) continue;
-      for (const r of rows) { const patch = rowPatch(pickPair(pairs, chainId, r.token.address, r.pool)); if (patch) { livePatches.set(rowKey(r), patch); changed = true; } }
+      for (const r of rows) { const patch = rowPatch(pickPair(pairs, chainId, r.token.address, r.launch ? null : r.pool)); if (patch) { livePatches.set(r.launch ? launchKey(r) : rowKey(r), patch); changed = true; } }
     }
-    if (changed && state.data?.rows) { state.data = { ...state.data, rows: withLive(state.data.rows) }; renderRows(); }
+    if (changed && state.data?.rows) state.data = { ...state.data, rows: withLive(state.data.rows) };
+    if (changed) renderRows();
   } finally { liveRowsBusy = false; }
 }
 setInterval(() => { void refreshLiveRows(); }, 30000);
-const loader = createFeedLoader({ fetcher: (...args) => fetch(...args), changed: update => {
+const loader = createFeedLoader({ fetcher: (...args) => fetch(...args), timeout: 25000, serverTimeout: 12000, browserDelay: 1500, storage, browser: opts => browserFeed(opts), cacheRead: readCachedFeed, cacheWrite: writeCachedFeed, changed: update => {
   if (update?.data?.rows) update = { ...update, data: { ...update.data, rows: withLive(update.data.rows) } };
   Object.assign(state, update); renderRows();
   if (!livePatches.size && update?.data?.rows?.length) setTimeout(() => { void refreshLiveRows(); }, 1500);
 } });
 function refresh() {
-  if (document.hidden) return;
+  // Only while the token list is on screen: a token page must not keep reading list providers in the background.
+  if (document.hidden || root.hidden) return;
   if (state.tab === 'launches') { state.loading = false; state.data = null; state.error = null; renderRows(); }
   else loader.load(state.tab, state.chain,state.window);updateWindow();
 }
@@ -315,6 +334,7 @@ function setTab(tab) {
   savePreference(storage, 'tab', tab);
   scroll.scrollTop = 0;
   renderTabs(); refresh();
+  if (tab === 'launches') setTimeout(() => { void refreshLiveRows(); }, 300); // launch rows without server stats get live numbers now
 }
 tabs.addEventListener('click', event => setTab(event.target.closest('[data-tab]')?.dataset.tab));
 tabs.addEventListener('keydown', event => {
@@ -341,9 +361,18 @@ retry.addEventListener('click', () => { refresh(); if (state.query.length >= 2) 
 
 // Keep the original search field. Discover owns its input only while visible; the token desk keeps
 // its existing search handler. Results use the terminal's existing read-only search endpoint.
+// A complete pasted contract opens that token (2026-11-10: an Elysium token outside the feed read "No tokens match").
+// With one chain chosen it opens at once; on All it opens when the search finds it on exactly one chain.
+const PASTED_EVM = /^0x[0-9a-fA-F]{40}$/;
+function openPasted(chainId, address) {
+  const hash = '#t=' + chainId + ':' + (chainId === 'solana' ? address : address.toLowerCase());
+  if (location.hash === hash) return;
+  location.hash = hash;
+}
 function scheduleSearch() {
   clearTimeout(searchTimer); searchController?.abort(); searchGeneration++;
   state.query = search.value.trim(); state.hits = []; state.searchError = null;
+  if (PASTED_EVM.test(state.query) && state.chain !== 'all' && state.chain !== 'solana') { const a = state.query; search.value = ''; state.query = ''; state.searching = false; renderRows(); openPasted(state.chain, a); return; }
   state.searching = state.query.length >= 2;
   renderRows();
   if (state.searching && !document.hidden) searchTimer = setTimeout(runSearch, 350);
@@ -356,11 +385,21 @@ async function runSearch() {
   state.searching = true; renderRows();
   const ceiling = setTimeout(() => controller.abort(), 12000);
   try {
-    const response = await fetch('/api/terminal/x/search?' + new URLSearchParams({ q: state.query, ...(state.chain === 'all' ? {} : { chain: state.chain }) }), { cache: 'no-store', signal: controller.signal });
-    const body = await response.json();
-    if (!response.ok) throw new Error(plainMarketError());
+    // Server search first; when it fails or finds nothing, the browser searches the providers itself.
+    let results = [];
+    try {
+      const response = await fetch('/api/terminal/x/search?' + new URLSearchParams({ q: state.query, ...(state.chain === 'all' ? {} : { chain: state.chain }) }), { cache: 'no-store', signal: controller.signal });
+      const body = response.ok ? await response.json() : null;
+      results = Array.isArray(body?.results) ? body.results : [];
+    } catch (error) { if (controller.signal.aborted) throw error; }
     if (mine !== searchGeneration) return;
-    state.hits = (Array.isArray(body.results) ? body.results : []).filter(hit => typeof hit?.address === 'string' && CHAINS.some(([id]) => id !== 'all' && id === String(hit.chainId)));
+    if (!results.length) results = await browserSearch({ q: state.query, chain: state.chain, signal: controller.signal });
+    if (mine !== searchGeneration) return;
+    state.hits = results.filter(hit => typeof hit?.address === 'string' && CHAINS.some(([id]) => id !== 'all' && id === String(hit.chainId)));
+    if (PASTED_EVM.test(state.query)) {
+      const exact = state.hits.filter(hit => hit.address.toLowerCase() === state.query.toLowerCase()), chains = [...new Set(exact.map(hit => String(hit.chainId)))];
+      if (chains.length === 1) { const a = state.query; search.value = ''; state.query = ''; state.hits = []; openPasted(chains[0], a); }
+    }
     state.searchError = null;
   } catch (error) {
     if (mine !== searchGeneration) return;
@@ -378,6 +417,7 @@ search.addEventListener('input', event => {
 function showTokens({ restore = true, clearHash = true } = {}) {
   root.hidden = false;
   document.body.classList.add('qxt-discover-mode');
+  refresh();
   if (quickRow) quickSlot.append(quickRow);
   if (clearHash && hasTokenHash(location.hash)) history.replaceState(history.state, '', location.pathname + location.search);
   if (search.value.trim() !== state.query) scheduleSearch();
@@ -475,8 +515,9 @@ document.addEventListener('qxt:ready', connectTerminal);
 renderTabs(); updateSort();
 if (hasTokenHash(location.hash)) showToken();
 else showTokens({ restore: false, clearHash: false });
-connectTerminal(); refresh();
-setInterval(() => { if (!document.hidden) { refresh(); if (state.query.length >= 2) runSearch(); } }, 30000);
+connectTerminal(); refresh(); void loadLaunches();
+if (globalThis.__qxTokenQuery?.search && !hasTokenHash(location.hash)) { search.value = globalThis.__qxTokenQuery.search; scheduleSearch(); }
+setInterval(() => { if (!document.hidden) { refresh(); void loadLaunches(); if (state.query.length >= 2) runSearch(); } }, 30000);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { loader.cancel(); searchController?.abort(); clearTimeout(searchTimer); searchGeneration++; }
   else { refresh(); if (state.query.length >= 2) runSearch(); }

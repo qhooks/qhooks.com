@@ -69,16 +69,20 @@ export function workspaceSearchRows({query='',chain='all',launches=[],external=[
  return{matches,saved:remaining,rows:[...matches,...remaining]};
 }
 // The workspace search owns its read revision, independently of trade selection.
-export function createWorkspaceSearch({fetchImpl=globalThis.fetch,onChange=()=>{},delay=350,setTimer=setTimeout,clearTimer=clearTimeout}={}) {
+// When the server search fails or finds nothing, the visitor's browser searches the providers itself.
+const defaultBrowserSearch=opts=>import('./qx-browser-market.mjs').then(m=>m.browserSearch(opts));
+export function createWorkspaceSearch({fetchImpl=globalThis.fetch,onChange=()=>{},delay=350,setTimer=setTimeout,clearTimer=clearTimeout,browserSearch=defaultBrowserSearch}={}) {
  let revision=0,timer=null,controller=null,value={query:'',chain:'all',status:'idle',results:[],error:null};
  const snapshot=()=>copy(value),publish=()=>onChange(snapshot());
  async function read(mine,query,chain,signal){
   try{
-   const response=await fetchImpl('/api/terminal/x/search?'+new URLSearchParams({q:query,...(chain!=='all'?{chain}:{})}),{cache:'no-store',signal});
-   if(!response.ok)throw Error('Token search is unavailable.');
-   const body=await response.json();if(mine!==revision)return false;
-   if(!Array.isArray(body?.results))throw Error('Token search returned no readable results.');
-   const results=body.results.flatMap(row=>{const asset=workspaceAsset({...row,kind:'external',token:row?.address});return asset&&(chain==='all'||asset.chainId===chain)?[{...row,address:asset.token,chainId:asset.chainId}]:[];});
+   let rows=null;
+   try{const response=await fetchImpl('/api/terminal/x/search?'+new URLSearchParams({q:query,...(chain!=='all'?{chain}:{})}),{cache:'no-store',signal});
+    if(response.ok){const body=await response.json();if(Array.isArray(body?.results))rows=body.results;}}catch(error){if(signal?.aborted)throw error;}
+   if(mine!==revision)return false;
+   if(!rows?.length&&browserSearch){const own=await browserSearch({q:query,chain,signal}).catch(()=>null);if(mine!==revision)return false;if(Array.isArray(own)&&own.length)rows=own;}
+   if(!rows)throw Error('Token search is unavailable.');
+   const results=rows.flatMap(row=>{const asset=workspaceAsset({...row,kind:'external',token:row?.address});return asset&&(chain==='all'||asset.chainId===chain)?[{...row,address:asset.token,chainId:asset.chainId}]:[];});
    value={query,chain,status:'received',results,error:null};publish();return true;
   }catch(error){if(mine!==revision)return false;value={query,chain,status:'error',results:[],error:text(error?.message||error,180)};publish();return false;}
  }
@@ -107,8 +111,11 @@ export function riskEvidence(raw,{receivedAt=null,pending=false,error=null,nativ
  if(Array.isArray(raw?.flags))coverage.push('Returned token flags');
  if(Array.isArray(raw?.checks))coverage.push(reportedChecks.length+' reported pre-buy checks');
  if(Array.isArray(raw?.coverage))coverage.push(...raw.coverage.filter(v=>typeof v==='string').map(v=>text(v,100)));
- const status=pending&&!raw?'pending':!raw||raw.unavailable||raw.unsupported?'unavailable':verdict==='danger'?'danger':verdict==='caution'||flags.length?'caution':error||raw.stale?'stale':verdict==='ok'&&safetyChecked(raw)?'limited':'unknown';
- const headline={pending:'Checking available signals',unavailable:'Refreshing checks…',danger:'High-risk signals returned',caution:'Review the reported flags',limited:'No flags returned by available checks',stale:'Refreshing checks…',unknown:'Refreshing checks…'}[status];
+ // 2026-11-10: "Refreshing checks…" is only for a check that is really in flight; a check that was never run, a chain
+ // without automated checks and a failed read each get a final state (copy rule: no "unavailable").
+ const inFlight=['queued','running','pending','checking'].includes(raw?.state)||Number.isSafeInteger(raw?.retryAt)&&raw.retryAt>Date.now();
+ const status=pending&&!raw?'pending':raw?.unsupported?'unsupported':raw?.state==='not_checked'?'not_checked':(!raw||raw.unavailable)&&inFlight?'stale':!raw||raw.unavailable?'unavailable':verdict==='danger'?'danger':verdict==='caution'||flags.length?'caution':error||raw.stale?'stale':verdict==='ok'&&safetyChecked(raw)?'limited':'unknown';
+ const headline={pending:'Checking available signals',unavailable:'Checks paused · retry',not_checked:'Not checked yet',unsupported:'No automated checks on this chain yet',danger:'High-risk signals returned',caution:'Review the reported flags',limited:'No flags returned by available checks',stale:'Refreshing checks…',unknown:'No verdict returned'}[status];
  return {status,headline,flags,source,asOf,refreshError:error?text(error.message||error,180):null,receivedAt:Number.isSafeInteger(receivedAt)?receivedAt:null,
   coverage:[...new Set(coverage)],coverageText:coverage.length?[...new Set(coverage)].join(' · '):native?'Pre-buy endpoint; coverage not reported':'Provider coverage not reported',
   detail:error?text(error.message||error,180):text(raw?.headline||raw?.detail,180)||null};
@@ -174,7 +181,7 @@ export function marketHealth({market,loading=false,error=null,receivedAt=null,pa
  }
  const summary=market.summary||{},missing=[];
  for(const [field,label] of [['price','price'],['liquidity','liquidity'],['volume24','24h volume']])if(nonnegative(summary[field])===null)missing.push(label);
- for(const [field,label] of [['candles','chart'],['trades','trades']])if(parts[field]&&parts[field]!=='available')missing.push(label);
+ for(const [field,label] of [['candles','chart'],['trades','trades']])if(parts[field]&&parts[field]!=='available'&&parts[field]!=='provider')missing.push(label); // 'provider': the provider chart is shown on purpose
  const source=text(market.token?.source||market.source,100)||(!market.ext?'QHooks launch index':null);
  const fresh=freshnessState(market.token||market,now,{fresh:'Live · '});
  return {status:error?'error':fresh.stale?'stale':loading?'refreshing':missing.length?'partial':fresh.observedAt?'received':'unknown',
@@ -229,7 +236,8 @@ export function renderWorkspaceContext({h,selection,snapshot,chainName=id=>id,on
    h('div',{},h('dt',{},'Coverage'),h('dd',{},checks.coverageText))),
    checks.detail?h('p',{class:'qxt-checks-note'},checks.detail):null,
    checks.flags.length?h('ul',{},...checks.flags.map(flag=>h('li',{},flag))):null,
-   checks.refreshError?h('p',{class:'qxt-checks-note'},'Refreshing checks…'):null,
+   checks.refreshError?h('p',{class:'qxt-checks-note'},'Checks paused. Use Refresh data to retry.'):null,
+   checks.status==='not_checked'||checks.status==='unsupported'?h('p',{class:'qxt-checks-note'},h('a',{href:'https://repoproof.online/proof',target:'_blank',rel:'noopener'},'Run a full check on RepoProof ↗')):null,
    h('p',{class:'qxt-checks-note'},'A returned check describes its reported coverage. Review the token controls, liquidity and quoted costs alongside it.')));
  return {identity,data,checks:details};
 }

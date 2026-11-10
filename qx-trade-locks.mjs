@@ -120,7 +120,7 @@ async function show(pool) {
   if (!card || !pool?.chainId) { if (card) card.hidden = true; return; }
   try {
     const c = pool.constructor, token = c.currency0 === c.quote ? c.currency1 : c.currency0;
-    const [t, address] = await Promise.all([erc20(pool.chainId, token), extraAddress('locks')]);
+    const [t, address] = await Promise.all([erc20(pool.chainId, token), extraAddress('locks', pool.chainId)]);
     const supply = BigInt(await ethCall(pool.chainId, token, '0x18160ddd'));
     if (mine !== seq) return;
     const owner = /^0x[0-9a-fA-F]{40}$/.test(c.owner || '') ? c.owner.toLowerCase() : null;

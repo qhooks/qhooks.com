@@ -1,6 +1,6 @@
 // Browser/Node ES2022, no dependencies and no DOM. See relay/NOTES.md for the wallet contract.
 const API = 'https://api.relay.link';
-const CHAINS = new Set([1, 8453, 42161, 56, 4663, 5042, 130]);
+const CHAINS = new Set([1, 8453, 42161, 56, 4663, 5042, 130, 99901, 999]); // + Elysium, HyperEVM (2026-11-09)
 const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const validId = value => typeof value === 'string' && /^0x[0-9a-fA-F]{1,128}$/.test(value);
 const error = (code, message, extra = {}) => Object.assign(new Error(message), {code, ...extra});

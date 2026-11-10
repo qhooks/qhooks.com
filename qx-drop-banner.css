@@ -1,0 +1,6 @@
+.qx-drop{margin:0;padding:8px 16px;border-bottom:1px solid var(--qx-line,#393b35);background:color-mix(in srgb,var(--qx-brass,#c9a45c) 12%,var(--qx-bg,#111));font-size:13px;line-height:1.45;text-align:center}
+.qx-drop .qx-drop-text{margin:0;max-width:1100px;margin-inline:auto;overflow-wrap:anywhere}
+.qx-drop a{color:inherit;font-weight:600;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+.qx-drop.qx-drop-hero{display:inline-block;margin:0 0 14px;padding:7px 12px;border:1px solid color-mix(in srgb,var(--qx-brass,#c9a45c) 55%,transparent);border-radius:10px;background:color-mix(in srgb,#000 45%,transparent);color:#f3efe6;text-align:left;max-width:100%}
+.qx-drop.qx-drop-hero[hidden]{display:none}
+.qx-drop.qx-drop-hero .qx-drop-text{margin:0}

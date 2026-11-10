@@ -1,0 +1,62 @@
+/* Light theme for /launch-options (2026-11-10, site-wide day/night): generated from qx-launch-options.css by role —
+   dark surfaces → paper/panel, light text → ink/muted, light-green accents → deep sage, dark lines → light rules.
+   Not an inversion: hues stay within the site palette. */
+:root[data-theme="light"] /* Chain packages: the existing QHooks shell around a focused editorial workbench. */
+body.qcp{background:#fbf9f4;color:#1b201d}
+:root[data-theme="light"] .qcp-app{--paper:#1b201d;--muted:#555d56;--line:#d2ccbf;--moss:#3f5a2f}
+:root[data-theme="light"] .qcp-eyebrow{color:#3f5a2f}
+:root[data-theme="light"] .qcp-lede{color:#1b201d}
+:root[data-theme="light"] .qcp-button,:root[data-theme="light"] .qcp-link{background:#e4ead9;border:1px solid #d2ccbf}
+:root[data-theme="light"] .qcp-button:hover:not(:disabled),:root[data-theme="light"] .qcp-link:hover{background:#e4ead9}
+:root[data-theme="light"] .qcp-primary:hover:not(:disabled){background:#3f5a2f}
+:root[data-theme="light"] .qcp-chain{color:#1b201d}
+:root[data-theme="light"] .qcp-chain:hover{background:#e4ead9}
+:root[data-theme="light"] .qcp-chain.is-selected{background:#e4ead9}
+:root[data-theme="light"] .qcp-chain-icon{color:#1b201d}
+:root[data-theme="light"] .qcp-chain small{color:#3f5a2f}
+:root[data-theme="light"] .qcp-native article{border:1px solid #d2ccbf;background:#ebe6db}
+:root[data-theme="light"] .qcp-native h3{color:#1b201d}
+:root[data-theme="light"] .qcp-native p{color:#3f5a2f}
+:root[data-theme="light"] .qcp-native a{color:#3f5a2f}
+:root[data-theme="light"] .qcp-details{border-top:1px solid #d2ccbf}
+:root[data-theme="light"] .qcp-details summary{color:#3f5a2f}
+:root[data-theme="light"] .qcp-source-link{color:#3f5a2f}
+:root[data-theme="light"] .qcp-field>span{color:#1b201d}
+:root[data-theme="light"] .qcp-field input,:root[data-theme="light"] .qcp-field textarea,:root[data-theme="light"] .qcp-field select{background:#ebe6db;border:1px solid #d2ccbf;color:#1b201d}
+:root[data-theme="light"] .qcp-field small{color:#3f5a2f}
+:root[data-theme="light"] .qcp-check{color:#1b201d}
+:root[data-theme="light"] .qcp-goal{border:1px solid #d2ccbf;background:#e4ead9;color:#1b201d}
+:root[data-theme="light"] .qcp-goal.is-selected{background:#e4ead9}
+:root[data-theme="light"] .qcp-goal b{color:#3f5a2f}
+:root[data-theme="light"] .qcp-goal small{color:#3f5a2f}
+:root[data-theme="light"] .qcp-editor{border:1px solid #d2ccbf;background:#e4ead9}
+:root[data-theme="light"] .qcp-part-tabs{border-bottom:1px solid #d2ccbf}
+:root[data-theme="light"] .qcp-part-tab{border-color:#d2ccbf}
+:root[data-theme="light"] .qcp-part-tab[aria-selected=true]{background:#3f5a2f}
+:root[data-theme="light"] .qcp-part-header p{color:#3f5a2f}
+:root[data-theme="light"] .qcp-status{color:#3f5a2f}
+:root[data-theme="light"] .qcp-status.is-error{color:#7a4a1f}
+:root[data-theme="light"] .qcp-policy{background:#ebe6db;color:#1b201d}
+:root[data-theme="light"] .qcp-result{border-top:1px solid #d2ccbf}
+:root[data-theme="light"] .qcp-result h3{color:#1b201d}
+:root[data-theme="light"] .qcp-stat{border-top:1px solid #d2ccbf}
+:root[data-theme="light"] .qcp-stat span{color:#3f5a2f}
+:root[data-theme="light"] .qcp-stat strong{color:#1b201d}
+:root[data-theme="light"] .qcp-code{background:#fbf9f4;color:#3f5a2f}
+:root[data-theme="light"] .qcp-outline{background:#e4ead9;border:1px solid #d2ccbf}
+:root[data-theme="light"] .qcp-outline-list li{border-top:1px solid #d2ccbf}
+:root[data-theme="light"] .qcp-outline-list span{color:#3f5a2f}
+:root[data-theme="light"] .qcp-file{border:1px solid #d2ccbf;color:#1b201d}
+:root[data-theme="light"] .qcp-saved small{color:#3f5a2f}
+:root[data-theme="light"] .qcp-empty{color:#3f5a2f}
+:root[data-theme="light"] .qcp-storage{color:#7a4a1f}
+:root[data-theme="light"] .qcp-dialog{background:#e4ead9;color:#1b201d}
+:root[data-theme="light"] .qcp-chain{background:#ebe6db}
+:root[data-theme="light"] .qcp-suggestion{background:#e4ead9}
+:root[data-theme="light"] .qcp-unit-helper{border-left:1px solid #d2ccbf}
+:root[data-theme="light"] .qcp-unit-helper label span{color:#3f5a2f}
+:root[data-theme="light"] .qcp-unit-helper input{color:#1b201d;background:#e4ead9;border:1px solid #d2ccbf}
+:root[data-theme="light"] .qcp-readable{color:#3f5a2f}
+/* Primary action keeps its emphasis in light: solid sage, light text (AA 7.6:1). */
+:root[data-theme="light"] .qcp-primary{background:#3f5a2f;border-color:#3f5a2f;color:#fbf6ea}
+:root[data-theme="light"] .qcp-primary:hover:not(:disabled){background:#33492a;border-color:#33492a}

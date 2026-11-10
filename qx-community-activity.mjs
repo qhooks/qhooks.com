@@ -4,8 +4,10 @@ import {communityFollowing,followingQuery,mountCommunityFollowButton} from './qx
 import {firstCallPrompt,qualifiedCallers} from './qx-community-empty.mjs';
 const ENDPOINT='/api/community/activity',SEEN='qhooks:community-seen:v1',FOLLOW_EVENT='qhooks:community-following';
 const cursorParts=value=>{const match=/^(\d{1,16})\.(p[0-9a-v]{12})$/.exec(value||'');return match?{at:Number(match[1]),id:match[2]}:null;};
+// A launch's token also has a token board (t=chain:token); calls can sit on either, so a launch panel reads both.
+export const boardKeys=board=>{const keys=[communityKey(board)];if(board?.kind==='launch'&&board.token)try{keys.push(communityKey({kind:'token',chainId:board.chainId,address:board.token}));}catch{}return[...new Set(keys)];};
 export function activityQuery({view='recent',chain,board,caller,before,after,following=communityFollowing,limit=20}={}){
- const params=new URLSearchParams({view,limit:String(limit)});if(chain&&chain!=='all')params.set('chain',chain);if(board)params.set('board',communityKey(board));if(caller)params.set('caller',caller.toLowerCase());if(before)params.set('before',before);if(after)params.set('after',after);
+ const params=new URLSearchParams({view,limit:String(limit)});if(chain&&chain!=='all')params.set('chain',chain);if(board)params.set('board',boardKeys(board).join(','));if(caller)params.set('caller',caller.toLowerCase());if(before)params.set('before',before);if(after)params.set('after',after);
  if(view==='following'){const saved=followingQuery(following);if(saved.boards.length)params.set('boards',saved.boards.join(','));if(saved.callers.length)params.set('callers',saved.callers.join(','));}return params;
 }
 export function createCommunityActivityReader({fetcher=globalThis.fetch,now=Date.now,ttl=15000}={}){
@@ -24,7 +26,9 @@ export const newerThan=(call,cursor)=>{const previous=cursorParts(cursor);return
 const labelFor=board=>board.symbol||board.name||((board.controller||board.address||'').slice(0,8)+'…');
 const short=wallet=>wallet.slice(0,6)+'…'+wallet.slice(-4);
 export function mountCommunityActivity(target,{board=null,caller=null,compact=false,initialView='recent',following=communityFollowing,fetcher=globalThis.fetch,document:doc=globalThis.document,events=globalThis.window,now=Date.now,pollMs=30000,reader=createCommunityActivityReader({fetcher,now}),seen=createCommunitySeen({now}),timers=globalThis}={}){
- if(board)board={...board,...communityTarget(board)};
+ // New calls on a launch go on its launch board (priced from the QHooks index, no outside provider); "Open board" shows
+ // the token board, where earlier calls on the token were filed. The panel reads both.
+ if(board)board={...board,...communityTarget(board)};const tokenBoard=board?.kind==='launch'&&board.token?{kind:'token',chainId:board.chainId,address:String(board.token).toLowerCase(),name:board.name,symbol:board.symbol}:null;
  const h=(tag,attrs={},...kids)=>{const node=doc.createElement(tag);for(const[key,value]of Object.entries(attrs)){if(value==null)continue;if(key==='class')node.className=value;else node.setAttribute(key,value);}node.append(...kids.flat().filter(value=>value!=null));return node;};
  let view=!compact&&initialView==='following'?'following':'recent',chain='all',body=null,pending=null,generation=0,controller=null,timer=null,disposed=false,copied='',ranked=null,followDisposers=[];
  const main=h('section',{class:'qcaf'+(compact?' qcaf-compact':''),'aria-label':compact?'Token conversation':'Community calls and following'}),toolbar=h('div',{class:'qcaf-toolbar'}),status=h('p',{class:'qcaf-status',role:'status','aria-live':'polite'}),feed=h('div',{class:'qcaf-feed'}),authors=h('aside',{class:'qcaf-callers'}),saved=h('div',{class:'qcaf-saved'}),more=h('button',{type:'button',class:'qcf-button'},'Older calls'),check=h('button',{type:'button',class:'qcf-button'},'Check now'),bar=h('div',{class:'qcaf-new',role:'status'}),show=h('button',{type:'button',class:'qcf-button'},'Show new calls');bar.hidden=true;bar.append(show);
@@ -33,7 +37,7 @@ export function mountCommunityActivity(target,{board=null,caller=null,compact=fa
   const select=h('select',{'aria-label':'Call chain'},h('option',{value:'all'},'All chains'),...COMMUNITY_CHAINS.map(([value,label])=>h('option',{value},label)));select.addEventListener('change',()=>{chain=select.value;body=null;refresh();});toolbar.append(select);
  }
  toolbar.append(check);main.append(toolbar,h('p',{class:'qcaf-note'},'Following is saved on this device. Updates are checked while this page is open; no push messages are enabled.'),bar,status,saved,h('div',{class:'qcaf-layout'},feed,authors),more);target.replaceChildren(main);
- let topicControl=null;if(board){const context=h('div',{class:'qcaf-context'},h('a',{href:communityPath(board)},'Open board →'),h('a',{href:communityPath(board,{intent:true})},'Make a call →')),follow=h('span',{});context.append(follow);toolbar.after(context);topicControl=mountCommunityFollowButton(follow,{kind:'board',board,label:labelFor(board)},{store:following,document:doc,events});}
+ let topicControl=null;if(board){const home=tokenBoard||board,context=h('div',{class:'qcaf-context'},h('a',{href:communityPath(home)},'Open board →'),h('a',{href:communityPath(board,{intent:true})},'Make a call →')),follow=h('span',{});context.append(follow);toolbar.after(context);topicControl=mountCommunityFollowButton(follow,{kind:'board',board,label:labelFor(board)},{store:following,document:doc,events});}
  const key=()=>[view,chain,board?communityKey(board):'',caller||''].join('|');
  const params=extra=>activityQuery({view,chain,board,caller,following,limit:compact?3:20,...extra});
  function selectView(value){if(compact||!['recent','following'].includes(value)||view===value)return;view=value;body=null;pending=null;bar.hidden=true;void refresh();}

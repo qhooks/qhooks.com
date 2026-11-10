@@ -7,8 +7,10 @@ export function timedCheckpoint({at,horizon,observation=null,source='native-inde
  if(now<targetAt)return{...base,status:'pending'};
  if(source==='legacy-untimed')return{...base,status:'legacy-untimed'};
  if(!observation)return{...base,status:index?.available?index.gaps===0?'missing':'index-incomplete':'unavailable'};
- const observedAt=Number(observation.ts)*1000,price=Number(observation.price);
+ const observedAt=Math.round(Number(observation.ts)*1000),price=Number(observation.price);
  if(!Number.isSafeInteger(observedAt)||observedAt<targetAt||observedAt>now||!positive(price))return base;
+ // Outside tokens: the call's main pool read on chain at the checkpoint by the call-quotes cron (block, no single trade).
+ if(source==='pool-read'){const provenance={marketKey:observation.marketKey,pool:observation.pool,block:observation.block};if(!Number.isSafeInteger(provenance.block)||provenance.block<0||!/^0x[0-9a-f]{40}$/i.test(provenance.pool||''))return base;const observed={...base,observedAt,price,provenance};return observedAt>latestAllowedAt?{...observed,status:'late'}:{...observed,status:'observed'};}
  const provenance={marketKey:observation.marketKey,block:observation.block,index:observation.idx,transaction:observation.tx};
  if(!Number.isSafeInteger(provenance.block)||provenance.block<0||!Number.isSafeInteger(provenance.index)||provenance.index<0||!/^0x[0-9a-f]{64}$/i.test(provenance.transaction||''))return base;
  const observed={...base,observedAt,price,provenance};
@@ -18,7 +20,7 @@ export function timedCheckpoint({at,horizon,observation=null,source='native-inde
 }
 export function callerOutcomeV2(record,{now=Date.now()}={}){
  const entryPrice=Number(record.entryPrice),at=Number(record.at),labels=Array.isArray(record.labels)?record.labels:[],excluded=labels.includes('creator_call')?'creator':labels.includes('linked')?'linked':null;
- const source=record.kind==='token'?'legacy-untimed':'native-index',entryValid=positive(entryPrice)&&Number.isSafeInteger(at)&&at>0&&at<=now;
+ const source=record.kind==='token'?'legacy-untimed':record.kind==='pool-read-token'?'pool-read':'native-index',entryValid=positive(entryPrice)&&Number.isSafeInteger(at)&&at>0&&at<=now;
  const checkpoint=horizon=>timedCheckpoint({at,horizon,observation:record[horizon===CALLER_SCORE_METHOD.horizons.day?'day':'week'],source,index:record.index,now});
  const day=checkpoint(CALLER_SCORE_METHOD.horizons.day),week=checkpoint(CALLER_SCORE_METHOD.horizons.week),eligible=entryValid&&!excluded;
  return{method:CALLER_SCORE_METHOD.id,version:2,id:record.id,marketKey:record.marketKey,entry:{price:entryValid?entryPrice:null,publishedAt:entryValid?at:null,observedAt:null,source:'stored-publication-record'},eligible,excluded:entryValid?excluded:'invalid-entry',checkpoints:{day,week},hit:eligible&&day.status==='observed'?day.price>entryPrice:null,indexedFirstDaySales:record.indexedFirstDaySales||{status:record.kind==='token'?'unsupported':'unavailable'},relationship:{labels:labels.filter(label=>['creator_call','linked'].includes(label)),coverage:record.kind==='token'?'unsupported':'legacy-publication-labels; absence is not attested independence'}};

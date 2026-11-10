@@ -21,15 +21,15 @@ export function rewardClaimState(balance,{reserved=false,busy=false}={}) {
 }
 export async function readEvmRewardSnapshot(owner,{quotes,native,router,codeAt,cashbackOf,now=Date.now}) {
  if(!/^0x[0-9a-f]{40}$/i.test(owner||'')||BigInt(owner)===0n)throw TypeError('Connect a valid rewards wallet.');
- const wallet=owner.toLowerCase(),balances=[],chains=[];
+ const wallet=owner.toLowerCase(),balances=[],chains=[],routerOf=typeof router==='function'?router:()=>router;
  await Promise.all(Object.entries(quotes).map(async([chainId,assets])=>{
   const currencies=[['0x'+'0'.repeat(40),native[chainId],18],...assets];
-  let code;try{code=await codeAt(chainId,router);if(typeof code!=='string'||!/^0x(?:[0-9a-f]{2})*$/i.test(code))throw Error('Invalid network response');}
+  const r=routerOf(chainId);let code;try{code=await codeAt(chainId,r);if(typeof code!=='string'||!/^0x(?:[0-9a-f]{2})*$/i.test(code))throw Error('Invalid network response');}
   catch{chains.push({chainId,status:'unavailable'});for(const[address,symbol,decimals]of currencies)balances.push({chainId,address,symbol,decimals,status:'unavailable',amount:null});return;}
   if(code==='0x'){chains.push({chainId,status:'not_deployed'});return;}
   chains.push({chainId,status:'checked'});
   await Promise.all(currencies.map(async([address,symbol,decimals])=>{
-   try{const amount=atomic(await cashbackOf(chainId,router,wallet,address));if(amount<0n||amount>=1n<<256n)throw Error('Invalid reward amount');balances.push({chainId,address,symbol,decimals,status:'checked',amount:amount.toString()});}
+   try{const amount=atomic(await cashbackOf(chainId,r,wallet,address));if(amount<0n||amount>=1n<<256n)throw Error('Invalid reward amount');balances.push({chainId,address,symbol,decimals,status:'checked',amount:amount.toString(),router:r});}
    catch{balances.push({chainId,address,symbol,decimals,status:'unavailable',amount:null});}
   }));
  }));

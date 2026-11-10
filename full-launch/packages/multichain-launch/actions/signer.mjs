@@ -13,8 +13,12 @@ import {abiEncode} from '../../launchpad/abi-encode.mjs';
 // 24 next volume epoch, 25 directional fees, 26 circuit resume).
 const LAB_OPERATIONS=Object.freeze({21:'QHOOKS/SLHVAULT/WITHDRAW/1',22:'QHOOKS/LPFEE/REPLACE/1',23:'QHOOKS/PRICEBAND/REPLACE/1',24:'QHOOKS/VOLEPOCH/OPEN/1',25:'QHOOKS/DIRFEE/SCHEDULE/1',26:'QHOOKS/CIRCUIT/RESUME/1'});
 
+// QPQCreator (post-quantum creator role for one-tap launches): its own context and message, rebuilt here from the shown
+// values only. Pinned contract addresses; kinds 1 payout, 2 hand over, 3 lock forever, 4 rotate, 5 key recovery, 6 cancel.
+const PQ_CREATORS=Object.freeze(new Set(['0x9b1559adc9b9c2dce8a32957f3024f3393ae5bf3']));
+const CREATOR_ARGS=Object.freeze({1:['address'],2:['address'],3:[],4:['address','bytes32'],5:['address'],6:['address','bytes32','uint64']});
 const text=new TextEncoder(),CTX=text.encode('QHOOKS/QGRAD/SLH128S/1');
-const PROOF_CTX=text.encode('QHOOKS/QGRAD/SLH128S/BACKUP/1');
+const PROOF_CTX=text.encode('QHOOKS/QGRAD/SLH128S/BACKUP/1'),CREATOR_CTX=text.encode('QHOOKS/PQCREATOR/SLH128S/1');
 const hex=b=>'0x'+Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');
 const unhex=s=>Uint8Array.from(s.slice(2).match(/../g)||[],x=>parseInt(x,16));
 const random=n=>globalThis.crypto.getRandomValues(new Uint8Array(n));
@@ -91,6 +95,23 @@ function makeHandle(seed,keys,verified){
       ensure(hex(keccak_256(unhex(encoded)))===action.operationHash,'Operation does not match the signed action');
       const message=encodeGraduationAction(action),signature=slh_dsa_sha2_128s.sign(message,keys.secretKey,{context:CTX});
       ensure(signature.length===7856&&slh_dsa_sha2_128s.verify(signature,message,keys.publicKey,{context:CTX}),'Signature self-check failed');
+      return Object.freeze({publicKeyHex,messageHex:hex(message),signatureHex:hex(signature)});
+    },
+    // One-tap launch creator role held by QPQCreator. The caller passes the exact values; the message is rebuilt as the
+    // contract's message() builds it, and is never taken as bytes from the caller. Window at most 15 minutes.
+    signCreatorAction({chainId,contract,factory,id,kind,values=[],nonce,validUntil,wallet,now=Math.floor(Date.now()/1000)}){
+      live();ensure(verified,'Verify a backup before signing');
+      const c=String(contract||'').toLowerCase(),types=CREATOR_ARGS[Number(kind)];
+      ensure(PQ_CREATORS.has(c),'Not the QHooks post-quantum creator contract');
+      ensure(types&&Array.isArray(values)&&values.length===types.length,'Not a creator action');
+      ensure(/^0x[0-9a-fA-F]{40}$/.test(factory)&&/^0x[0-9a-fA-F]{40}$/.test(wallet)&&/^0x[0-9a-fA-F]{64}$/.test(id),'Invalid launch');
+      const until=BigInt(validUntil),n=BigInt(nonce),chain=BigInt(chainId);
+      ensure(until>BigInt(now)&&until-BigInt(now)<=900n&&n>=0n&&chain>0n,'Signing window must be at most 15 minutes');
+      const dec=v=>typeof v==='bigint'?v.toString():v,args=types.length?abiEncode(types,values.map(dec)):'0x';
+      const message=unhex(abiEncode(['bytes32','uint256','address','address','bytes32','uint8','bytes32','uint64','uint64','address','bytes32'],
+        [hex(keccak_256(text.encode('QHOOKS/PQCREATOR/1'))),chain.toString(),c,factory,id,String(Number(kind)),hex(keccak_256(unhex(args))),n.toString(),until.toString(),wallet,publicKeyHex]));
+      const signature=slh_dsa_sha2_128s.sign(message,keys.secretKey,{context:CREATOR_CTX});
+      ensure(signature.length===7856&&slh_dsa_sha2_128s.verify(signature,message,keys.publicKey,{context:CREATOR_CTX}),'Signature self-check failed');
       return Object.freeze({publicKeyHex,messageHex:hex(message),signatureHex:hex(signature)});
     },
     signAction(action,request){

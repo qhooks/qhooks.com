@@ -66,3 +66,4 @@ body.qx.qxc{font-size:14px;line-height:1.5;--qx-serif:var(--qx-sans)}
 .qaq-strength{margin:6px 0 0}.qaq-strength[data-ok="true"]{color:var(--qx-sage)}.qaq-strength[data-ok="false"]{color:var(--qx-brass)}
 
 .qxc-steps li .qc-step-note{grid-column:2/-1;margin:2px 0 0;font-size:12px;line-height:1.45;color:var(--qx-faint)}
+.qxc-chain-note{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0;padding:10px 12px;border:1px solid var(--qx-brass,#b88a3e);border-radius:10px;font-size:13px}.qxc-chain-note p{margin:0;flex:1 1 220px}.qxc-chain-note[hidden]{display:none}

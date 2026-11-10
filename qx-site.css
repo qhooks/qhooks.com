@@ -322,3 +322,15 @@ html body :is(h1,h2,h3,h4,h5,h6) :is(.qx-serif,em,i){font-family:inherit!importa
 html body .qx-serif{font-family:inherit!important;font-weight:inherit!important;letter-spacing:inherit!important}
 .qhc-in-app{margin:8px 0 0;font-size:13px;line-height:1.5}.qhc-in-app .qhc-secondary{margin-top:6px}
 .qhc-more-wallets{margin-top:14px;border-top:1px solid var(--qx-line,rgba(255,255,255,.12));padding-top:10px}.qhc-more-wallets>summary{cursor:pointer;font-size:14px;padding:6px 0}
+
+.qwm-acts{padding:0 10px 8px 38px}.qwm-act-bar{display:flex;flex-wrap:wrap;gap:6px}
+.qwm-act{min-height:32px;padding:5px 12px;border:1px solid var(--qx-line,#3a3f39);border-radius:999px;background:transparent;color:var(--qx-ink,#f1eee3);font:600 12px var(--qx-sans,system-ui,sans-serif);cursor:pointer}
+.qwm-act:hover:not(:disabled){background:color-mix(in srgb,var(--qx-ink,#f1eee3) 6%,transparent)}.qwm-act:disabled{opacity:.55;cursor:progress}
+.qwm-act:focus-visible,.qwm-act-form input:focus-visible,.qwm-act-form select:focus-visible{outline:2px solid var(--qx-brass,#d2ad72);outline-offset:1px}
+.qwm-act-go{border-color:var(--qx-brass,#d2ad72);background:var(--qx-brass,#d2ad72);color:var(--qx-on-brass,#151512)}
+.qwm-act-panel{margin-top:8px}.qwm-act-form{display:grid;gap:8px}
+.qwm-act-form select,.qwm-act-form input{width:100%;min-height:38px;padding:7px 10px;border:1px solid var(--qx-line,#3a3f39);border-radius:10px;background:transparent;color:var(--qx-ink,#f1eee3);font:13px var(--qx-mono,monospace);box-sizing:border-box}
+.qwm-act-form select option{color:#151512}.qwm-act-amt{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}.qwm-act-max{padding:0 12px;border:1px solid var(--qx-line,#3a3f39);border-radius:10px;background:transparent;color:var(--qx-ink,#f1eee3);font:600 12px var(--qx-sans,system-ui,sans-serif);cursor:pointer}
+.qwm-act-status,.qwm-act-note{margin:0;font-size:12px;line-height:1.5;color:var(--qx-muted,#a7aea3);overflow-wrap:anywhere}.qwm-act-status a{color:inherit}
+.qwm-chain-name{flex-wrap:wrap;row-gap:2px}
+.qxt-launch-caps,.qx-launch-caps{margin:6px 0 0;font:600 12px var(--qx-mono,monospace);color:var(--qx-muted,#a7aea3);letter-spacing:-.01em}

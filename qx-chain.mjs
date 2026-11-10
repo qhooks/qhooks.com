@@ -177,6 +177,31 @@ export async function send(chainId,tx,onStatus=()=>{},assertContext=()=>{}){
   }
   throw new Error('Still pending. Check your wallet activity');
 }
+/// EIP-5792: sends `calls` as one atomic batch when the connected wallet reports atomic batching on `chainId`
+/// (wallet_getCapabilities). Returns null, having sent nothing, when it does not; the caller then sends one by one.
+export async function sendCallsAtomic(chainId,calls,onStatus=()=>{},assertContext=()=>{}){
+  assertContext();const from=connectedAddress();if(!from)throw Error('Connect your wallet first');
+  const assert=()=>{assertContext();if(connectedAddress()!==from)throw Error('Your wallet changed. Review this action again.');};
+  const p=await providerFor(from);assert();
+  const hexChain='0x'+Number(chainId).toString(16);
+  let caps=null;try{caps=await p.request({method:'wallet_getCapabilities',params:[from,[hexChain]]});}catch{return null;}
+  const c=caps?.[hexChain]||caps?.[String(Number(chainId))]||null;
+  const atomic=c?.atomic?.status==='supported'||c?.atomic?.status==='ready'||c?.atomicBatch?.supported===true;
+  if(!atomic)return null;
+  await onChain(p,chainId,onStatus,assert);assert();
+  onStatus(silentActive()?'Sending…':'Confirm in your wallet (one approval for all steps)…');
+  const res=await p.request({method:'wallet_sendCalls',params:[{version:'2.0.0',chainId:hexChain,from,atomicRequired:true,calls:calls.map(x=>({to:x.to,data:x.data,value:'0x'+BigInt(x.value||0).toString(16)}))}]});
+  const id=typeof res==='string'?res:res?.id;if(!id)throw Error('The wallet did not return a batch id');
+  onStatus('Waiting for the transaction…');
+  for(let i=0;i<180;i++){
+    const st=await p.request({method:'wallet_getCallsStatus',params:[id]}).catch(()=>null);
+    const code=typeof st?.status==='number'?st.status:({CONFIRMED:200,PENDING:100}[st?.status]??0);
+    if(code>=200&&code<300){const rs=st.receipts||[];if(rs.some(r=>r.status&&r.status!=='0x1'))throw Error('The transaction reverted');return rs;}
+    if(code>=400)throw Error('The transaction reverted');
+    await new Promise(r=>setTimeout(r,2000));
+  }
+  throw Error('Still pending. Check your wallet activity');
+}
 /// Signs EIP-712 typed data with the connected wallet on `chainId` (switching the wallet's chain first).
 export async function signTypedData(chainId, typed) {
   const from = connectedAddress(); if (!from) throw new Error('Connect your wallet first');

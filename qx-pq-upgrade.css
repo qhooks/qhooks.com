@@ -1,0 +1,17 @@
+.pqu .qlk-card{margin-top:16px}
+.pqu h2{font-size:18px;margin:0 0 8px}
+.pqu-launch{border-top:1px solid var(--qx-line,#393b35);padding-top:12px;margin-top:12px}
+.pqu-launch h3{font-size:16px;margin:0 0 6px}
+.pqu-alert{margin:8px 0;padding:10px 12px;border:1px solid var(--qx-bad,#e08a7a);border-radius:6px;overflow-wrap:anywhere}
+.pqu-manage{display:grid;gap:8px;margin-top:8px}
+.pqu-manage label{display:grid;gap:4px;font-size:13px}
+.pqu-manage input{min-height:44px;padding:8px 10px;font:inherit;font-family:var(--qx-mono,ui-monospace,monospace);min-width:0}
+.pqu .qtx-mini{min-height:44px}
+.pqu-proof{padding-left:18px;display:grid;gap:6px}
+#pqu-contracts{overflow-wrap:anywhere}
+
+.pqu-guided{border-color:var(--qx-brass,#b7a272)}
+.pqu-guided input{display:block;width:100%;box-sizing:border-box;min-height:44px;margin:6px 0;padding:8px 10px;font:inherit;font-size:16px}
+.pqu-big{width:100%;min-height:48px;margin-top:8px;font-size:16px}
+
+#pqu-key [hidden]{display:none!important}#pqu-key .qaq-row{display:flex;justify-content:space-between;align-items:center;gap:8px}

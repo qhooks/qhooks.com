@@ -3,7 +3,7 @@ import { quote, summarize, execute, status } from './qx-relay.mjs';
 import { relayWallet, relayRpc, relayFees, relayChainId, gasWithHeadroom } from './qx-relay-wallet.mjs';
 
 export const NATIVE_TOKEN = '0x0000000000000000000000000000000000000000';
-export const MOVE_CHAINS = Object.freeze([8453, 1, 42161, 56, 4663].map(id => chainById(id)));
+export const MOVE_CHAINS = Object.freeze([8453, 1, 42161, 56, 4663, 99901].map(id => chainById(id))); // + Elysium (HYPE), 2026-11-09
 const ADDRESS = /^0x[0-9a-f]{40}$/i;
 const HASH = /^0x[0-9a-f]{64}$/i;
 const DASH = '—';
@@ -28,6 +28,7 @@ const STABLES = {
   42161: [['USDC', chainById(42161).usdc], ['USDT', '0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9']],
   56: [['USDC', '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d'], ['USDT', '0x55d398326f99059ff775485246999027b3197955']],
   4663: [['USDG', '0x5fc5360d0400a0fd4f2af552add042d716f1d168']],
+  99901: [],
 };
 export const TOKEN_CANDIDATES = Object.freeze(MOVE_CHAINS.flatMap(chain => [
   { chainId: Number(chain.id), address: NATIVE_TOKEN, symbol: chain.native, decimals: 18, native: true, stable: false },
@@ -77,14 +78,21 @@ function uintResult(value) {
 }
 
 export async function nativePrices({ fetchImpl = (...args) => globalThis.fetch(...args) } = {}) {
-  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 8000);
+  // The site's own price route first: the pages' CSP (connect-src) does not allow api.coingecko.com, so a browser call to it
+  // always failed and every funding row read "Could not price this pay asset" (pro terminal X1, 2026-11-10).
+  const out = {};
+  const timed = async (url, init) => { const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 8000);
+    try { return await fetchImpl(url, { ...init, signal: controller.signal }); } finally { clearTimeout(timer); } };
   try {
-    const response = await fetchImpl('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,binancecoin&vs_currencies=usd',
-      { signal: controller.signal, credentials: 'omit', cache: 'no-store' });
-    if (!response.ok) return {};
-    const body = await response.json();
-    return { ETH: usdNumber(body?.ethereum?.usd), BNB: usdNumber(body?.binancecoin?.usd) };
-  } catch { return {}; } finally { clearTimeout(timer); }
+    const r = await timed('/api/funding/native-prices?symbols=ETH,BNB,HYPE', { credentials: 'omit', cache: 'no-store' });
+    if (r.ok) { const p = (await r.json())?.prices || {}; for (const k of ['ETH', 'BNB', 'HYPE']) { const v = usdNumber(p[k]); if (v != null) out[k] = v; } }
+  } catch {}
+  if (out.ETH != null && out.BNB != null) return out;
+  try { // Fallback where a direct call is allowed (tests, Node).
+    const response = await timed('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,binancecoin&vs_currencies=usd', { credentials: 'omit', cache: 'no-store' });
+    if (response.ok) { const body = await response.json(); out.ETH ??= usdNumber(body?.ethereum?.usd); out.BNB ??= usdNumber(body?.binancecoin?.usd); }
+  } catch {}
+  return out;
 }
 
 /** Read-only; metadata and balance failures are isolated to the token/chain that failed. */

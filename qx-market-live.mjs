@@ -17,6 +17,32 @@ export function trendingTokens(body,limit=5){
   href:'/terminal#t='+encodeURIComponent(String(row.chainId))+':'+encodeURIComponent(row.token.address),
   logo:logoURL(row.token.logo)||logoURL(officialLogo(row.chainId,row.token.address)),price:money(row.priceUsd,{precise:true}),change:percent(row.change?.h24),direction:typeof row.change?.h24==='number'&&Number.isFinite(row.change.h24)?Math.sign(row.change.h24):0}));
 }
+// Home strip (2026-11-10, walkthrough item 8): QHooks launches first, instead of boosted outside tokens.
+export const LAUNCH_FEED_URL='/api/terminal/feed?chain=all';
+const NATIVE_OF={WETH:'ETH',ETH:'ETH',WBNB:'BNB',BNB:'BNB',WHYPE:'HYPE',HYPE:'HYPE'};
+/// Live QHooks launches as strip rows, USD from DexScreener (browser) or the launch's own price × the native USD price.
+export async function launchTokens(body,{fetcher=globalThis.fetch,limit=5,dex}={}){
+ if(!Array.isArray(body?.markets))throw Error('Invalid launch feed');
+ const seen=new Set(),list=body.markets.filter(m=>{const chain=String(m?.chainId),k=chain+':'+String(m?.token||'').toLowerCase();if(!m?.live||!supported(chain)||!address(chain,m.token)||seen.has(k))return false;seen.add(k);return true;});
+ const {fetchDexPairs,pickPair,rowPatch}=dex||await import('./qx-dex-live.mjs'),byChain=new Map();
+ for(const m of list){const c=String(m.chainId);byChain.set(c,[...(byChain.get(c)||[]),m.token]);}
+ const pairs=new Map();await Promise.all([...byChain].map(async([c,tokens])=>{const got=await fetchDexPairs(c,tokens,{fetcher}).catch(()=>null);if(got)pairs.set(c,got);}));
+ let natives=null;const nativeUsd=async sym=>{if(!NATIVE_OF[sym])return null;natives??=readPublicJSON('/api/funding/native-prices?symbols=ETH,BNB,HYPE',{fetcher}).then(b=>b.prices||{}).catch(()=>({}));return (await natives)[NATIVE_OF[sym]]??null;};
+ const rows=await Promise.all(list.map(async m=>{
+  const c=String(m.chainId),patch=rowPatch(pickPair(pairs.get(c),c,m.token,null)),s=m.summary||{};
+  let usd=patch?.priceUsd??null,chg=patch?.change?.h24??(typeof s.change24==='number'?s.change24:null),vol=patch?.volumeUsd?.h24??null;
+  if(usd==null&&typeof s.price==='number'&&s.price>0){const n=await nativeUsd(String(m.quoteSymbol||'').toUpperCase());if(n)usd=s.price*n;}
+  return {symbol:m.symbol||m.name||'Token',name:m.name||'',address:m.token,chainId:c,href:'/terminal#m='+encodeURIComponent(c)+':'+encodeURIComponent(String(m.controller).toLowerCase()),
+   logo:logoURL(m.logo)||logoURL(officialLogo(c,m.token)),price:usd!=null?money(usd,{precise:true}):'—',change:percent(chg),direction:typeof chg==='number'&&Number.isFinite(chg)?Math.sign(chg):0,
+   _rank:(vol??0)+(Number(s.trades24)||0)};
+ }));
+ return rows.sort((a,b)=>b._rank-a._rank).slice(0,limit).map(({_rank,...r})=>r);
+}
+/// Outside rows that are fit for the home strip: not from the Pump.fun reader and not collapsing (> -50% in 24 h).
+export function cleanTrending(body,limit=5){
+ if(body?.version!==1||!Array.isArray(body.rows))throw Error('Invalid public feed');
+ return trendingTokens({...body,rows:body.rows.filter(r=>!/pump\.fun reader/i.test(String(r?.source||''))&&!(typeof r?.change?.h24==='number'&&r.change.h24<-0.5))},limit);
+}
 export function newestLaunch(body){
  if(body?.version!==1||body.kind!=='qhooks-market-directory'||!Array.isArray(body.rows))throw Error('Invalid launch directory');
  const row=body.rows.filter(row=>row&&supported(String(row.chainId))&&address(String(row.chainId),row.controller)&&Number.isSafeInteger(row.listedAt)&&row.listedAt>0)

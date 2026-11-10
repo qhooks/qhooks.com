@@ -1,0 +1,40 @@
+{
+ "schemaVersion": 1,
+ "kind": "qhooks-relaunch",
+ "launcher": "0xfb5a559886fccba6400cc52905ba3aa4658ba0cc",
+ "chains": {
+  "56": {
+   "relaunch": "0xa63cd432efc916ba0e8951e006d3c14479e4afb4",
+   "poolManager": "0x28e2ea090877bf75740558f6bfb36a5ffee9e9df",
+   "knownFactories": [
+    "0xfb5a559886fccba6400cc52905ba3aa4658ba0cc"
+   ],
+   "fromBlock": 132618000
+  },
+  "4663": {
+   "relaunch": "0xe3be1ad845f6aed920fe0ebfb335b099faa68846",
+   "poolManager": "0x8366a39cc670b4001a1121b8f6a443a643e40951",
+   "knownFactories": [
+    "0x023623568f41c032ec2f4bba368dbafc123160cc",
+    "0xfb5a559886fccba6400cc52905ba3aa4658ba0cc"
+   ],
+   "fromBlock": 110206000
+  },
+  "8453": {
+   "relaunch": "0x98e9a9a79946e571faa53c727d669cb16649add5",
+   "poolManager": "0x498581ff718922c3f8e6a244956af099b2652b2b",
+   "knownFactories": [
+    "0xfb5a559886fccba6400cc52905ba3aa4658ba0cc"
+   ],
+   "fromBlock": 55261000
+  },
+  "42161": {
+   "relaunch": "0x36d8a87163fb52df90056f5bc123776a739cd69c",
+   "poolManager": "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+   "knownFactories": [
+    "0xfb5a559886fccba6400cc52905ba3aa4658ba0cc"
+   ],
+   "fromBlock": 522732000
+  }
+ }
+}
