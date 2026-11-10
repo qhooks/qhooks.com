@@ -41,7 +41,11 @@ async function myLocks(me) {
     const w = words(await ethCall(c, cfg.lock, calldata(cfg.sel.locks, ['uint256'], [id])));
     if (w[5] === 0n) continue;   // withdrawn
     const p = words(await ethCall(c, cfg.lock, calldata(cfg.sel.pending, ['uint256'], [id])));
-    out.push({id, term: Number(w[1]), end: w[3], amount: w[5], q: p[0], t: p[1], bonus: p[2]});
+    // pending() only counts what the lock contract has already collected from the staking vault. The real claimable amount
+    // is what claimBase(id) would pay right now, so simulate it from the owner (the same read a wallet preview does).
+    let q = p[0], t = p[1];
+    try { const r = words(await ethCall(c, cfg.lock, calldata(cfg.sel.claimBase, ['uint256'], [id]), me)); if (r.length >= 2) { q = r[0]; t = r[1]; } } catch {}
+    out.push({id, term: Number(w[1]), end: w[3], amount: w[5], q, t, bonus: p[2]});
   }
   return out;
 }
