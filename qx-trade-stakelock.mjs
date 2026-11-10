@@ -26,26 +26,22 @@ async function act(btn, status, fn) {
 
 async function myLocks(me) {
   const c = cfg.chainId;
-  // 2026-11-10: windows of 9,000,000 blocks (RPC limit 10M; this range grows ~345k blocks a day on Robinhood). A failed
-  // window is retried with backoff instead of silently showing no locks.
-  const head = BigInt(await rpc(c, 'eth_blockNumber', []));
-  const topics = [cfg.lockedTopic, null, '0x' + me.slice(2).toLowerCase().padStart(64, '0')], wins = [];
-  for (let lo = BigInt(cfg.fromBlock); lo <= head; lo += 9000000n) { const hi = lo + 8999999n < head ? lo + 8999999n : head; wins.push([lo, hi]); }
-  const read = ([lo, hi]) => rpc(c, 'eth_getLogs', [{address: cfg.lock, fromBlock: '0x' + lo.toString(16), toBlock: '0x' + hi.toString(16), topics}]);
-  // Up to 4 tries per window with backoff (1 s, 2.5 s, 5 s): the RPC rate-limits bursts of wide reads.
-  const tries = async w => { for (const wait of [0, 1000, 2500, 5000]) { if (wait) await new Promise(r => setTimeout(r, wait)); try { return await read(w); } catch (e) { if (wait === 5000) throw e; } } };
-  const logs = (await Promise.all(wins.map(tries))).flat();
+  // 2026-11-10: the lock list comes from the Worker's lock table (/api/stake-lock/locks: nextId() + locks(id) through
+  // Multicall3, cached colo-wide), not from eth_getLogs, which the public RPC rate-limits on a cold colo.
+  // A refreshing answer is retried with backoff before the card shows "Refreshing your locks…".
+  const read = async () => { const r = await fetch('/api/stake-lock/locks?owner=' + me.toLowerCase(), {cache: 'no-store'}); const j = await r.json(); if (!r.ok || !Array.isArray(j?.locks)) throw Error('refreshing'); return j.locks; };
+  let rows;
+  for (const wait of [0, 1000, 2500]) { if (wait) await new Promise(r => setTimeout(r, wait)); try { rows = await read(); break; } catch (e) { if (wait === 2500) throw e; } }
   const out = [];
-  for (const l of logs) {
-    const id = BigInt(l.topics[1]);
-    const w = words(await ethCall(c, cfg.lock, calldata(cfg.sel.locks, ['uint256'], [id])));
-    if (w[5] === 0n) continue;   // withdrawn
+  for (const l of rows) {
+    const id = BigInt(l.id), amount = BigInt(l.amount);
+    if (amount === 0n) continue;   // withdrawn
     const p = words(await ethCall(c, cfg.lock, calldata(cfg.sel.pending, ['uint256'], [id])));
     // pending() only counts what the lock contract has already collected from the staking vault. The real claimable amount
     // is what claimBase(id) would pay right now, so simulate it from the owner (the same read a wallet preview does).
     let q = p[0], t = p[1];
     try { const r = words(await ethCall(c, cfg.lock, calldata(cfg.sel.claimBase, ['uint256'], [id]), me)); if (r.length >= 2) { q = r[0]; t = r[1]; } } catch {}
-    out.push({id, term: Number(w[1]), end: w[3], amount: w[5], q, t, bonus: p[2]});
+    out.push({id, term: Number(l.term), end: BigInt(l.end), amount, q, t, bonus: p[2]});
   }
   return out;
 }
