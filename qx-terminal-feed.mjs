@@ -208,7 +208,7 @@ function makeRow(vm) {
 function updateRow(node, vm) {
   const old = node.vm;
   node.vm = vm;
-  text(node.letter, vm.letter); text(node.symbol, vm.symbol); text(node.name, vm.name); text(node.rowAge, vm.lifecycle.stage==='bonding'?'Bond '+Math.round(vm.lifecycle.progress*100)+'%':vm.lifecycle.stage==='migrated'?'Migrated · '+vm.age:vm.age);node.rowAge.dataset.stage=vm.lifecycle.stage;
+  text(node.letter, vm.letter); text(node.symbol, vm.symbol); text(node.name, vm.name + (founding.slots.has(String(vm.address).toLowerCase()) ? ' · Founding #' + founding.slots.get(String(vm.address).toLowerCase()) : '')); text(node.rowAge, vm.lifecycle.stage==='bonding'?'Bond '+Math.round(vm.lifecycle.progress*100)+'%':vm.lifecycle.stage==='migrated'?'Migrated · '+vm.age:vm.age);node.rowAge.dataset.stage=vm.lifecycle.stage;
   node.name.title = vm.name;
   node.open.setAttribute('aria-label', `Open ${vm.symbol}, ${vm.name || vm.address}, on ${vm.chainName}`);
   node.chain.hidden = !vm.chainIcon;
@@ -258,6 +258,18 @@ function skeleton() {
     ...columns.map(([key]) => el('td', { class: 'qxfd-' + key }, el('span', { class: 'qxfd-placeholder' }))))));
 }
 
+// Founding Launchers (2026-11-10): a pinned row to /founding on the QHooks launches tab, and "Founding #N" by name.
+const founding = {status: null, left: 0, slots: new Map()}, foundingTr = el('tr', {class: 'qxfd-founding'});
+async function loadFounding() {
+  try { const r = await fetch('/api/founding', {cache: 'no-store'}), d = r.ok ? await r.json() : null; if (!d) return;
+    founding.status = d.status; founding.left = d.spotsLeft; founding.slots = new Map((d.launches || []).map(l => [String(l.token).toLowerCase(), l.slot])); renderRows(); } catch {}
+}
+function pinFounding() {
+  if (state.tab !== 'launches' || (founding.status !== 'open' && founding.status !== 'full')) { foundingTr.remove(); return; }
+  foundingTr.replaceChildren(el('td', {colspan: String(columns.length)}, el('a', {href: '/founding'}, el('b', {}, 'Founding Launchers'), ' · ',
+    founding.status === 'full' ? 'All 50 spots taken · see the founding launches' : founding.left + ' of 50 spots left · launch now and earn on your volume for 90 days')));
+  if (tbody.firstChild !== foundingTr) tbody.insertBefore(foundingTr, tbody.firstChild);
+}
 function renderRows() {
   const rows = visibleRows(),activeFilters=Object.values(state.filters).filter(x=>x!=='').length;filterDetails.querySelector('summary').textContent=activeFilters?'Filters · '+activeFilters:'Filters';
   const previousFocus = document.activeElement;
@@ -272,6 +284,7 @@ function renderRows() {
     updateRow(node, vm);
     if (tbody.children[index] !== node.tr) tbody.insertBefore(node.tr, tbody.children[index] || null);
   });
+  pinFounding();
   if (!keep.has(focusedKey)) focusedKey = rows[Math.max(0, Math.min(rows.length - 1, previousIndex))]?.key || null;
   for (const [key, node] of nodes) node.open.tabIndex = key === focusedKey ? 0 : -1;
   if (!root.hidden && previousFocus !== document.body && !previousFocus.isConnected && previousFocus.closest?.('tr[data-key]')) nodes.get(focusedKey)?.open.focus({ preventScroll: true });
@@ -522,3 +535,4 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) { loader.cancel(); searchController?.abort(); clearTimeout(searchTimer); searchGeneration++; }
   else { refresh(); if (state.query.length >= 2) runSearch(); }
 });
+loadFounding(); setInterval(loadFounding, 300000);
