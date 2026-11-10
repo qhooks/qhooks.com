@@ -54,11 +54,11 @@ const completeCoverage=v=>v?.coverage?.complete===true&&v?.coverage?.unknown===0
 function verdictMeta(v){
  const at=checkTime(v),coverage=v?.coverage,checked=Number.isSafeInteger(coverage?.checked)?coverage.checked:null,unknown=Number.isSafeInteger(coverage?.unknown)?coverage.unknown:null;
  const snapshot=v?.snapshot,point=snapshot?(snapshot.chain?' · snapshot '+String(snapshot.chain).slice(0,40):'')+(snapshot.block!=null?' · block '+String(snapshot.block).slice(0,80):snapshot.slot!=null?' · slot '+String(snapshot.slot).slice(0,80):''):'';
- return (v?.source||'RepoProof via QHooks')+' · '+(v?.stale?'stale · ':'')+(v?.cached?'cached · ':'')+(at?new Date(at).toISOString()+' ('+ageOf(at)+')':'check time unknown')+' · source coverage: '+(checked!==null?checked+' checked'+(unknown!==null?', '+unknown+' unknown':''):Array.isArray(v?.checks)?v.checks.length+' returned checks; completeness unknown':'unavailable')+(point||'');
+ return (v?.source||'RepoProof via QHooks')+' · '+(v?.stale?'refreshing · ':'')+(v?.cached?'cached · ':'')+(at?new Date(at).toISOString()+' ('+ageOf(at)+')':'check time unknown')+' · source coverage: '+(checked!==null?checked+' checked'+(unknown!==null?', '+unknown+' unknown':''):Array.isArray(v?.checks)?v.checks.length+' returned checks; completeness unknown':'unavailable')+(point||'');
 }
 export function verdictChip(v) {
-  if (!v || !v.level) return h('span', { class: 'qtr-chip' }, v?.unsupported ? 'Not covered' : 'Unavailable');
-  if(v.level==='clear'&&(v.stale||!checkTime(v)||!completeCoverage(v)))return h('span',{class:'qtr-chip unknown'},v.stale?'Earlier check':!checkTime(v)?'Check time unknown':'Limited coverage');
+  if (!v || !v.level) return h('span', { class: 'qtr-chip' }, v?.unsupported ? 'Not covered' : 'Refreshing…');
+  if(v.level==='clear'&&(v.stale||!checkTime(v)||!completeCoverage(v)))return h('span',{class:'qtr-chip unknown'},v.stale?'Refreshing…':!checkTime(v)?'Check time unknown':'Limited coverage');
   const [t, c] = LEVEL[v.level] || ['Unknown', 'unknown'];
   return h('span', { class: 'qtr-chip ' + c }, t);
 }
@@ -122,7 +122,7 @@ const verifyHref = pool => '/verify#m=' + pool.chainId + ':' + pool.controller;
 function verdictBlock(v) {
   const head = h('div', { class: 'qtr-row' }, h('b', {}, 'Market checks'), verdictChip(v));
   if (!v || !v.level) return h('div', { class: 'qtr-verdict' }, head,
-    h('p', { class: 'qtb-note' }, v?.unsupported ? 'RepoProof does not cover this chain yet.' : 'No full cached RepoProof report is available. Contract observations below have separate source coverage.'),
+    h('p', { class: 'qtb-note' }, v?.unsupported ? 'RepoProof does not cover this chain yet.' : 'Refreshing… RepoProof is checking this launch. Contract observations below have separate source coverage.'),
     h('p',{class:'qtr-evidence'},verdictMeta(v)),
     v?.url ? h('a', { class: 'qtr-link', href: v.url, target: '_blank', rel: 'noopener' }, 'Run the check on RepoProof ↗') : null);
   return h('div', { class: 'qtr-verdict ' + (v.level==='clear'?'unknown':v.level) }, head,
@@ -180,7 +180,7 @@ export async function renderRisk(el, pool) {
   const coverageIncomplete=!v?.level||v.level==='unknown'||!completeCoverage(v)||partialReads||!t;
   const details=h('details',{class:'qtr-risk-details'},h('summary',{class:'qtr-risk-summary'},level?(coverageIncomplete?'Sources · incomplete coverage':'Sources & launch observations'):summary),body);
   const warningTitle=t?.copyOf||v?.level==='danger'||v?.level==='caution'?title:warningChecks.length?'Market checks need attention':'Launch observations need attention';
-  const evidenceState=v?.stale?'Earlier RepoProof check · '+(checkTime(v)?ageOf(checkTime(v)):'check time unknown'):v?.level&&!checkTime(v)?'RepoProof check time unknown':null;
+  const evidenceState=v?.stale?'Refreshing · last RepoProof check '+(checkTime(v)?ageOf(checkTime(v)):'time unknown'):v?.level&&!checkTime(v)?'RepoProof check time unknown':null;
   el.className = 'qxt-risk qtr-ticket-risk ' + (level||'qtr-ticket-risk--compact');
   el.replaceChildren(...(level?[h('b',{},warningTitle),
     h('ul',{},...warningChecks.map(c=>h('li',{},c.title)),...warningFacts.map(factLine)),

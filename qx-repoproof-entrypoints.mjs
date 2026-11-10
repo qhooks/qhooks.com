@@ -2,7 +2,7 @@
 import {mountRepoProofCheck} from './qx-repoproof.mjs';
 import {chainById} from './chains.mjs';
 
-const CHAINS=new Set(['1','8453','42161','56','4663']);
+const CHAINS=new Set(['1','8453','42161','56','4663','99901']);
 const evm=value=>typeof value==='string'&&/^0x[0-9a-f]{40}$/i.test(value)&&BigInt(value)>0n?value.toLowerCase():null;
 const sol=value=>typeof value==='string'&&/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(value)?value:null;
 const same=(a,b)=>a?.kind===b?.kind&&a?.chainId===b?.chainId&&a?.address===b?.address;

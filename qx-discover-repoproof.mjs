@@ -1,6 +1,6 @@
 // The inspector's contract report is owned by one exact Discovery record and URL revision.
 import {mountRepoProofCheck} from './qx-repoproof.mjs';
-const CHAINS=new Set(['1','8453','42161','56','4663']);
+const CHAINS=new Set(['1','8453','42161','56','4663','99901']);
 const NAMES={'1':'Ethereum','8453':'Base','42161':'Arbitrum One','56':'BNB Chain','4663':'Robinhood Chain'};
 const address=value=>typeof value==='string'&&/^0x[0-9a-f]{40}$/i.test(value)&&BigInt(value)>0n?value.toLowerCase():null;
 function identity(value,{profile=false}={}){

@@ -1,9 +1,11 @@
 // Read-only reports plus an explicit, bounded check request. No wallet/provider
-// access, automatic scans, polling, signing or trading authority.
+// access, signing or trading authority. RepoProof checks on its own schedule; while it
+// refreshes, this panel re-reads the stored report a few times (reads only, never a scan).
 const EVM=/^0x[0-9a-f]{40}$/i,SOL=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-const CHAINS=new Set(['1','8453','42161','56','4663','solana']),KINDS=new Set(['token','wallet','launch','contract']);
-const STATES=new Set(['ready','not_checked','unavailable','busy','rate_limited']);
-const CHAIN_NAMES={'1':'Ethereum','8453':'Base','42161':'Arbitrum','56':'BNB Chain','4663':'Robinhood','solana':'Solana'};
+const CHAINS=new Set(['1','8453','42161','56','4663','99901','solana']),KINDS=new Set(['token','wallet','launch','contract']);
+const STATES=new Set(['ready','refreshing','not_checked','unavailable','busy','rate_limited']);
+const REREAD_MS=20000,REREADS=9;
+const CHAIN_NAMES={'1':'Ethereum','8453':'Base','42161':'Arbitrum','56':'BNB Chain','4663':'Robinhood','99901':'Elysium','solana':'Solana'};
 const scalar=v=>v==null?'Unknown':typeof v==='boolean'?(v?'Yes · reported':'No · reported'):typeof v==='number'&&!Number.isFinite(v)?'Unknown':String(v);
 const label=v=>String(v).replace(/([a-z0-9])([A-Z])/g,'$1 $2').replace(/[_-]+/g,' ').replace(/^./,c=>c.toUpperCase());
 const stamp=v=>typeof v==='string'&&Number.isFinite(Date.parse(v))?Date.parse(v):null;
@@ -40,7 +42,7 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
  // an outer Enter shortcut must not submit a trade while evidence has focus.
  element.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' ')event.stopPropagation();});
  container.replaceChildren(element);
- let disposed=false,revision=0,controller=null,pending=false,envelope=null,issue=null,retryTime=null,retryTimer=null,requestTimer=null;
+ let disposed=false,revision=0,controller=null,pending=false,envelope=null,issue=null,retryTime=null,retryTimer=null,requestTimer=null,rereadTimer=null,rereads=0;
  const active=()=>!disposed&&sameRepoProofSubject(target,getSubject());
  const current=()=>{try{return active();}catch{return false;}};
  function loseContext(){revision++;controller?.abort();clearTimeout(requestTimer);requestTimer=null;pending=false;envelope=null;issue='Selection changed. Reopen this report for the current asset.';reportHost.replaceChildren();paintStatus();}
@@ -49,10 +51,10 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
   const alive=current(),blocked=envelope?.state==='busy'||envelope?.state==='rate_limited',waiting=retryTime!==null&&Date.now()<retryTime||blocked&&retryTime===null;
   check.disabled=!alive||pending||waiting;refresh.disabled=!alive||pending;
   check.textContent=pending?'Reading…':envelope?.report?'Run another check':'Check with RepoProof';
-  const texts={ready:'Report available',not_checked:'No cached report',unavailable:'Check unavailable',busy:'Check in progress',rate_limited:'Check limit reached'};
-  badge.textContent=issue?'Could not refresh':pending?'Reading…':texts[envelope?.state]||'Reading cache';
+  const texts={ready:'Report available',refreshing:'Refreshing…',not_checked:'Refreshing…',unavailable:'Refreshing…',busy:'Check in progress',rate_limited:'Check limit reached'};
+  badge.textContent=issue?'Refreshing…':pending?'Reading…':envelope?.stale&&envelope?.state==='ready'?'Refreshing…':texts[envelope?.state]||'Reading cache';
   badge.className='qpr-state'+(envelope?.stale?' qpr-stale':'');
-  status.textContent=!alive?'Selection changed. Reopen this report for the current asset.':issue?issue:pending?'Reading the selected asset only…':envelope?.state==='not_checked'?'No cached report. Press Check with RepoProof to request one.':envelope?.state==='busy'?'A check is already in progress. Refresh the cached report to read its result.':envelope?.state==='rate_limited'?'The check limit was reached. Refreshing the cache does not request a scan.':envelope?.state==='unavailable'?(envelope.reason||'The check could not complete. You can refresh the cache or request it again.'):envelope?.stale?'This cached snapshot is stale. Request another check to refresh its observations.':'Observations are scoped to this report and its snapshot.';
+  status.textContent=!alive?'Selection changed. Reopen this report for the current asset.':issue?issue:pending?'Reading the selected asset only…':['not_checked','refreshing'].includes(envelope?.state)?(envelope.report?'Refreshing… RepoProof is rechecking this. The report below is from its last check.':'Refreshing… RepoProof is checking this now. This panel updates by itself.'):envelope?.state==='busy'?'A check is already in progress. Refresh the cached report to read its result.':envelope?.state==='rate_limited'?'The check limit was reached. Refreshing the cache does not request a scan.':envelope?.state==='unavailable'?'Refreshing… RepoProof is checking this. This panel updates by itself.':envelope?.stale?'Refreshing… The report below is from RepoProof’s last check.':'Observations are scoped to this report and its snapshot.';
   if(retryTime!==null&&Date.now()<retryTime){status.textContent+=' Retry after '+time(new Date(retryTime).toISOString())+'.';retryTimer=setTimeout(paintStatus,Math.min(2147483647,retryTime-Date.now()+20));}
  }
  function fields(value,depth=0){
@@ -69,7 +71,7 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
   const counts=report.counts||{},coverage=report.coverage||{},checks=Array.isArray(report.checks)?report.checks:[],receipts=Array.isArray(report.receipts)?report.receipts:[];
   const strongest=report.level==='danger'||checks.some(c=>c?.status==='danger')?'danger':report.level==='caution'||checks.some(c=>c?.status==='caution')?'caution':report.level;
   const link=reportURL(report.url),sell=repoProofSellEvidence(report),level={danger:'Danger signals reported',caution:'Caution signals reported',clear:'No flags in returned checks',unknown:'Unknown coverage'}[strongest]||'Unknown coverage';
-  const source=h('div',{class:'qpr-report-overview'},h('p',{class:'qpr-cache-state'},envelope.cached?'Cached report':'Returned check report',envelope.stale?' · Stale snapshot':''),h('p',{class:'qpr-level '+(strongest==='danger'?'danger':strongest==='caution'?'caution':'neutral')},level),
+  const source=h('div',{class:'qpr-report-overview'},h('p',{class:'qpr-cache-state'},envelope.cached?'Cached report':'Returned check report',envelope.stale||envelope.state==='refreshing'?' · Refreshing':''),h('p',{class:'qpr-level '+(strongest==='danger'?'danger':strongest==='caution'?'caution':'neutral')},level),
    report.headline?h('p',{class:'qpr-headline'},h('span',{},'RepoProof summary: '),String(report.headline)):null,
    h('p',{class:'qpr-counts'},'Reported checks · Danger '+knownCount(counts.danger)+' · Caution '+knownCount(counts.caution)+' · Clear '+knownCount(counts.clear)+' · Unknown '+knownCount(counts.unknown)),
    h('p',{class:'qpr-coverage'},coverage.complete===true?'Complete reported coverage for this snapshot':coverage.complete===false?'Partial reported coverage':'Coverage completeness not reported',
@@ -107,12 +109,19 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
    const body=await response.json();if(disposed||mine!==revision)return false;if(!current()){loseContext();return false;}
    if(body?.version!==1||!sameRepoProofSubject(target,body.subject,{revision:false})||!STATES.has(body.state))throw Error('The report response did not match this asset. Refresh the cached report to retry.');
    if(!response.ok&&!['busy','rate_limited','unavailable'].includes(body.state))throw Error('The report request could not complete. Refresh the cached report to retry.');
-   envelope=structuredClone(body);const nextRetry=retryAfter(response,body),remaining=retryTime!==null&&retryTime>Date.now()?retryTime:null;retryTime=nextRetry===null?remaining:remaining===null?nextRetry:Math.max(remaining,nextRetry);paintReport();try{onReport(structuredClone(envelope));}catch{}return true;
-  }catch(error){if(disposed||mine!==revision)return false;if(!current()){loseContext();return false;}if(envelope?.report)envelope={...envelope,stale:true};issue=error?.name==='AbortError'?'The report response took too long. Refresh the cached report before requesting another check.':error?.message||'The report could not be read. Refresh the cache to retry.';return false;}
+   envelope=structuredClone(body);scheduleReread();const nextRetry=retryAfter(response,body),remaining=retryTime!==null&&retryTime>Date.now()?retryTime:null;retryTime=nextRetry===null?remaining:remaining===null?nextRetry:Math.max(remaining,nextRetry);paintReport();try{onReport(structuredClone(envelope));}catch{}return true;
+  }catch(error){if(disposed||mine!==revision)return false;if(!current()){loseContext();return false;}if(envelope?.report)envelope={...envelope,stale:true};scheduleReread(true);issue=method==='GET'?'Refreshing… RepoProof is checking this. This panel updates by itself.':error?.name==='AbortError'?'The report response took too long. Refresh the cached report before requesting another check.':error?.message||'The report could not be read. Refresh the cache to retry.';return false;}
   finally{clearTimeout(timer);if(requestTimer===timer)requestTimer=null;if(!disposed&&mine===revision){pending=false;paintStatus();}}
  }
+ // While RepoProof refreshes (or a read failed), re-read the stored report a bounded number of times.
+ function scheduleReread(failed=false){
+  clearTimeout(rereadTimer);rereadTimer=null;
+  const waiting=failed||['refreshing','not_checked','unavailable'].includes(envelope?.state)||envelope?.stale;
+  if(!waiting){rereads=0;return;}if(rereads>=REREADS||disposed)return;
+  rereads++;rereadTimer=setTimeout(()=>{rereadTimer=null;if(!disposed&&current())void request('GET');},REREAD_MS);
+ }
  check.addEventListener('click',()=>request('POST'));refresh.addEventListener('click',()=>request('GET'));
- const view=Object.freeze({element,refreshCache:()=>request('GET'),dispose(){if(disposed)return;disposed=true;revision++;controller?.abort();clearTimeout(requestTimer);clearTimeout(retryTimer);if(element.parentNode===container)element.remove();}});
+ const view=Object.freeze({element,refreshCache:()=>request('GET'),dispose(){if(disposed)return;disposed=true;revision++;controller?.abort();clearTimeout(requestTimer);clearTimeout(retryTimer);clearTimeout(rereadTimer);if(element.parentNode===container)element.remove();}});
  void view.refreshCache();return view;
 }
 
