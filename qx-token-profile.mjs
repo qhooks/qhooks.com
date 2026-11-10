@@ -45,7 +45,7 @@ async function imageFile(file, kind) {
     return profileImage(data,kind);
   } finally { image.close(); }
 }
-export function mountTokenProfileEditor({id,chain = () => document.getElementById('ql-chain')?.value || '8453',name = () => document.getElementById('ql-name')?.value || 'Your token',symbol = () => document.getElementById('ql-symbol')?.value || 'TICKER',scope=()=>''} = {}) {
+export function mountTokenProfileEditor({id,chain = () => document.getElementById('ql-chain')?.value || '8453',name = () => document.getElementById('ql-name')?.value || 'Your token',symbol = () => document.getElementById('ql-symbol')?.value || 'TICKER',scope=()=>'',imageRequired=false} = {}) {
   const scopeKey=()=>String(scope()||''),localStore=()=>scopedStore(scopeKey()),draft=chain=>localStore().get(String(chain)),update=(chain,patch)=>localStore().update(String(chain),patch);
   const status = h('p',{class:'qtp-status',role:'status','aria-live':'polite'}), fields = h('div',{class:'qtp-fields'});
   const banner = h('img',{alt:'Token banner preview',class:'qtp-preview-banner'}), avatar = h('img',{alt:'Token profile picture preview',class:'qtp-preview-avatar'});
@@ -58,7 +58,7 @@ export function mountTokenProfileEditor({id,chain = () => document.getElementByI
     fields.append(h('label',{for:id+'-'+key},label,input));
   }
   const uploads = h('div',{class:'qtp-uploads'});
-  for (const [kind,label,hint] of [['image','Profile picture','Square · PNG or JPEG'],['banner','Token banner','Wide, 3:1 · optional']]) {
+  for (const [kind,label,hint] of [['image','Profile picture',imageRequired?'Square · PNG or JPEG · required':'Square · PNG or JPEG'],['banner','Token banner','Wide, 3:1 · optional']]) {
     const file=h('input',{id:id+'-'+kind,type:'file',accept:'image/*'}),remove=h('button',{type:'button',class:'qtp-remove'},'Remove'); let revision=0;
     file.addEventListener('change',async()=>{const turn=++revision,c=String(chain()),s=scopeKey(); status.textContent='Preparing your '+label.toLowerCase()+'…';try { const data=await imageFile(file.files?.[0],kind);if(turn!==revision||c!==String(chain())||s!==scopeKey())return;const saved=update(c,{[kind]:data});status.textContent=saved?'Image ready. Your token profile is saved in this browser.':storageNotice; } catch(e) { status.textContent=e.message; } finally {if(turn===revision)file.value='';} });
     remove.addEventListener('click',()=>{revision++;update(String(chain()),{[kind]:''});status.textContent=label+' removed.';});
@@ -95,7 +95,7 @@ export function mountTokenProfileEditor({id,chain = () => document.getElementByI
     status.textContent='Previous profile restored.'+(saved?'':(' '+storageNotice));
   });
   const backup=h('details',{class:'qtp-backup'},h('summary',{},'Back up artwork & socials'),h('p',{},'Save this token profile separately from your launch configuration and quantum key backup.'),download,h('label',{for:id+'-restore'},'Restore profile backup',restore),undo);
-  const root=h('section',{id,class:'qtp-editor','aria-labelledby':id+'-title'},h('div',{class:'qtp-head'},h('div',{},h('p',{class:'qx-eyebrow'},'Make it yours'),h('h3',{id:id+'-title'},'Your token’s first impression.'),h('p',{},'Add a profile picture, banner and the places your community can find you. Everything is optional.'))),h('div',{class:'qtp-layout'},h('div',{},uploads,fields),preview),backup,status);
+  const root=h('section',{id,class:'qtp-editor','aria-labelledby':id+'-title'},h('div',{class:'qtp-head'},h('div',{},h('p',{class:'qx-eyebrow'},'Make it yours'),h('h3',{id:id+'-title'},'Your token’s first impression.'),h('p',{},imageRequired?'Add a profile picture (required to launch), a banner and the places your community can find you.':'Add a profile picture, banner and the places your community can find you. Everything is optional.'))),h('div',{class:'qtp-layout'},h('div',{},uploads,fields),preview),backup,status);
   const render = event => {
     const c=String(chain());if(event?.detail&&(event.detail.chain!==c||(event.detail.scope||'')!==scopeKey()))return;const value=draft(c);
     for(const [key,input]of Object.entries(inputs)){const text=key==='description'?value.description:value.links?.[key];if(document.activeElement!==input)input.value=typeof text==='string'?text:'';}
@@ -133,5 +133,13 @@ export function profilePublicationControl({chain=()=>document.getElementById('ql
   return h('section',{class:'qtp-publish'},h('h3',{},'Give your launch its identity.'),h('p',{},'Publish your artwork and links with a free creator-wallet signature. You can update them later.'),button,status);
 }
 const tokenPanel=document.getElementById('qtd-token-panel');
-if(tokenPanel&&!document.getElementById('ql-profile')){const actions=tokenPanel.querySelector('.qtd-actions');actions?.before(mountTokenProfileEditor({id:'ql-profile'}));}
+// Expert Studio: a token image is required to launch (2026-11-10). Continue and Prepare launch workspace stay blocked
+// with a plain note until the profile picture is ready.
+if(tokenPanel&&!document.getElementById('ql-profile')){const actions=tokenPanel.querySelector('.qtd-actions');actions?.before(mountTokenProfileEditor({id:'ql-profile',imageRequired:true}));
+  const chainOf=()=>document.getElementById('ql-chain')?.value||'8453',hasImage=()=>{try{return !!tokenProfileDraft(chainOf()).image;}catch{return false;}};
+  const note=h('p',{id:'ql-need-image',class:'qtd-need-image',role:'status','data-error':'true'},'Add an image for your token.');actions?.prepend(note);
+  const begin=document.getElementById('ql-begin'),note2=h('p',{id:'ql-need-image-begin',class:'qtd-need-image',role:'status','data-error':'true'},'Add an image for your token. Add it under “Make it yours” in Token details.');begin?.after(note2);
+  const sync=()=>{const ok=hasImage();note.hidden=ok;note2.hidden=ok;for(const id of ['qj-next-token','ql-begin'])document.getElementById(id)?.setAttribute('aria-disabled',String(!ok));};
+  for(const id of ['qj-next-token','ql-begin'])document.getElementById(id)?.addEventListener('click',e=>{if(hasImage())return;e.preventDefault();e.stopImmediatePropagation();sync();document.getElementById('ql-profile-image')?.focus();},true);
+  onTokenProfileDraft(sync);document.getElementById('ql-chain')?.addEventListener('change',sync);sync();}
 const success=document.getElementById('qj-success');if(success)success.append(profilePublicationControl());

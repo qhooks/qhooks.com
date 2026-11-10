@@ -214,7 +214,9 @@ function renderQuick(){
  appendArbRecaptureLine(box,c,pick.blocks||[],launchFactory());
  const b=$('launch');
  b.textContent=busy?'Launching…':!conn?'Connect wallet':conn.chainId!==chainId?'Switch to '+c.short+' and launch':priceBlocked()?'Refreshing price…':pqBlocked()?'Unlock your quantum key to launch':'Launch for '+(cost?ethText(cost.totalWei)+' '+c.native:'…');
- b.disabled=busy||!!taken||!!conn&&conn.chainId===chainId&&(!ready||!cost||priceBlocked()||pqBlocked()||cost.live&&!cost.quote.funded);
+ // A token image is required (2026-11-10): no launch, or chain switch for one, until the image is ready.
+ const needImage=!image;$('need-image').hidden=!needImage||busy;
+ b.disabled=busy||!!taken||!!conn&&(needImage||conn.chainId===chainId&&(!ready||!cost||priceBlocked()||pqBlocked()||cost.live&&!cost.quote.funded));
 }
 
 async function rpc(method,params){const c=chainById(chainId);const r=await fetch(c.rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});const j=await r.json();if(j.error||typeof j.result!=='string')throw Error(j.error?.message||'RPC error');return j.result;}

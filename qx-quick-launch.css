@@ -43,3 +43,7 @@
 .qq-chain{display:flex;gap:8px;align-items:center;margin:0 0 10px;font-size:13px;font-weight:600}.qq-chain select{min-height:36px;padding:4px 10px;border-radius:8px;max-width:100%}
 .qq-pq-skip{justify-self:start;background:none;border:0;padding:4px 0;font:inherit;font-size:12.5px;color:var(--qx-muted,#888);text-decoration:underline;cursor:pointer}.qq-pq-skip:hover{color:inherit}
 .qxc-main .qq-pq-skip,.qq-pq-skip{justify-self:start;min-height:44px;background:none;border:0;box-shadow:none;padding:0;font:inherit;font-size:13px;font-weight:500;color:var(--qx-muted,#888);text-decoration:underline;text-underline-offset:3px;cursor:pointer}.qxc-main .qq-pq-skip:hover{background:none;color:inherit}
+
+/* Token image required to launch (2026-11-10). */
+.qq-need-image[hidden],#qc-need-image[hidden]{display:none}
+.qxc-main #qq-need-image,.qxc-main #qc-need-image{color:#9d3f36;border-color:#d9b1a8}[data-theme="dark"] .qxc-main #qq-need-image,[data-theme="dark"] .qxc-main #qc-need-image{color:#e8a89a;border-color:var(--qx-line)}

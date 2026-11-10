@@ -197,12 +197,15 @@ const word = v => BigInt(v).toString(16).padStart(64, '0');
 const hexOf = bytes => Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 function stringTail(s) {const b = enc.encode(s), h = hexOf(b);return word(b.length) + h.padEnd(Math.ceil(h.length / 64) * 64, '0');}
 
+/// A token image is required to launch (2026-11-10).
+export const NEED_IMAGE = 'Add an image for your token.';
 /// Checks name, ticker and the token's meta JSON. Throws a plain sentence.
 export function validateQuick({name, symbol, image = ''}) {
  const n = String(name ?? '').trim(), s = String(symbol ?? '').trim().toUpperCase();
  if (!n || !n.isWellFormed() || enc.encode(n).length > 64) throw new TypeError('Enter a token name, up to 64 characters.');
  if (!/^[A-Z0-9]{1,10}$/.test(s)) throw new TypeError('Use 1–10 letters or digits for the ticker.');
- if (image && !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(image)) throw new TypeError('Choose a PNG, JPEG or WebP image.');
+ if (!image) throw new TypeError(NEED_IMAGE);
+ if (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(image)) throw new TypeError('Choose a PNG, JPEG or WebP image.');
  const meta = quickMeta({image});
  if (enc.encode(meta).length > META_LIMIT) throw new TypeError('Choose a smaller image.');
  return {name: n, symbol: s, meta};

@@ -153,6 +153,8 @@ function render(){renderChainNote();
  for(const id of ['next-1','next-2']){$(id).disabled=busy||!record&&(liquidity.blocked||guidedOff());$(id).title=!record&&liquidity.blocked?liquidity.message:'';$(id).setAttribute('aria-describedby','qc-liquidity-note');}
  renderSavedLaunch();$('execution-hold').hidden=CREATE_EXECUTION_ENABLED;$('key-panel').hidden=!CREATE_EXECUTION_ENABLED||record?.status==='done';$('launch').hidden=record?.status==='done';$('launch').textContent=record?'Resume launch':'Launch';
  let valid=true;try{validateConfig(config,c?.owner||'0x'+'1'.repeat(40));}catch{valid=false;}
+ // A token image is required for a new launch (2026-11-10); a launch already underway can still resume.
+ const needImage=!record&&!config.image;if(needImage)valid=false;$('need-image').hidden=!needImage;
  $('launch').disabled=!CREATE_EXECUTION_ENABLED||busy||!c||!record&&guidedOff()||!signer?.backupVerified||signer.locked||!quantumReady||!cost||!valid||!!record&&record.owner!==c?.owner||!record&&liquidity.blocked;
  $('launch').title=!record&&liquidity.blocked?liquidity.message:'';
  quantumControl?.render();
@@ -188,7 +190,7 @@ async function refreshCost({refreshBalances=true}={}){const identity=liquidityId
  if(wrapAmount!==null)cost.totalNativeWei=(BigInt(cost.totalNativeWei)-(wrapNeeded?units(config.liquidity,chain.quote.decimals):0n)+wrapAmount).toString();
  render();
  }catch(e){if(rev===costRevision){note('Could not read the network estimate. Refresh to retry.',true);$('cost').replaceChildren(costNode());}}}
-function review(){if(!executionAllowed())return;try{const c=hub.snapshot().current;if(!c)throw Error('Connect your launch wallet.');if(!record&&liquidityStatus().blocked)throw Error(liquidityStatus().message);validateConfig(config,c.owner);if(!signer?.backupVerified||signer.locked||!quantumReady)throw Error('Unlock your account quantum key first.');if(!cost)throw Error('Refresh the network estimate first.');
+function review(){if(!executionAllowed())return;try{const c=hub.snapshot().current;if(!c)throw Error('Connect your launch wallet.');if(!record&&!config.image)throw Error('Add an image for your token.');if(!record&&liquidityStatus().blocked)throw Error(liquidityStatus().message);validateConfig(config,c.owner);if(!signer?.backupVerified||signer.locked||!quantumReady)throw Error('Unlock your account quantum key first.');if(!cost)throw Error('Refresh the network estimate first.');
  $('review-summary').replaceChildren(summaryNode());$('review-cost').replaceChildren(costNode());$('review-steps').replaceChildren(...plan(config).map(s=>el('li',{},s.label)));$('review-wallet').textContent=c.entry.rdns===EMBEDDED_RDNS?'One review for your email wallet. The launch starts after you confirm.':'Up to '+cost.walletConfirmations+' wallet confirmations: '+cost.txCount+' transactions and 1 signature, plus a network switch.';reviewGate.prepare();$('review').showModal();}catch(e){note(e.message,true);}}
 const lockName=()=>'qhooks-full-launch:'+record.chainId+':'+record.owner;
 let lockBlocked=false;const launchChannel=typeof BroadcastChannel==='function'?new BroadcastChannel('qhooks-create-launch'):null;
@@ -249,7 +251,7 @@ quantumControl=mountAccountQuantum($('key-panel'),{hub,getExpectedKey:()=>record
 // Older drafts could turn this required setting off. Keep their other work.
 if(!record&&!config.quantum){config.quantum=true;saveDraft();}
 bindFundWallet($('fund-wallet'),{hub,chainId:()=>config.chainId,note});
-$('profile-slot').append(mountTokenProfileEditor({id:'qc-profile',chain:()=>config.chainId,name:()=>config.name||'Your token',symbol:()=>config.symbol||'TICKER',scope:()=>profileScope}));
+$('profile-slot').append(mountTokenProfileEditor({id:'qc-profile',imageRequired:true,chain:()=>config.chainId,name:()=>config.name||'Your token',symbol:()=>config.symbol||'TICKER',scope:()=>profileScope}));
 onTokenProfileDraft(({chain,scope=''})=>{if(!record&&chain===String(config.chainId)&&scope===profileScope){const value=editableTokenProfileDraft(chain,profileScope);Object.assign(config,{description:value.description,image:value.image,banner:value.banner,...value.links});changed();}});
 for(const c of chains)$('chainId').append(el('option',{value:c.id},c.name));if(record&&!chains.some(c=>c.id===config.chainId))$('chainId').append(el('option',{value:config.chainId},chainById(config.chainId).name));
 for(const p of CREATE_STYLES){const b=el('button',{type:'button','data-style':p.id,'aria-pressed':'false'},p.name);b.addEventListener('click',()=>{config.style=p.id;Object.assign(config,presetRules(p.id));for(const k of ['stakers','referrals','antiSnipe'])$(k).value=config[k];changed();});$('styles').append(b);}

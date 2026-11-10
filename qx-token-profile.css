@@ -7,3 +7,7 @@
 .qsr{font-size:12px;line-height:1.5;max-width:100%}.qsr h3{font-size:15px;margin:8px 0}.qsr p{white-space:normal;overflow-wrap:anywhere}.qsr-row{display:flex;justify-content:space-between;gap:12px;padding:8px 0}.qsr button:disabled{opacity:.45;cursor:default}
 
 .qtp-backup{margin-top:20px;padding-top:16px;border-top:1px solid var(--qx-line,#d8ded8)}.qtp-backup summary{cursor:pointer;font-size:13px;font-weight:600}.qtp-backup p{font-size:13px;line-height:1.5}.qtp-backup label{margin-top:12px}.qsr button{min-height:36px}.qsr-row{align-items:center}
+
+/* Token image required to launch (2026-11-10). */
+.qtd-need-image{color:var(--danger,#bc574f);margin:.25rem 0 .5rem;font-size:.92rem}.qtd-need-image[hidden]{display:none}
+#qj-next-token[aria-disabled="true"],#ql-begin[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
