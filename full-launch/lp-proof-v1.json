@@ -811,5 +811,48 @@
     ]
    }
   ]
+ },
+ "holders": {
+  "4663": {
+   "note": "Every PoolManager position in a launch pool, found from ModifyLiquidity events since the launch contract was deployed, then read live from StateView.",
+   "fromBlock": 108170556,
+   "window": 2000000,
+   "official": "0x007d77e43164a5d7d1251457f47f556c2be7f865942c7ec7a91c3cbbf50e53fe",
+   "contracts": [
+    {
+     "address": "0x8DAe320425a1d1263FE13964F48322795B3cFbF7",
+     "kind": "flywheel",
+     "name": "QFlywheelLiquidity",
+     "reason": "Only adds liquidity (full range). No owner, no remove or withdraw function, no upgrade.",
+     "source": [
+      [
+       "Sourcify",
+       "https://repo.sourcify.dev/4663/0x8DAe320425a1d1263FE13964F48322795B3cFbF7"
+      ],
+      [
+       "Blockscout",
+       "https://robinhoodchain.blockscout.com/address/0x8DAe320425a1d1263FE13964F48322795B3cFbF7?tab=contract"
+      ]
+     ]
+    }
+   ],
+   "floorImpls": [
+    {
+     "impl": "0xb6853b3F763C59e5d54BbDE2167C2f3C79218615",
+     "name": "QFloor",
+     "reason": "No owner, no withdraw. Its bid range only moves up inside the contract; any QHOOKS it gets back goes to the dead address.",
+     "source": [
+      [
+       "Sourcify",
+       "https://repo.sourcify.dev/4663/0xb6853b3F763C59e5d54BbDE2167C2f3C79218615"
+      ],
+      [
+       "Blockscout",
+       "https://robinhoodchain.blockscout.com/address/{address}?tab=contract"
+      ]
+     ]
+    }
+   ]
+  }
  }
 }

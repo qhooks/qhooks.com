@@ -24,11 +24,33 @@ function contractCard(chain, c) {
         el('tbody', {}, ...[...writes, ...views].map(f => el('tr', {}, el('td', {}, el('code', {}, f.signature)), el('td', {}, f.liquidity)))))));
 }
 
+const OFFICIAL = {chain: '4663', pool: '0x007d77e43164a5d7d1251457f47f556c2be7f865942c7ec7a91c3cbbf50e53fe', symbols: ['WETH', 'QHOOKS']};
+const amt = (raw, sym) => { const n = Number(raw) / 1e18; return (n >= 1000 ? Math.round(n).toLocaleString('en-US') : n.toLocaleString('en-US', {maximumSignificantDigits: 4})) + ' ' + sym; };
+const KIND = {launch: 'Launch contract', flywheel: 'Liquidity flywheel', floor: 'Floor bid', unknown: 'Other'};
+
+function holdersCard(j) {
+  const h = j.holders; if (!h) return null;
+  const syms = j.poolId === OFFICIAL.pool ? OFFICIAL.symbols : null;
+  return el('section', {class: 'lpp-holders'},
+    el('h3', {}, 'Who holds this pool\'s liquidity'),
+    h.total ? el('p', {class: 'lpp-total'}, h.total + '.') : el('p', {class: 'lpp-note', 'data-tone': h.complete ? 'bad' : null},
+      h.complete ? 'Not every position in this pool belongs to a contract with no withdraw path. See the list below.' : 'The full position list could not be read right now. Try again in a moment.'),
+    ...h.positions.map(x => el('div', {class: 'lpp-holder', 'data-kind': x.kind},
+      el('div', {class: 'lpp-hhead'}, el('strong', {}, KIND[x.kind] || x.kind), el('strong', {class: 'lpp-share'}, x.valueShare + '%')),
+      el('dl', {class: 'lpp-facts'},
+        el('dt', {}, 'Owner'), el('dd', {}, el('code', {}, x.owner), el('br'), el('span', {class: 'lpp-sub'}, x.name)),
+        el('dt', {}, 'Share'), el('dd', {}, x.valueShare + '% of value · ' + (x.inRange ? x.activeLiquidityShare + '% of in-range liquidity' : 'out of range')
+          + (syms ? ' · ' + amt(x.amount0Raw, syms[0]) + ' + ' + amt(x.amount1Raw, syms[1]) : '')),
+        el('dt', {}, 'Why it can\'t be removed'), el('dd', {}, x.reason),
+        el('dt', {}, 'Verified source'), el('dd', {}, ...Object.entries(x.source).flatMap(([n, u], i) => [i ? ' · ' : '', link(u, n)]))))),
+    el('p', {class: 'lpp-note'}, h.method + ' Scanned from block ' + h.scannedFromBlock.toLocaleString('en-US') + '. In-range liquidity of these positions: ' + fmtL(h.knownActiveLiquidity) + ' of the pool\'s ' + fmtL(h.activeLiquidity) + '.'));
+}
+
 function launchCard(j) {
   return el('section', {class: 'lpp-launch'},
-    el('h2', {}, 'This launch'),
+    el('h2', {}, j.poolId === OFFICIAL.pool ? 'Official QHOOKS pool' : 'This launch'),
     el('dl', {class: 'lpp-facts'},
-      el('dt', {}, 'Token'), el('dd', {}, j.token),
+      el('dt', {}, 'Token'), el('dd', {}, j.token + (j.poolId === OFFICIAL.pool ? ' (QHOOKS, official pool)' : '')),
       el('dt', {}, 'Chain'), el('dd', {}, NAMES[j.chain] || j.chain),
       el('dt', {}, 'Pool id'), el('dd', {}, j.poolId),
       el('dt', {}, 'Pool hook'), el('dd', {}, j.poolKey.hooks + ' (the launch contract)'),
@@ -38,6 +60,7 @@ function launchCard(j) {
       el('dt', {}, 'LP fees go to'), el('dd', {}, j.payout),
       el('dt', {}, 'Remove or withdraw function'), el('dd', {}, 'None')),
     el('p', {}, j.statement),
+    holdersCard(j),
     el('p', {class: 'lpp-note'}, 'Read at ' + j.readAt + '. Machine-readable: ', link('/api/v1/lp-proof?chain=' + j.chain + '&pool=' + j.poolId, '/api/v1/lp-proof?chain=' + j.chain + '&pool=' + j.poolId.slice(0, 10) + '…')));
 }
 
@@ -49,8 +72,8 @@ async function render() {
   const go = el('button', {type: 'button', class: 'qtx-mini qas-go'}, 'Check this launch');
   go.addEventListener('click', () => { const u = new URL(location.href); u.searchParams.set('chain', sel.value); u.searchParams.delete('pool'); if (inp.value.trim()) u.searchParams.set('token', inp.value.trim()); else u.searchParams.delete('token'); location.href = u.toString(); });
   kids.push(el('div', {class: 'lpp-row'}, sel, inp, go));
-  if (token || pool) {
-    const r = await fetch('/api/v1/lp-proof?chain=' + encodeURIComponent(chain) + (pool ? '&pool=' + encodeURIComponent(pool) : '&token=' + encodeURIComponent(token)));
+  {
+    const r = await fetch('/api/v1/lp-proof?chain=' + encodeURIComponent(token || pool ? chain : OFFICIAL.chain) + (pool ? '&pool=' + encodeURIComponent(pool) : token ? '&token=' + encodeURIComponent(token) : '&pool=' + OFFICIAL.pool));
     const j = await r.json().catch(() => ({}));
     kids.push(r.ok ? launchCard(j) : el('p', {class: 'lpp-note', 'data-tone': 'bad'}, j.hint || 'That could not be read right now.'));
   }

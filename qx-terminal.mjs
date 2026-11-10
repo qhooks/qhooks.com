@@ -25,7 +25,7 @@ import {mountSelectedRepoProof} from '/qx-repoproof.mjs';
 import { createTerminalSelection, prepareNativeTicket, withTerminalTradeReady, createTerminalShortcutHandler, closeTerminalOverlayOnEscape, tradeAddressLabel } from '/qx-terminal-selection.mjs';
 import { afterBuy, onReached } from '/qx-terminal-tpsl.mjs';
 import { getWalletHub } from '/wallet-hub.mjs';
-import { trustList, trustOf, verdictOf, badge, copyLabel } from '/qx-trust.mjs';
+import { trustList, trustOf, verdictOf, badge, copyLabel, forget } from '/qx-trust.mjs';
 import { officialFor, officialLogo, impostorOf, officialBadge, notOfficialBadge, impostorBanner, rowMark, pinOfficial } from '/qx-official.mjs';
 import { externalQuick } from '/qx-terminal-feed-core.mjs';
 import {freshnessState,historyState,loadExternalHeader,loadExternalHistory} from '/qx-terminal-data.mjs';
@@ -145,7 +145,11 @@ function renderLaunchActions(){
 // queues a token on first view (2026-11-10, via the main thread). Until it accepts the chain: "No automated checks…".
 // Chains where RepoProof's token check answers. Add '99901' when RepoProof's release supports Elysium (until then its
 // check answers 400 and the page would log an error): the terminal then asks it instead of showing the unsupported copy.
-const REPOPROOF_TOKEN_CHAINS=new Set([]);
+// 2026-11-10: the set was empty, so this fallback never ran. RepoProof's API (/api/repoproof/check) accepts tokens on
+// these chains (Elysium answers 400 invalid_proof_subject, so it stays out). The safety scan also answers 503 for
+// uncached tokens, and those now fall back here too: a cached RepoProof report shows its verdict, otherwise "Not checked
+// yet" with the RepoProof link instead of "Checks paused · retry".
+const REPOPROOF_TOKEN_CHAINS=new Set(['1','8453','42161','56','4663']);
 const SAFETY_SKIP=new Set(['99901']); // /api/terminal/x/safety has no Elysium (400).
 async function repoproofTokenChecks(selected,signal){
  if(!REPOPROOF_TOKEN_CHAINS.has(String(selected.chainId)))return {unsupported:true,chainId:selected.chainId,address:selected.token};
@@ -156,14 +160,62 @@ async function repoproofTokenChecks(selected,signal){
   return {...(rep||{}),level:rep?.level??null,verdict:rep?(rep.level==='clear'?'ok':rep.level):undefined,unavailable:!rep,state:v.state,retryAt:v.retryAt??null,source:'RepoProof via QHooks',checkedAt:v.checkedAt||rep?.completedAt||null,chainId:String(selected.chainId),address:String(selected.token).toLowerCase()};
  }catch(e){if(signal?.aborted)throw e;return none;}
 }
+// 2026-11-10 (release lead: BRETT showed "No flags" while RepoProof rated it danger; QHOOKS showed "Not checked yet"):
+// - Every available source counts. GoPlus/RugCheck (the safety scan) and RepoProof are merged; the panel shows the worst
+//   level, and each flag is labelled by its source.
+// - On Robinhood the selected market gets one RepoProof check on view when it has no report (once per subject per browser
+//   session; the server's allowance of 20 checks an hour, 5 per visitor, still applies). Other chains read cached reports
+//   only, so views don't spend the shared allowance; "Check with RepoProof" runs one there.
+// - The trade ticket gets the same flags, but its "danger" title says "may not be sellable": a danger that only comes from
+//   RepoProof (e.g. holder concentration) without a failed sell probe reaches the ticket as caution.
+const RISK_RANK={danger:3,caution:2,ok:1,clear:1,unknown:0};
+const sourceName=s=>({goplus:'GoPlus',rugcheck:'RugCheck','RepoProof via QHooks':'RepoProof'})[s]||String(s||'Safety scan');
+const lvl=v=>v==='clear'?'ok':v||'unknown';
+export function mergeRisk(base,rp){
+ const r=rp&&!rp.unsupported&&!rp.unavailable&&Array.isArray(rp.checks)?rp:null;
+ if(!r)return base;if(!base)return rp;
+ const b=lvl(base.verdict),x=lvl(r.level),verdict=(RISK_RANK[x]??0)>(RISK_RANK[b]??0)?x:b;
+ const rpFlags=r.checks.filter(c=>c&&(c.status==='danger'||c.status==='caution')).sort((p,q)=>(p.status==='danger'?0:1)-(q.status==='danger'?0:1)).map(c=>'RepoProof: '+String(c.title||c.id));
+ const baseFlags=(Array.isArray(base.flags)?base.flags:[]).map(f=>sourceName(base.source)+': '+f);
+ return {...base,verdict,flags:[...rpFlags,...baseFlags],checks:r.checks,source:sourceName(base.source)+' + RepoProof',checkedAt:r.checkedAt||base.checkedAt||null};
+}
+export function ticketRisk(c,scan=null){
+ if(!c||lvl(c.verdict)!=='danger'||scan&&lvl(scan.verdict)==='danger')return c;
+ const sellFail=(c.checks||[]).some(k=>/sell/i.test(String(k?.id||''))&&k.status==='danger');
+ return sellFail?c:{...c,verdict:'caution'};
+}
+const AUTO_KEY='qhooks:repoproof:auto:v1';
+async function autoRepoProof(kind,chainId,address,signal){
+ if(String(chainId)!=='4663')return false;
+ const key=kind+':'+chainId+':'+String(address).toLowerCase();let seen=[];
+ try{seen=JSON.parse(sessionStorage.getItem(AUTO_KEY)||'[]');}catch{}
+ if(seen.includes(key))return false;
+ try{sessionStorage.setItem(AUTO_KEY,JSON.stringify([...seen,key].slice(-40)));}catch{}
+ try{const r=await fetch('/api/repoproof/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,chainId:String(chainId),address:String(address).toLowerCase()}),signal});return r.ok;}
+ catch(e){if(signal?.aborted)throw e;return false;}
+}
+async function tokenRepoProof(selected,signal){
+ let rp=await repoproofTokenChecks(selected,signal);
+ if(rp?.state==='not_checked'&&!rp.retryAt&&await autoRepoProof('token',selected.chainId,selected.token,signal))rp=await repoproofTokenChecks(selected,signal);
+ return rp;
+}
 async function refreshSelectedChecks() {
  const selected=selectedContext(),run=selectionFlow?.current();if(!selected||!run||!state.data)return;
+ const signal=run.controller.signal;
  try{
-  let checks;
-  if(selected.kind==='launch')checks=await verdictOf(selected.chainId,selected.controller);
-  else if(SAFETY_SKIP.has(String(selected.chainId)))checks=await repoproofTokenChecks(selected,run.controller.signal);
-  else {const response=await fetch(`/api/terminal/x/safety/${selected.chainId}/${selected.token}`,{cache:'no-store',signal:run.controller.signal});if(response.status===400){checks=await repoproofTokenChecks(selected,run.controller.signal);}else{if(!response.ok)throw Error('Checks paused. Refresh data to retry.');checks=await response.json();}}
-  if(!run.active())return;if(!checks)throw Error('Check provider returned no coverage.');if(selected.kind==='external'){state.data.safety=checks;ticket.setSafety(checks,run.intent);}
+  let checks,forTicket=null;
+  if(selected.kind==='launch'){
+   checks=await verdictOf(selected.chainId,selected.controller);
+   if(checks?.state==='not_checked'&&await autoRepoProof('launch',selected.chainId,selected.controller,signal)){forget(selected.chainId,selected.controller);checks=await verdictOf(selected.chainId,selected.controller);}
+  }
+  else if(SAFETY_SKIP.has(String(selected.chainId)))checks=await repoproofTokenChecks(selected,signal);
+  else {
+   const response=await fetch(`/api/terminal/x/safety/${selected.chainId}/${selected.token}`,{cache:'no-store',signal}),rpChain=REPOPROOF_TOKEN_CHAINS.has(String(selected.chainId));
+   if(response.status===400){checks=rpChain?await tokenRepoProof(selected,signal):await repoproofTokenChecks(selected,signal);}
+   else if(response.status>=500&&rpChain){checks=await tokenRepoProof(selected,signal);if(checks?.unsupported)throw Error('Checks paused. Refresh data to retry.');}
+   else{if(!response.ok)throw Error('Checks paused. Refresh data to retry.');const scan=await response.json();checks=rpChain?mergeRisk(scan,await tokenRepoProof(selected,signal)):scan;forTicket=ticketRisk(checks,scan);}
+  }
+  if(!run.active())return;if(!checks)throw Error('Check provider returned no coverage.');if(selected.kind==='external'){const t=forTicket||ticketRisk(checks);state.data.safety=t;ticket.setSafety(t,run.intent);}
   marketWorkspace.receiveRisk(selected,checks);renderHead();
  }catch(error){if(run.active()){marketWorkspace.failRisk(selected,error);if(state.data)renderHead();}}
 }
@@ -367,7 +419,7 @@ function renderChart() {
   const embedSelection=d.ext?{chainId:d.meta.chainId,token:d.meta.token,pool:d.token?.pools?.[0]?.address,quote:d.token?.pools?.[0]?.quoteAddress,asset:d.meta.symbol,tf:d.tf}:null;
   // Outside tokens: when our candles are missing or behind, show the live provider chart instead of a stale one.
   const candlesBehind=!!d.ext&&!!d.candles?.length&&historyState('candles',d.historyFreshness?.candles).stale;
-  // Our candles first: no provider embed while the history read is still running (2026-11-10, TradingView switch).
+  // Our candles first: no provider embed while the history read is still running (2026-11-10, chart switch).
   if((!d.candles?.length||candlesBehind)&&d.marketCoverage?.candles!=='loading'&&providerChart.render(d.chartSurface||directProviderChart(embedSelection),embedSelection)){chartUnits.hidden=true;const status=$('qxt-candles-freshness');if(status)status.hidden=true;return;}
   providerChart.clear();chartUnits.hidden=false;
   renderHistoryStatus('candles',d);
