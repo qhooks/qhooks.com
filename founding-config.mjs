@@ -59,6 +59,10 @@ export const FOUNDING = {
   // Chains whose QHooks trades go through a fee router (same Swapped/Referral events). Elysium has its own router.
   routerChains: ['4663', '8453', '42161', '56', '1', '99901'],
   routers: {'99901': '0xff208831ed6f0c4e3e3224effa45fae7906dc6c2'},
+  // Qualifying chains (Randall 2026-11-10). A chain with `gate` opens by itself once one of those launch contracts has
+  // code there (Ethereum: the clean launch contract, deploying before 5 PM CT); until then the page says "opening soon".
+  chains: [{id: '4663', name: 'Robinhood Chain'}, {id: '8453', name: 'Base'}, {id: '56', name: 'BNB Chain'}, {id: '42161', name: 'Arbitrum'}, {id: '99901', name: 'Elysium'},
+    {id: '1', name: 'Ethereum', gate: ['0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', '0xfb5a559886fccba6400cc52905ba3aa4658ba0cc']}],
 };
 
 const lower = s => String(s || '').toLowerCase();
@@ -79,7 +83,8 @@ export function pickFounding(launches, cfg = FOUNDING) {
     const firstOpen = sorted.findIndex(l => l.entry == null);
     pool = (firstOpen < 0 ? sorted : sorted.slice(0, firstOpen)).filter(l => l.entry === true);
   }
-  const ok = pool.filter(l => Number(l.launchedAt) >= cfg.start && /^0x[0-9a-f]{40}$/.test(lower(l.creator)) && !isOwnWallet(l.creator, cfg)
+  const chainIds = new Set((cfg.chains || []).map(c => c.id));
+  const ok = pool.filter(l => (!chainIds.size || chainIds.has(String(l.chainId))) && Number(l.launchedAt) >= cfg.start && /^0x[0-9a-f]{40}$/.test(lower(l.creator)) && !isOwnWallet(l.creator, cfg)
     && !skipTok.has(lower(l.token)) && !skipTok.has(tokenKey(l)));
   ok.sort((a, b) => Number(a.launchedAt) - Number(b.launchedAt) || String(a.chainId).localeCompare(String(b.chainId)) || lower(a.token).localeCompare(lower(b.token)));
   const seen = new Set(), out = [];

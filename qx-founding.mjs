@@ -21,6 +21,8 @@ function render() {
   const g = data.rules.grant;
   document.querySelectorAll('[data-rule="holders"]').forEach(n => { n.textContent = String(g.holders); });
   document.querySelectorAll('[data-rule="volume"]').forEach(n => { n.textContent = '$' + Number(g.volumeUsd).toLocaleString('en-US'); });
+  const ch = $('qfd-chains'), list6 = data.rules.chains || [];
+  if (ch && list6.length) ch.textContent = list6.map(c => c.name + (c.open ? '' : ' (opening soon)')).join(', ') + '. Launches on a chain marked opening soon count from the moment it opens.';
   const b = $('qfd-bounty'); if (b) b.textContent = data.bounty?.winner ? 'Won by ' + data.bounty.winner.symbol + '.' : 'Bounty: open.';
   if (data.status === 'soon') {
     const at = data.opensAt || data.rules.start, left = at ? at - Math.floor(Date.now() / 1000) : null;
