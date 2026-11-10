@@ -6,7 +6,7 @@ import {resolveTradingTolerance} from './qx-trading-preferences.mjs';
 // Every quote runs through the real pool and hook, so charges are in the number shown. Trades go through the
 // platform fee router: 1% per trade, 30% of it back to the trader as cashback they claim here (40% for QHOOKS holders on Robinhood Chain).
 import { rpc, livePoolKey, parseUnits, formatUnits, erc20, send, ensureAllowance, connectedAddress, onWalletChange, NATIVE, CHAIN_NAME, h } from '/qx-chain.mjs';
-import { quoteSingle, nativeRoute, quoteNative, FEE_BPS, feeSwapCall, viaSwapCall, nativeHops, cashbackOf, referralLink, claimCall } from '/qx-swap.mjs';
+import { quoteSingle, nativeRoute, quoteNative, FEE_BPS, feeSwapCall, viaSwapCall, nativeHops, cashbackOf, referralLink, claimCall, savedReferrer } from '/qx-swap.mjs';
 import { extraAddress, isLive, setUp } from '/qx-extras.mjs';
 import { hasDirectRoute, resolveDirectPool, refusalText } from '/qx-elysium-direct.mjs';
 import { holderMinTokens, shortText } from '/qx-holder-min.mjs';
@@ -125,6 +125,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     h('div', { class: 'qxt-side-toggle', role: 'group', ariaLabel: 'Trade side' }, ...sideBtns, sellToCash),
     h('div', { class: 'qxt-row2' }, payRow, h('label', { class: 'qxt-pay' }, h('span', {}, 'Tolerance'), tolSel)),
     risk, h('div', { class: 'qxt-amount' }, amount, unit), h('div', { class: 'qxt-meta' }, balance), addFunds, presets, out, quoteTools, funding.element, go, signIn, status, followup, cashSettings(h), cash);
+  import('/qx-oneclick.mjs').then(m => m.mountOneClickToggle(card)).catch(() => {}); // One-click trading toggle (hidden unless an email/Google wallet is connected)
 
   const targetKey=t=>!t?'none':t.kind==='launch'?'m:'+String(t.chainId)+':'+String(t.controller).toLowerCase():'t:'+String(t.chainId)+':'+(String(t.chainId)==='solana'?String(t.address):String(t.address).toLowerCase());
   const isSelection=intent=>!!intent&&intent===selection;
@@ -299,10 +300,12 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       if (!live) { s('One-time setup of trading on ' + CHAIN_NAME[chainId] + '…'); await setUp(chainId, 'feeRouter', s, assertContext); }
       const tin = sell === XNATIVE ? ZERO : sell, tout = buy === XNATIVE ? ZERO : buy;
       assertTradeOwner(c);
+      if (!((tin === ZERO || tout === ZERO) && await tryOneClick(c, s))) {
       if (tin !== ZERO) await ensureAllowance(chainId, tin, router, c.a, s, assertContext);
       const now = BigInt((await rpc(chainId, 'eth_getBlockByNumber', ['latest', false])).timestamp);
       assertTradeOwner(c);
       await send(chainId, { to: router, data: viaSwapCall(q.tx.to, q.tx.data, tin, tout, c.a, minOut, c.side === 'buy', now + 600n), value: tin === ZERO ? c.a : 0n }, s, assertContext);
+      }
       const after = await erc20(chainId, token, me).catch(() => null), moved = after ? (after.balance > b.token ? after.balance - b.token : b.token - after.balance) : null;
       s(moved === null ? 'Trade confirmed. Refresh balances.' : (c.side === 'buy' ? 'Bought ' : 'Sold ') + formatUnits(moved, st.decimals, 4) + ' ' + st.symbol + '.');if (c.side === 'buy' && moved !== null) afterBuy();
       amount.value = ''; document.dispatchEvent(new CustomEvent('qhooks:traded')); try { await onTraded({ side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s, ext: true }); } catch {}
@@ -480,6 +483,17 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     finally {if(mine===qseq){quoteLoading=false;renderQuoteFreshness();}}
   }
 
+  // One-click (qx-oneclick.mjs): when on, the server sends this trade (same router routes) with no wallet popup.
+  async function tryOneClick(c, s) {
+    const oc = await import('/qx-oneclick.mjs').catch(() => null);
+    if (!oc || !(await oc.oneClickOn().catch(() => false))) return false;
+    assertTradeOwner(c); s('Placing your trade…');
+    const done = await oc.oneClickTrade({ chainId: st.chainId, token: st.token, side: c.side, amountWei: c.a, slippageBps: c.toleranceBps || 300, referrer: savedReferrer() });
+    if (!done) return false;
+    const last = done.hashes[done.hashes.length - 1];
+    for (let i = 0; i < 90; i++) { const r = await rpc(st.chainId, 'eth_getTransactionReceipt', [last]).catch(() => null); if (r) { if (r.status !== '0x1') throw new Error('The trade reverted'); return true; } await new Promise(res => setTimeout(res, 1000)); }
+    return true;
+  }
   async function poolSubmit(c) {
         const { chainId, key, token, quote: qt } = st, router = await extraAddress('feeRouter', chainId);
         const me = connectedAddress(), b = await balances();
@@ -491,7 +505,10 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         const live = await isLive(chainId, 'feeRouter');
         assertContext();
         if (!live) { s('One-time setup of trading on ' + CHAIN_NAME[chainId] + '…'); await setUp(chainId, 'feeRouter', s, assertContext); }
-        if (c.side === 'buy' && st.nativePool) {
+        // One-click (qx-oneclick.mjs): QHooks markets, ETH/BNB in or token out, no wallet popup. Off or not eligible: wallet signs below.
+        const oneClickDone = (c.side === 'sell' || c.pay === 'native' || st.nativePool) && await tryOneClick(c, s);
+        if (oneClickDone) { /* sent by one-click */ }
+        else if (c.side === 'buy' && st.nativePool) {
           // Native-HYPE pool: HYPE goes straight in (router checks currency0 is native); no wrap.
           assertTradeOwner(c);
           await send(chainId, { to: router, data: feeSwapCall(chainId, [{ key, zeroForOne: BigInt(key.currency0) === 0n }], c.a, c.minOut, null, true, deadline), value: c.a }, s, assertContext);

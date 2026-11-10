@@ -91,6 +91,6 @@ if (typeof document !== 'undefined' && window.qxTelegram?.inTelegram) {
     let storage; try { storage = window.localStorage; } catch {}
     const hub = getWalletHub(window);
     mountWalletLink({ document, hub, telegram: window.qxTelegram, storage, force: new URLSearchParams(location.search).get('link') === '1' });
-    import('./qx-tg-signer.mjs').then(({ mountTelegramSigner }) => mountTelegramSigner({ document, hub, telegram: window.qxTelegram, target: window })).catch(() => {});
+    // One-click trading now lives in the ticket toggle (qx-oneclick.mjs); the old Telegram-only permission strip is retired.
   }).catch(() => {});
 }
