@@ -34,7 +34,10 @@ export const FOUNDING = {
     stakeLock: '0x807390f11e52e8508636bac3c54b47b17a66dae3', stakeLockFrom: 110600000, from: 108872832},
   // Bounty ("first coin to 150k gets 1k usd"): first founding token to hold a $150,000 market cap for 24 hours straight
   // wins $1,000 in WETH on Robinhood Chain. Tracking ships with the payout tree; until then the page shows it open.
-  bounty: {mcapUsd: 150000, holdHours: 24, prizeUsd: 1000, maxGapS: 1800}, // a sampling gap over 30 min restarts the 24 hours
+  // Anti-spike (Randall 2026-11-10, "people can't launch floor higher … spike to 150k"): for all 24 hours the market cap is
+  // also ≥ startMultiple × the starting market cap, and at the win it has `holders` holders with ≥ holderMinUsd each and
+  // ≥ volumeUsd of real volume since launch. A sampling gap over 30 min restarts the 24 hours.
+  bounty: {mcapUsd: 150000, holdHours: 24, prizeUsd: 1000, maxGapS: 1800, startMultiple: 10, holders: 100, holderMinUsd: 10, volumeUsd: 25000},
   // Payouts on (2026-11-10 payout tree): each drop list pays the extra cashback, and pays the creator share and the
   // bounty only to creators holding the entry minimum at that moment (else it waits for a later list).
   payouts: true,
@@ -53,7 +56,7 @@ export const FOUNDING = {
   grant: {
     chain: '4663', token: QHOOKS, qgrants: '0xf042b3624ddf632e9e320a4c697565de4dea664d', grantor: SAFE,
     amount: (50000n * 10n ** 18n).toString(), budget: (2500000n * 10n ** 18n).toString(),
-    holders: 100, volumeUsd: 5000, perTraderShare: 0.25, withinDays: 14, vestDays: 30,
+    holders: 100, holderMinUsd: 10, volumeUsd: 5000, perTraderShare: 0.25, withinDays: 14, vestDays: 30,
   },
   pay: {chain: '4663', token: WETH_RH, drops: '0x89eb481a2ea221e62647c113c88de67e7b9a5a70'},
   router: ROUTER,
@@ -115,10 +118,11 @@ export function tradeRewards(trade, launch, cfg = FOUNDING) {
 
 /// Milestone volume: USD per trader, the creator and QHooks wallets left out, each trader counted up to
 /// perTraderShare of the bar, so one wallet trading back and forth can't make it alone.
-export function milestoneVolume(perTraderUsd, launch, cfg = FOUNDING) {
-  const cap = cfg.grant.volumeUsd * cfg.grant.perTraderShare;
+/// linked: wallets the creator sent the token to (treated as the creator's). bar: the volume bar the cap is a share of.
+export function milestoneVolume(perTraderUsd, launch, cfg = FOUNDING, {linked = new Set(), bar = cfg.grant.volumeUsd} = {}) {
+  const cap = bar * cfg.grant.perTraderShare;
   let total = 0;
-  for (const [trader, usd] of perTraderUsd) if (trader !== launch.creator && !isOwnWallet(trader, cfg)) total += Math.min(Number(usd) || 0, cap);
+  for (const [trader, usd] of perTraderUsd) if (trader !== launch.creator && !linked.has(trader) && !isOwnWallet(trader, cfg)) total += Math.min(Number(usd) || 0, cap);
   return total;
 }
 export const milestoneMet = (holders, volumeUsd, cfg = FOUNDING) => Number(holders) >= cfg.grant.holders && volumeUsd >= cfg.grant.volumeUsd;
