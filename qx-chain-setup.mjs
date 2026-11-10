@@ -14,6 +14,12 @@ import {chainById} from '/chains.mjs';
 const root=document.getElementById('qcs-root'),hub=getWalletHub(window),q=new URLSearchParams(location.search);
 const list=k=>new Set((q.get(k)||'').split(',').map(x=>x.trim()).filter(Boolean));
 const go=list('go'),factoryGo=list('factory');
+// ?first=order-executor,x-receiver (2026-11-10, /taps for Ethereum): trading steps first. Only steps in the "Orders" and
+// "Cross-chain buys" groups may move up; they deploy through the standard deployer with no reference to the steps
+// between, so they are ready once the fee Safe and shared launch contracts are on chain. Everything else keeps its order.
+const FIRST=[...list('first')],FIRST_GROUPS=new Set(['Orders','Cross-chain buys']);
+const firstOf=steps=>FIRST.map(id=>steps.find(s=>s.id===id&&FIRST_GROUPS.has(s.group))).filter(Boolean);
+const BASE_GROUPS=new Set(['Fee Safe','Shared launch contracts']);
 const SET=/^[a-z0-9-]{1,32}$/.test(q.get('set')||'')?q.get('set'):null;
 const needsFactoryGo=s=>s.group==='Launch contract'||s.group==='Terminal trading';
 // A chain that is not built in chains.mjs yet (Elysium mainnet before its site release) carries its network in the manifest.
@@ -167,9 +173,10 @@ function section(chainId,many){
   rows.push(el('div',{class:'qcs-step qcs-switch'},el('h3',{},'Switch your wallet to '+ch.name),el('dl',{},el('dt',{},'Status'),el('dd',{},'Your wallet is on '+(net(conn.chainId)?.name||'chain '+conn.chainId)+'. Send also switches it.')),b));
  }
  let group='';
- for(const s of C.steps){
-  const st=S.steps[s.id];
-  const ready=prev==='ok',ok=cleared&&(!needsFactoryGo(s)||factoryGo.has(chainId));
+ const early=firstOf(C.steps),baseOk=C.steps.filter(x=>BASE_GROUPS.has(x.group)).every(x=>S.steps[x.id]==='ok');
+ for(const s of [...early,...C.steps.filter(x=>!early.includes(x))]){
+  const st=S.steps[s.id],isEarly=early.includes(s);
+  const ready=isEarly?baseOk:prev==='ok',ok=cleared&&(!needsFactoryGo(s)||factoryGo.has(chainId));
   if(s.group!==group){group=s.group;rows.push(el(many?'h3':'h2',{class:'qcs-group'},group));}
   const btn=el('button',{type:'button',class:'qtx-mini qas-go',disabled:busy||st!=='none'||!ok||!ready},
    st==='ok'?'Set up':st==='wrong'?'Stopped':!conn?'Connect wallet':'Send');
@@ -181,7 +188,7 @@ function section(chainId,many){
     ...(s.gas?[el('dt',{},'Gas'),el('dd',{},Number(s.gas).toLocaleString('en-US'))]:[]),
     el('dt',{},'Status'),el('dd',{},st===null?'Refreshing…':st==='ok'?'Set up':st==='wrong'?'Other code at this address: stop':!ready?'After the step above':ok?'Ready':needsFactoryGo(s)&&cleared?'Waiting for Randall’s go for this chain’s launch contract (factory='+chainId+')':'Waiting for a go')),
    btn));
-  prev=st;
+  if(!isEarly)prev=st;
  }
  rows.push(el('p',{class:'qas-status',role:'status','aria-live':'polite','data-tone':status.chain===chainId&&status.tone||false},status.chain===chainId?status.text:''));
  return el('section',{class:'qcs-chainset','data-chain':chainId},...rows);

@@ -1,0 +1,49 @@
+/* Setup taps shares the site's shell, typography, palette and wallet panel. */
+.qtp-page,.qtp-page *{font-style:normal!important}
+.taps{max-width:880px;min-width:0;color:var(--qx-ink)}
+.taps h1{font-family:var(--qx-sans);letter-spacing:-.045em;font-size:clamp(36px,7vw,58px);line-height:1.06;margin:12px 0 18px}
+.taps .qlk-lede{max-width:40ch}
+.taps-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 0 20px;border-bottom:1px solid var(--qx-line-2)}
+.taps-progress-line{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0;font:600 14px/1.5 var(--qx-sans)}
+#taps-refreshing{font-weight:400;color:var(--qx-muted)}
+#taps-refreshing[hidden]{display:none}
+.taps-status{color:var(--qx-muted);overflow-wrap:anywhere;line-height:1.5;font-size:14px;margin:12px 0}
+.taps-status:empty{margin:0}
+.taps-section{margin:30px 0 36px;min-width:0}
+.taps-section>h2{font:600 21px/1.3 var(--qx-sans);letter-spacing:-.025em;margin:0 0 16px}
+.taps-row{border:1px solid var(--qx-line-2);background:var(--qx-panel);border-radius:16px;margin:0 0 12px;overflow:hidden}
+.taps-row-body{padding:20px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px 20px;min-width:0}
+.taps-chains{grid-column:1;display:flex;flex-wrap:wrap;gap:7px;min-height:24px}
+.taps-chains img{display:block;width:24px;height:24px;object-fit:contain}
+.taps-sentence{grid-column:1;font:500 16px/1.5 var(--qx-sans);margin:0;overflow-wrap:anywhere}
+.taps-action{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:12px 18px;border-radius:10px;border:1px solid var(--qx-brass);background:var(--qx-brass);color:var(--qx-on-brass);font:600 14px/1.4 var(--qx-sans);text-decoration:none;cursor:pointer;text-align:center}
+.taps-row .taps-action{grid-column:2;grid-row:1 / span 4;min-width:130px}
+.taps-action:hover{filter:brightness(1.08)}
+.taps-action:focus-visible,.taps summary:focus-visible{outline:3px solid var(--qx-sage);outline-offset:4px}
+.taps-action:disabled{opacity:.5;cursor:default;filter:none}
+.taps-check{border-color:var(--qx-line-2);background:transparent;color:var(--qx-ink)}
+.taps-destination,.taps-note{grid-column:1;color:var(--qx-muted);font:400 12px/1.5 var(--qx-sans);margin:0;overflow-wrap:anywhere;min-width:0}
+.taps-destination span{font-family:var(--qx-mono)}
+.taps-next{list-style:none;margin:0;padding:12px 20px;border-top:1px solid var(--qx-line);background:var(--qx-bg-2);color:var(--qx-muted);font:400 13px/1.5 var(--qx-sans)}
+.taps-next li+li{margin-top:8px}
+.taps-next li{overflow-wrap:anywhere}
+.taps-empty{font:400 15px/1.5 var(--qx-sans);color:var(--qx-muted);padding:20px;border:1px solid var(--qx-line);border-radius:12px}
+.taps-done{border-top:1px solid var(--qx-line-2);padding-top:8px;color:var(--qx-muted);font:400 13px/1.5 var(--qx-sans)}
+.taps-done summary{cursor:pointer;min-height:44px;align-content:center;font-weight:600;color:var(--qx-ink)}
+.taps-done ul{list-style:none;margin:8px 0 0;padding:0}
+.taps-done li{padding:8px 0;border-bottom:1px solid var(--qx-line);overflow-wrap:anywhere}
+@media(max-width:560px){
+ .taps-toolbar{align-items:stretch}
+ .taps-toolbar .taps-action{width:100%}
+ .taps-row-body{display:flex;flex-direction:column;align-items:stretch;padding:16px;gap:12px}
+ .taps-row .taps-action{width:100%;margin-top:2px}
+ .taps-next{padding:12px 16px}
+}
+
+.taps-cost{grid-column:1;margin:0;color:var(--qx-muted);font:400 13px/1.5 var(--qx-sans);overflow-wrap:anywhere}
+.taps-ethereum-total{margin:20px 0;padding:16px;border:1px solid var(--qx-line-2);border-radius:12px;background:var(--qx-panel);color:var(--qx-ink);font:500 14px/1.6 var(--qx-sans);overflow-wrap:anywhere}
+
+.taps-checking{margin:0 0 16px;color:var(--qx-muted);font:400 13px/1.5 var(--qx-sans)}
+
+/* Label colour (lead review 2026-11-10): a broader site link rule overrode --qx-on-brass, leaving light text on brass. */
+.taps-row a.taps-action,.taps-row button.taps-action,.taps-row a.taps-action:visited{color:var(--qx-on-brass)}

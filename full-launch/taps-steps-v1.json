@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "steps": [
+    {"id":"instant-receiver","kind":"manifest","group":"wallet","title":"Instant receiver","sentence":"Set up instant cross-chain buys","set":"instant","source":"/chain-setup.html","manifest":"/full-launch/chain-setup-instant-v1.json","chains":[56,4663,8453,42161,99901]},
+    {"id":"copy-vault","kind":"manifest","group":"wallet","title":"Copy vault","sentence":"Set up follower copy vaults","set":"copyvault","source":"/chain-setup.html","manifest":"/full-launch/chain-setup-copyvault-v1.json","chains":[56,8453,42161,99901,4663]},
+    {"id":"clean-launch","kind":"manifest","group":"wallet","title":"Clean launch set","sentence":"Set up the clean launch contracts","set":"clean","source":"/chain-setup.html","manifest":"/full-launch/chain-setup-clean-v1.json","chains":[1,56,4663,8453,42161,99901]},
+    {"id":"base-setup","kind":"manifest","group":"wallet","title":"Base chain setup","sentence":"Set up the shared launch and trading contracts","source":"/chain-setup.html","manifest":"/full-launch/chain-setup-v1.json","chains":[4663,8453,42161,56,99901,1]},
+    {"id":"robinhood-pairs","kind":"manifest","group":"wallet","title":"Robinhood pairs","sentence":"Set up USDG and stock-token launch pairs","set":"pairs","source":"/chain-setup.html","manifest":"/full-launch/chain-setup-pairs-v1.json","chains":[4663]},
+    {"id":"arb-liquidity","kind":"arbliq","group":"wallet","title":"Arb liquidity keeper","sentence":"Set up the liquidity keeper contracts","source":"/arb-liquidity-setup.html","manifest":"/full-launch/arb-liquidity-rh-v1.json","chains":[4663],"href":"/arb-liquidity-setup?go=4663"},
+    {"id":"keeper-gas","kind":"balanceMin","group":"wallet","title":"Keeper gas","address":"0x9f57ea4801259f12ad68564615a7ddf5a1c820e5","chains":[{"id":4663,"target":"0.004"},{"id":8453,"target":"0.002"},{"id":42161,"target":"0.001"},{"id":56,"target":"0.014"},{"id":99901,"target":"0.18"}]},
+    {"id":"qdrops-weekly","kind":"qdropsFund","group":"safe","title":"QDrops weekly funding","sentence":"Fund the weekly QDrops rewards","source":"/safe-drops-fund.html","recurring":true,"chainId":4663,"href":"/safe-drops-fund"},
+    {"id":"founding-funding","kind":"foundingFund","group":"safe","title":"Founding Launchers grants/top-up","sentence":"Fund the Founding Launchers grants and rewards","source":"/safe-founding-fund.html","recurring":true,"chainId":4663,"href":"/safe-founding-fund"},
+    {"id":"arb-hook-allow-list","kind":"call","adapter":"arbAllow","group":"safe","title":"Arb hook allow-list","sentence":"Update the arb hook allow-list","source":"/arb2-allow-2.html","sources":["/arb2-allow-2.html","/arb2-remove.html"],"manifest":"/full-launch/arb2-allow-2-v1.json","removeManifest":"/full-launch/arb2-remove-v1.json","chainId":4663,"href":"/arb2-allow-2"},
+    {"id":"floor-flywheel","kind":"call","adapter":"floorAllowances","group":"safe","title":"Floor flywheel allowances","sentence":"Approve the floor flywheel tokens","source":"/floor-qhooks.html","manifest":"/full-launch/floor-qhooks-v1.json","chainId":4663,"href":"/floor-qhooks"}
+  ]
+}
