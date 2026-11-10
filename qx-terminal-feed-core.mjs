@@ -153,7 +153,7 @@ export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24'
   };
   const quote = row.quoteAmounts;
   const displayMoney = (key, precise = false) => numeric[key] !== null ? money(numeric[key], { precise }) :
-    quote?.unit ? money(quote[key], { unit: quote.unit, precise }) : DASH;
+    quote?.unit && Number(quote[key]) > 0 ? money(quote[key], { unit: quote.unit, precise }) : DASH; // no "0 WETH" cap for an untraded launch (quoteusd)
   const symbol = typeof token.symbol === 'string' && token.symbol.trim() ? token.symbol : '?';
   const address = typeof token.address === 'string' ? token.address : '';
   return {

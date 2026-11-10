@@ -30,7 +30,7 @@ import { officialFor, officialLogo, impostorOf, officialBadge, notOfficialBadge,
 import { externalQuick } from '/qx-terminal-feed-core.mjs';
 import {freshnessState,historyState,loadExternalHeader,loadExternalHistory} from '/qx-terminal-data.mjs';
 import {ownChartView,ownHolderLabel,ownTapeValue,ownTapeRows,ownTapePrice} from '/qx-terminal-own.mjs';
-import {fillNativeUsd,ethUsd as browserEthUsd} from '/qx-native-usd.mjs';
+import {fillNativeUsd,ethUsd as browserEthUsd,quoteUsd} from '/qx-native-usd.mjs';
 import {coldPoolSpec,readColdPrice,coldMayPaint,spotFromSlot0,GET_SLOT0,COLD_CHART_MESSAGE} from '/qx-cold-price.mjs';
 import {renderMarketHolders,holderSource} from '/qx-terminal-holders.mjs';
 import {renderChartHistory,renderTapeHistory,tapeHistoryState,refreshHistoryPresentation} from '/qx-terminal-history.mjs';
@@ -81,6 +81,9 @@ function compact(n) {
 const stable = sym => /^(USDC|USDT|DAI|USD)/.test(sym || '');
 // No number yet: a bare dash, not "— WETH".
 const money = (n, sym) => n == null || Number.isNaN(n) ? '—' : stable(sym) ? '$' + compact(n) : compact(n) + ' ' + (sym || '');
+// Header amounts (2026-11-10, quoteusd): dollars first, the quote amount after it; the quote amount alone only when USD
+// is not known yet (stables are already dollars).
+const usdFirst = (usd, amount, sym) => usd != null && Number.isFinite(usd) && !stable(sym) ? money(usd, 'USD') + (amount != null && Number.isFinite(amount) ? ' · ' + money(amount, sym) : '') : money(amount, sym);
 const pct = (n, sign = true) => n == null ? '—' : (sign && n > 0 ? '+' : '') + (n * 100).toFixed(Math.abs(n) < 0.1 ? 2 : 1) + '%';
 const age = ts => { const d = Math.floor(Math.max(0, now() - ts)); return d < 60 ? d + 's' : d < 3600 ? Math.floor(d / 60) + 'm' : d < 86400 ? Math.floor(d / 3600) + 'h' : Math.floor(d / 86400) + 'd'; };
 const clock = s => { s = Math.max(0, s); const m = Math.floor(s / 60); return m >= 60 ? Math.floor(m / 60) + 'h ' + (m % 60) + 'm' : m + ':' + String(s % 60).padStart(2, '0'); };
@@ -373,9 +376,11 @@ function renderFeed() {
  if(!rows.length){list.replaceChildren(h('li',{class:'qxt-workspace-empty'},h('b',{},'No matching QHooks launches'),h('p',{},'Outside tokens remain available in Tokens, Recent and Watchlist.'),h('button',{type:'button',class:'qxt-context-action',onclick:()=>document.dispatchEvent(new CustomEvent('qxt:discover'))},'Browse tokens')),...xPart);return;}
  list.replaceChildren(...foundingPin(),...rows.map((m,i)=>{
   const s=m.summary,u=unitOf(m),sel=state.sel&&keyOf(state.sel)===keyOf(m);
-  return h('li',{class:(sel?'sel ':'')+(i===state.cursor?'cur':''),'data-key':keyOf(m)},h('button',{type:'button',class:'qxt-row',onclick:()=>select(m.chainId,m.controller)},avatar(m),
+  // Card amounts (2026-11-10, quoteusd): dollars, the quote amount on hover; "Refreshing" while unknown, never "0 WETH".
+  const amt=(usd,q)=>Number.isFinite(usd)&&usd>0?h('span',{title:Number(q)>0?money(q,m.quoteSymbol):undefined},'$'+compact(usd)):Number(q)>0?money(q,m.quoteSymbol):Number.isFinite(usd)&&usd===0&&s?.lastTradeAt?'$0':'Refreshing';
+  return h('li',{class:'qxt-has-qb '+(sel?'sel ':'')+(i===state.cursor?'cur':''),'data-key':keyOf(m)},h('button',{type:'button',class:'qxt-row',onclick:()=>select(m.chainId,m.controller)},avatar(m),
    h('span',{class:'qxt-r1'},h('b',{},m.symbol),h('span',{class:'qxt-rail-chain'},CHAIN_NAME[m.chainId]||m.chainId),h('span',{class:'qxt-age'},age(m.launchedAt))),
-   s?h('span',{class:'qxt-r2'},h('span',{},h('i',{},'MC '),money(s.mcap,m.quoteSymbol)),h('span',{},h('i',{},'V '),money(s.volume24,m.quoteSymbol)),h('span',{class:s.change24>0?'up':s.change24<0?'down':''},pct(s.change24))):h('span',{class:'qxt-r2 qxt-quiet'},'Refreshing…'),
+   s?h('span',{class:'qxt-r2'},h('span',{},h('i',{},'MC '),amt(s.mcapUsd,s.mcap)),h('span',{},h('i',{},'V '),amt(s.volume24Usd,s.volume24)),h('span',{class:s.change24>0?'up':s.change24<0?'down':''},pct(s.change24))):h('span',{class:'qxt-r2 qxt-quiet'},'Refreshing…'),
    h('span',{class:'qxt-r3 qxt-rail-contract'},h('code',{title:m.token||m.controller},short(m.token||m.controller)),...badges(m))),h('button',{type:'button',class:'qxt-qb',title:'Buy '+m.symbol+' with '+state.quick[u]+' '+QUNIT[u],onclick:()=>quickBuy(m)},'⚡ '+state.quick[u]));
  }),...xPart);
 }
@@ -539,8 +544,8 @@ function renderHead() {
   headTrust();
   $('qxt-stats').dataset.source='index';
   $('qxt-stats').replaceChildren(
-    ...cell('Price', s.priceUsd!=null?'$'+price(s.priceUsd)+' · '+price(s.price)+' '+q:s.price!=null?price(s.price)+' '+q:'—'), ...cell('24h', pct(s.change24), s.change24 > 0 ? 'up' : s.change24 < 0 ? 'down' : ''),
-    ...cell('MCap', s.mcapUsd!=null?money(s.mcapUsd,'USD'):money(s.mcap, q)), ...cell('Vol 24h', money(s.volume24, q)), ...cell('Buys / sells · 24h', Number.isFinite(s.buys24)&&Number.isFinite(s.sells24)?s.buys24+' / '+s.sells24:'—'),
+    ...cell('Price', stable(q)&&s.price!=null?'$'+price(s.price):s.priceUsd!=null?'$'+price(s.priceUsd)+' · '+price(s.price)+' '+q:s.price!=null?price(s.price)+' '+q:'—'), ...cell('24h', pct(s.change24), s.change24 > 0 ? 'up' : s.change24 < 0 ? 'down' : ''),
+    ...cell('MCap', usdFirst(s.mcapUsd, s.mcap, q)), ...cell('Vol 24h', usdFirst(s.volume24Usd, s.volume24, q)), ...cell('Buys / sells · 24h', Number.isFinite(s.buys24)&&Number.isFinite(s.sells24)?s.buys24+' / '+s.sells24:'—'),
     ...cell('Holder wallets', s.holders ?? '—'), ...cell('Top 10', pct(s.top10, false)), ...cell('Burned', s.supply!=null&&s.burned!=null&&s.supply+s.burned>0 ? pct(s.burned / (s.supply + s.burned), false) : '—'),
     ...cell('Team locked', s.supply!=null&&s.burned!=null&&s.locked!=null&&s.supply+s.burned>0 ? pct(s.locked / (s.supply + s.burned), false) : '—'));
   $('qxt-sync').textContent = d.status==='ready'?'Live':{pending:'Loading price history…',syncing:'Loading price history…',partial:'Refreshing…',stale:'Refreshing…'}[d.status];
@@ -629,7 +634,7 @@ function renderPane() {
   showTape(h('table', { class: 'qxt-table' }, h('thead', {}, h('tr', {}, ...['Age', 'Side', 'Price', 'Amount', 'Value', 'Trader', ''].map(t => h('th', {}, t)))),
     h('tbody', {}, ...rows.map(t => { const eth = t.pool === 2;
       return h('tr', { class: t.buy ? 'b' : 's' }, h('td', { title: new Date(t.ts * 1000).toLocaleString() }, age(t.ts)), h('td', { class: t.buy ? 'up' : 'down' }, t.buy ? 'Buy' : 'Sell',t.source==='QHooks data'?h('span',{class:'qxt-tag',title:'Trade source'},'Public RPC'):null),
-        (()=>{const tp=ownTapePrice(t,{ext:!!d.ext,quoteSymbol:eth?'ETH':q},price);return h('td',tp.title?{title:tp.title}:{},tp.text);})(), h('td', {}, compact(t.token)), h('td', {title:t.usdObservedAt?'USD quote observed '+new Date(t.usdObservedAt).toISOString():undefined}, ownTapeValue(t,money)??(eth ? compact(t.quote) + ' ETH' : money(t.quote, q))),
+        (()=>{const tp=ownTapePrice(t,{ext:!!d.ext,quoteSymbol:eth?'ETH':q},price);return h('td',tp.title?{title:tp.title}:{},tp.text);})(), h('td', {}, compact(t.token)), h('td', {title:t.usdCurrent?'USD at the current '+(t.quoteSymbol||q)+' price':t.usdObservedAt?'USD quote observed '+new Date(t.usdObservedAt).toISOString():undefined}, ownTapeValue(t,money)??(eth ? compact(t.quote) + ' ETH' : money(t.quote, q))),
         t.via === 'auction' ? h('td', {}, link(m.chainId, '/address/' + t.trader, short(t.trader)), h('span', { class: 'qxt-tag' }, 'Auction batch')) : who(m.chainId, t.trader, eth ? h('span', { class: 'qxt-tag' }, 'ETH pool') : null),
         h('td', {}, link(m.chainId, '/tx/' + t.tx, '↗'))); }))));
 }
@@ -788,13 +793,15 @@ function applyPoolPrice(data,p,usd){
 // paint as the index, so an untraded launch never shows "—" between the pool read and the index.
 function applyCachedPoolPrice(data){
  if(!needsPoolPrice(data?.summary))return;const hit=poolSpots.get(launchPoolId(data));if(!hit)return;
- applyPoolPrice(data,hit.price,/^W?ETH$/i.test(data.meta.quoteSymbol||'')?Number(data.nativeQuote?.usd)||null:/^(USD|USDC|USDT)$/i.test(data.meta.quoteSymbol||'')?1:null);
+ applyPoolPrice(data,hit.price,Number(data.nativeQuote?.usd)>0?Number(data.nativeQuote.usd):stable(data.meta.quoteSymbol)?1:null);
 }
 async function fillPoolPrice(data,mine){
  const s=data?.summary;if(!s||s.lastTradeAt||(Number(s.price)>0&&!s.priceFromPool))return;
  try{const p=await poolSpotPrice(data);if(!p||mine!==mseq||state.data!==data)return;
   let usd=null;
-  if(/^W?ETH$/i.test(data.meta.quoteSymbol||'')&&data.meta.quote)usd=Number(data.nativeQuote?.usd)>0?Number(data.nativeQuote.usd):(await browserEthUsd().catch(()=>null))?.usd||await ethUsd(String(data.meta.chainId),data.meta.quote).catch(()=>null);
+  if(Number(data.nativeQuote?.usd)>0)usd=Number(data.nativeQuote.usd);
+  else if(/^W?ETH$/i.test(data.meta.quoteSymbol||'')&&data.meta.quote)usd=(await browserEthUsd().catch(()=>null))?.usd||await ethUsd(String(data.meta.chainId),data.meta.quote).catch(()=>null);
+  else usd=await quoteUsd(data.meta.quoteSymbol).catch(()=>null);
   if(mine!==mseq||state.data!==data)return;
   if(s.priceFromPool&&s.price===p&&(usd?s.priceUsd===p*usd:true))return;
   applyPoolPrice(data,p,usd);paintMarket();}catch{}
@@ -803,7 +810,7 @@ async function fillPoolPrice(data,mine){
 // launch index loads. It paints only until the index has painted this selection; after that the index owns the header.
 async function paintColdPrice(record,chainId,mine){
  const spec=coldPoolSpec(record,chainById(chainId));if(!spec)return;
- let cold;try{cold=await readColdPrice(spec,{rpc,ethUsd:()=>browserEthUsd()});}catch{return;}
+ let cold;try{cold=await readColdPrice(spec,{rpc,ethUsd:()=>browserEthUsd(),quoteUsd});}catch{return;}
  if(!cold)return;poolSpots.set(spec.poolId,{price:cold.price,at:cold.observedAt});
  if(!coldMayPaint({revision:mine,current:mseq,hasIndexData:!!state.data}))return;
  const q=cold.quoteSymbol||'WETH',cell=(k,v)=>[h('div',{},h('dt',{},k),h('dd',{},v))];
@@ -811,8 +818,8 @@ async function paintColdPrice(record,chainId,mine){
  if(spec.name){$('qxt-name').textContent=spec.name;$('qxt-name').title=spec.name;}
  document.title=tabTitle(spec.symbol,{priceUsd:cold.priceUsd,priceQuote:cold.price,quoteSymbol:cold.quoteSymbol||'WETH'});
  $('qxt-stats').replaceChildren(
-  ...cell('Price',cold.priceUsd!=null?'$'+price(cold.priceUsd)+' · '+price(cold.price)+' '+q:price(cold.price)+' '+q),...cell('24h','—'),
-  ...cell('MCap',cold.mcapUsd!=null?money(cold.mcapUsd,'USD'):money(cold.mcap,q)),...cell('Vol 24h','—'),...cell('Buys / sells · 24h','—'),
+  ...cell('Price',stable(q)?'$'+price(cold.price):cold.priceUsd!=null?'$'+price(cold.priceUsd)+' · '+price(cold.price)+' '+q:price(cold.price)+' '+q),...cell('24h','—'),
+  ...cell('MCap',usdFirst(cold.mcapUsd,cold.mcap,q)),...cell('Vol 24h','—'),...cell('Buys / sells · 24h','—'),
   ...cell('Holder wallets','—'),...cell('Top 10','—'),...cell('Burned','—'),...cell('Team locked','—'));
  $('qxt-stats').dataset.source='pool';
  $('qxt-chart').hidden=false;$('qxt-chart-empty').hidden=false;$('qxt-chart-empty').textContent=COLD_CHART_MESSAGE;

@@ -13,7 +13,8 @@ export function ownTapeValue(trade,money){
  if(!trade.quoteSymbol)return null;
  const native=money(trade.quote,trade.quoteSymbol);
  // No dollar value without a dated ETH/USD sample: show the native amount alone (no "unavailable" wording).
- return Number.isFinite(trade.valueUsd)?native+' · '+money(trade.valueUsd,'USD'):native;
+ // Dollars first, the quote amount after it (2026-11-10, quoteusd).
+ return Number.isFinite(trade.valueUsd)&&!/^USD/.test(trade.quoteSymbol)?money(trade.valueUsd,'USD')+' · '+native:native;
 }
 // Tape PRICE column (2026-11-10, holder: "the Price section should show the actual price"): USD per token at the time
 // of the trade — the trade's dated USD value ÷ its token amount; outside tokens already carry a USD price. The quote-token

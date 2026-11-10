@@ -44,13 +44,15 @@ export function spotFromSlot0(raw, { tokenIs0, decimals = 18, quoteDecimals = 18
 
 const STABLE = /^(USD|USDC|USDT)$/i, ETHISH = /^W?ETH$/i;
 /** { price, priceUsd, mcap, mcapUsd, quoteSymbol, observedAt, source:'pool' } or null. Dollars when ETH/USD is known. */
-export async function readColdPrice(spec, { rpc, ethUsd, now = Date.now }) {
+export async function readColdPrice(spec, { rpc, ethUsd, quoteUsd, now = Date.now }) {
   if (!spec) return null;
   const raw = await rpc(spec.chainId, 'eth_call', [{ to: spec.stateView, data: GET_SLOT0 + spec.poolId.slice(2) }, 'latest']);
   const price = spotFromSlot0(raw, spec); if (!price) return null;
   const mcap = spec.supply > 0 ? price * spec.supply : null;
   let usd = STABLE.test(spec.quoteSymbol || '') ? 1 : null;
   if (usd == null && ETHISH.test(spec.quoteSymbol || '') && ethUsd) { const v = await Promise.resolve().then(ethUsd).catch(() => null); usd = Number(v?.usd ?? v) > 0 ? Number(v?.usd ?? v) : null; }
+  // Any other quote (WHYPE, WBNB…): the caller's quote price lookup, when given (2026-11-10, quoteusd).
+  if (usd == null && quoteUsd) { const v = await Promise.resolve(spec.quoteSymbol).then(quoteUsd).catch(() => null); usd = Number(v) > 0 ? Number(v) : null; }
   return { price, priceUsd: usd ? price * usd : null, mcap, mcapUsd: usd && mcap != null ? mcap * usd : null, quoteSymbol: spec.quoteSymbol, observedAt: now(), source: 'pool' };
 }
 

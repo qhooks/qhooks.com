@@ -518,3 +518,11 @@ body.qx.qxt{font-size:13px;line-height:1.4}
 .qxt-theme-toggle{flex:none;display:inline-grid;place-items:center;width:34px;height:34px;padding:0;border-radius:50%;border:1px solid var(--qx-line-2);background:transparent;color:var(--qx-ink);cursor:pointer}
 .qxt-theme-toggle[hidden]{display:none}.qxt-theme-toggle:hover{background:var(--qx-panel-2)}.qxt-theme-toggle:focus-visible{outline:2px solid var(--qx-brass);outline-offset:2px}
 .qxt-theme-toggle svg{width:16px;height:16px}
+
+/* Quick-buy pill on its own row at the bottom of launch cards (2026-11-10, quoteusd; JAL: pill overlapped the chain
+   label). The name/chain row gets the full width and truncates with an ellipsis. */
+.qxt-list li.qxt-has-qb{display:flex;flex-direction:column}
+.qxt-list li.qxt-has-qb .qxt-row{padding-right:10px;padding-bottom:4px}
+.qxt-list li.qxt-has-qb .qxt-qb{position:static;align-self:flex-end;margin:0 10px 9px auto;flex:none}
+.qxt-list li.qxt-has-qb .qxt-r1 b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qxt-list li.qxt-has-qb .qxt-rail-chain{min-width:0;overflow:hidden;text-overflow:ellipsis}

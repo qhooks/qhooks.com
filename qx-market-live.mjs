@@ -30,7 +30,7 @@ export async function launchTokens(body,{fetcher=globalThis.fetch,limit=5,dex}={
  let natives=null;const nativeUsd=async sym=>{if(!NATIVE_OF[sym])return null;natives??=readPublicJSON('/api/funding/native-prices?symbols=ETH,BNB,HYPE',{fetcher}).then(b=>b.prices||{}).catch(()=>({}));return (await natives)[NATIVE_OF[sym]]??null;};
  const rows=await Promise.all(list.map(async m=>{
   const c=String(m.chainId),patch=rowPatch(pickPair(pairs.get(c),c,m.token,null)),s=m.summary||{};
-  let usd=patch?.priceUsd??null,chg=patch?.change?.h24??(typeof s.change24==='number'?s.change24:null),vol=patch?.volumeUsd?.h24??null;
+  let usd=patch?.priceUsd??(typeof s.priceUsd==='number'&&s.priceUsd>0?s.priceUsd:null),chg=patch?.change?.h24??(typeof s.change24==='number'?s.change24:null),vol=patch?.volumeUsd?.h24??null;
   if(usd==null&&typeof s.price==='number'&&s.price>0){const n=await nativeUsd(String(m.quoteSymbol||'').toUpperCase());if(n)usd=s.price*n;}
   return {symbol:m.symbol||m.name||'Token',name:m.name||'',address:m.token,chainId:c,href:'/terminal#m='+encodeURIComponent(c)+':'+encodeURIComponent(String(m.controller).toLowerCase()),
    logo:logoURL(m.logo)||logoURL(officialLogo(c,m.token)),price:usd!=null?money(usd,{precise:true}):'—',change:percent(chg),direction:typeof chg==='number'&&Number.isFinite(chg)?Math.sign(chg):0,

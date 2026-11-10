@@ -125,7 +125,7 @@ export function createSmartBoard({ nameOf = short, isFollowing = () => false, to
     if (!S.rows) { tableBox.replaceChildren(el('p', { class: 'qsm-empty' }, S.err ? 'The board is refreshing. Try again in a moment.' : 'Refreshing…')); return; }
     // One plain line on what the period covers, and which chains have few sampled trades in it.
     const want = S.chain === 'all' ? Object.keys(NAME) : [S.chain], thin = want.filter(id => (S.coverage.find(c => c.chainId === id)?.trades || 0) < 30).map(id => NAME[id]);
-    const head = S.fallback ? el('p', { class: 'qsm-period' }, el('b', {}, 'QHooks launches, 7 days'), ' · All-token smart money is filling in from each chain. Meanwhile, these are the top wallets on QHooks launches.') : el('p', { class: 'qsm-period' }, el('b', {}, TF_TEXT[S.tf]), ' · ' + plural(shown().length, 'wallet') + ' ranked · updates every 15 minutes' + (thin.length ? '. Few sampled trades on ' + thin.join(', ') + ' in this period, so ' + (thin.length === want.length ? 'this list is short' : 'they show less here') + '.' : '.'));
+    const head = S.fallback ? el('p', { class: 'qsm-period' }, el('b', {}, 'QHooks launches, 7 days'), ' · All-token smart money is filling in from each chain. Meanwhile, these are the top wallets on QHooks launches.') : el('p', { class: 'qsm-period' }, el('b', {}, TF_TEXT[S.tf]), ' · ' + plural(shown().length, 'wallet') + ' ranked' + (thin.length ? '. Few sampled trades on ' + thin.join(', ') + ' in this period, so ' + (thin.length === want.length ? 'this list is short' : 'they show less here') + '.' : '.'));
     const list = shown(), wideN = 50 + S.more * 50, narrowN = 20 + S.more * 20;
     const more = n => list.length > n ? el('button', { type: 'button', class: 'qsm-btn qsm-more', onclick: () => { S.more++; draw(); } }, 'Show more (' + (list.length - n) + ')') : null;
     tableBox.replaceChildren(...[head,
@@ -148,7 +148,7 @@ export function createSmartBoard({ nameOf = short, isFollowing = () => false, to
   // ---- the live feed of buys by top-ranked wallets
   function drawFeed() {
     const items = (S.feed || []).slice(0, 14);
-    feedBox.replaceChildren(el('div', { class: 'qsm-feed-h' }, el('span', { class: 'qsm-live', 'aria-hidden': 'true' }), el('h2', {}, 'Smart money buys'), el('small', { class: 'qsm-feed-note' }, 'updates every 15 minutes')),
+    feedBox.replaceChildren(el('div', { class: 'qsm-feed-h' }, el('span', { class: 'qsm-live', 'aria-hidden': 'true' }), el('h2', {}, 'Smart money buys')),
       S.feed == null ? el('p', { class: 'qsm-empty' }, 'Refreshing…') : !items.length ? el('p', { class: 'qsm-empty' }, 'No buys by ranked wallets in the last day yet.')
         : el('ul', {}, ...items.map(b => el('li', {}, el('a', { href: terminalHref(b.chainId, b.token), class: 'qsm-buy' },
           tokenIcon(b, 26), el('span', { class: 'qsm-buy-t' }, el('b', {}, b.symbol || short(b.token)), el('small', {}, '#' + b.rank + ' ' + nameOf(b.wallet) + ' · ' + (SHORT[b.chainId] || ''))),
@@ -158,7 +158,7 @@ export function createSmartBoard({ nameOf = short, isFollowing = () => false, to
     clearTimeout(S.feedTimer);
     if (!box.isConnected && S.feed) return; // stopped when the board is off screen
     if (!document.hidden) { try { const r = await fetch('/api/wallets/smart/buys?chain=' + S.chain, { cache: 'no-store' }); if (r.ok) { S.feed = (await r.json()).buys || []; drawFeed(); } } catch {} }
-    S.feedTimer = setTimeout(loadFeed, 60000); // the data refreshes every 15 minutes; a minute is plenty
+    S.feedTimer = setTimeout(loadFeed, 20000);
   }
   drawFeed(); load(); loadFeed();
   return { node: box, refresh: draw, chain: () => S.chain, tf: () => S.tf };

@@ -134,4 +134,3 @@
 .qsm-more{display:flex;margin:10px auto;min-height:42px;padding:6px 18px}
 .qsm-period{margin:0 2px 8px;font-size:13px;color:var(--qx-muted)}.qsm-period b{color:var(--qx-ink)}
 @media (max-width:640px){.qpw-page .qpw-compact .qa-lede{display:none}.qpw-page .qa-hero.qpw-compact{padding-bottom:6px}.qpw-page .qpw-compact h1{margin-bottom:0}} /* phones: the title says it; the board starts sooner */
-.qsm-feed-note{margin-left:auto;font-size:12px;color:var(--qx-muted)}
