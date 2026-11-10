@@ -70,6 +70,3 @@
 button.qxt-tag-open{border:0;cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
 button.qxt-wallet-name{font:inherit;font-weight:700;cursor:pointer;border:0;background:none;padding:0;color:inherit;text-align:left}
 button.qxt-tag-open:focus-visible,button.qxt-wallet-name:focus-visible{outline:2px solid var(--qx-brass,#d2ad72);outline-offset:2px}
-.qpw-scroll{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px}.qpw-scroll::-webkit-scrollbar{display:none}.qpw-scroll .qpw-chip{flex:0 0 auto}
-.qpw-across{display:grid;gap:8px;margin-bottom:8px}.qpw-across h3{margin:8px 0 0}
-.qpw-mini .qpw-line{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;min-height:40px;padding:6px 2px;border-top:1px solid var(--qx-line);font-size:13px;font-variant-numeric:tabular-nums}.qpw-mini .qpw-line>span:nth-child(2){text-align:right}

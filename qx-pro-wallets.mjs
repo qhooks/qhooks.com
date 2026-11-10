@@ -1,15 +1,14 @@
 // Wallets (pro terminal phase W1, 2026-11-10): follow any wallet with your own name, emoji and group; see its trades,
-// PnL, win rate and holdings on QHooks markets and across chains (sampled pools, any token); browse the smart-money board. Read-only: nothing here moves money.
+// PnL, win rate and holdings on QHooks markets; browse the smart-money board. Read-only: nothing here moves money.
 // Follows sync across devices through /api/wallets (one free sign-in signature, the community session). The page also
 // offers to bring in wallets tracked in this device's terminal. Cards open from anywhere via 'qhooks:wallet-open'.
 import '/qx-confirm-top.mjs'; // Privy confirms stay on top of these sheets
 import { connectedAddress, onWalletChange } from '/qx-chain.mjs';
 import { authHeaders, signIn, boardSession } from '/qx-board-session.mjs';
 import { chainById } from '/chains.mjs';
-import { createSmartBoard, walletSection } from '/qx-smart.mjs';
 
 const ADDR = /^0x[0-9a-f]{40}$/, TERMINAL_KEY = 'qhooks:terminal:tracked';
-const SCOPE_NOTE = 'PnL on QHooks markets, from our own trade index.';
+const SCOPE_NOTE = 'PnL on QHooks markets, from our own trade index. Other tokens are not counted yet.';
 const el = (tag, attrs = {}, ...kids) => {
   const n = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) { if (v == null || v === false) continue; if (k === 'class') n.className = v; else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v === true ? '' : v); }
@@ -53,7 +52,7 @@ const words = { sign_in: 'Sign in to keep your list.', slow_down: 'Too many chan
 const say = e => words[e?.message] || 'Something went wrong. Try again.';
 
 // ---------------------------------------------------------------- state
-const S = { follows: [], signedIn: false, group: 'All', tab: 'board', board: { scope: 'all', chain: 'all', tf: '7d', window: '7d', rows: null }, cards: new Map(), activity: [], seen: new Set() };
+const S = { follows: [], signedIn: false, group: 'All', tab: 'following', board: { window: '7d', rows: null }, cards: new Map(), activity: [], seen: new Set() };
 let root = null, status = null, activityTimer = null;
 
 async function loadFollows() {
@@ -111,10 +110,8 @@ function render() {
   if (!root) return;
   const me = connectedAddress();
   const tabs = el('div', { class: 'qpw-tabs', role: 'tablist' },
-    ...[['board', 'Smart money'], ['following', 'Following']].map(([id, label]) => el('button', { type: 'button', role: 'tab', 'aria-selected': String(S.tab === id), class: 'qpw-tab', onclick: () => { S.tab = id; render(); } }, label)));
-  document.querySelector('.qpw-page')?.classList.toggle('qpw-wide', S.tab === 'board' && S.board.scope === 'all');
-  root.replaceChildren(...[tabs, S.tab === 'board' ? null : el('p', { class: 'qpw-scope' }, 'PnL across chains from sampled trades of any token, plus every QHooks-market trade from our own index.'), S.tab === 'board' ? boardView() : followingView(me)].filter(Boolean));
-  const scope = root.querySelector('.qpw-scope-chips'); if (scope) root.prepend(el('div', { class: 'qpw-head' }, tabs, scope)); // tabs and token scope share one row
+    ...[['following', 'Following'], ['board', 'Smart money']].map(([id, label]) => el('button', { type: 'button', role: 'tab', 'aria-selected': String(S.tab === id), class: 'qpw-tab', onclick: () => { S.tab = id; render(); } }, label)));
+  root.replaceChildren(tabs, el('p', { class: 'qpw-scope' }, SCOPE_NOTE), S.tab === 'board' ? boardView() : followingView(me));
 }
 
 function followingView(me) {
@@ -188,75 +185,50 @@ function ioRow() {
   return el('div', { class: 'qpw-io' }, exp, imp, area, go);
 }
 
-const SMART_CHAINS = [['all', 'All chains'], ['4663', 'Robinhood'], ['8453', 'Base'], ['56', 'BNB'], ['42161', 'Arbitrum'], ['99901', 'Elysium'], ['1', 'Ethereum']];
-const chainShort = id => (SMART_CHAINS.find(c => c[0] === String(id)) || [, chainById(String(id))?.name || id])[1];
 function boardView() {
-  const B = S.board, box = el('section', { class: 'qpw-board', 'aria-label': 'Smart money' });
-  const chip = (on, label, set) => el('button', { type: 'button', class: 'qpw-chip', 'aria-pressed': String(on), onclick: () => { Object.assign(S.board, set, { rows: null }); render(); } }, label);
-  box.append(el('div', { class: 'qpw-chips qpw-scope-chips', role: 'group', 'aria-label': 'Tokens' }, chip(B.scope === 'all', 'All tokens', { scope: 'all' }), chip(B.scope === 'qhooks', 'QHooks launches', { scope: 'qhooks' })));
-  if (B.scope === 'all') {
-    // The all-chains board keeps its own state (filters, sort, the live feed) across redraws of this page.
-    S.smart ||= createSmartBoard({ nameOf, isFollowing: w => S.follows.some(f => f.wallet === w), toggleFollow, openWallet: r => openCard(r.wallet, { windowKey: '7d', acrossTf: S.smart.tf(), chainId: r.chains?.length === 1 ? r.chains[0] : null }), say: t => { if (status) status.textContent = t; } });
-    S.smart.refresh(); box.append(S.smart.node); return box;
-  } else {
-    box.append(el('div', { class: 'qpw-chips', role: 'group', 'aria-label': 'Period' }, ...[['7d', '7 days'], ['30d', '30 days']].map(([w, l]) => chip(B.window === w, l, { window: w }))),
-      el('p', { class: 'qpw-note' }, 'Wallets with at least 5 trades on QHooks markets in the period, ranked by PnL. Launch creators and QHooks contracts are left out.'));
-  }
+  const box = el('section', { class: 'qpw-board', 'aria-label': 'Smart money' });
+  box.append(el('div', { class: 'qpw-chips', role: 'group', 'aria-label': 'Period' }, ...[['7d', '7 days'], ['30d', '30 days']].map(([w, l]) =>
+    el('button', { type: 'button', class: 'qpw-chip', 'aria-pressed': String(S.board.window === w), onclick: () => { S.board = { window: w, rows: null }; render(); } }, l))),
+  el('p', { class: 'qpw-note' }, 'Wallets with at least 5 trades on QHooks markets in the period, ranked by PnL. Launch creators and QHooks contracts are left out.'));
   const list = el('ol', { class: 'qpw-list qpw-ranked' });
   box.append(list);
-  const key = B.scope === 'all' ? 'all:' + B.chain + ':' + B.tf : 'qh:' + B.window;
-  if (!B.rows || B.key !== key) {
+  if (!S.board.rows) {
     list.append(el('li', { class: 'qpw-empty' }, 'Refreshing…'));
-    const url = B.scope === 'all' ? '/api/wallets/smart?chain=' + B.chain + '&tf=' + B.tf : '/api/wallets/leaderboard?window=' + B.window;
-    api(url).then(j => { const now = S.board.scope === 'all' ? 'all:' + S.board.chain + ':' + S.board.tf : 'qh:' + S.board.window; if (now === key) { S.board.rows = j.rows || []; S.board.key = key; render(); } }, () => { list.replaceChildren(el('li', { class: 'qpw-empty' }, 'The board is refreshing. Try again in a moment.')); });
+    const want = S.board.window;
+    api('/api/wallets/leaderboard?window=' + want).then(j => { if (S.board.window === want) { S.board.rows = j.rows || []; render(); } }, () => { list.replaceChildren(el('li', { class: 'qpw-empty' }, 'The board is refreshing. Try again in a moment.')); });
     return box;
   }
-  if (!B.rows.length) list.append(el('li', { class: 'qpw-empty' }, B.scope === 'all' ? 'Smart money fills in as trades are sampled from each chain. Wallets need 5 or more trades in the period to appear.' : 'Smart money fills in as wallets trade QHooks launches. Wallets need 5 or more trades in the period to appear.'));
-  for (const r of B.rows) {
+  if (!S.board.rows.length) list.append(el('li', { class: 'qpw-empty' }, 'Smart money fills in as wallets trade QHooks launches. Wallets need 5 or more trades in the period to appear.'));
+  for (const r of S.board.rows) {
     const following = S.follows.some(f => f.wallet === r.wallet);
-    const sub = plural(r.tokens, 'token') + ' · ' + plural(r.trades, 'trade') + (r.volumeUsd != null ? ' · ' + usd(r.volumeUsd) + ' volume' : '') + (r.chains?.length && B.chain === 'all' ? ' · ' + [...r.chains].sort((x, y) => SMART_CHAINS.findIndex(c => c[0] === x) - SMART_CHAINS.findIndex(c => c[0] === y)).map(chainShort).join(', ') : '');
-    list.append(el('li', {}, el('button', { type: 'button', class: 'qpw-row', onclick: () => openCard(r.wallet, B.scope === 'all' ? { windowKey: B.tf === '24h' ? '7d' : B.tf, chainId: r.chains?.[0] || null } : {}) },
-      el('span', { class: 'qpw-who' }, el('b', {}, nameOf(r.wallet)), el('small', {}, sub)),
+    list.append(el('li', {}, el('button', { type: 'button', class: 'qpw-row', onclick: () => openCard(r.wallet) },
+      el('span', { class: 'qpw-who' }, el('b', {}, nameOf(r.wallet)), el('small', {}, r.tokens + ' tokens · ' + r.trades + ' trades')),
       el('span', { class: 'qpw-stats' }, el('span', { class: tone(r.pnlUsd) }, signedUsd(r.pnlUsd)), el('span', {}, 'Win ' + pct(r.winRate)), following ? el('span', { class: 'qpw-tag' }, 'Following') : null))));
   }
   return box;
 }
-const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
-/// Follow / unfollow from the board: signs in first if needed (one free signature).
-async function toggleFollow(wallet) {
-  if (!connectedAddress()) throw new Error('Connect a wallet to follow wallets.');
-  if (!boardSession()) { await signIn(); await loadFollows(); }
-  const on = !S.follows.some(f => f.wallet === wallet);
-  await follow(wallet, on ? { label: '' } : {}, on);
-}
 
 // ---------------------------------------------------------------- the wallet card (a sheet)
 let sheet = null;
-export async function openCard(wallet, { windowKey = '30d', chainId = null, acrossTf = null } = {}) {
-  let atf = acrossTf; // the board's period for the cross-chain section, until a period chip here is tapped
+export async function openCard(wallet, { windowKey = '30d', chainId = null } = {}) {
   wallet = String(wallet || '').toLowerCase(); if (!ADDR.test(wallet)) return;
   if (!sheet) { sheet = el('dialog', { class: 'qpw-sheet', 'aria-labelledby': 'qpw-sheet-h' }); document.body.append(sheet); sheet.addEventListener('click', e => { if (e.target === sheet) sheet.close(); }); }
   const draw = async w => {
     const f = S.follows.find(x => x.wallet === wallet), explorer = chainById(String(chainId || '4663'))?.explorer;
     const head = el('div', { class: 'qpw-sheet-head' }, el('div', {}, el('h2', { id: 'qpw-sheet-h' }, nameOf(wallet)), el('small', {}, wallet)),
       el('button', { type: 'button', class: 'qpw-x', 'aria-label': 'Close', onclick: () => sheet.close() }, '×'));
-    const windows = el('div', { class: 'qpw-chips', role: 'group', 'aria-label': 'Period' }, ...[['7d', '7D'], ['30d', '30D'], ['all', 'All']].map(([k, l]) => el('button', { type: 'button', class: 'qpw-chip', 'aria-pressed': String(w === k), onclick: () => { atf = null; draw(k); } }, l)));
+    const windows = el('div', { class: 'qpw-chips', role: 'group', 'aria-label': 'Period' }, ...[['7d', '7D'], ['30d', '30D'], ['all', 'All']].map(([k, l]) => el('button', { type: 'button', class: 'qpw-chip', 'aria-pressed': String(w === k), onclick: () => draw(k) }, l)));
     const body = el('div', { class: 'qpw-sheet-body' }, el('p', { class: 'qpw-empty' }, 'Refreshing…'));
     const me = connectedAddress();
-    const followBtn = me?.toLowerCase() !== wallet ? el('button', { type: 'button', class: 'qpw-btn ' + (f ? '' : 'qpw-primary') }, f ? 'Unfollow' : 'Follow') : null;
+    const followBtn = me && me.toLowerCase() !== wallet ? el('button', { type: 'button', class: 'qpw-btn ' + (f ? '' : 'qpw-primary') }, f ? 'Unfollow' : 'Follow') : null;
     followBtn?.addEventListener('click', async () => {
-      if (!connectedAddress()) { followBtn.after(el('p', { class: 'qpw-note' }, 'Connect a wallet to follow wallets.')); return; }
       if (!boardSession()) { try { await signIn(); await loadFollows(); } catch { return; } }
       followBtn.disabled = true; try { await follow(wallet, f ? {} : { label: '' }, !f); draw(w); } catch (e) { followBtn.disabled = false; followBtn.after(el('p', { class: 'qpw-note' }, say(e))); }
     });
-    const copyLink = me?.toLowerCase() !== wallet ? el('a', { class: 'qpw-btn', href: '/copy?w=' + wallet + (chainId ? '&chain=' + chainId : '') }, 'Copy trades') : null;
+    const copyLink = me && me.toLowerCase() !== wallet ? el('a', { class: 'qpw-btn', href: '/copy?w=' + wallet + (chainId ? '&chain=' + chainId : '') }, 'Copy trades') : null;
     const links = el('div', { class: 'qpw-io' }, followBtn, copyLink, explorer ? el('a', { class: 'qpw-btn', href: explorer + '/address/' + wallet, target: '_blank', rel: 'noopener' }, 'Explorer') : null);
-    sheet.replaceChildren(el('div', { class: 'qpw-sheet-in' }, head, links, windows, body)); // Follow and Copy trades up top
+    sheet.replaceChildren(el('div', { class: 'qpw-sheet-in' }, head, windows, body, links));
     if (!sheet.open) sheet.showModal();
-    // Every chain, every token (sampled pools): PnL line, holdings, best and worst, recent trades. Above the QHooks-market detail.
-    const across = el('section', { class: 'qpw-across', 'aria-label': 'Across chains' }, el('p', { class: 'qpw-empty' }, 'Refreshing…'));
-    api('/api/wallets/activity?w=' + wallet + '&tf=' + (atf || (w === 'all' ? '30d' : w))).then(a => across.replaceChildren(walletSection(a)), () => across.replaceChildren(el('p', { class: 'qpw-empty' }, 'Refreshing. Try again in a moment.')));
-    body.replaceChildren(across, el('p', { class: 'qpw-empty' }, 'Refreshing…'));
     try {
       const c = await card(wallet, w);
       const tiles = el('div', { class: 'qpw-tiles' },
@@ -264,10 +236,9 @@ export async function openCard(wallet, { windowKey = '30d', chainId = null, acro
         tile('Win rate', pct(c.winRate)), tile('Tokens', String(c.positionsCounted)), tile('Avg hold', hold(c.avgHoldSec)));
       const holdings = el('ul', { class: 'qpw-mini' }, ...(c.holdings.length ? c.holdings.slice(0, 12).map(p => el('li', {}, el('a', { href: terminalLink(p.chainId, p.controller) }, el('b', {}, p.symbol || '—'), el('span', {}, compact(p.held)), el('span', {}, usd(p.valueUsd))))) : [el('li', { class: 'qpw-empty' }, 'No QHooks tokens held.')]));
       const recent = el('ul', { class: 'qpw-mini' }, ...(c.recent.length ? c.recent.map(t => el('li', {}, el('a', { href: terminalLink(t.chainId, t.controller) }, el('span', { class: t.buy ? 'up' : 'down' }, t.buy ? 'Buy' : 'Sell'), el('b', {}, t.symbol || '—'), el('span', {}, compact(t.quote) + ' ' + (t.quoteSymbol || '')), el('span', {}, age(t.ts))))) : [el('li', { class: 'qpw-empty' }, 'No trades on QHooks markets in this period.')]));
-      body.replaceChildren(el('h3', {}, 'On QHooks markets'), tiles, el('h3', {}, 'Holdings'), holdings, el('h3', {}, 'Recent trades'), recent,
+      body.replaceChildren(tiles, el('h3', {}, 'Holdings'), holdings, el('h3', {}, 'Recent trades'), recent,
         el('p', { class: 'qpw-note' }, (w === 'all' ? 'All indexed trades' : 'Last ' + (w === '7d' ? '7' : '30') + ' days') + ' · ' + SCOPE_NOTE + (c.partial ? ' Some tokens have no dollar price yet.' : '')));
-      body.prepend(across);
-    } catch { body.replaceChildren(across, el('p', { class: 'qpw-empty' }, 'QHooks-market detail is refreshing. Try again in a moment.')); }
+    } catch { body.replaceChildren(el('p', { class: 'qpw-empty' }, 'This wallet is refreshing. Try again in a moment.')); }
   };
   draw(windowKey);
 }
@@ -287,7 +258,6 @@ if (node) { import('/qx-account-wallet.mjs').catch(() => {}); mount(node); }
 else {
   // On the terminal: styles for the card and the clickable tracked names, and "+ Track" kept in the signed-in list.
   if (!document.querySelector('link[href="/qx-pro.css"]')) document.head.append(el('link', { rel: 'stylesheet', href: '/qx-pro.css' }));
-  if (!document.querySelector('link[href="/qx-smart.css"]')) document.head.append(el('link', { rel: 'stylesheet', href: '/qx-smart.css' })); // the card's cross-chain section
   let pushTimer = null;
   window.addEventListener('qhooks:tracked-change', e => {
     const t = e.detail?.tracked; if (!t || !boardSession()) return;
