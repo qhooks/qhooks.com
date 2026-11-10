@@ -143,6 +143,3 @@ body.qxt-discover-mode{height:100vh;height:100dvh;overflow:hidden;padding-bottom
  .qxfd-placeholder,.qxfd-flash-up,.qxfd-flash-down{animation:none}
  .qxfd-scroll{scroll-behavior:auto}
 }
-.qxfd-founding td{text-align:left;font-family:inherit;padding:.6rem 1rem;border-bottom:1px solid var(--line,rgba(127,127,127,.25))}
-.qxfd-founding a{color:inherit;text-decoration:none}
-.qxfd-founding a b{color:var(--accent,#8a5a1f)}

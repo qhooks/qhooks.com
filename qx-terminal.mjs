@@ -284,22 +284,9 @@ function feedRows() {
   if (state.feed !== 'watch') rows = [...rows.filter(m => !state.trust[keyOf(m)]?.copyOf), ...rows.filter(m => state.trust[keyOf(m)]?.copyOf)];
   return pinOfficial(rows, q);
 }
-// Founding Launchers (2026-11-10): a pinned row to /founding while spots are open, and a "Founding #N" badge.
-const founding = {status: null, left: 0, rows: new Map()};
-async function loadFounding() {
-  try { const r = await fetch('/api/founding', {cache: 'no-store'}), d = r.ok ? await r.json() : null; if (!d) return;
-    founding.status = d.status; founding.left = d.spotsLeft; founding.rows = new Map((d.launches || []).map(l => [l.chainId + ':' + l.token, l.slot])); renderFeed(); } catch {}
-}
-function foundingPin() {
-  if (founding.status !== 'open' && founding.status !== 'full') return [];
-  return [h('li', {class: 'qxt-founding'}, h('a', {class: 'qxt-row', href: '/founding'}, h('span', {class: 'qxt-r1'}, h('b', {}, 'Founding Launchers'), h('span', {class: 'qxt-badge warm'}, founding.status === 'full' ? 'All 50 taken' : founding.left + ' of 50 spots left')),
-    h('span', {class: 'qxt-r2 qxt-quiet'}, founding.status === 'full' ? 'See the founding launches' : 'Launch now: earn on your volume for 90 days')))];
-}
 function badges(m) {
   const t = now(), out = [], tr = state.trust[keyOf(m)], om = rowMark(m.chainId, m.token, m.name, m.symbol);
   if (om) out.push(om);
-  const fslot = founding.rows.get(String(m.chainId) + ':' + String(m.token || m.controller || '').toLowerCase());
-  if (fslot) out.push(h('span', { class: 'qxt-badge warm', title: 'Founding Launcher' }, 'Founding #' + fslot));
   if (tr?.copyOf) out.push(copyLabel(tr.copyOf, { compact: true }));
   else if (tr?.verified) out.push(badge(tr.verified, { compact: true }));
   if ((m.auctionEndsAt || 0) > t) out.push(h('span', { class: 'qxt-badge warm' }, 'Auction ' + clock(m.auctionEndsAt - t)));
@@ -371,7 +358,7 @@ function renderFeed() {
  }
  const rows=feedRows(),xPart=xs.length?[h('li',{class:'qxt-sect'},'Outside tokens'),...xs.map((x,i)=>xItem(x,rows.length+i))]:q.length>=2?[searchNotice()]:[];
  if(!rows.length){list.replaceChildren(h('li',{class:'qxt-workspace-empty'},h('b',{},'No matching QHooks launches'),h('p',{},'Outside tokens remain available in Tokens, Recent and Watchlist.'),h('button',{type:'button',class:'qxt-context-action',onclick:()=>document.dispatchEvent(new CustomEvent('qxt:discover'))},'Browse tokens')),...xPart);return;}
- list.replaceChildren(...foundingPin(),...rows.map((m,i)=>{
+ list.replaceChildren(...rows.map((m,i)=>{
   const s=m.summary,u=unitOf(m),sel=state.sel&&keyOf(state.sel)===keyOf(m);
   return h('li',{class:(sel?'sel ':'')+(i===state.cursor?'cur':''),'data-key':keyOf(m)},h('button',{type:'button',class:'qxt-row',onclick:()=>select(m.chainId,m.controller)},avatar(m),
    h('span',{class:'qxt-r1'},h('b',{},m.symbol),h('span',{class:'qxt-rail-chain'},CHAIN_NAME[m.chainId]||m.chainId),h('span',{class:'qxt-age'},age(m.launchedAt))),
@@ -380,7 +367,6 @@ function renderFeed() {
  }),...xPart);
 }
 let feedRevision=0;
-loadFounding(); setInterval(loadFounding, 300000);
 async function loadFeed() {
   const chain=state.chain,revision=++feedRevision;
   try {

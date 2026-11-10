@@ -1,6 +1,0 @@
-.qfd .qfd-big{font-size:clamp(1.6rem,5vw,2.4rem);font-weight:700;margin:0 0 .25rem}
-.qfd .qfd-list{display:grid;gap:.75rem;padding-left:1.25rem}
-.qfd .qfd-launches{list-style:none;padding:0;margin:0;display:grid;gap:.75rem}
-.qfd .qfd-launch{border-top:1px solid var(--line,rgba(127,127,127,.25));padding-top:.75rem}
-.qfd .qfd-launch p{margin:.2rem 0;overflow-wrap:anywhere}
-.qfd .qfd-head b{margin-right:.35rem}
