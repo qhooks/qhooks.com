@@ -34,9 +34,10 @@ export const FOUNDING = {
     stakeLock: '0x807390f11e52e8508636bac3c54b47b17a66dae3', stakeLockFrom: 110600000, from: 108872832},
   // Bounty ("first coin to 150k gets 1k usd"): first founding token to hold a $150,000 market cap for 24 hours straight
   // wins $1,000 in WETH on Robinhood Chain. Tracking ships with the payout tree; until then the page shows it open.
-  bounty: {mcapUsd: 150000, holdHours: 24, prizeUsd: 1000},
-  // Fee top-ups and grants switch on with the payout tree (holding check at payout). Until then trades only accrue.
-  payouts: false,
+  bounty: {mcapUsd: 150000, holdHours: 24, prizeUsd: 1000, maxGapS: 1800}, // a sampling gap over 30 min restarts the 24 hours
+  // Payouts on (2026-11-10 payout tree): each drop list pays the extra cashback, and pays the creator share and the
+  // bounty only to creators holding the entry minimum at that moment (else it waits for a later list).
+  payouts: true,
   spots: 50,
   // QHooks' own wallets: never founding creators, never paid a top-up.
   exclude: [

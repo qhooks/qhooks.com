@@ -31,10 +31,14 @@ async function readGrants() {
   const ids = words(await call(g.qgrants, '0x' + SEL.grantsBy + pad(SAFE))).slice(2);
   const grants = await Promise.all(ids.map(id => call(g.qgrants, '0x' + SEL.get + W(id)).then(decodeGrant)));
   const granted = grantedSet(grants), cut = dayCut(c.now);
-  const {rows, left} = grantBatch(c.api.launches || [], granted, cut);
+  // Entry rule at payout: only creators holding 100,000 QHOOKS right now (others wait for a later batch).
+  const due = (c.api.launches || []).filter(l => l.qualifiedAt && l.qualifiedAt < cut && !granted.has(l.creator));
+  const holding = new Set(), waiting = [];
+  await Promise.all(due.map(async l => { try { const r = await fetch('/api/founding/eligibility?wallet=' + l.creator, {cache: 'no-store'}), d = await r.json(); if (d.eligible) holding.add(l.creator); else waiting.push(l); } catch { waiting.push(l); } }));
+  const {rows, left} = grantBatch((c.api.launches || []).filter(l => holding.has(l.creator)), granted, cut);
   const bal = BigInt(await call(g.token, '0x' + SEL.balanceOf + pad(SAFE)));
   const tx = rows.length ? grantsTx(rows) : null;
-  return {...c, kind: 'grants', rows, left, granted: granted.size, bal, tx, short: tx && bal < tx.total};
+  return {...c, kind: 'grants', rows, left, granted: granted.size, bal, tx, short: tx && bal < tx.total, waiting};
 }
 async function readTopUp() {
   const c = await readCommon(), need = BigInt(c.api.wethWaiting || '0');
@@ -106,11 +110,12 @@ const drawGrants = section(document.getElementById('qff-grants'), readGrants, s 
     ['Vesting', '30 days from the grant, claimable as it vests; the Safe can take back what has not vested']],
   extra: s.rows.length ? [el('ol', {}, ...s.rows.map(r => el('li', {}, '#' + r.slot + ' ' + r.beneficiary + ' · token ' + r.chainId + ':' + r.token + ' ',
     el('a', {href: '/terminal#m=' + r.chainId + ':' + r.token, target: '_blank', rel: 'noopener'}, 'check it'))))] : [],
-  note: s.rows.length ? 'Each creator reached ' + FOUNDING.grant.holders + ' holders and $' + FOUNDING.grant.volumeUsd.toLocaleString('en-US') + ' of volume within 14 days, before today 00:00 UTC. Check the tokens before approving.' : 'Milestones reached today join tomorrow\'s batch.',
+  extraNote: null,
+  note: (s.waiting?.length ? s.waiting.length + ' qualified creator' + (s.waiting.length > 1 ? 's hold' : ' holds') + ' under 100,000 QHOOKS right now and will join a later batch. ' : '') + (s.rows.length ? 'Each creator reached ' + FOUNDING.grant.holders + ' holders and $' + FOUNDING.grant.volumeUsd.toLocaleString('en-US') + ' of volume within 14 days, before today 00:00 UTC. Check the tokens before approving.' : 'Milestones reached today join tomorrow\'s batch.'),
 }));
 const drawTopUp = section(document.getElementById('qff-weth'), readTopUp, s => ({
   title: s.tx ? 'Deposit ' + fmt(s.tx.amount, 4) + ' WETH for founding top-ups' : 'No top-ups waiting',
-  facts: [['Waiting in the drop list', fmt(s.need, 6) + ' WETH (volume share + extra cashback)'], ['Safe WETH', fmt(s.bal, 4)], ['Into', 'QDrops ' + FOUNDING.pay.drops]],
+  facts: [['Waiting in the drop list', fmt(s.need, 6) + ' WETH (volume share, extra cashback, bounty)'], ['Safe WETH', fmt(s.bal, 4)], ['Into', 'QDrops ' + FOUNDING.pay.drops]],
   note: s.tx ? (s.short ? 'The Safe holds less WETH than this needs. Move WETH to the Safe first.' : 'The next drop list pays these once the WETH is in.') : 'Each weekly drop list adds what founding launches earned.',
 }));
 drawGrants(); drawTopUp();
