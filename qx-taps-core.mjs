@@ -4,7 +4,7 @@ import {FUND, SEL as DROP_SEL, decodeLock, vestedAt, fundStep} from './qdrops-fu
 import {FOUNDING, grantBatch, dayCut} from './founding-config.mjs';
 import {decodeGrant, grantedSet, SEL as GRANT_SEL} from './founding-fund.mjs';
 
-export const GROUPS = [{id: 'wallet', label: 'Your wallet'}, {id: 'safe', label: 'Safe, both signers'}];
+export const GROUPS = [{id: 'wallet', label: 'Your wallet'}, {id: 'solana', label: 'Your wallet (Solana)'}, {id: 'safe', label: 'Safe, both signers'}, {id: 'privy', label: 'Privy dashboard (one visit)'}];
 const pad = a => String(a).toLowerCase().replace(/^0x/, '').padStart(64, '0');
 const word = n => BigInt(n).toString(16).padStart(64, '0');
 async function allReads(promises) {
@@ -21,6 +21,8 @@ const tuple = h => {
   return h.slice(2).match(/.{64}/g);
 };
 export function chainInfo(id, network) {
+  if (String(id) === 'privy') return {id: 'privy', name: 'Privy', icon: null, symbol: '', rpc: null};
+  if (String(id) === 'solana') return {id: 'solana', name: 'Solana', icon: 'solana', symbol: 'SOL', rpc: null};
   const c = chainById(id) || network || {};
   return {id: String(id), name: c.name || `Chain ${id}`, icon: c.icon || null, symbol: c.native || 'ETH', rpc: c.rpc || null};
 }
@@ -118,6 +120,61 @@ export async function checkFounding(rpc, fetchJson) {
   return {status: rows.length || wethWaiting > 0n ? 'pending' : 'done', grantsDue: rows.length, wethWaiting: wethWaiting.toString()};
 }
 
+// Perps builder fee (2026-11-11, main thread). Done when /api/perps/config names a builder AND Hyperliquid shows at least
+// 100 USDC account value for it. Until the fee reads 0.1% (builderFeeTenthsBp 100) the row waits and has no button.
+export const PERPS_FEE_TENTHS_BP = 100, PERPS_MIN_USDC = 100;
+export async function checkPerpsBuilder(fetchJson, request) {
+  const cfg = await fetchJson('/api/perps/config');
+  const waiting = Number(cfg?.builderFeeTenthsBp) !== PERPS_FEE_TENTHS_BP;
+  const builder = /^0x[0-9a-fA-F]{40}$/.test(cfg?.builder || '') ? cfg.builder : null;
+  if (!builder) return {status: 'pending', waiting};
+  const r = await request('https://api.hyperliquid.xyz/info', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({type: 'clearinghouseState', user: builder})});
+  if (!r.ok) throw Error('Hyperliquid read');
+  const value = Number((await r.json())?.marginSummary?.accountValue);
+  if (!Number.isFinite(value)) throw Error('Hyperliquid read');
+  return {status: value >= PERPS_MIN_USDC ? 'done' : 'pending', waiting, builder, accountValue: value};
+}
+// X login in Privy (info row, not a tap): done when the app's public config has twitter_oauth on.
+export const PRIVY_APP_ID = 'cmv3q3emi00mi0flc038ym0mt';
+export async function checkPrivyLogin(request) {
+  const r = await request('https://auth.privy.io/api/v1/apps/' + PRIVY_APP_ID, {headers: {'privy-app-id': PRIVY_APP_ID}});
+  if (!r.ok) throw Error('Privy read');
+  const j = await r.json();
+  if (typeof j?.twitter_oauth !== 'boolean') throw Error('Privy read');
+  return {status: j.twitter_oauth ? 'done' : 'pending'};
+}
+// Privy dashboard checklist (2026-11-11, main thread). One read of Privy's public app config per cycle answers every
+// readable item: a row lists `flags` ({field, equals, label}) and/or `domains` that must all hold. Items the config does
+// not expose are `manual` rows: the owner marks them done on this device.
+export function readPrivyConfig(request) {
+  return request('https://auth.privy.io/api/v1/apps/' + PRIVY_APP_ID, {headers: {'privy-app-id': PRIVY_APP_ID}})
+    .then(async r => { if (!r.ok) throw Error('Privy read'); const j = await r.json(); if (j?.id !== PRIVY_APP_ID) throw Error('Privy read'); return j; });
+}
+const at = (obj, path) => String(path).split('.').reduce((o, k) => o?.[k], obj);
+export function privyMissing(row, config) {
+  const missing = [];
+  for (const f of row.flags || []) if (at(config, f.field) !== (f.equals ?? true)) missing.push(f.label);
+  const domains = (config.allowed_domains || []).map(d => String(d).toLowerCase().replace(/\/+$/, ''));
+  for (const d of row.domains || []) if (!domains.includes(d.toLowerCase())) missing.push(d);
+  return missing;
+}
+export async function checkPrivyRow(row, readConfig) {
+  const missing = privyMissing(row, await readConfig());
+  return {status: missing.length ? 'pending' : 'done', missing};
+}
+// Manual rows: done when marked on this device (key per row id); storage may be unavailable (then pending).
+export const MANUAL_KEY = id => 'qhooks:taps:manual:' + id;
+export function checkManual(row, storage) {
+  let v = null; try { v = storage?.getItem(MANUAL_KEY(row.id)); } catch {}
+  return {status: v ? 'done' : 'pending', manual: true, markedAt: v || null};
+}
+// A JSON flag on a site endpoint (Solana launch setup: /api/sol-launch/config {ready:true} once the config account
+// is verified on chain by the server).
+export async function checkJsonFlag(row, fetchJson) {
+  const j = await fetchJson(row.url);
+  if (j == null || typeof j !== 'object') throw Error('read');
+  return {status: at(j, row.field) === (row.equals ?? true) ? 'done' : 'pending'};
+}
 export const ETHEREUM_FIRST = ['order-executor', 'x-receiver'];
 export const ETHEREUM_SETUP_HREF = '/chain-setup?chain=1&go=1&factory=1&first=order-executor,x-receiver';
 const isDeployment = s => s.kind === 'manifest' || s.kind === 'arbliq';
@@ -184,7 +241,7 @@ export function groupSteps(steps) {
     const key = ethereum ? `${s.catalogueId}:1:${segment}` : ordered ? `${s.catalogueId}:${s.stepId}` : s.id;
     let row = buckets.get(key);
     if (!row) {
-      row = {...s, ethereumSection: segment, chains: [], steps: [], next: [], presentation: 'action', button: s.kind === 'balanceMin' ? `Send ${s.amount || '…'} ${s.chain.symbol}` : 'Open setup'};
+      row = {...s, ethereumSection: segment, chains: [], steps: [], next: [], presentation: 'action', button: s.kind === 'balanceMin' ? `Send ${s.amount || '…'} ${s.chain.symbol}` : s.linkLabel || 'Open setup'};
       buckets.set(key, row); result.find(g => g.id === s.group).rows.push(row);
     }
     row.steps.push(s); row.chains.push(s.chain);
@@ -198,7 +255,11 @@ export function groupSteps(steps) {
     row.status = row.steps.some(s => s.status === 'unknown') ? 'unknown' : row.steps[0].status;
     row.text = row.ethereumSection ? (row.ethereumSection === 'trading' ? 'Turn on one-click trading on Ethereum.' : 'Finish the chain setup on Ethereum.') : row.kind === 'balanceMin'
       ? (row.amount ? `Top up keeper gas on ${row.chain.name}: send ${row.amount} ${row.chain.symbol}` : `Top up keeper gas on ${row.chain.name}.`)
+      : ['perpsBuilder', 'privyFlags', 'manual', 'jsonFlag'].includes(row.kind) ? row.sentence
       : describe(row.sentence || row.name, row.chains);
+    if (row.kind === 'perpsBuilder' && row.status === 'pending') row.note = row.waiting ? 'Waiting on the fee update to 0.1%. The button appears once it is live.' : 'Needs a 100 USDC deposit on Hyperliquid for the builder wallet.';
+    if (row.kind === 'perpsBuilder' && row.waiting) row.button = null;
+    if (row.kind === 'privyFlags' && row.status === 'pending' && row.missing?.length) row.note = (row.missingText || 'Still off:') + ' ' + row.missing.join(', ') + '.';
     if (row.status === 'unknown') row.text += ' Refreshing…';
   }
   for (const group of result) {
@@ -219,9 +280,11 @@ export async function evaluateCatalogue(catalogue, io, {onUpdate} = {}) {
     if (!cache.has(url)) cache.set(url, Promise.resolve().then(() => io.fetchJson(url)));
     return cache.get(url);
   };
+  let privyRead = null;
+  const privyConfig = () => (privyRead ||= readPrivyConfig(io.request || (() => Promise.reject(Error('No read client for Privy')))));
   const prepare = async row => {
     const items = [], chainIds = row.chains?.map(c => String(typeof c === 'object' ? c.id : c)) || [String(row.chainId || '4663')];
-    const base = id => ({catalogueId: row.id, id: row.id + ':' + id, kind: row.kind, group: row.group, name: row.title, sentence: row.sentence, href: row.href, recurring: !!row.recurring, chainId: String(id), chain: chainInfo(id, networks[id]), status: 'unknown', reading: true, counted: true});
+    const base = id => ({missingText: row.missingText || null, catalogueId: row.id, id: row.id + ':' + id, kind: row.kind, group: row.group, name: row.title, sentence: row.sentence, href: row.href, linkLabel: row.linkLabel || null, rowKey: row.id, recurring: !!row.recurring, chainId: String(id), chain: chainInfo(id, networks[id]), status: 'unknown', reading: true, counted: true});
     const add = (step, check) => items.push({step, check});
     try {
       for (const source of row.sources || (row.source ? [row.source] : [])) {
@@ -258,6 +321,14 @@ export async function evaluateCatalogue(catalogue, io, {onUpdate} = {}) {
           const art = await json(row.manifest); checks = floorChecks(art); chain = art.chainId;
         }
         add(base(chain), () => checkCalls(checks, chain, io.rpc));
+      } else if (row.kind === 'perpsBuilder') {
+        add(base(chainIds[0]), () => checkPerpsBuilder(json, io.request || ((u, i) => fetch(u, i))));
+      } else if (row.kind === 'privyFlags') {
+        add(base(chainIds[0]), () => checkPrivyRow(row, privyConfig));
+      } else if (row.kind === 'manual') {
+        add(base(chainIds[0]), async () => checkManual(row, io.storage));
+      } else if (row.kind === 'jsonFlag') {
+        add(base(chainIds[0]), () => checkJsonFlag(row, json));
       } else add(base(chainIds[0]), async () => ({status: 'unknown', reason: 'This catalogue check is not supported'}));
     } catch (e) {
       if (missing(e)) skipped.push({id: row.id, reason: 'Source manifest is missing', source: row.manifest});

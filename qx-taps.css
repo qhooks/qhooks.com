@@ -47,3 +47,12 @@
 
 /* Label colour (lead review 2026-11-10): a broader site link rule overrode --qx-on-brass, leaving light text on brass. */
 .taps-row a.taps-action,.taps-row button.taps-action,.taps-row a.taps-action:visited{color:var(--qx-on-brass)}
+
+/* Manual checklist rows (2026-11-11): link + Mark done side by side; Undo in the Done list. */
+.taps-actions{display:flex;flex-wrap:wrap;gap:10px}
+.taps-row .taps-actions .taps-action{grid-column:auto;grid-row:auto}
+.taps-row a.taps-mark,.taps-row button.taps-mark{background:transparent;color:var(--qx-brass)}
+.taps-undo{margin-left:6px;padding:6px 10px;min-height:36px;border-radius:8px;border:1px solid var(--qx-line-2,currentColor);background:transparent;color:inherit;font:inherit;cursor:pointer}
+@media(max-width:640px){.taps-actions{flex-direction:column}.taps-actions .taps-action{width:100%}}
+.taps-row .taps-actions{grid-column:2;grid-row:1 / span 4;align-self:start;flex-direction:column}
+@media(max-width:640px){.taps-row .taps-actions{grid-column:auto;grid-row:auto}}

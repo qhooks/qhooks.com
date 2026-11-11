@@ -1,6 +1,6 @@
 import {chainById} from './chains.mjs';
 import {getWalletHub} from './wallet-hub-fresh.mjs';
-import {evaluateCatalogue, checkBalance, keeperTransaction, GROUPS} from './qx-taps-core.mjs';
+import {evaluateCatalogue, checkBalance, keeperTransaction, GROUPS, MANUAL_KEY} from './qx-taps-core.mjs';
 
 // Coalesce reads into batches of 20; each chain drains independently.
 export function createReadClient({fetchImpl = globalThis.fetch, origin = '', relay = true, elysiumInterval = 250, sleep = ms => new Promise(r => setTimeout(r, ms)), now = Date.now} = {}) {
@@ -118,6 +118,7 @@ export function createReadClient({fetchImpl = globalThis.fetch, origin = '', rel
   }
   return {
     rpc, fetchJson,
+    request: (u, init = {}) => fetchImpl(u, {...init, cache: 'no-store', signal: AbortSignal.timeout(8000)}),
     registerNetwork(id, network) { networks[id] = network; },
     async sourceExists(path) { try { await fetchTimed(path, {method: 'HEAD', cache: 'no-store'}); return true; } catch (e) { if (e.status === 404) return false; return true; } },
     begin() { memo.clear(); for (const queue of chains.values()) queue.stopped = null; },
@@ -133,6 +134,7 @@ export function mountTaps({document: doc = document, target = window, hub = getW
     n.append(...children.flat().filter(c => c != null)); return n;
   };
   const submitted = new Map();
+  let storage = null; try { storage = target.localStorage; } catch {}
   let catalogue, result, checking = false, sending = null, disposed = false, renderQueued = false;
   const update = partial => {
     result = partial;
@@ -158,7 +160,7 @@ export function mountTaps({document: doc = document, target = window, hub = getW
       if (!group.rows.length && !group.checking) section.append(el('p', {class: 'taps-empty'}, 'Nothing waiting here.'));
       for (const row of group.rows) {
         const icons = el('div', {class: 'taps-chains', 'aria-label': row.chains.map(c => c.name).join(', ')});
-        for (const c of row.chains) if (c.icon) icons.append(el('img', {src: `/chain-symbol-icons/${c.icon}.svg`, alt: c.name, width: 24, height: 24}));
+        if (!['perpsBuilder', 'privyFlags', 'manual'].includes(row.kind)) for (const c of row.chains) if (c.icon) icons.append(el('img', {src: `/chain-symbol-icons/${c.icon}.svg`, alt: c.name, width: 24, height: 24}));
         const body = el('div', {class: 'taps-row-body'}, icons, el('p', {class: 'taps-sentence'}, row.text));
         for (const step of row.steps) if (step.costText) body.append(el('p', {class: 'taps-cost'}, `${step.name}: estimated gas ${step.costText}`));
         let button;
@@ -169,8 +171,14 @@ export function mountTaps({document: doc = document, target = window, hub = getW
           if (!connected) body.append(el('p', {class: 'taps-note'}, 'Connect your wallet above to send.'));
           button = el('button', {type: 'button', class: 'taps-action', disabled: !connected || row.status !== 'pending' || checking || !!sending || submitted.has(row.id)}, row.button);
           button.addEventListener('click', () => sendTopUp(row));
-        } else button = el('a', {class: 'taps-action', href: row.href}, 'Open setup');
-        body.append(button);
+        } else if (row.button) button = el('a', {class: 'taps-action', href: row.href, ...(/^https:/.test(row.href || '') ? {target: '_blank', rel: 'noopener'} : {})}, row.button);
+        if (row.note) body.append(el('p', {class: 'taps-note'}, row.note));
+        if (row.kind === 'manual') {
+          // Not readable from any public source: the owner marks it done on this device (main thread, 2026-11-11).
+          const mark = el('button', {type: 'button', class: 'taps-action taps-mark'}, 'Mark done');
+          mark.addEventListener('click', () => { try { storage?.setItem(MANUAL_KEY(row.rowKey), new Date().toISOString()); } catch {} refresh(); });
+          body.append(el('div', {class: 'taps-actions'}, button, mark));
+        } else if (button) body.append(button);
         const article = el('article', {class: 'taps-row'}, body);
         if (row.next.length) article.append(el('ul', {class: 'taps-next'}, ...row.next.map(s => el('li', {}, s.text))));
         section.append(article);
@@ -178,7 +186,11 @@ export function mountTaps({document: doc = document, target = window, hub = getW
       return section;
     });
     const details = el('details', {class: 'taps-done'}, el('summary', {}, `Done (${result.done.length})`),
-      el('ul', {}, ...result.done.map(s => el('li', {}, `${s.name} · ${s.chain.name}`))));
+      el('ul', {}, ...result.done.map(s => {
+        const li = el('li', {}, `${s.name} · ${s.chain.name}`);
+        if (s.manual) { const undo = el('button', {type: 'button', class: 'taps-undo'}, 'Undo'); undo.addEventListener('click', () => { try { storage?.removeItem(MANUAL_KEY(s.rowKey)); } catch {} refresh(); }); li.append(' · marked done on this device ', undo); }
+        return li;
+      })));
     // A refresh preserves the owner's choice to expand the completed list.
     if (root.querySelector('details')?.open) details.open = true;
     const estimate = result.ethereum?.pending && result.ethereum.ready ? [el('p', {class: 'taps-ethereum-total'}, result.ethereum.text)] : [];
@@ -193,7 +205,7 @@ export function mountTaps({document: doc = document, target = window, hub = getW
     try {
       catalogue = await io.fetchJson('/full-launch/taps-steps-v1.json');
       const json = new Map(), sources = new Map();
-      const cycle = {...io, fetchJson(path) {
+      const cycle = {...io, storage, fetchJson(path) {
         if (!json.has(path)) json.set(path, Promise.resolve().then(() => io.fetchJson(path)));
         return json.get(path);
       }};
