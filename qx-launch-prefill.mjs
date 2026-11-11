@@ -2,7 +2,7 @@
 import {visibleChains} from './chains.mjs';
 import {ideaCards,ideaCard} from './qx-quick-launch-core.mjs';
 
-export const launchChains = () => visibleChains(false).filter(c => ideaCards(c.id).length);
+export const launchChains = () => [...visibleChains(false).filter(c => ideaCards(c.id).length),{id:'solana',key:'solana',name:'Solana'}];
 export function launchChain(value) {
   const chains = launchChains();
   if (value === undefined || value === null || value === '') return chains.find(c => c.id === '4663') || chains.find(c => c.id === '8453') || null;
@@ -24,13 +24,13 @@ export function launchTicker(value) {
 export function normalizeLaunch({name,ticker,chain,style = 'fair'} = {}) {
   const c = launchChain(chain);
   if (!c) throw new TypeError('Choose a supported one-tap launch chain.');
-  const card = ideaCard(c.id,style);
+  const card = c.id==='solana'?{id:'dbc',name:'Meteora bonding curve'}:ideaCard(c.id,style);
   if (!card) throw new TypeError('Choose a launch idea from the one-tap cards.');
   return {name:launchName(name),ticker:launchTicker(ticker),chain:c.id,style:card.id,chainName:c.name,styleLabel:card.name};
 }
 export function launchLink(input) {
   const v = normalizeLaunch(input);
-  return 'https://qhooks.com/create?chain=' + encodeURIComponent(v.chain) + '&name=' + encodeURIComponent(v.name) + '&ticker=' + encodeURIComponent(v.ticker) + '#quick-' + encodeURIComponent(v.style);
+  return 'https://qhooks.com/create?chain=' + encodeURIComponent(v.chain) + '&name=' + encodeURIComponent(v.name) + '&ticker=' + encodeURIComponent(v.ticker) + (v.chain==='solana'?'':'#quick-' + encodeURIComponent(v.style));
 }
 // Invalid external text is left blank so the person can enter it before review.
 export function sanitizePrefill({name,ticker} = {}) {

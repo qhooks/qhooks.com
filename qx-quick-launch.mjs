@@ -38,10 +38,10 @@ const chainSelect=document.getElementById('qc-chainId');
 // One-tap has its own chain picker (2026-11-09): ?chain= wins over the wallet's network and over the guided form
 // (which an unfinished guided launch can lock to another chain). Launch asks the wallet to switch (adding the chain if needed).
 const urlChain=()=>new URLSearchParams(location.search).get('chain');
-let quickChain=null;
+let quickChain=null,solQuickPrevious=null;
 const currentChain=()=>quickChain||chainSelect?.value||urlChain()||'4663';
-const quickChains=()=>visibleChains().filter(c=>ideaCards(c.id).length);
-function setQuickChain(id){quickChain=id;try{const u=new URL(location.href);u.searchParams.set('chain',id);history.replaceState(history.state,'',u);}catch{}
+const quickChains=()=>[...visibleChains().filter(c=>ideaCards(c.id).length),{id:'solana',name:'Solana',native:'SOL'}];
+function setQuickChain(id){const wasSol=quickChain==='solana';quickChain=id;if(id==='solana'||wasSol)document.dispatchEvent(new CustomEvent('qhooks:sol-create',{detail:{chain:id}}));try{const u=new URL(location.href);u.searchParams.set('chain',id);history.replaceState(history.state,'',u);}catch{}
  renderIdeas();if(pick)openQuick(pick.id);checkTickerSoon();costSoon();}
 function renderPicker(){
  let sel=$('chain');
@@ -63,7 +63,7 @@ function checkTickerSoon(){clearTimeout(tickerTimer);const run=++tickerRun;ticke
 // USD for the cost line in the chain's own coin (ETH, BNB, HYPE): the price of the selected chain, read again on change.
 let usdFor=null;function readUsd(){const id=currentChain(),sym=chainById(id)?.native||'ETH';if(usdFor===id)return;usdFor=id;usd=null;
  void readCreateNativeUSD(sym).then(v=>{if(usdFor===id){usd=v;renderQuick();}}).catch(()=>{});}
-function renderIdeas(){readUsd();chainId=currentChain();renderPicker();
+function renderIdeas(){chainId=currentChain();renderPicker();if(chainId==='solana'){if(pick)solQuickPrevious=pick;pick=null;cost=null;costRun++;clearTimeout(costTimer);clearTimeout(tickerTimer);tickerRun++;$('chips').replaceChildren();$('cards').replaceChildren();$('none').hidden=true;$('quick').hidden=true;$('open').hidden=true;return;}if(!pick&&solQuickPrevious){pick=ideaCard(chainId,solQuickPrevious.id);solQuickPrevious=null;}readUsd();
  // Clean-token launch contract: once it has code on this chain, new launches go to it (redraw once when it switches).
  {const id=chainId;primeClean(id).then(r=>{if(r.changed&&id===chainId){costRun++;cost=null;renderIdeas();if(pick)void refreshCost();}}).catch(()=>{});}
  // Pairs launch contract (Robinhood): the pair picker appears once it has code on this chain.

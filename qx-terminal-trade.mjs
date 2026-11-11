@@ -325,6 +325,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const { input, output } = solMints();
     const r = await fetch('/api/terminal/sol/order?' + new URLSearchParams({ input, output, amount: a.toString(), taker: solAddress(), slippageBps: String(tolerance) }), { cache: 'no-store' });
     const body = await r.json().catch(() => ({}));
+    if(!r.ok&&['no_route','trading_off','unavailable'].includes(body.error)&&(input===SOL_MINT||output===SOL_MINT)){try{return await (await import('/qx-sol-launch-trade.mjs')).directDbcOrder({input,output,amount:a.toString(),taker:solAddress(),slippageBps:Number(tolerance)});}catch{/* The original Jupiter answer remains authoritative for tokens without a verified direct curve. */}}
     if (!r.ok) throw new Error(body.error === 'trading_off' ? 'Solana trading is not switched on yet.' : body.error === 'no_route' ? (body.detail ? body.detail.replace(/\.?$/, '.') : 'No route for this trade right now.') : body.detail || 'No quote right now.');
     return body;
   }
@@ -338,7 +339,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       out.replaceChildren(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
         h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4)),
         ...impactNodes(o.priceImpact != null && Number.isFinite(Number(o.priceImpact)) ? Math.abs(Number(o.priceImpact)) : null),
-        h('span', { class: 'qxt-fee' }, 'Jupiter route · 1% trading fee · Solana rewards not active'));
+        h('span', { class: 'qxt-fee' }, o.route==='dbc'?'Direct Meteora DBC · fee includes the launch anti-snipe schedule · 30% of the QHooks share as cashback':'Jupiter route · 1% integrator fee plus pool fees'));
       go.disabled = busy || (st.safety?.verdict === 'danger' && !risk.querySelector('input')?.checked);
     } catch (e) { if (mine === qseq) {current=null;go.disabled=true;out.textContent = e.message;} }
   }
@@ -355,6 +356,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       s('Linking any referral for your rewards…'); await enrollSolanaReferrer();
       s('Confirm in your wallet…');
       assertTradeOwner(c);
+      if(o.route==='dbc'){const x=await (await import('/qx-sol-launch-trade.mjs')).executeDirectDbc(o);status.textContent='Trade finalized · '+x.signature;amount.value='';document.dispatchEvent(new CustomEvent('qhooks:traded'));await onTraded({side:c.side,chainId:c.chainId,token:c.token,owner:c.owner,ext:true});lock(false);layout();return;}
       const signed = await signSol(o.transaction);
       assertTradeOwner(c);
       s('Sending…');

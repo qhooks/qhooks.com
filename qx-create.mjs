@@ -1,3 +1,4 @@
+import {mountSolCreate} from './qx-sol-launch.mjs';
 import {checkTicker,assertTickerFree,TickerTaken,tickerBlockNodes} from '/qx-ticker-guard.mjs';
 import {CREATE_EXECUTION_ENABLED,CREATE_EXECUTION_HOLD} from './qx-create-release.mjs';
 import {appendArbRecaptureLine,createCostView,walletStepLabel,showRequiredQuantum,bindFundWallet} from './qx-create-display.mjs';
@@ -24,6 +25,7 @@ const $=id=>document.getElementById('qc-'+id),DRAFT='qhooks:create:draft:v1',ACT
 const hub=getWalletHub(window),chains=visibleChains();
 const chainPackage=mountCreateChainPackage({container:$('chain-package')});
 const el=(tag,attrs={},...kids)=>{const n=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')n.className=v;else if(k in n)n[k]=v;else n.setAttribute(k,v);}n.append(...kids.filter(x=>x!==null&&x!==undefined));return n;};
+let solCreate=null;
 let config=defaultConfig(),profileScope='',screen=1,record=null,signer=null,context=null,busy=false,openingMarket=false,cost=null,costRevision=0,costTimer=null;
 let liquidityState=liquidityDraftState(config),walletBalances=null,balanceIdentity=null,balanceRevision=0,balanceRead=null,liquidityGasCost=null;
 let usdPrices={},usdReads=new Map(),usdReadAt=new Map();
@@ -139,7 +141,7 @@ function renderChainNote(){
   n.replaceChildren(el('p',{},'Guided Create isn’t on '+(c?.name||'this chain')+' yet. '),a);n.firstChild.append(a);n.hidden=false;return;}
  n.replaceChildren();n.hidden=true;
 }
-function render(){renderChainNote();
+function render(){if(solCreate?.active){solCreate.render();return;}renderChainNote();
  const liquidity=liquidityStatus();if(!record&&liquidity.blocked)reviewGate.invalidate(liquidity.message);
  reviewGate.check();
  for(let n=1;n<=3;n++)$('screen-'+n).hidden=screen!==n;for(const b of document.querySelectorAll('[data-screen]')){if(Number(b.dataset.screen)===screen)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');b.disabled=busy||!record&&liquidity.blocked&&Number(b.dataset.screen)>screen;b.title=b.disabled&&!busy?liquidity.message:'';}
@@ -172,6 +174,7 @@ function applyAffordableLiquidity(estimate=cost||liquidityGasCost){
  reviewGate.invalidate();config.liquidity=suggestion;liquidityState.defaultValue=suggestion;$('liquidity').value=suggestion;saveDraft();return true;
 }
 function refreshLiquidity({force=false}={}){
+ if(solCreate?.active)return Promise.resolve(null);
  const identity=liquidityIdentity();if(!force&&sameLiquidityIdentity(identity,balanceIdentity))return balanceRead||Promise.resolve(walletBalances);
  if(identity?.chainId!==balanceIdentity?.chainId)liquidityGasCost=null;
  balanceIdentity=identity;walletBalances=null;const revision=++balanceRevision;costRevision++;cost=null;reviewGate.invalidate();
@@ -182,7 +185,7 @@ function refreshLiquidity({force=false}={}){
  })().finally(()=>{if(revision===balanceRevision)balanceRead=null;});return balanceRead;
 }
 async function rpcRead(method,params,chainId=config.chainId){const r=await fetch(chainById(chainId).rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});if(!r.ok)throw Error('RPC timeout.');const j=await r.json();if(j.error)throw Error(j.error.message);return j.result;}
-async function refreshCost({refreshBalances=true}={}){const identity=liquidityIdentity();await refreshLiquidity({force:refreshBalances});if(!sameLiquidityIdentity(identity,liquidityIdentity()))return;clearTimeout(costTimer);refreshDollarPrices();reviewGate.invalidate();const rev=++costRevision,chain=chainById(config.chainId);cost=null;render();try{const price=BigInt(await rpcRead('eth_gasPrice',[],chain.id));if(price<=0n)throw Error('Network gas estimate is unavailable.');let wrapNeeded=true,locksSetupNeeded=true,wrapAmount=null;const c=hub.snapshot().current;
+async function refreshCost({refreshBalances=true}={}){if(solCreate?.active)return;const identity=liquidityIdentity();await refreshLiquidity({force:refreshBalances});if(!sameLiquidityIdentity(identity,liquidityIdentity()))return;clearTimeout(costTimer);refreshDollarPrices();reviewGate.invalidate();const rev=++costRevision,chain=chainById(config.chainId);cost=null;render();try{const price=BigInt(await rpcRead('eth_gasPrice',[],chain.id));if(price<=0n)throw Error('Network gas estimate is unavailable.');let wrapNeeded=true,locksSetupNeeded=true,wrapAmount=null;const c=hub.snapshot().current;
  if(config.allocations.length){const r=await fetch('/full-launch/extras.json');if(!r.ok)throw Error('Could not estimate QLocks setup.');const extras=await r.json();locksSetupNeeded=await rpcRead('eth_getCode',[extras.contracts.locks.address,'latest'],chain.id)==='0x';}
  if(rev!==costRevision)return;liquidityGasCost=costSummary(config,{gasPriceWei:price,locksSetupNeeded});applyAffordableLiquidity(liquidityGasCost);
  if(c&&chain.quote.wrapNative){const bal=currentLiquidityBalances()?.quoteBalance;if(bal==null)throw Error('Balance unavailable.');const need=units(config.liquidity,chain.quote.decimals);wrapNeeded=BigInt(bal)<need;wrapAmount=need>BigInt(bal)?need-BigInt(bal):0n;}
@@ -290,3 +293,5 @@ hub.subscribe(s=>{void quantumControl.refresh();reviewGate.check();if(!record){l
  render();});
 window.addEventListener('focus',()=>{void refreshLiquidity({force:true});if(screen===3)void refreshCost({refreshBalances:false});});
 window.addEventListener('pagehide',()=>{balanceRevision++;reviewGate.clear();context?.dispose();quantumControl.lock();});render();void quantumControl.refresh();if(screen===3)void refreshCost({refreshBalances:false});
+
+solCreate=mountSolCreate({chainSelect:$('chainId'),onExit:()=>{render();}});

@@ -41,7 +41,7 @@ async function refresh() {
   const evm=connectedAddress(),owners=[wallet,...(evm?[evm]:[])];
   let all=await Promise.all(owners.map(w=>api('?wallet='+w)));
   if(serial!==loading)return;
-  if(!all[0].enabled){panel.replaceChildren(h('p',{},'Trade Solana through Jupiter · 1% trading fee. Solana cashback and referral rewards are not active.'));return;}
+  if(!all[0].enabled){panel.replaceChildren(h('p',{},'QHooks Solana bonding-curve rewards open with Solana launches. Connect again after launches open to check your balances.'));return;}
   const claims=all.flatMap(value=>value.claims||[]);
   let changed=false;
   await Promise.all(claims.map(async claim=>{
@@ -60,7 +60,7 @@ async function refresh() {
   const status=h('p',{role:'status','aria-live':'polite'});
   const copy=h('button',{type:'button',class:actionClass},'Copy Solana referral link');
   copy.onclick=async()=>{
-   try {await navigator.clipboard.writeText('https://qhooks.com/terminal?ref='+wallet);status.textContent='Referral link copied. You earn 20% of the fee from referred Solana trades.';}
+   try {await navigator.clipboard.writeText('https://qhooks.com/terminal?ref='+wallet);status.textContent='Referral link copied. You earn 20% of the QHooks share from eligible referred Solana trades.';}
    catch {status.textContent='https://qhooks.com/terminal?ref='+wallet;}
   };
   const rows=[];
@@ -75,7 +75,7 @@ async function refresh() {
   }
   const pendingRows=active.map(claim=>h('p',{},format(claim.amount,claim.mint===SOL?9:6)+' '+(claim.mint===SOL?'SOL':'USDC')+' payout pending. This amount is reserved until the payment confirms or safely expires.'));
   const check=h('button',{type:'button',class:actionClass,onclick:()=>{polls=0;void refresh();}},'Check rewards');
-  panel.replaceChildren(h('h3',{},'Solana rewards'),h('p',{},'30% of the trading fee back to you. 20% to the referrer. Jupiter’s share comes from the same 1% fee.'),...rows,...pendingRows,...(!rows.length&&!pendingRows.length?[h('p',{},recovery.read().length?'Confirming your recent swap before crediting rewards…':'Your cashback appears after a confirmed trade.')]:[]),copy,check,status);
+  panel.replaceChildren(h('h3',{},'Solana rewards'),h('p',{},'QHooks bonding-curve trades credit 30% of the QHooks partner share to you and 20% to an enrolled referrer. Jupiter integrator rewards, when enabled, use their separate confirmed fee.'),...rows,...pendingRows,...(!rows.length&&!pendingRows.length?[h('p',{},recovery.read().length?'Confirming your recent swap before crediting rewards…':'Your cashback appears after a confirmed trade.')]:[]),copy,check,status);
   const notice=owners.map(owner=>notices.get(owner)).filter(Boolean).join(' ');
   if(notice)status.textContent=notice;
   else if(all.some(value=>value.balances.some(balance=>!balance.enabled)))status.textContent='Rewards are recorded. Claims are temporarily unavailable.';

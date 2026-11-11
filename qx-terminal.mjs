@@ -152,15 +152,15 @@ function renderLaunchActions(){
 // these chains (Elysium answers 400 invalid_proof_subject, so it stays out). The safety scan also answers 503 for
 // uncached tokens, and those now fall back here too: a cached RepoProof report shows its verdict, otherwise "Not checked
 // yet" with the RepoProof link instead of "Checks paused · retry".
-const REPOPROOF_TOKEN_CHAINS=new Set(['1','8453','42161','56','4663']);
+const REPOPROOF_TOKEN_CHAINS=new Set(['1','8453','42161','56','4663','solana']);
 const SAFETY_SKIP=new Set(['99901']); // /api/terminal/x/safety has no Elysium (400).
 async function repoproofTokenChecks(selected,signal){
  if(!REPOPROOF_TOKEN_CHAINS.has(String(selected.chainId)))return {unsupported:true,chainId:selected.chainId,address:selected.token};
  const none={unsupported:true,chainId:selected.chainId,address:selected.token};
- try{const r=await fetch('/api/repoproof/check?'+new URLSearchParams({kind:'token',chainId:String(selected.chainId),address:String(selected.token).toLowerCase()}),{cache:'no-store',signal});if(!r.ok)return none;
-  const v=await r.json();if(v?.version!==1||v.subject?.kind!=='token'||String(v.subject?.chainId)!==String(selected.chainId)||String(v.subject?.address).toLowerCase()!==String(selected.token).toLowerCase())return none;
+ try{const r=await fetch('/api/repoproof/check?'+new URLSearchParams({kind:'token',chainId:String(selected.chainId),address:selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase()}),{cache:'no-store',signal});if(!r.ok)return none;
+  const v=await r.json();if(v?.version!==1||v.subject?.kind!=='token'||String(v.subject?.chainId)!==String(selected.chainId)||(selected.chainId==='solana'?String(v.subject?.address):String(v.subject?.address).toLowerCase())!==(selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase()))return none;
   const rep=v.report&&['danger','caution','clear','unknown'].includes(v.report.level)&&Array.isArray(v.report.checks)?v.report:null;
-  return {...(rep||{}),level:rep?.level??null,verdict:rep?(rep.level==='clear'?'ok':rep.level):undefined,unavailable:!rep,state:v.state,retryAt:v.retryAt??null,source:'RepoProof via QHooks',checkedAt:v.checkedAt||rep?.completedAt||null,chainId:String(selected.chainId),address:String(selected.token).toLowerCase()};
+  return {...(rep||{}),level:rep?.level??null,verdict:rep?(rep.level==='clear'?'ok':rep.level):undefined,unavailable:!rep,state:v.state,retryAt:v.retryAt??null,source:'RepoProof via QHooks',checkedAt:v.checkedAt||rep?.completedAt||null,chainId:String(selected.chainId),address:selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase()};
  }catch(e){if(signal?.aborted)throw e;return none;}
 }
 // 2026-11-10 (release lead: BRETT showed "No flags" while RepoProof rated it danger; QHOOKS showed "Not checked yet"):
@@ -189,12 +189,12 @@ export function ticketRisk(c,scan=null){
 }
 const AUTO_KEY='qhooks:repoproof:auto:v1';
 async function autoRepoProof(kind,chainId,address,signal){
- if(String(chainId)!=='4663')return false;
- const key=kind+':'+chainId+':'+String(address).toLowerCase();let seen=[];
+ if(!['4663','solana'].includes(String(chainId)))return false;
+ const key=kind+':'+chainId+':'+(String(chainId)==='solana'?String(address):String(address).toLowerCase());let seen=[];
  try{seen=JSON.parse(sessionStorage.getItem(AUTO_KEY)||'[]');}catch{}
  if(seen.includes(key))return false;
  try{sessionStorage.setItem(AUTO_KEY,JSON.stringify([...seen,key].slice(-40)));}catch{}
- try{const r=await fetch('/api/repoproof/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,chainId:String(chainId),address:String(address).toLowerCase()}),signal});return r.ok;}
+ try{const r=await fetch('/api/repoproof/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,chainId:String(chainId),address:(String(chainId)==='solana'?String(address):String(address).toLowerCase())}),signal});return r.ok;}
  catch(e){if(signal?.aborted)throw e;return false;}
 }
 async function tokenRepoProof(selected,signal){
@@ -309,6 +309,7 @@ function badges(m) {
   else if ((m.opensAt || 0) > t) out.push(h('span', { class: 'qxt-badge warm' }, 'Opens ' + clock(m.opensAt - t)));
   const bits = BITS.filter((_, i) => (m.mask >> i) & 1 && i !== 0 && i !== 5);
   if (bits.length) out.push(h('span', { class: 'qxt-badge', title: bits.join(', ') }, bits.length <= 2 ? bits.join(' · ') : bits.slice(0, 2).join(' · ') + ' +' + (bits.length - 2)));
+  if(m.qhooksLaunch&&m.chainId==='solana')out.push(h('span',{class:'qxt-badge'},m.graduated?'Graduated · LP locked':'QHooks launch · '+(m.progressBps/100).toFixed(1)+'% to graduation'));
   if (m.pools.includes('eth')) out.push(h('span', { class: 'qxt-badge' }, 'ETH pool'));
   return out;
 }
@@ -524,6 +525,7 @@ function renderHead() {
   const d = marketDisplay(), m = d.meta, s = d.summary || {};
   $('qxt-symbol').textContent = m.symbol; $('qxt-symbol').title=m.symbol; $('qxt-name').textContent = m.name; $('qxt-name').title=m.name;
   syncOfficial(m);
+  let solLaunch=$('qxt-sol-launch');if(!solLaunch){solLaunch=h('p',{id:'qxt-sol-launch',class:'qxt-launch-caps'});$('qxt-name').after(solLaunch);}const launchInfo=d.token?.qhooksLaunch;solLaunch.hidden=!launchInfo;solLaunch.textContent=launchInfo?'QHooks launch · '+(launchInfo.graduated?'Graduated · LP locked':(launchInfo.progressBps/100).toFixed(1)+'% to graduation · 85 SOL'):'';
   document.title = tabTitle(m.symbol, {priceUsd: s.priceUsd ?? (d.ext ? s.price : null), priceQuote: s.price, quoteSymbol: d.ext ? 'USD' : m.quoteSymbol});
   const ci = $('qxt-chain-icon'); ci.src = '/chain-symbol-icons/' + ICON[m.chainId] + '.svg'; ci.alt = CHAIN_NAME[m.chainId]; ci.hidden = false;
   const av = $('qxt-av'); if (av) { av.hidden = false; av.style.setProperty('--h', hue(m.token || state.sel?.controller)); av.firstChild.textContent = (m.symbol || '?').replace(/^\$/, '').slice(0, 1).toUpperCase(); av.querySelector('.qxt-av-logo')?.remove(); const lg = avLogo(m.chainId ?? state.sel?.chainId, m.token); if (lg) av.firstChild.after(lg); }
@@ -732,7 +734,7 @@ function clearMarketView(message='Choose a token') {
   document.title='Terminal | QHooks';$('qxt-stats').replaceChildren();
   for(const id of ['qxt-av','qxt-chain-icon','qxt-copy','qxt-share','qxt-star','qxt-board'])if($(id))$(id).hidden=true;
   const trust=$('qxt-trust');if(trust){trust.dataset.key='';trust.replaceChildren();}
-  syncOfficial(null);
+  syncOfficial(null);if($('qxt-sol-launch'))$('qxt-sol-launch').hidden=true;
   document.querySelector('.qxt-tools').hidden=true;
   // A launch that is loading keeps the chart area visible so its "Loading price history…" message shows.
   $('qxt-chart').hidden=!(state.loading&&state.sel&&!state.sel.ext);
@@ -826,6 +828,7 @@ async function paintColdPrice(record,chainId,mine){
  $('qxt-sync').textContent='Price from the pool · Loading…';
 }
 async function select(chainId,controller,{quiet=false}={}) {
+  if(String(chainId)==='solana')return selectExternal('solana',String(controller),{quiet});
   chainId=String(chainId);controller=String(controller).toLowerCase();
   return selectionFlow.open({kind:'launch',chainId,controller,quiet},async run=>{
     const r=await fetch(`/api/markets/${chainId}/${controller}`,{cache:'no-store',signal:run.controller.signal});

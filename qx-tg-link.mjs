@@ -1,3 +1,5 @@
+import {privyAccessToken} from './qx-privy-access-token.mjs';
+export {privyAccessToken};
 // Wallet ownership is confirmed in the connected wallet. Telegram credentials remain in the bridge's memory.
 export const utf8Hex = text => '0x' + [...new TextEncoder().encode(text)].map(b => b.toString(16).padStart(2, '0')).join('');
 
@@ -16,18 +18,6 @@ export async function linkRequest(initData, body, fetchImpl = globalThis.fetch) 
 
 // Silent link (2026-11-10): a wallet the signed-in Privy account owns links itself to this Telegram user, with no card
 // or signature. The server checks Telegram initData, the Privy access token and Privy's record of the user's wallets.
-export function privyAccessToken(storage) {
-  try {
-    for (let i = 0; i < (storage?.length || 0); i++) {
-      const key = storage.key(i);
-      if (!/^privy:(?:[^:]+:)?token$/.test(key || '')) continue;
-      const raw = storage.getItem(key); if (!raw) continue;
-      let token = raw; try { token = JSON.parse(raw); } catch {}
-      if (typeof token === 'string' && token.split('.').length === 3) return token;
-    }
-  } catch {}
-  return null;
-}
 export async function silentLink({ initData, address, storage, explicit = false, fetchImpl = globalThis.fetch }) {
   const privyToken = privyAccessToken(storage);
   if (!privyToken) return 'fallback';

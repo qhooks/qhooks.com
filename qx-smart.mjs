@@ -1,13 +1,13 @@
 // Smart money board (2026-11-10, redesign): every chain, any token, from /api/wallets/smart (sampled pools). A dense sortable
 // table on desktop and tight cards on phones; a live "Smart money buys" feed; Follow and Copy trades on every row; the wallet
 // drawer's cross-chain section (PnL line, holdings, best and worst, recent trades). Read-only: nothing here moves money.
-const CHAINS = [['all', 'All'], ['4663', 'Robinhood'], ['8453', 'Base'], ['56', 'BNB'], ['42161', 'Arbitrum'], ['99901', 'Elysium'], ['1', 'Ethereum']];
-const SHORT = { '4663': 'RH', '8453': 'Base', '56': 'BNB', '42161': 'Arb', '99901': 'Ely', '1': 'ETH' };
+const CHAINS = [['all', 'All'], ['4663', 'Robinhood'], ['8453', 'Base'], ['56', 'BNB'], ['42161', 'Arbitrum'], ['99901', 'Elysium'], ['1', 'Ethereum'],['solana','Solana']];
+const SHORT = { '4663': 'RH', '8453': 'Base', '56': 'BNB', '42161': 'Arb', '99901': 'Ely', '1': 'ETH',solana:'SOL' };
 const TFS = [['6h', '6H'], ['24h', '24H'], ['7d', '7D']];
 const TF_TEXT = { '6h': 'Last 6 hours', '24h': 'Last 24 hours', '7d': 'Last 7 days' };
-const NAME = { '4663': 'Robinhood Chain', '8453': 'Base', '56': 'BNB Chain', '42161': 'Arbitrum', '99901': 'Elysium', '1': 'Ethereum' };
+const NAME = { '4663': 'Robinhood Chain', '8453': 'Base', '56': 'BNB Chain', '42161': 'Arbitrum', '99901': 'Elysium', '1': 'Ethereum',solana:'Solana' };
 const TAGS = { smart: 'Smart money', sniper: 'Sniper', whale: 'Whale', fresh: 'Fresh wallet', verified: 'Verified' };
-const EXPLORER = { '4663': 'https://robinhoodchain.blockscout.com', '8453': 'https://basescan.org', '56': 'https://bscscan.com', '42161': 'https://arbiscan.io', '99901': 'https://elysium.kinetiq.xyz', '1': 'https://etherscan.io' };
+const EXPLORER = { '4663': 'https://robinhoodchain.blockscout.com', '8453': 'https://basescan.org', '56': 'https://bscscan.com', '42161': 'https://arbiscan.io', '99901': 'https://elysium.kinetiq.xyz', '1': 'https://etherscan.io',solana:'https://solscan.io' };
 const NS = 'http://www.w3.org/2000/svg';
 export const el = (tag, attrs = {}, ...kids) => {
   const n = document.createElement(tag);
