@@ -1,0 +1,16 @@
+/* Telegram link sheet uses the terminal palette in both themes, independently of the selected token. */
+.qxt-tg-link{position:fixed;z-index:150;inset:auto 12px max(12px,env(safe-area-inset-bottom));width:auto;max-width:440px;max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));margin-inline:auto;overflow:auto;overscroll-behavior:contain;box-sizing:border-box;padding:20px max(20px,env(safe-area-inset-right)) 20px max(20px,env(safe-area-inset-left));border:1px solid var(--qx-line-2);border-radius:14px;background:var(--qx-panel);color:var(--qx-ink);box-shadow:0 12px 48px #0005;font:normal 14px/1.5 var(--qx-sans);overflow-wrap:anywhere}
+.qxt-tg-link h2{margin:0;font:600 18px/1.35 var(--qx-sans);letter-spacing:-.02em}
+.qxt-tg-link .qxt-tg-description{margin:8px 0 18px;color:var(--qx-muted)}
+.qxt-tg-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.qxt-tg-link button{min-height:44px;padding:10px 14px;border:1px solid var(--qx-line-2);border-radius:8px;background:transparent;color:var(--qx-ink);font:500 14px/1.35 var(--qx-sans);white-space:normal;cursor:pointer}
+.qxt-tg-link button.qxt-tg-primary{background:var(--qx-brass);color:var(--qx-on-brass);border-color:var(--qx-brass)}
+.qxt-tg-link button:disabled{opacity:.6;cursor:wait}
+.qxt-tg-link :focus-visible{outline:2px solid var(--qx-brass);outline-offset:3px}
+.qxt-tg-status{margin:12px 0 0;color:var(--qx-muted)}
+.qxt-tg-status:empty{display:none}
+.qxt-tg-label{margin-top:16px;color:var(--qx-muted)}
+.qxt-tg-label summary{min-height:44px;display:list-item;align-content:center;cursor:pointer}
+.qxt-tg-label input{display:block;box-sizing:border-box;width:100%;margin:4px 0 8px;padding:12px;min-height:44px;background:var(--qx-bg);border:1px solid var(--qx-line-2);border-radius:8px;color:var(--qx-ink);font:normal 16px var(--qx-sans)}
+.qxt-tg-link>button{margin-top:8px}
+.qxt-tg-link [hidden]{display:none!important}
