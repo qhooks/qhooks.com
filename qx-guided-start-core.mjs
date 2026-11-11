@@ -31,7 +31,9 @@ export function chooseStart({tier='standard',steps=0,customUsd='',base,start,quo
  const selection=selectedStart({tier,steps,customUsd,standardUsd}),actual=Number(start.startCapWei)/10**quoteDecimals*quoteUsd;ensure(Math.abs(actual/selection.selectedCapUsd-1)<=0.02);
  return Object.freeze({version:1,tier,steps:selection.steps,tick0:start.tick0,startCapWei:String(start.startCapWei),quoteUsd,selectedCapUsd:selection.selectedCapUsd,quoteDecimals,standardUsd});
 }
-export function impliedStartCap({sqrtPriceX96,tokenIs0,totalSupply,quoteDecimals,quoteUsd}){
+export function impliedStartCap({sqrtPriceX96,tokenIs0,price,totalSupply,quoteDecimals,quoteUsd}){
+ // Sales encode quote raw units per whole 18-decimal token, rather than a pool sqrt price.
+ if(price!==undefined){const p=BigInt(price),supply=BigInt(totalSupply);ensure(p>0n&&supply>0n&&Number.isFinite(quoteUsd)&&quoteUsd>0&&Number.isInteger(quoteDecimals)&&quoteDecimals>=0&&quoteDecimals<=18);return Number(p*supply)/Number(10n**18n*10n**BigInt(quoteDecimals))*quoteUsd;}
  const p=BigInt(sqrtPriceX96),supply=BigInt(totalSupply);ensure(p>=4295128739n&&p<1461446703485210103287273052203988822378723970342n&&supply>0n&&Number.isFinite(quoteUsd)&&quoteUsd>0&&Number.isInteger(quoteDecimals)&&quoteDecimals>=0&&quoteDecimals<=18);
  // Integer rational first, conversion only for the final bounded USD comparison.
  const numerator=tokenIs0?p*p*supply:Q*Q*supply,denominator=(tokenIs0?Q*Q:p*p)*10n**BigInt(quoteDecimals);

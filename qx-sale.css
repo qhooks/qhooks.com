@@ -37,3 +37,9 @@
 .qsf-grid input, .qsf-grid select { font-size: 1rem; padding: 9px 10px; min-width: 0; }
 .qsf-summary { margin: 10px 0; padding: 10px 12px; border-radius: 10px; background: var(--chip, #ece8dd); }
 .qsf-preview { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; }
+.qsf [hidden] { display: none !important; }
+.qsf-tiers { margin: 14px 0; }
+.qsf-tiers > input { margin-top: 8px; width: 100%; box-sizing: border-box; padding: 9px 10px; font-size: 1rem; }
+.qsf-price-cap, .qsa-price-cap { display: block; font-size: .82rem; font-weight: 400; color: var(--muted, #6b6f68); overflow-wrap: anywhere; }
+.qsf .qq-start-opt { min-height: 44px; }
+.qsf .qq-start-opt:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }

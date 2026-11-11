@@ -4,13 +4,20 @@
 import {getWalletHub} from './wallet-hub-fresh.mjs';
 import {chainById} from './chains.mjs';
 import {saleAddress, decodeSale, stateAt, outcome, clearAt, priceAt, capAt, tokensFor, timeText, compact, fromWei, toWei,
-  encodeCommit, encodeSettle, encodeClaim, encodeRefund, encodeAllocation, SEL, feeFields} from './qx-sale-core.mjs';
+  encodeCommit, encodeSettle, encodeClaim, encodeRefund, encodeAllocation, SEL, feeFields, saleCapText, SUPPLY} from './qx-sale-core.mjs';
+import {readCreateNativeUSD} from './qx-create-prices.mjs';
 
 const root = document.getElementById('qsa-root'), hub = getWalletHub(window), q = new URLSearchParams(location.search);
 const chainId = String(q.get('chain') || ''), saleId = /^\d{1,9}$/.test(q.get('id') || '') ? Number(q.get('id')) : null;
 const chain = chainById(chainId), address = saleAddress(chainId);
 const el = (tag, attrs = {}, ...kids) => { const n = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else if (v !== false && v != null) n.setAttribute(k, v === true ? '' : v); } n.append(...kids.flat().filter(k => k != null && k !== false)); return n; };
 let sale = null, mine = null, busy = false, note = '', noteBad = false, offset = 0;
+let paymentUsd = null, usdAt = 0, totalSupply = SUPPLY;
+async function readUsd() {
+  if (Date.now() - usdAt < 60000) return;
+  paymentUsd = /USD/.test(chain.native) ? 1 : await readCreateNativeUSD(chain.native).catch(() => null);
+  usdAt = Date.now();
+}
 
 async function rpc(method, params) {
   const r = await fetch(chain.rpc, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({jsonrpc: '2.0', id: 1, method, params})});
@@ -22,8 +29,10 @@ const word = v => BigInt(v).toString(16).padStart(64, '0');
 async function load() {
   if (!chain || !address || saleId === null) { show(el('p', {}, 'This sale link is not valid.')); return; }
   try {
-    const [h, block] = await Promise.all([call(SEL.saleOf + word(saleId)), rpc('eth_getBlockByNumber', ['latest', false])]);
+    const [h, block] = await Promise.all([call(SEL.saleOf + word(saleId)), rpc('eth_getBlockByNumber', ['latest', false]), readUsd()]);
     sale = decodeSale(h);
+    // Settlement may burn unsold inventory. Do not call the original 1B supply its current market cap.
+    totalSupply = sale.settled ? await rpc('eth_call', [{to: sale.token, data: '0x18160ddd'}, 'latest']).then(raw => BigInt(raw)).catch(() => 0n) : SUPPLY;
     offset = Number(BigInt(block.timestamp)) - Math.floor(Date.now() / 1000); // chain clock vs this device
     const who = hub.snapshot().current?.owner;
     if (who) {
@@ -57,8 +66,9 @@ function render() {
     el('div', {}, el('dt', {}, 'Minimum'), el('dd', {}, coin(s.softCap))),
     el('div', {}, el('dt', {}, st === 'live' && s.mode === 1 ? 'Sells out at' : 'Most it can raise'), el('dd', {}, coin(cap))),
     el('div', {}, el('dt', {}, 'Buyers'), el('dd', {}, String(s.buyers))),
-    el('div', {}, el('dt', {}, st === 'settled' ? 'Final price' : 'Price now'), el('dd', {}, coin(st === 'settled' ? BigInt(s.clearPrice) * 10n ** 6n : priceAt(s, t) * 10n ** 6n) + ' per 1M')),
-    s.mode === 1 && st !== 'settled' ? el('div', {}, el('dt', {}, 'Floor'), el('dd', {}, coin(BigInt(s.floorPrice) * 10n ** 6n) + ' per 1M')) : null,
+    el('div', {}, el('dt', {}, st === 'settled' ? 'Final price' : 'Price now'), el('dd', {}, coin(st === 'settled' ? BigInt(s.clearPrice) * 10n ** 6n : priceAt(s, t) * 10n ** 6n) + ' per 1M', el('small', {class: 'qsa-price-cap'}, saleCapText(st === 'settled' ? s.clearPrice : priceAt(s, t), paymentUsd, totalSupply)))),
+    s.mode === 1 && st !== 'settled' ? el('div', {}, el('dt', {}, 'Start price'), el('dd', {}, coin(BigInt(s.price) * 10n ** 6n) + ' per 1M', el('small', {class: 'qsa-price-cap'}, saleCapText(s.price, paymentUsd)))) : null,
+    s.mode === 1 && st !== 'settled' ? el('div', {}, el('dt', {}, 'Floor'), el('dd', {}, coin(BigInt(s.floorPrice) * 10n ** 6n) + ' per 1M', el('small', {class: 'qsa-price-cap'}, saleCapText(s.floorPrice, paymentUsd)))) : null,
     s.walletCap > 0n ? el('div', {}, el('dt', {}, 'Wallet limit'), el('dd', {}, coin(s.walletCap))) : null);
   const you = mine ? el('div', {class: 'qsa-you'}, el('h2', {}, 'Your allocation'),
     mine.coin > 0n ? el('p', {}, 'You put in ' + coin(mine.coin) + '. ' + (st === 'failed' || next === 'refund' ? (mine.done ? 'Refunded.' : 'You get it all back.')

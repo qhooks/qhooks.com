@@ -3,6 +3,7 @@
 import {keccak_256} from './full-launch/prototypes/qpools/client/vendor/hashes/sha3.js';
 import {abiEncode} from './full-launch/packages/launchpad/abi-encode.mjs';
 import {chainById} from './chains.mjs';
+import {assertStartPrice,impliedStartCap,START_PRICE_HOLD} from './qx-guided-start-core.mjs';
 
 export const SALE_TOKENS = 500_000_000n * 10n ** 18n;
 export const SUPPLY = 1_000_000_000n * 10n ** 18n;
@@ -51,19 +52,54 @@ export function fromWei(v, digits = 6) {
 /// Plain inputs → QSaleLaunch.SaleParams. Fixed: `raise` is the most it raises (all 500M sale tokens sold), at one price.
 /// Falling: `raise` is what selling every sale token at the floor would raise; the price starts at `multiple` × the floor,
 /// so the most it can raise is multiple × raise.
-export function planSale({name, symbol, image = '', description = '', style = 'fixed', raise, minimum, window = 86400, walletCap = '', multiple = 4, fee = 10000, salt, start = 0}) {
+export function salePrices({style = 'fixed', raise, pricePerMillion, multiple = 4}) {
+  const mult = style === 'falling' ? BigInt(multiple) : 1n;
+  if (style === 'falling' && !START_MULTIPLES.includes(Number(multiple))) throw new TypeError('Pick a starting price.');
+  const typed = pricePerMillion !== undefined;
+  const floorPrice = typed ? toWei(pricePerMillion) / (10n ** 6n * mult) : toWei(raise) * 10n ** 18n / SALE_TOKENS;
+  const price = typed ? toWei(pricePerMillion) / 10n ** 6n : floorPrice * mult;
+  if (floorPrice < MIN_PRICE) throw new TypeError('The price is too small for a 500M token sale.');
+  if (price > MAX_PRICE) throw new TypeError('The price is too large.');
+  return {price, floorPrice: style === 'falling' ? floorPrice : 0n, hardCap: SALE_TOKENS * price / 10n ** 18n};
+}
+
+// QSaleLaunch takes native coin (18 decimals). A factory's tier quote may have 6 or 18 decimals;
+// readFactoryStart converts that quote to USD before it reaches this native-coin conversion.
+export function salePriceForCap({capUsd, paymentUsd}) {
+  if (!(capUsd > 0) || !Number.isFinite(capUsd) || !(paymentUsd > 0) || !Number.isFinite(paymentUsd)) throw new TypeError(START_PRICE_HOLD);
+  const raw = Math.round(capUsd / paymentUsd * 1e9);
+  if (!Number.isFinite(raw)) throw new TypeError(START_PRICE_HOLD);
+  const price = BigInt(raw);
+  if (price < MIN_PRICE || price > MAX_PRICE) throw new TypeError(START_PRICE_HOLD);
+  assertStartPrice({price, totalSupply: SUPPLY, quoteDecimals: 18, quoteUsd: paymentUsd, selectedCapUsd: capUsd});
+  return price;
+}
+export const impliedSaleCap = (price, paymentUsd, totalSupply = SUPPLY) => impliedStartCap({price, totalSupply, quoteDecimals: 18, quoteUsd: paymentUsd});
+export function saleCapText(price, paymentUsd, totalSupply = SUPPLY) {
+  try {
+    const cap = impliedSaleCap(price, paymentUsd, totalSupply);
+    if (!Number.isFinite(cap) || !(cap > 0)) throw Error();
+    return '≈ $' + new Intl.NumberFormat('en-US', {maximumFractionDigits: 2}).format(cap) + ' market cap at this price';
+  } catch { return 'Market cap unavailable.'; }
+}
+// Read the price that will actually be signed, not just the form's plan.
+export function assertSaleStart({data, selectedCapUsd, paymentUsd}) {
+  try {
+    if (typeof data !== 'string' || !/^0x(?:[0-9a-f]{2})+$/i.test(data) || data.slice(0, 10) !== SEL.createSale) throw Error();
+    const body = data.slice(10), at = i => { const h = body.slice(i * 64, (i + 1) * 64); if (h.length !== 64) throw Error(); return BigInt('0x' + h); };
+    if (at(0) !== 32n) throw Error();
+    const mode = at(4), price = at(7), floor = at(8);
+    if (mode > 1n || price < MIN_PRICE || price > MAX_PRICE || (mode === 0n ? floor !== 0n : floor < MIN_PRICE || floor > price)) throw Error();
+    return assertStartPrice({price, totalSupply: SUPPLY, quoteDecimals: 18, quoteUsd: paymentUsd, selectedCapUsd});
+  } catch { throw new TypeError(START_PRICE_HOLD); }
+}
+
+export function planSale({name, symbol, image = '', description = '', style = 'fixed', raise, pricePerMillion, minimum, window = 86400, walletCap = '', multiple = 4, fee = 10000, salt, start = 0}) {
   const n = String(name ?? '').trim(), s = String(symbol ?? '').trim().toUpperCase();
   if (!n || new TextEncoder().encode(n).length > 64) throw new TypeError('Enter a token name (up to 64 characters).');
   if (!/^[A-Z0-9]{1,10}$/.test(s)) throw new TypeError('Enter a ticker of 1–10 letters or digits.');
   if (!image) throw new TypeError('Add an image for your token.');
-  const raiseWei = toWei(raise), minWei = toWei(minimum);
-  const floorPrice = raiseWei * 10n ** 18n / SALE_TOKENS;
-  const mult = style === 'falling' ? BigInt(multiple) : 1n;
-  if (style === 'falling' && !START_MULTIPLES.includes(Number(multiple))) throw new TypeError('Pick a starting price.');
-  const price = floorPrice * mult;
-  if (floorPrice < MIN_PRICE) throw new TypeError('The raise is too small for a 500M token sale.');
-  if (price > MAX_PRICE) throw new TypeError('The raise is too large.');
-  const hardCap = SALE_TOKENS * price / 10n ** 18n;
+  const minWei = toWei(minimum), {price, floorPrice, hardCap} = salePrices({style, raise, pricePerMillion, multiple});
   if (minWei < MIN_RAISE) throw new TypeError('Set a minimum above zero.');
   if (minWei > hardCap) throw new TypeError('The minimum can’t be more than the sale can raise.');
   const cap = String(walletCap ?? '').trim() ? toWei(walletCap) : 0n;
