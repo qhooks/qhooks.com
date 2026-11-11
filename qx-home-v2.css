@@ -1,0 +1,117 @@
+/* QHooks home v2 (2026-11 redesign). Loaded after the home sheets; needs qx-ds.css. Re-skin and re-layout only:
+   the same nodes, links, copy and data. The hero's one brand moment is the hook: it hangs from its line and swings
+   (qx-home-v2.mjs), and the light on its metal follows the pointer. */
+
+.qv2 body.qx-home{background:var(--q-bg);color:var(--q-text)}
+.qv2 .qx-home :is(.qx-serif,em,i){font-family:var(--q-sans);font-style:normal}
+.qv2 .qx-home .qx-btn{border-radius:var(--q-r);font-weight:650;letter-spacing:-.01em;transition:filter var(--q-fast) ease-out,border-color var(--q-fast) ease-out,transform var(--q-fast) ease-out}
+.qv2 .qx-home .qx-btn:active{transform:translateY(1px)}
+.qv2 .qx-home .qx-btn-primary,.qv2 .hx-hero .qx-btn-primary{background:var(--q-gold-metal);color:var(--q-on-gold);box-shadow:var(--q-gold-edge);border:0}
+.qv2 .qx-home .qx-btn-primary:hover{filter:brightness(1.05)}
+.qv2 .qx-home .qx-btn-primary .qx-btn-dot,.qv2 .hx-hero .qx-btn-primary .qx-btn-dot{background:rgba(23,19,11,.9);color:#e6c995}
+.qv2 .qx-home .qx-eyebrow{letter-spacing:.02em;text-transform:none;font:600 12.5px/1 var(--q-sans);color:var(--q-text-2)}
+
+/* the floating header keeps its capsule; its parts follow the system */
+.qv2 .site-header{border-color:rgba(255,255,255,.1)}
+/* gold is for the page's one primary action (Launch a token); the wallet button is a quiet secondary */
+.qv2 .site-header #qhc-trigger,.qv2 .site-header :is(.wallet-connect,[data-wallet-button]){background:var(--q-raised-2);color:var(--q-text);box-shadow:none;border:1px solid var(--q-line-2);border-radius:var(--q-r);font-weight:650}
+
+/* ---- hero stage: always graphite, in both themes, because the hook is lit against the dark ---- */
+.qv2 .hx-hero{padding:10px}
+.qv2 .hx-frame{border-radius:20px;border:1px solid rgba(255,255,255,.08);background:#0b110f;--q-text:rgba(255,255,255,.94);--q-text-2:rgba(255,255,255,.68);--q-text-3:rgba(255,255,255,.5);--q-line:rgba(255,255,255,.09);--q-line-2:rgba(255,255,255,.16);--q-raised:#121514;--q-raised-2:#191d1b;--q-inset:#0e1110;--q-up:#4cc38a;--q-down:#f2695c;--q-up-a:rgba(76,195,138,.13);--q-down-a:rgba(242,105,92,.13);--q-gold:#d2ad72}
+.qv2 .hx-art img{object-position:20% 46%;animation:none;transform-origin:var(--hook-ox,74.8%) var(--hook-oy,0%);transform:rotate(var(--hook-a,0deg)) scale(var(--hook-scale,1.1));will-change:transform;backface-visibility:hidden}
+.qv2 .hx-art{isolation:isolate}
+.qv2 .hx-art::after{animation:none;background:radial-gradient(ellipse 7% 20% at var(--hook-lx,77%) var(--hook-ly,36%),rgba(255,238,198,.95) 0,rgba(255,238,198,.4) 45%,transparent 100%);background-size:auto;mix-blend-mode:overlay;opacity:1}
+.qv2 .hx-lattice{opacity:.5}
+.qv2 .hx-scrim{background:linear-gradient(90deg,rgba(10,13,11,.92) 0%,rgba(10,13,11,.7) 40%,rgba(10,13,11,0) 64%),linear-gradient(0deg,rgba(10,13,11,.7) 0%,rgba(10,13,11,0) 22%)}
+
+.qv2 .hx-copy{padding-top:112px;max-width:1200px;color:var(--q-text)}
+.qv2 .hx-copy .qx-eyebrow{color:var(--q-text-2)}
+.qv2 .hx-title{margin:18px 0 18px;font:700 clamp(46px,5.4vw,88px)/.98 var(--q-sans);letter-spacing:-.045em;color:var(--q-text)}
+.qv2 .qx .hx-title,.qv2 .hx-title{color:rgba(255,255,255,.96)}
+.qv2 .hx-title .qx-serif,.qv2 .qx .hx-title .qx-serif{font:inherit;letter-spacing:inherit;line-height:inherit;padding-bottom:.08em;background:linear-gradient(180deg,#f1dcb0 0%,#d6b176 48%,#b98f51 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.qv2 .hx-lede{margin:0 0 26px;max-width:min(540px,56%);font:400 clamp(16px,1.2vw,18px)/1.55 var(--q-sans);color:var(--q-text-2)}
+.qv2 .hx-actions{gap:10px 12px;align-items:center}
+.qv2 .hx-hero .qx-btn{min-height:48px;padding:0 20px;font-size:15px}
+.qv2 .hx-hero .qx-btn-ghost{background:rgba(18,21,20,.72);border:1px solid var(--q-line-2);color:var(--q-text);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.qv2 .hx-hero .qx-btn-ghost:hover{border-color:rgba(255,255,255,.3)}
+.qv2 .hx-actions .qx-link{color:var(--q-text-2);font-weight:550;text-decoration:none;border:0}
+.qv2 .hx-actions .qx-link:hover{color:var(--q-text)}
+
+/* the drop notice: one slim line */
+.qv2 .hx-copy .qx-drop.qx-drop-hero{margin:0 0 18px;padding:0!important;border:0!important;background:none!important;box-shadow:none!important;max-width:100%}
+.qv2 .qx-drop-hero .qx-drop-text{margin:0;padding:7px 12px;border:1px solid var(--q-line);border-radius:var(--q-r-chip);background:rgba(18,21,20,.7);font:500 12.5px/1.35 var(--q-sans);color:var(--q-text-2);text-align:left;white-space:normal}
+.qv2 .qx-drop-hero a{color:var(--q-gold);font-weight:600;text-decoration:none}
+
+/* ---- the live product panel: real launches, styled like terminal rows; contract and burn line as its footer ---- */
+.qv2 .hx-copy>.qx-home-live{order:1}
+.qv2 .hx-copy>.qx-ca{order:2}
+.qv2 .hx-copy>.qx-home-burn{order:3}
+.qv2 .qx-home-live{height:auto;max-width:800px;margin-top:30px;padding:14px 16px 12px;border:1px solid var(--q-line-2);border-radius:14px;background:rgba(14,17,16,.82);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 24px 60px -30px rgba(0,0,0,.8);--qx-ink:var(--q-text);--qx-muted:var(--q-text-2);--qx-line:var(--q-line)}
+.qv2 .qx-live-grid{grid-template-rows:auto auto;gap:8px}
+.qv2 .qx-home-live h2{margin:0 0 10px;font:600 12.5px/1.3 var(--q-sans);color:var(--q-text-2);letter-spacing:0}
+.qv2 .qx-live-trending ul{gap:8px;grid-template-columns:repeat(auto-fit,minmax(138px,1fr))}
+.qv2 .qx-live-trending li{border:1px solid var(--q-line);border-radius:10px;background:var(--q-raised);transition:border-color var(--q-fast) ease-out,transform var(--q-fast) ease-out}
+.qv2 .qx-live-trending li:hover{border-color:var(--q-line-2);transform:translateY(-1px)}
+.qv2 .qx-live-trending li>a{padding:10px 12px;border-radius:10px;color:var(--q-text);text-decoration:none}
+.qv2 .qx-live-trending li :is(b,strong){font:680 14.5px/1.2 var(--q-sans);letter-spacing:-.01em}
+.qv2 .qx-live-price{font:550 13px/1.3 var(--q-sans);font-variant-numeric:tabular-nums;color:var(--q-text-2)}
+.qv2 .qx-live-change{font:650 12.5px/1.2 var(--q-sans);font-variant-numeric:tabular-nums;color:var(--q-text-3)}
+.qv2 .qx-live-change[data-direction="1"]{color:var(--q-up)}
+.qv2 .qx-live-change[data-direction="-1"]{color:var(--q-down)}
+.qv2 .qx-live-avatar{border:1px solid var(--q-line-2);background:var(--q-raised-2);color:var(--q-text)}
+.qv2 .qx-live-reward{margin:8px 0 0;padding-top:10px;border-top:1px solid var(--q-line);font:400 12.5px/1.45 var(--q-sans)}
+.qv2 .qx-live-reward a{color:var(--q-text-3);text-decoration:none}
+.qv2 .qx-live-reward a:hover{color:var(--q-text-2)}
+.qv2 .qx-live-launch{font:500 12.5px/1.3 var(--q-sans);color:var(--q-text-3)}
+.qv2 .qx-live-launch h2{display:inline;margin:0 8px 0 0;color:var(--q-text-3);font-weight:500}
+.qv2 .qx-live-launch a{color:var(--q-gold);font-weight:650;text-decoration:none}
+.qv2 .qx-ca{align-self:stretch;max-width:800px;margin:10px 0 0;padding:8px 12px;border:1px solid var(--q-line);border-radius:10px;background:rgba(14,17,16,.6);display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.qv2 .qx-ca .qx-ca-k{font:500 11.5px/1 var(--q-sans);letter-spacing:0;text-transform:none;color:var(--q-text-3)}
+.qv2 .qx-ca .qx-ca-v{font:500 12px/1.2 var(--q-mono);color:var(--q-text-2);overflow-wrap:anywhere}
+.qv2 .qx-ca .qx-ca-copy{min-height:28px;padding:0 10px;border:1px solid var(--q-line-2);border-radius:8px;background:none;color:var(--q-text);font:600 12px/1 var(--q-sans)}
+.qv2 .qx-ca .qx-ca-go{margin-left:auto;color:var(--q-gold);font:600 12.5px/1 var(--q-sans);text-decoration:none}
+.qv2 .qx-home-burn{margin:8px 2px 0;font:500 12.5px/1.4 var(--q-sans);color:var(--q-text-3)}
+.qv2 .qx-home-burn a{color:var(--q-text-2);text-decoration:none}
+.qv2 .hx-foot{color:var(--q-text-3);font-size:13px}
+.qv2 .hx-foot .hx-chains li{color:var(--q-text-2)}
+.qv2 .hx-readout{color:var(--q-text-2)}
+
+/* ---- sections under the hero: the system's shape and type ---- */
+.qv2 .qx-home :is(h2,h3){font-family:var(--q-sans);letter-spacing:-.03em}
+.qv2 .qx-home section:not(.hx-hero) h2{font-weight:680}
+
+/* Desktop: the stage is split. Words, buttons and the live panel keep the left 60%; the hook hangs whole in the
+   right 40%, so nothing is ever written over it, at any width. */
+@media (min-width:761px){
+  /* The whole hook, line included, fits above the fold: its line comes down from behind the header capsule. */
+  .qv2 .hx-art{inset:56px -24px auto auto;width:calc(40% + 24px);height:min(calc(100svh - 96px),860px);-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 24%),linear-gradient(#000 86%,transparent);-webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent 0,#000 24%),linear-gradient(#000 86%,transparent);mask-composite:intersect}
+  .qv2 .hx-art img{object-position:77% 0;--hook-scale:1}
+  .qv2 .hx-copy{max-width:61%;padding-right:24px}
+  .qv2 .hx-title{font-size:clamp(40px,5vw,80px)}
+  .qv2 .hx-scrim{background:linear-gradient(0deg,rgba(10,13,11,.6) 0%,rgba(10,13,11,0) 20%)}
+}
+@media (max-width:760px){
+  .qv2 .hx-hero{padding:8px}
+  .qv2 .hx-frame{border-radius:16px}
+  /* The hook hangs whole in its own band on the right of the top of the stage. The notice and the eyebrow sit
+     beside it, the headline starts under it: nothing is written over the hook. */
+  .qv2 .hx-art{inset:0 0 auto 0;height:236px;-webkit-mask-image:linear-gradient(#000 82%,transparent);mask-image:linear-gradient(#000 82%,transparent)}
+  .qv2 .hx-art img{object-position:56% 0}
+  .qv2 .hx-lattice{display:none}
+  .qv2 .hx-scrim{background:linear-gradient(90deg,rgba(10,13,11,.55) 0%,rgba(10,13,11,0) 52%)}
+  .qv2 .hx-copy{padding:92px 16px 0;max-width:none}
+  .qv2 .hx-copy .qx-drop.qx-drop-hero{max-width:56%;margin-bottom:12px}
+  .qv2 .hx-copy>.qx-eyebrow{max-width:56%;line-height:1.35;align-items:flex-start}
+  .qv2 .hx-title{max-width:none;font-size:clamp(38px,10.6vw,48px);margin:0 0 14px;padding-top:var(--hx-clear,96px)}
+  .qv2 .hx-lede{max-width:none;font-size:15px;line-height:1.5;margin-bottom:18px}
+  .qv2 .hx-actions{width:100%}
+  .qv2 .hx-hero .hx-actions .qx-btn{flex:1 1 150px;justify-content:center;min-height:50px;padding:0 12px;font-size:15px;white-space:nowrap;gap:8px}
+  .qv2 .hx-hero .hx-actions .qx-btn-dot{width:26px;height:26px;flex:none}
+  .qv2 .qx-home-live,.qv2 .qx-ca{max-width:none}
+  .qv2 .qx-live-trending ul{grid-template-columns:none}
+  .qv2 .qx-home-live{margin-top:22px;padding:12px 12px 10px}
+  .qv2 .qx-ca .qx-ca-go{margin-left:0}
+  .qv2 .hx-foot{margin:18px 16px 20px}
+}
+@media (prefers-reduced-motion:reduce){.qv2 .hx-art img{transform:scale(var(--hook-scale,1.1))}}

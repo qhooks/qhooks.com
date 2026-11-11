@@ -1,0 +1,169 @@
+/* QHooks design system v2 (2026-11 redesign). One shared sheet: tokens, type, shape and the base parts.
+   A page opts in with class="qv2" on <html>. Dark first; light is mapped below. Presentation only. */
+
+:root.qv2{
+  /* colour: graphite and gold */
+  --q-bg:#0b0d0c;
+  --q-raised:#121514;
+  --q-raised-2:#191d1b;
+  --q-inset:#0e1110;
+  --q-line:rgba(255,255,255,.08);
+  --q-line-2:rgba(255,255,255,.14);
+  --q-text:rgba(255,255,255,.92);
+  --q-text-2:rgba(255,255,255,.64);
+  --q-text-3:rgba(255,255,255,.5);
+  --q-gold:#d2ad72;
+  --q-gold-2:#e1c18d;
+  --q-on-gold:#17130b;
+  --q-gold-a:rgba(210,173,114,.13);
+  --q-gold-metal:linear-gradient(180deg,#ecd3a4 0%,#d6b176 46%,#bd9456 100%);
+  --q-gold-edge:inset 0 1px 0 rgba(255,255,255,.42),inset 0 -1px 0 rgba(60,38,8,.35),0 6px 18px -8px rgba(210,173,114,.55);
+  --q-up:#4cc38a;
+  --q-down:#f2695c;
+  --q-up-a:rgba(76,195,138,.13);
+  --q-down-a:rgba(242,105,92,.13);
+  --q-buy:#1a7f55;
+  --q-sell:#c13d30;
+  --q-on-action:#ffffff;
+  --q-warn:#e3a94f;
+  --q-warn-a:rgba(227,169,79,.1);
+  --q-shade:rgba(0,0,0,.56);
+  --q-shadow:0 18px 48px rgba(0,0,0,.5);
+
+  /* shape: 4px grid, one border weight */
+  --q-r:10px;
+  --q-r-in:8px;
+  --q-r-chip:999px;
+  --q-1:4px;--q-2:8px;--q-3:12px;--q-4:16px;--q-5:20px;--q-6:24px;--q-8:32px;
+
+  /* type: one sans, tabular figures; mono for addresses only */
+  --q-sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --q-mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --q-12:12px;--q-13:13px;--q-15:15px;--q-17:17px;--q-20:20px;--q-24:24px;--q-32:32px;--q-44:44px;--q-64:64px;
+
+  /* motion */
+  --q-ease:cubic-bezier(.2,.7,.2,1);
+  --q-fast:140ms;
+
+  /* the older site tokens read from the new ones, so every existing part follows */
+  --qx-bg:var(--q-bg);
+  --qx-bg-2:var(--q-inset);
+  --qx-panel:var(--q-raised);
+  --qx-panel-2:var(--q-raised-2);
+  --qx-ink:var(--q-text);
+  --qx-muted:var(--q-text-2);
+  --qx-faint:var(--q-text-3);
+  --qx-line:var(--q-line);
+  --qx-line-2:var(--q-line-2);
+  --qx-brass:var(--q-gold);
+  --qx-brass-2:#a9844c;
+  --qx-on-brass:var(--q-on-gold);
+  --qx-sans:var(--q-sans);
+  --qx-serif:var(--q-sans);
+  --qx-radius:var(--q-r);
+  color-scheme:dark;
+}
+
+:root.qv2[data-theme="light"]{
+  --q-bg:#f5f4f0;
+  --q-raised:#ffffff;
+  --q-raised-2:#efede7;
+  --q-inset:#eceae4;
+  --q-line:rgba(17,20,18,.1);
+  --q-line-2:rgba(17,20,18,.18);
+  --q-text:rgba(17,20,18,.94);
+  --q-text-2:rgba(17,20,18,.7);
+  --q-text-3:rgba(17,20,18,.6);
+  --q-gold:#8b6631;
+  --q-gold-2:#6f5025;
+  --q-on-gold:#fffaf0;
+  --q-gold-a:rgba(139,102,49,.1);
+  --q-gold-metal:linear-gradient(180deg,#8f6a33 0%,#7d5b2a 50%,#6a4c21 100%);
+  --q-gold-edge:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(40,24,4,.3),0 6px 16px -8px rgba(139,102,49,.5);
+  --q-up:#147a52;
+  --q-down:#bf3b2e;
+  --q-up-a:rgba(20,122,82,.1);
+  --q-down-a:rgba(191,59,46,.09);
+  --q-buy:#147a52;
+  --q-sell:#bf3b2e;
+  --q-on-action:#ffffff;
+  --q-warn:#8f5d0a;
+  --q-warn-a:rgba(143,93,10,.08);
+  --q-shade:rgba(17,20,18,.36);
+  --q-shadow:0 18px 48px rgba(17,20,18,.16);
+  --qx-brass-2:#6f5025;
+  color-scheme:light;
+}
+
+/* ---- base ---- */
+.qv2 body{
+  background:var(--q-bg);
+  color:var(--q-text);
+  font-family:var(--q-sans);
+  font-variant-numeric:tabular-nums;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+.qv2 :is(h1,h2,h3){letter-spacing:-.02em;font-style:normal}
+.qv2 :is(em,i,cite,dfn,address){font-style:normal}
+.qv2 :is(code,kbd,samp){font-family:var(--q-mono);font-size:.92em;font-variant-numeric:tabular-nums}
+.qv2 ::selection{background:var(--q-gold-a)}
+.qv2 :focus-visible{outline:2px solid var(--q-gold);outline-offset:2px}
+.qv2 *{scrollbar-color:var(--q-line-2) transparent;scrollbar-width:thin}
+
+/* ---- buttons: exactly three kinds, plus the buy and sell pair ---- */
+.qv2 .q-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--q-2);
+  min-height:36px;padding:0 var(--q-4);border:1px solid transparent;border-radius:var(--q-r-in);
+  font:600 var(--q-13)/1 var(--q-sans);white-space:nowrap;cursor:pointer;text-decoration:none;
+  transition:background var(--q-fast) ease-out,border-color var(--q-fast) ease-out,color var(--q-fast) ease-out,transform var(--q-fast) ease-out;
+}
+.qv2 .q-btn:active{transform:translateY(1px)}
+.qv2 .q-btn--primary{background:var(--q-gold-metal);color:var(--q-on-gold);box-shadow:var(--q-gold-edge)}
+.qv2 .q-btn--primary:hover{filter:brightness(1.05)}
+.qv2 .q-btn--secondary{background:var(--q-raised-2);color:var(--q-text);border-color:var(--q-line)}
+.qv2 .q-btn--secondary:hover{border-color:var(--q-line-2)}
+.qv2 .q-btn--quiet{background:none;color:var(--q-text-2);padding:0 var(--q-2)}
+.qv2 .q-btn--quiet:hover{color:var(--q-text)}
+.qv2 .q-btn--buy{background:var(--q-buy);color:var(--q-on-action)}
+.qv2 .q-btn--sell{background:var(--q-sell);color:var(--q-on-action)}
+.qv2 .q-btn:disabled{background:var(--q-raised-2);color:var(--q-text-3);border-color:var(--q-line);cursor:default}
+
+/* ---- shared parts ---- */
+.qv2 .q-card{background:var(--q-raised);border:1px solid var(--q-line);border-radius:var(--q-r)}
+.qv2 .q-chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:var(--q-r-chip);background:var(--q-raised-2);color:var(--q-text-2);font:500 var(--q-12)/1 var(--q-sans);white-space:nowrap}
+.qv2 .q-input{height:40px;padding:0 var(--q-3);border:1px solid var(--q-line);border-radius:var(--q-r-in);background:var(--q-inset);color:var(--q-text);font:500 var(--q-15)/1 var(--q-sans)}
+.qv2 .q-input:focus{border-color:var(--q-gold);outline:0}
+.qv2 .q-label{font:500 var(--q-12)/1.3 var(--q-sans);color:var(--q-text-3)}
+.qv2 .q-num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.qv2 .q-up{color:var(--q-up)}
+.qv2 .q-down{color:var(--q-down)}
+.qv2 .q-skel{border-radius:6px;background:linear-gradient(90deg,var(--q-raised) 0,var(--q-raised-2) 50%,var(--q-raised) 100%);background-size:200% 100%;animation:q-skel 1.2s linear infinite}
+@keyframes q-skel{to{background-position:-200% 0}}
+
+/* ---- app shell: the phone tab bar (qx-appbar.mjs). The same five places on every page. ---- */
+.qv2 .q-tabbar{display:none}
+@media (max-width:760px){
+  .qv2 .q-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:41;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));height:calc(58px + env(safe-area-inset-bottom));padding:0 4px env(safe-area-inset-bottom);background:var(--q-bg);background:color-mix(in srgb,var(--q-bg) 94%,transparent);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-top:1px solid var(--q-line)}
+  .qv2 .q-tab{position:relative;display:grid;justify-items:center;align-content:center;gap:4px;min-width:0;height:58px;color:var(--q-text-3);font:600 10.5px/1 var(--q-sans);letter-spacing:0;text-decoration:none;-webkit-tap-highlight-color:transparent;transition:color var(--q-fast) ease-out}
+  .qv2 .q-tab svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .qv2 .q-tab[aria-current="page"]{color:var(--q-gold)}
+  .qv2 .q-tab[aria-current="page"]::before{content:"";position:absolute;top:-1px;left:50%;width:22px;height:2px;margin-left:-11px;border-radius:0 0 3px 3px;background:var(--q-gold)}
+  .qv2 .q-tab--primary{color:var(--q-text)}
+  .qv2 .q-tab--primary svg{width:40px;height:30px;padding:4px 9px;border-radius:10px;background:var(--q-gold-metal);box-shadow:var(--q-gold-edge);color:var(--q-on-gold);stroke-width:2.3}
+  .qv2 .q-tab--primary[aria-current="page"]::before{content:none}
+  .qv2.q-has-tabbar body{padding-bottom:calc(58px + env(safe-area-inset-bottom))}
+}
+
+/* review pass: a lower bar, and the Launch tab no longer competes with the page's own primary action */
+@media (max-width:760px){
+  .qv2 .q-tabbar{height:calc(50px + env(safe-area-inset-bottom))}
+  .qv2 .q-tab{height:50px;gap:3px;font-size:10px}
+  .qv2 .q-tab svg{width:21px;height:21px}
+  .qv2 .q-tab--primary svg{width:36px;height:25px;padding:3px 8px;border-radius:9px;background:var(--q-gold-a);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--q-gold) 45%,transparent);color:var(--q-gold);stroke-width:2.2}
+  .qv2.q-has-tabbar body{padding-bottom:calc(50px + env(safe-area-inset-bottom))}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .qv2 *,.qv2 *::before,.qv2 *::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}
+}
