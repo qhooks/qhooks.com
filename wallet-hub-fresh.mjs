@@ -89,8 +89,9 @@ export function createWalletHub(target,{discover=discoverWallets,settle=()=>new 
   let next;
   try{
    try{await p.request({method:'wallet_switchEthereumChain',params:[{chainId:chain.hex}]});}
-   catch(e){if(Number(e?.code)!==4902)throw e;
-    await p.request({method:'wallet_addEthereumChain',params:[{chainId:chain.hex,chainName:chain.name,nativeCurrency:{name:chain.native,symbol:chain.native,decimals:18},rpcUrls:[chain.rpc],blockExplorerUrls:[chain.explorer]}]});
+   // MetaMask Mobile and WalletConnect peers answer an unknown chain with -32603 / "Unrecognized chain ID", not 4902 (Monad, 2026-11-11).
+   catch(e){if(Number(e?.code)!==4902&&!/unrecognized|not added|unknown chain|not been added|no chain with/i.test(e?.message||''))throw e;
+    await p.request({method:'wallet_addEthereumChain',params:[{chainId:chain.hex,chainName:chain.name,nativeCurrency:{name:chain.native,symbol:chain.native,decimals:18},rpcUrls:[chain.rpc],...(chain.explorer?{blockExplorerUrls:[chain.explorer]}:{})}]});
     await p.request({method:'wallet_switchEthereumChain',params:[{chainId:chain.hex}]});
    }
    // Embedded SDKs re-issue their handle after returning from the switch. Let
