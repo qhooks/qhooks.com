@@ -108,27 +108,45 @@ export function mountTokenProfileEditor({id,chain = () => document.getElementByI
   return root;
 }
 const errorMessage = j => ({not_the_creator:'Connect the wallet that currently owns this launch.',owner_unavailable:'Could not check the launch owner. Your draft is saved; try again.',wait_a_moment:'Wait a moment before publishing again.',store_unavailable:'Profile publishing is unavailable. Your launch and draft are safe.'})[j.error]||j.message||'The profile did not publish. Your draft is saved; try again.';
-export function profilePublicationControl({chain=()=>document.getElementById('ql-chain')?.value,share=()=>document.getElementById('qj-share')?.value,profile=()=>tokenProfileDraft(chain()),onPublished=()=>{},getConnection}={}) {
+const autoPublications=new Map(),PUBLISHED='qhooks:token-profile-published:v1:',SAVE_ERROR="Your token profile didn't save. Tap Publish token profile to try again.";
+const declined=e=>[4001,'ACTION_REJECTED'].includes(e?.code)||[4001,'ACTION_REJECTED'].includes(e?.cause?.code)||/reject|declin|denied|cancel/i.test(e?.message||'');
+const transient=j=>['wait_a_moment','store_unavailable','not_listed','market_not_found','market_observation_unavailable','directory_unavailable'].includes(j?.error);
+export function profilePublicationControl({chain=()=>document.getElementById('ql-chain')?.value,share=()=>document.getElementById('qj-share')?.value,profile=()=>tokenProfileDraft(chain()),onPublished=()=>{},getConnection,auto=false,recordId='',fetcher=(...args)=>globalThis.fetch(...args),loadSession=()=>import('./qx-board-session.mjs'),sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms)),storage=()=>localStorage}={}) {
   const button=h('button',{type:'button',class:'workspace-button qtd-primary'},'Publish token profile'),status=h('p',{role:'status','aria-live':'polite'});
-  button.addEventListener('click',async()=>{
-    button.disabled=true;
-    try {
+  let running=false;
+  const saved=()=>{try{return !!recordId&&storage().getItem(PUBLISHED+recordId)==='published';}catch{return false;}};
+  const showPublished=pool=>status.replaceChildren('Token profile published. ',h('a',{href:'/terminal#m='+pool.chainId+':'+pool.controller},'View your token →'));
+  const request=async(...args)=>{try{return await fetcher(...args);}catch(e){throw Object.assign(Error(e?.message||'Network unavailable.'),{retryable:!declined(e)&&e?.name!=='AbortError'});}};
+  const failure=async(response,message)=>{const j=await response.json().catch(()=>({}));return Object.assign(Error(message||errorMessage(j)),{retryable:j.error!=='not_the_creator'&&(response.status>=500||transient(j))});};
+  async function publish(automatic=false){
+    if(running)return;running=true;button.disabled=true;
+    try{
       const value=normalizeTokenProfile(profile());if(!hasTokenProfile(value))throw Error('Add a profile picture, banner, description or community link first.');
       const pool=poolFromShareLink(share());
       if(String(pool.chainId)!==String(chain()))throw Error('The launch chain changed. Return to the matching chain to publish its profile.');
-      const sessions=await import('./qx-board-session.mjs'),auth=getConnection?sessions.createBoardSession({getConnection}):sessions,connection=auth.capture?auth.capture():null;
+      const sessions=await loadSession(),auth=getConnection?sessions.createBoardSession({getConnection,fetcher:async(...args)=>{const r=await request(...args);if(automatic&&!r.ok)throw await failure(r);return r;}}):sessions,connection=auth.capture?auth.capture():null;
+      for(let attempt=0;;attempt++)try{
       await connection?.check();status.textContent='Checking your launch…';
-      const listed=await fetch('/api/markets/'+pool.chainId+'/'+pool.controller,{cache:'no-store'});
-      await connection?.check();if(listed.status===404){const added=await fetch('/api/markets',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(pool)});if(!added.ok)throw Error('The launch could not be listed yet. Your profile draft is saved; try again.');}
-      else if(!listed.ok)throw Error('The launch directory is unavailable. Try again in a moment.');
+      const listed=await request('/api/markets/'+pool.chainId+'/'+pool.controller,{cache:'no-store'});
+      await connection?.check();if(listed.status===404){const added=await request('/api/markets',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(pool)});if(!added.ok)throw await failure(added,'The launch could not be listed yet. Your profile draft is saved; try again.');}
+      else if(!listed.ok)throw await failure(listed,'The launch directory is unavailable. Try again in a moment.');
       if(!auth.boardSession()){status.textContent='Sign in with your creator wallet. This free signature moves no funds.';await auth.signIn(connection||undefined);}
       await connection?.check();const headers=auth.authHeaders();if(!headers.authorization)throw Error('Sign in with your current creator wallet again.');connection?.assertCurrent();
       status.textContent='Publishing your token profile…';
-      const response=await fetch('/api/token-profiles/'+pool.chainId+'/'+pool.controller.toLowerCase(),{method:'PUT',headers:{'content-type':'application/json',...headers},body:JSON.stringify(value)});
-      const j=await response.json();if(!response.ok)throw Error(errorMessage(j));
-      status.replaceChildren('Token profile published. ',h('a',{href:'/terminal#m='+pool.chainId+':'+pool.controller},'View your token →'));
+      const response=await request('/api/token-profiles/'+pool.chainId+'/'+pool.controller.toLowerCase(),{method:'PUT',headers:{'content-type':'application/json',...headers},body:JSON.stringify(value)});
+      if(!response.ok)throw await failure(response);const j=await response.json();
+      try{if(recordId)storage().setItem(PUBLISHED+recordId,'published');}catch{}
+      showPublished(pool);
       try{onPublished(j);}catch{}
-    }catch(e){status.textContent=e.message||'Publishing stopped. Your profile draft is saved.';}finally{button.disabled=false;}
+      return {pool};
+      }catch(e){if(!automatic||attempt>=2||!e.retryable||declined(e))throw e;status.textContent='Saving your token profile. Trying again…';await sleep(attempt?2500:1500);}
+    }catch(e){const message=automatic?SAVE_ERROR:e.message||'Publishing stopped. Your profile draft is saved.';status.textContent=message;return {message};}finally{running=false;button.disabled=false;}
+  }
+  button.addEventListener('click',()=>{if(running)return;const pending=publish();if(recordId&&auto)autoPublications.set(recordId,pending);});
+  if(auto)queueMicrotask(async()=>{
+    if(saved()){try{showPublished(poolFromShareLink(share()));}catch{}return;}
+    let pending=recordId&&autoPublications.get(recordId);if(!pending){pending=publish(true);if(recordId)autoPublications.set(recordId,pending);}
+    else{running=true;button.disabled=true;const result=await pending;if(result?.pool)showPublished(result.pool);else status.textContent=result?.message||SAVE_ERROR;running=false;button.disabled=false;}
   });
   return h('section',{class:'qtp-publish'},h('h3',{},'Give your launch its identity.'),h('p',{},'Publish your artwork and links with a free creator-wallet signature. You can update them later.'),button,status);
 }

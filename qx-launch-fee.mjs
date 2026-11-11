@@ -7,7 +7,8 @@ import { chainMap } from '/chains.mjs';
 export const FEE_WALLET = '0x2b1cf7c4071a98a59709166dfa73c7acb7e83e71';
 // [display amount, symbol, wei]
 // From the registry (chains.mjs launchFee / launchFeeWei, which mirror QLaunchBlocks' per-chain constant).
-export const LAUNCH_FEE = chainMap(c => [c.launchFee, c.native, BigInt(c.launchFeeWei)]);
+// Chains without a launch fee (no QLaunchBlocks, e.g. Monad discovery-only) are left out; the reader falls back to Base.
+export const LAUNCH_FEE = Object.freeze(Object.fromEntries(Object.entries(chainMap(c => c.launchFeeWei == null ? null : [c.launchFee, c.native, BigInt(c.launchFeeWei)])).filter(([, v]) => v)));
 const d = document, chainId = () => d.getElementById('ql-chain')?.value || '8453';
 
 const box = d.createElement('div');
