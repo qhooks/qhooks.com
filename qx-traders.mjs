@@ -2,7 +2,7 @@ import {memberWallet} from './qx-member-wallet.mjs';
 
 const SESSION_KEY='qhooks:trader-session:v1';
 const CHAINS={'1':'Ethereum','56':'BNB Chain','8453':'Base','42161':'Arbitrum','4663':'Robinhood Chain','99901':'Elysium',solana:'Solana'};
-const messages={sign_in:'Sign in with this wallet to continue.',wrong_origin:'Open QHooks directly to change your settings.',slow_down:'Too many changes. Try again shortly.',own_wallet:'This is your own wallet.',invalid_follow:'Choose a full wallet address.',push_off:'Web push is off. The site owner must configure push keys.',traders_unavailable:'Trading records are unavailable. Try Refresh.',invalid_thesis:'Keep your thesis to one line, without other addresses or contact details.'};
+const messages={sign_in:'Sign in with this wallet to continue.',wrong_origin:'Open QHooks directly to change your settings.',slow_down:'Too many changes. Try again shortly.',own_wallet:'This is your own wallet.',invalid_follow:'Choose a full wallet address.',push_off:'Web push is off. The site owner must configure push keys.',no_subscription:'Enable web push in this browser, then try again.',alerts_unavailable:'Alert settings are unavailable. Try again shortly.',traders_unavailable:'Trading records are unavailable. Try Refresh.',invalid_thesis:'Keep your thesis to one line, without other addresses or contact details.'};
 const key=value=>memberWallet(value,{allowBareSolana:true})?.key||null;
 export const traderTime=value=>Number(value)>1e12?Number(value):Number(value)*1000;
 export function traderCountdown(round,now=Date.now()){
@@ -23,11 +23,11 @@ export function createTradersClient({fetcher=(...args)=>globalThis.fetch(...args
  async function request(path,options={}){
   const response=await fetcher(path,{cache:'no-store',credentials:'omit',redirect:'error',...options,headers:{...(options.body?{'content-type':'application/json'}:{}),...headers(),...options.headers}});
   const body=await response.json().catch(()=>null);
-  if(!response.ok)throw Object.assign(Error(messages[body?.error]||body?.message||'Trading records are unavailable. Try Refresh.'),{status:response.status,code:body?.error});
+  if(!response.ok)throw Object.assign(Error(messages[body?.error]||body?.message||'Trading records are unavailable. Try Refresh.'),{status:response.status,code:body?.error,retryAfter:body?.retryAfter});
   if(!body||typeof body!=='object')throw Error('The trading response was incomplete. Try Refresh.');
   return body;
  }
- return{request,feed:({filter='all',wallet}={})=>request('/api/traders/feed?'+new URLSearchParams({filter,...(wallet?{wallet}:{})})),profile:wallet=>request('/api/traders/profile?'+new URLSearchParams({wallet})),saveProfile:publicTrades=>request('/api/traders/profile',{method:'PUT',body:JSON.stringify({publicTrades})}),leaderboard:window=>request('/api/traders/leaderboard?'+new URLSearchParams({window})),competition:()=>request('/api/traders/competition'),config:()=>request('/api/traders/config'),follows:()=>request('/api/wallets/follows'),follow:(wallet,on)=>request('/api/wallets/follow',{method:'POST',body:JSON.stringify({wallet,on})}),alertStatus:()=>request('/api/traders/alerts/status'),push:subscription=>request('/api/traders/alerts/push',{method:'POST',body:JSON.stringify({subscription})})};
+ return{request,feed:({filter='all',wallet}={})=>request('/api/traders/feed?'+new URLSearchParams({filter,...(wallet?{wallet}:{})})),profile:wallet=>request('/api/traders/profile?'+new URLSearchParams({wallet})),saveProfile:publicTrades=>request('/api/traders/profile',{method:'PUT',body:JSON.stringify({publicTrades})}),leaderboard:window=>request('/api/traders/leaderboard?'+new URLSearchParams({window})),competition:()=>request('/api/traders/competition'),config:()=>request('/api/traders/config'),follows:()=>request('/api/wallets/follows'),follow:(wallet,on)=>request('/api/wallets/follow',{method:'POST',body:JSON.stringify({wallet,on})}),alertStatus:()=>request('/api/traders/alerts/status'),pushSubscriptions:()=>request('/api/traders/alerts/push'),testAlert:()=>request('/api/traders/alerts/test',{method:'POST'}),push:subscription=>request('/api/traders/alerts/push',{method:'POST',body:JSON.stringify({subscription})})};
 }
 
 // A separate purpose-bound session. Existing Solana profile-edit tokens are never reused.
@@ -113,12 +113,35 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
   if(!profile)void alerts(controls,owner);
  }
  async function alerts(host,owner){
-  const alertBox=h('div',{class:'qt-alerts'},h('h3',{},'Buy alerts')),note=h('p',{class:'qt-help'},'Reading alert settings…');host.append(alertBox);alertBox.append(note);
+  const alertBox=h('div',{class:'qt-alerts'},h('h3',{},'Buy alerts')),note=h('p',{class:'qt-help',role:'status','aria-live':'polite'},'Reading alert settings…'),actions=h('div',{class:'qa-actions'});
+  host.append(alertBox);alertBox.append(note,actions,h('p',{class:'qt-help'},'On iPhone, add QHooks to your Home Screen first, then enable alerts from there.'));
   try{const config=await client.alertStatus();if(disposed||selectedOwner()!==owner||!alertBox.isConnected)return;note.textContent=config.pushEnabled?(config.note||'Buy alerts follow your synced trader list. Up to 30 alerts per hour.'):'Web push is off. Buy alerts go to your linked Telegram until push is turned on. Link @qhooks_bot below.';
-   const supported=!!globalThis.navigator?.serviceWorker&&!!globalThis.PushManager;
-   const enable=button('Enable web push',async()=>{enable.disabled=true;try{await signedIn();if(!supported)throw Error('Web push is unavailable in this browser. On iPhone, install QHooks on your home screen first.');const permission=await globalThis.Notification.requestPermission();if(permission!=='granted')throw Error('Notifications were not enabled. You can change this in browser settings.');const registration=await globalThis.navigator.serviceWorker.register('/sw.js'),ready=await globalThis.navigator.serviceWorker.ready,bytes=Uint8Array.from(atob(String(config.publicKey).replace(/-/g,'+').replace(/_/g,'/')),char=>char.charCodeAt(0)),subscription=await ready.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});if(selectedOwner()!==owner)throw Error('Your wallet changed. Review alert settings again.');await client.push(subscription.toJSON());note.textContent='Web push enabled for buys by the traders you follow.';}catch(error){note.textContent=error.message;}finally{enable.disabled=!config.pushEnabled||!supported;}});
-   enable.disabled=!config.pushEnabled||!supported;alertBox.append(enable,h('a',{class:'qa-btn',href:'https://t.me/qhooks_bot',target:'_blank',rel:'noopener noreferrer'},'Link Telegram with @qhooks_bot'));
+   const supported=!!globalThis.navigator?.serviceWorker&&!!globalThis.PushManager&&!!globalThis.Notification;
+   const current=()=>!disposed&&selectedOwner()===owner&&alertBox.isConnected;
+   const signedOwner=()=>current()&&key(session()?.wallet)===owner;
+   async function activeSubscription(){
+    if(!config.pushEnabled||!supported||!signedOwner()||globalThis.Notification.permission!=='granted')return null;
+    const registration=await globalThis.navigator.serviceWorker.getRegistration('/sw.js'),subscription=await registration?.pushManager.getSubscription();
+    return signedOwner()&&subscription&&(!subscription.expirationTime||subscription.expirationTime>now())?subscription:null;
+   }
+   const testAlert=button('Send me a test alert',async()=>{
+    if(testAlert.disabled)return;testAlert.disabled=true;
+    try{
+     if(!await activeSubscription()){testAlert.hidden=true;throw Error('Enable web push in this browser, then try again.');}
+     const result=await client.testAlert();if(!current())return;
+     note.textContent=result.sent>0?'Sent. Check your phone.':'The test alert could not be sent. Enable web push and try again.';
+     if(result.failed)await updateTestButton();
+    }catch(error){if(current()){note.textContent=error.code==='slow_down'?'Three test alerts an hour. Try again in '+Math.max(1,Math.ceil((Number(error.retryAfter)||3600)/60))+' minutes.':error.message;if(['no_subscription','push_off','sign_in'].includes(error.code))testAlert.hidden=true;}}
+    finally{testAlert.disabled=false;}
+   });testAlert.hidden=true;
+   async function updateTestButton(){
+    testAlert.hidden=true;
+    try{const subscription=await activeSubscription();if(!subscription)return;const stored=await client.pushSubscriptions();if(signedOwner())testAlert.hidden=!(stored.endpoints||[]).includes(subscription.endpoint);}catch{}
+   }
+   const enable=button('Enable web push',async()=>{enable.disabled=true;try{await signedIn();if(!supported)throw Error('Web push is unavailable in this browser. On iPhone, install QHooks on your home screen first.');const permission=await globalThis.Notification.requestPermission();if(permission!=='granted')throw Error('Notifications were not enabled. You can change this in browser settings.');if(!current())return;await globalThis.navigator.serviceWorker.register('/sw.js');const ready=await globalThis.navigator.serviceWorker.ready,bytes=Uint8Array.from(atob(String(config.publicKey).replace(/-/g,'+').replace(/_/g,'/')),char=>char.charCodeAt(0)),subscription=await ready.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});if(!signedOwner())throw Error('Your wallet changed. Review alert settings again.');await client.push(subscription.toJSON());if(current()){note.textContent='Web push enabled for buys by the traders you follow.';await updateTestButton();}}catch(error){if(current())note.textContent=error.message;}finally{enable.disabled=!config.pushEnabled||!supported;}});
+   enable.disabled=!config.pushEnabled||!supported;actions.append(enable,testAlert,h('a',{class:'qa-btn',href:'https://t.me/qhooks_bot',target:'_blank',rel:'noopener noreferrer'},'Link Telegram with @qhooks_bot'));
    if(config.pushEnabled&&!supported)note.textContent+=' Web push is unavailable in this browser. On iPhone, install QHooks on your home screen first.';
+   await updateTestButton();
   }catch(error){note.textContent=error.message;}
  }
  function renderCompetition(value){
