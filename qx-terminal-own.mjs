@@ -1,5 +1,11 @@
 // Display adapters for the launch index. Quote amounts remain in their native
 // unit; chart USD is a revaluation at the explicitly dated quote observation.
+export function ownCandleOptions(up,down){
+ return {upColor:up,downColor:down,borderVisible:true,borderUpColor:up,borderDownColor:down,wickVisible:true,wickUpColor:up,wickDownColor:down};
+}
+export function ownChartRange(count){
+ return {from:Math.max(-2,count-90),to:Math.max(10,count+4)};
+}
 export function ownChartView(data){
  const quote=data.nativeQuote;
  if(!quote)return {bars:data.candles,unit:null};

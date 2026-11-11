@@ -1,3 +1,4 @@
+import {checksSummary} from './qx-checks-copy.mjs';
 // Trust layer on token pages: who made this launch (a creator verified on X), whether it copies an earlier verified
 // launch, RepoProof's pre-buy verdict, and the launch's own facts read from its contracts just now.
 // Used by the Launch terms card (qx-terms.mjs), the terminal's header, list and risk banner, and verify.html.
@@ -156,6 +157,7 @@ export async function renderTrust(el, pool) {
 /** Fills the ticket's banner: copy warning first, then RepoProof's verdict, then the facts that matter at the moment of trading. */
 export async function renderRisk(el, pool) {
   const key = keyOf(pool.chainId, pool.controller),active=beginRender(el,key);
+  el.hidden=false;el.replaceChildren(h('p',{class:'qtr-evidence'},checksSummary({state:'running'})));
   const [t, v, f] = await Promise.all([trustOf(pool.chainId, pool.controller), verdictOf(pool.chainId, pool.controller), factsOf(pool).catch(() => null)]);
   if (!active()) return;
   const warningChecks=(v?.checks||[]).filter(c=>c.status==='danger'||c.status==='caution');
@@ -163,10 +165,10 @@ export async function renderRisk(el, pool) {
   const level = t?.copyOf || v?.level === 'danger' || warningChecks.some(c=>c.status==='danger') ? 'danger'
     : v?.level === 'caution' || warningChecks.length || warningFacts.length || f?.recovery ? 'caution' : '';
   const title = t?.copyOf ? 'Copy warning: same ' + t.copyOf.same + ' as $' + t.copyOf.symbol + ' by @' + t.copyOf.handle
-    : v?.level === 'danger' ? 'RepoProof: ' + v.headline : v?.level === 'caution' ? 'Trade with care: ' + v.headline : v?.level === 'clear' ? v.stale?'Refreshing RepoProof check…':!checkTime(v)?'Refreshing RepoProof check…':!completeCoverage(v)?'RepoProof: no flags · partial checks':'No flags returned by available RepoProof checks' : 'Refreshing market checks…';
+    : v?.level === 'danger' ? 'RepoProof: ' + v.headline : v?.level === 'caution' ? 'Trade with care: ' + v.headline : v?.level === 'clear' ? checksSummary(v,{hasTimestamp:!!checkTime(v)}) : 'Refreshing market checks…';
   const partialReads=!f||f.coverage.unavailable>0||f.facts.some(fact=>/unavailable|could not be read|could not be checked/i.test(fact.v));
   // checks-rel 2026-11-10 (walkthrough item 3): final states instead of an endless "Refreshing" — this one line only.
-  const summary=!v?'Checks paused · retry':!v.level?(v.state==='not_checked'?'Not checked yet · run a check below':['queued','running','pending','checking'].includes(v.state)?'Refreshing market checks…':'Checks paused · retry'):v.stale?'Refreshing checks…':!checkTime(v)?'Refreshing checks…':!completeCoverage(v)||v.level==='unknown'?'Checks: no flags · partial checks':partialReads?'Checks: no flags · partial reads':!t?'Checks: no flags · creator unknown':'Checks returned no flags';
+  const summary=checksSummary(v,{hasTimestamp:!!checkTime(v)});
   const creator=h('li',{},...(t?.verified?['Creator verified on X: ',badge(t.verified,{compact:true})]:[t?'Creator not verified on X':'Creator not verified on X']));
   const factLine=fact=>h('li',{},h('b',{},fact.k+': '),fact.v);
   const body=h('div',{class:'qtr-risk-detail-body'},

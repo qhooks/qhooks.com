@@ -1,3 +1,4 @@
+import {swapCandles,mergeSwapCandles} from './qx-swap-candles.mjs';
 // Provider observations and the terminal's read-only page adapters. No wallet calls.
 const time=v=>typeof v==='number'&&Number.isSafeInteger(v)&&v>0?v:null;
 const utc=at=>new Date(at).toISOString().slice(11,16)+' UTC';
@@ -124,15 +125,13 @@ export async function loadExternalHistory({chainId,pool,tf,signal,fetcher=global
  // tape read "0 received". The visitor's browser then reads the pool's recent swaps from GeckoTerminal (CORS *).
  // Robinhood/Elysium: our own on-chain read first (no third party, no per-visitor limit); GeckoTerminal elsewhere or after.
  const own=PROXY_CHAINS[String(chainId)]&&!t0?await chainTrades({chainId,pool,token,quote,signal,fetcher}):null;
- // Depth rule (main thread review, 2026-11-10): an outside token uses our chart only when the bars reach back ≥ 24 h at
- // this timeframe; otherwise the provider chart (deeper history) stays for that token and timeframe. Launches don't come
- // through here: they always use our own index.
- const DEPTH_S=86400,bars0=c?.body?.candles||[],deep=bars0.length>0&&Math.floor(Date.now()/1000)-bars0[0].time>=DEPTH_S;
- const provider=bars0.length>0&&!deep;
- const t=t0||(own?.body?.trades?.length?own:null)||await browserTrades({chainId,pool,signal,fetcher})||own,candles=deep?bars0:[],rawTrades=t?.body.trades||[];
+ // New pools start with the first observed swap; a young history is useful history.
+ const t=t0||(own?.body?.trades?.length?own:null)||await browserTrades({chainId,pool,signal,fetcher})||own,rawTrades=t?.body.trades||[];
+ const indexed=swapCandles(rawTrades.map(x=>({ts:Math.floor(x.ts/1000),price:x.priceUsd,quote:x.valueUsd})),tf);
+ const candles=mergeSwapCandles(indexed,c?.body?.candles||[]),deep=candles.length>0;
  const newest=values=>values.filter(v=>Number.isFinite(v)&&v>0).reduce((a,b)=>Math.max(a,b),0)||null;
  return {candles,tradeCoverage:t?.body.coverage||null,
   trades:rawTrades.map(x=>({id:x.tx+':'+(x.index??x.logIndex??'')+':'+(x.wallet||'')+':'+x.ts,logIndex:x.index??x.logIndex,ts:Math.floor(x.ts/1000),buy:x.side==='buy',price:x.priceUsd,token:x.amountToken,quote:x.valueUsd,trader:chainId==='solana'?(x.wallet||''):(x.wallet||'').toLowerCase(),tx:x.tx,pool:0})),
-  marketCoverage:{candles:deep?'available':provider||!c?'provider':'unavailable',trades:t?'available':'unavailable'},
-  historyFreshness:{candles:{available:!!c,observedAt:c?.observedAt||null,stale:!!c?.stale,lastEventAt:newest(candles.map(x=>x.time*1000))},trades:{available:!!t,observedAt:t?.observedAt||null,stale:!!t?.stale,lastEventAt:newest(rawTrades.map(x=>x.ts))}}};
+  marketCoverage:{candles:deep?'available':!c?'provider':'unavailable',trades:t?'available':'unavailable'},
+  historyFreshness:{candles:{available:deep,observedAt:c?.observedAt||t?.observedAt||null,stale:!!c?.stale,lastEventAt:newest(candles.map(x=>x.time*1000))},trades:{available:!!t,observedAt:t?.observedAt||null,stale:!!t?.stale,lastEventAt:newest(rawTrades.map(x=>x.ts))}}};
 }

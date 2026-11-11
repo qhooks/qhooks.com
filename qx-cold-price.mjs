@@ -62,4 +62,4 @@ export async function readColdPrice(spec, { rpc, ethUsd, quoteUsd, now = Date.no
  */
 export const coldMayPaint = ({ revision, current, hasIndexData }) => revision === current && !hasIndexData;
 
-export const COLD_CHART_MESSAGE = 'Loading price history… about a minute';
+export const COLD_CHART_MESSAGE = 'Refreshing';

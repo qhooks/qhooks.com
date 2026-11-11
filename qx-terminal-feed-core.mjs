@@ -1,3 +1,4 @@
+import {tokenAvatar,tokenAvatarSources,avatarImage} from './qx-token-avatar.mjs';
 // Discover's data contract and presentation helpers. No DOM, wallet calls or currency estimates.
 import {WINDOWS,DISCOVERY_TABS,lifecycle} from './qx-discovery-model.mjs';
 import { stockPair } from './full-launch/packages/multichain-launch/stock-pairs.mjs';
@@ -117,7 +118,7 @@ export function launchRow(market) {
   const s = market.summary || {};
   return {
     chainId: String(market.chainId), pool: market.controller, dex: 'QHooks', launch: market,
-    token: { address: market.token, symbol: market.symbol, name: market.name, logo: market.logo || officialLogo(market.chainId, market.token) },
+    token: { address: market.token, symbol: market.symbol, name: market.name, profileImage:market.profileImage,launchImage:market.launchImage,logo: tokenAvatar(market).src || officialLogo(market.chainId, market.token) },
     quote: { symbol: market.quoteSymbol }, createdAt: market.launchedAt,
     priceUsd: s.priceUsd ?? null, volumeUsd: { h24: s.volume24Usd ?? null }, liquidityUsd: s.liquidityUsd ?? null,
     marketCapUsd: s.mcapUsd ?? null, fdvUsd: s.fdvUsd ?? null,
@@ -159,6 +160,7 @@ export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24'
   return {
     key: rowKey(row), row, chainId, chainName: chain?.[1] || chainId, chainIcon: chain?.[2], address,
     lifecycle:lifecycle(row),move:percent(numeric.move),symbol, name: typeof token.name === 'string' ? token.name : '', logo: safeLogo(token.logo) || safeLogo(officialLogo(chainId, address)),
+    avatarSources:tokenAvatarSources({...row.launch,...row,...token},[officialLogo(chainId,address)]),
     letter: symbol.replace(/^\$/, '').slice(0, 1).toUpperCase() || '?', age: age(row.createdAt, now),
     price: displayMoney('price', true), m5: percent(numeric.m5), h1: percent(numeric.h1), h6: percent(numeric.h6), h24: percent(numeric.h24),
     volume: displayMoney('volume'), liquidity: displayMoney('liquidity'), mcap: displayMoney('mcap'),
@@ -170,7 +172,7 @@ export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24'
 
 export function safeLogo(url) {
   if (typeof url !== 'string') return null;
-  return /^https:\/\//i.test(url) || /^\/(?!\/)/.test(url) ? url : null;
+  return avatarImage(url);
 }
 
 export function sortRows(rows, sort = {}) {

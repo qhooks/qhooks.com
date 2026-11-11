@@ -160,8 +160,8 @@ export function nativeMarketView(market,{now=Date.now()}={}) {
  // An incomplete address/log scan cannot establish absence. Positive observed
  // values and valid rows are still useful; zero counts await complete coverage.
  if(!complete)for(const field of ['volume24','top10','burned','locked',...counts])if(summary[field]===0)summary[field]=null;
- const note=status==='pending'?'Reading this launch’s market history. Holder coverage is not known yet.':
-  status==='syncing'?'Loading price history… Shown activity and holders are partial for now.':
+ const note=status==='pending'?'Refreshing':
+  status==='syncing'?'Refreshing':
   status==='partial'?'Refreshing…':
   status==='stale'?'Refreshing…':
   'Live · updated just now.';

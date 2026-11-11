@@ -37,7 +37,7 @@ export function mountTradingSettings({h,storage,legacyTolerance,onChange=()=>{},
  details.addEventListener('toggle',()=>{if(details.open&&!blocked)editor();});
  const crossTab=event=>{if(event.key===TRADING_PROFILE_KEY){if(details.open)message.textContent='Profiles changed in another tab. Reopen settings to load them.';render();onChange();}};
  const localExit=()=>{render();onChange();};document.addEventListener('qhooks:trading-profile-edit',localExit);window.addEventListener('storage',crossTab);render();
- return {element,profile:()=>profiles.snapshot(chain).profile,
+ return {element,summary,profile:()=>profiles.snapshot(chain).profile,
   setTolerance(side,value){if(blocked||chain==='solana'&&value!=='auto'&&Number(value)>5000)return false;const s=profiles.snapshot(chain),profile=s.profile;if(value==='auto')profile[side].mode='auto';else{if(!/^\d{1,5}$/.test(String(value))||Number(value)<1||Number(value)>10000)return false;profile[side]={...profile[side],mode:'manual',manualBps:Number(value)};}profiles.save(chain,profile,s.revision);changed();return true;},
   setChain(value,units=['usd','eth']){const next=[...new Set(units.filter(unit=>['usd','eth','bnb','sol','hype'].includes(unit)))];if(chain===String(value)&&next.join()===amountUnits.join())return;chain=String(value);amountUnits=next;details.open=false;render();},lock,destroy(){document.removeEventListener('qhooks:trading-profile-edit',localExit);window.removeEventListener('storage',crossTab);element.remove();}};
 }

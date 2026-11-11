@@ -81,18 +81,18 @@ export async function oneClickTrade({ chainId, token, side, amountWei, pct, slip
   }
 }
 /// The ticket toggle: one switch, one line of disclosure, limits folded underneath.
-export function mountOneClickToggle(host, { doc = document } = {}) {
+export function mountOneClickToggle(host, { doc = document, before = null } = {}) {
   if (!host || host.querySelector('.qx-oneclick')) return () => {};
   const el = (t, a = {}, ...kids) => { const n = doc.createElement(t); for (const [k, v] of Object.entries(a)) k === 'class' ? n.className = v : n.setAttribute(k, v); n.append(...kids); return n; };
   const box = el('div', { class: 'qx-oneclick', style: 'display:grid;gap:6px;margin-top:10px;font-size:13px' });
   const input = el('input', { type: 'checkbox', role: 'switch', style: 'width:20px;height:20px' });
   const label = el('label', { style: 'display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer' }, input, el('b', {}, 'One-click trading'));
-  const line = el('span', { style: 'opacity:.75' }, DISCLOSURE), status = el('span', { role: 'status', 'aria-live': 'polite' });
+  const line = el('p', { class:'qx-oneclick-disclosure', style:'margin:0;opacity:.75;line-height:1.4;overflow-wrap:anywhere' }, DISCLOSURE), status = el('span', { role: 'status', 'aria-live': 'polite' });
   const per = el('input', { type: 'number', min: '1', step: '1', inputmode: 'decimal', placeholder: 'No limit', 'aria-label': 'Per trade, USD', style: 'width:6.5em;min-height:36px' });
   const day = el('input', { type: 'number', min: '1', step: '1', inputmode: 'decimal', placeholder: 'No limit', 'aria-label': 'Per day, USD', style: 'width:6.5em;min-height:36px' });
   const save = el('button', { type: 'button', class: 'qxt-mini', style: 'min-height:36px' }, 'Save');
   const limits = el('details', {}, el('summary', { style: 'cursor:pointer;min-height:32px' }, 'Limits'), el('div', { style: 'display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:6px' }, 'Per trade $', per, 'Per day $', day, save));
-  box.append(label, line, limits, status); box.hidden = true; host.append(box);
+  box.append(label, line, limits, status); box.hidden = true;if(before?.parentNode===host)host.insertBefore(box,before);else host.append(box);
   let stopped = false, busy = false;
   const render = async (fresh = false) => {
     const s = await oneClickStatus({ fresh }); if (stopped) return;

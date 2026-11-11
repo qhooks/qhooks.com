@@ -1,3 +1,4 @@
+import {bindTokenAvatar} from './qx-token-avatar.mjs';
 import {WINDOWS,filterDiscovery,createMarketViews,validateDiscoveryFilters} from './qx-discovery-model.mjs';
 import {plainMarketError} from './qx-terminal-data.mjs';
 import {fetchDexPairs,pickPair,rowPatch,applyRowPatch,DEX_CHAINS} from './qx-dex-live.mjs';
@@ -185,7 +186,6 @@ function makeRow(vm) {
   const avatar = el('span', { class: 'qxfd-avatar', 'aria-hidden': 'true' });
   const letter = el('span');
   const logo = el('img', { alt: '', width: 26, height: 26, loading: 'lazy', referrerpolicy: 'no-referrer', hidden: '' });
-  logo.addEventListener('error', () => { logo.hidden = true; });
   avatar.append(letter, logo);
   const symbol = el('b'), name = el('span', { class: 'qxfd-name' }), rowAge = el('span', { class: 'qxfd-age' });
   const chain = el('img', { class: 'qxfd-chain-icon', width: 13, height: 13, alt: '' });
@@ -216,11 +216,7 @@ function updateRow(node, vm) {
     node.chain.setAttribute('src', '/chain-symbol-icons/' + vm.chainIcon + '.svg');
     node.chain.alt = vm.chainName;
   }
-  if (old?.logo !== vm.logo) {
-    node.logo.hidden = !vm.logo;
-    if (vm.logo) node.logo.src = vm.logo;
-    else node.logo.removeAttribute('src');
-  }
+  if(JSON.stringify(old?.avatarSources)!==JSON.stringify(vm.avatarSources)){node.unbindAvatar?.();node.unbindAvatar=bindTokenAvatar(node.logo,{},vm.avatarSources);}
   for (const key of ['price', 'move', 'volume', 'liquidity', 'makers']) text(node.cells[key], vm[key]);
   for (const key of ['move']) {
     node.cells[key].classList.toggle('up', vm.numeric[key] > 0);

@@ -1,3 +1,4 @@
+import {sellPortion} from './qx-position-core.mjs';
 import {poolQuoteInfo} from './qx-best-pool.mjs';
 import {chainById} from './chains.mjs';
 import {quoteUsd as readQuoteUsd} from '/qx-native-usd.mjs';
@@ -22,7 +23,7 @@ import { holderMinTokens, shortText } from '/qx-holder-min.mjs';
 import { solAddress, solWallets, connectSol, signSol, onSolChange } from '/qx-solana.mjs';
 import { renderRisk as trustRisk } from '/qx-trust.mjs';
 import { oneClickPlan, withOneClick, pressGate, silentActive } from '/qx-instant-bridge.mjs';
-import { impactFromQuotes, impactLines, impactGate, confirmCopy } from '/qx-trade-impact.mjs';
+import { impactFromQuotes, impactLines, formatPriceImpact, impactGate, confirmCopy } from '/qx-trade-impact.mjs';
 import { getWalletHub } from '/wallet-hub.mjs';
 import { relayWallet } from './qx-relay-wallet.mjs';
 import { createFundingRow, fundingAsset, destinationCosts, runCrossChainBuy, retryLanded, recoveryView,
@@ -132,7 +133,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const me = connectedAddress(); if (!me) return;
     const link = h('button', { type: 'button', class: 'qxt-mini' }, 'Copy your link — earn 20% from traders you bring');
     link.addEventListener('click', async () => { try { await navigator.clipboard.writeText(referralLink(me)); link.textContent = 'Link copied'; } catch { link.textContent = referralLink(me); } });
-    status.append(' 30% of the fee comes back to you; claim it in ', h('a', { href: '/me#qa-rewards' }, 'My QHooks'), '. ', link);
+    cash.append(h('p',{},h('a',{href:'/me#qa-rewards'},'Claim cashback'), ' · ',link));
   }
   const showSignIn = () => { const out = !st?.sol && !connectedAddress(); if (out) addFunds.hidden = true; signIn.hidden = !out; go.hidden = out; signIn.textContent = side === 'sell' ? 'Sign in to sell' : 'Sign in to buy'; };
   const sideBtns = ['buy', 'sell'].map(s => h('button', { type: 'button', 'data-side': s, ariaPressed: String(s === side) }, s === 'buy' ? 'Buy' : 'Sell'));
@@ -161,12 +162,17 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     clearArmed(); if (current) current.funding = quote;
     go.disabled = busy || !!(current?.homeRequired && !current.home) || !quoteMatches(current) || !ready || (st?.safety?.verdict === 'danger' && !risk.querySelector('input')?.checked);
   } });
+  const quoteDetails=h('div',{class:'qxt-quote-details'});
+  if(tradingSettings.summary)tradingSettings.summary.textContent='Edit trading profile';
+  const settingsSummary=h('summary',{},'Settings');
+  const settings=h('details',{class:'qxt-ticket-settings'},settingsSummary,homeSettings.element,tradingSettings.element,h('label',{class:'qxt-pay'},h('span',{},'Slippage'),tolSel),thesisRow,quoteDetails,quoteTools,cashSettings(h),cash);
+  settings.addEventListener('keydown',event=>{if(event.key==='Escape'&&settings.open){event.preventDefault();event.stopPropagation();settings.open=false;settingsSummary.focus();}});
+  function presentQuote(...nodes){const main=nodes.filter((n,i)=>i===0||String(n.getAttribute?.('class')||n.className||'').split(' ').includes('qxt-impact'));out.replaceChildren(...main);quoteDetails.replaceChildren(...nodes.filter(n=>!main.includes(n)));}
   card.replaceChildren(
-    tradingSettings.element,
     h('div', { class: 'qxt-side-toggle', role: 'group', ariaLabel: 'Trade side' }, ...sideBtns, sellToCash),
-    h('div', { class: 'qxt-row2' }, payRow, h('label', { class: 'qxt-pay' }, h('span', {}, 'Tolerance'), tolSel)),
-    risk, h('div', { class: 'qxt-amount' }, amount, unit), h('div', { class: 'qxt-meta' }, balance), addFunds, presets, thesisRow, out, quoteTools, funding.element, go, signIn, status, followup, homeSettings.element, cashSettings(h), cash);
-  import('/qx-oneclick.mjs').then(m => m.mountOneClickToggle(card)).catch(() => {}); // One-click trading toggle (hidden unless an email/Google wallet is connected)
+    payRow,
+    risk, h('div', { class: 'qxt-amount' }, amount, unit), h('div', { class: 'qxt-meta' }, balance), addFunds, presets, out, funding.element, go, signIn, status, followup, settings);
+  import('/qx-oneclick.mjs').then(m => m.mountOneClickToggle(settings)).catch(() => {}); // One-click trading toggle (hidden unless an email/Google wallet is connected)
 
   const targetKey=t=>!t?'none':t.kind==='launch'?'m:'+String(t.chainId)+':'+String(t.controller).toLowerCase():'t:'+String(t.chainId)+':'+(String(t.chainId)==='solana'?String(t.address):String(t.address).toLowerCase());
   const isSelection=intent=>!!intent&&intent===selection;
@@ -174,7 +180,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     if(busy||recovery){status.textContent=busy?'Finish the current trade before opening another token.':'Resolve the funded trade below before opening another token.';return false;}
     selection=Object.freeze({revision:++selectionRevision,key:targetKey(target)});thesis.value='';
     clearTimeout(timer);qseq++;current=null;st=null;priceUsd=null;marketPrices=[];sellCash=false;homeSelected=false;sellPrefillOwner=null;pendingSellPrefill=false;
-    funding.clear();followup.replaceChildren();cash.replaceChildren();risk.replaceChildren();risk.hidden=true;
+    funding.clear();quoteDetails.replaceChildren();followup.replaceChildren();cash.replaceChildren();risk.replaceChildren();risk.hidden=true;
     amount.value='';unit.textContent='';balance.textContent='';balance.disabled=true;paySel.replaceChildren();
     clearArmed();go.disabled=true;status.textContent='';out.textContent=target?(target.kind==='launch'?'Loading the launch…':'Loading the token…'):'Choose a token to trade.';
     quoteLoading=false;renderQuoteFreshness();
@@ -241,7 +247,8 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   // Impact %, the low-liquidity line and the amber warning, under the quote. Never blocks: minOut is enforced on chain.
   function impactNodes(impactPct) {
     if (current) current.impactPct = impactPct;
-    return impactLines({ impactPct, liquidityUsd: poolLiquidityUsd() }).map(l => h('span', { class: 'qxt-impact' + (l.level === 'warn' ? ' warn' : '') }, l.text));
+    const line=formatPriceImpact(impactPct);
+    return [...(line?[h('span',{class:'qxt-impact'+(line.level==='warn'?' warn':'')},line.text)]:[]),...impactLines({liquidityUsd:poolLiquidityUsd()}).map(l=>h('span',{class:'qxt-liquidity-detail'},l.text))];
   }
   function tradeUsd(c) {
     const dollars = sym => unitClass(sym) === 'usd' && /^(USDC|USDT|USDG)$/i.test(sym || '');
@@ -330,7 +337,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       const got = cut(BigInt(q.buyAmount)), minOut = cut(BigInt(q.minBuyAmount));
       const impactPct = rq?.buyAmount ? impactFromQuotes(BigInt(q.buyAmount), a, BigInt(rq.buyAmount), small) : null;
       current = bindQuote({ side, pay, a, got, minOut, x: true },mine,read.owner,read.toleranceBps);
-      out.replaceChildren(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
+      presentQuote(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
         h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4) + (q.sources?.length ? ' · via ' + q.sources.map(s => s.replace(/_/g, ' ')).join(', ') : '')),
         ...impactNodes(impactPct),
         feeLine(st.chainId, ' · routed by 0x'));
@@ -390,7 +397,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       if (!quoteReadIsCurrent(read)) return;
       const { outDec, outSym } = solMints(), got = BigInt(o.outAmount), minOut = BigInt(o.minOut);
       current = bindQuote({ side, pay, a, got, minOut, sol: true },mine,read.owner,read.toleranceBps);
-      out.replaceChildren(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
+      presentQuote(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
         h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4)),
         ...impactNodes(o.priceImpact != null && Number.isFinite(Number(o.priceImpact)) ? Math.abs(Number(o.priceImpact)) : null),
         h('span', { class: 'qxt-fee' }, o.route==='dbc'?'Direct Meteora DBC · fee includes the launch anti-snipe schedule · 30% of the QHooks share as cashback':'Jupiter route · 1% integrator fee plus pool fees'));
@@ -483,7 +490,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     clearArmed();
     if (side === 'sell') {
       const b = await balances(); if(!isSelection(intent)||st!==activeState||revision!==qseq)return; if (!b) { status.textContent = 'Connect a wallet first.'; return; }
-      amount.value = formatUnits(b.token * BigInt(tradingSettings.profile().sellPercentages[i]) / 100n, st.decimals, st.decimals).replace(/,/g, '');
+      amount.value = formatUnits(sellPortion(b.token, tradingSettings.profile().sellPercentages[i]), st.decimals, st.decimals).replace(/,/g, '');
     } else amount.value = tradingSettings.profile().amounts[unitClass(payUnit())][i];
     refresh();
   }
@@ -493,7 +500,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     pendingSellPrefill=false;
     clearArmed();
     clearTimeout(timer); current = null; go.disabled = true; qseq++;
-    funding.clear(); recovery = null; followup.replaceChildren();
+    funding.clear(); quoteDetails.replaceChildren(); recovery = null; followup.replaceChildren();
     quoteLoading=hasQuoteAmount();renderQuoteFreshness();
     out.textContent = amount.value ? (st?.ext ? 'Finding the best route…' : 'Quoting through the pool…') : 'Enter an amount or pick a preset.';
     timer = setTimeout(quote, 300);
@@ -541,8 +548,8 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       if (!quoteReadIsCurrent(read)) return;
       const minOut = got * (10000n - BigInt(read.toleranceBps)) / 10000n;
       const outDec = side === 'buy' ? st.decimals : st.multi?route.pool.quoteDecimals:selectedQuote().quoteDecimals, outSym = side === 'buy' ? st.symbol : st.multi?route.pool.quoteSymbol:selectedQuote().quoteSymbol;
-      current = bindQuote({ side, pay, a, got, minOut, route, payAsset: pay === 'homeAsset' ? homeToken(homePref) : null },mine,read.owner,read.toleranceBps);
-      out.replaceChildren(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
+      current = bindQuote({ side, pay, a, got, minOut, route },mine,read.owner,read.toleranceBps);
+      presentQuote(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
         h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4) + ' · block charges included'),
         ...impactNodes(impactPct),
         feeLine(chainId),
@@ -802,9 +809,9 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     // The market poll updates this every few seconds; a price tick must not disarm a pending "Confirm $X".
     setPriceUsd(p,intent=selection) { if(!isSelection(intent))return; const v = Number(p); priceUsd = Number.isFinite(v) && v > 0 ? v : null;if(priceUsd){marketPrices.push({price:priceUsd,at:now()});marketPrices=marketPrices.slice(-12);} },
     setSide, preset, submit,
-    // Positions actions only prepare a sell. Balance, precision, selection and owner are rechecked;
-    // neither a cached portfolio amount nor this percentage is ever sent as a transaction here.
-    async prefillSell({percent,owner,chainId,token,controller}={}) {
+    // Position actions reread the live balance. run=true continues through the
+    // normal quoted submit flow, with the same owner, router and confirmation checks.
+    async prefillSell({percent,owner,chainId,token,controller,run=false}={}) {
       if(!st||busy||recovery){status.textContent=busy?'Finish the current trade before preparing a sell.':recovery?'Resolve the funded trade below before preparing a sell.':'Open a token first.';return false;}
       if(![25,50,100].includes(percent))return false;
       const activeState=st,intent=selection,me=st.sol?solAddress():connectedAddress();
@@ -822,11 +829,15 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         else{const body=await erc20(st.chainId,st.token,me);held=body.balance;precision=body.decimals;}
         if(!alive())return false;
         if(typeof held!=='bigint'||held<0n||held>=1n<<256n||!Number.isInteger(precision)||precision<0||precision>36||precision!==st.decimals)throw Error('Token precision is unavailable or changed. Reopen this token before selling.');
-        const value=held*BigInt(percent)/100n;
+        const value=sellPortion(held,percent);
         if(!value)throw Error(held===0n?'This wallet has no available tokens to sell.':'This balance is too small for that percentage.');
         pendingSellPrefill=false;side='sell';sellCash=false;homeSelected=false;if(st.multi)pay='auto';paySel.value=pay;sellPrefillOwner=me;
-        amount.value=formatUnits(value,precision,precision).replace(/,/g,'');
-        void layout();refresh();status.textContent='Sell '+percent+'% prepared. Review the current quote, fees and minimum received before selling.';
+        const filled=formatUnits(value,precision,precision).replace(/,/g,'');
+        amount.value=filled;
+        await layout();
+        if(!isSelection(intent)||st!==activeState||!ownerMatches()||side!=='sell'||sellPrefillOwner!==me||amount.value!==filled)return false;
+        status.textContent='Sell '+percent+'% prepared.';
+        if(run){clearTimeout(timer);await quote();if(quoteMatches(current)&&ownerMatches()&&current.a===value&&amount.value===filled)await submit();}
         return true;
       }catch(error){if(alive())status.textContent=tradeError(error);return false;}
       finally{if(mine===qseq)pendingSellPrefill=false;}

@@ -515,6 +515,42 @@ body.qx.qxt{font-size:13px;line-height:1.4}
 .qxt-impact{display:block;font-size:12px;color:var(--qx-muted)}
 .qxt-impact.warn{color:var(--qx-brass);font-weight:600}
 
+/* The ticket keeps its primary action and amount in the first reading path. */
+.qxt *{font-style:normal}
+#qxt-ticket .qxt-ticket-settings{margin-top:12px;border-top:1px solid var(--qx-line);padding-top:4px;background:none;box-shadow:none}
+#qxt-ticket .qxt-ticket-settings>summary{min-height:44px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;color:var(--qx-muted);list-style:none;background:none;border:0;border-radius:0;padding:0;box-shadow:none}
+#qxt-ticket .qxt-ticket-settings>summary:hover,#qxt-ticket .qxt-ticket-settings>summary:focus{background:none;box-shadow:none}
+#qxt-ticket .qxt-ticket-settings>summary:not(:focus-visible){outline:none}
+.qxt-ticket-settings>summary::after{content:'+';font-size:20px}
+.qxt-ticket-settings[open]>summary::after{content:'−'}
+.qxt-ticket-settings>summary::-webkit-details-marker{display:none}
+.qxt-ticket-settings .qxt-pay{margin:10px 0}
+.qxt-quote-details{display:flex;flex-direction:column;gap:8px;margin:14px 0;color:var(--qx-muted);font-size:12px}
+.qxt .qxt-impact.warn{color:var(--qxt-down);font-weight:650}
+.qxt-ticket-settings .qxt-profile-bar{flex-wrap:wrap}
+#qxt-ticket .qxt-go{min-height:52px;font-size:17px;font-weight:650}
+#qxt-ticket{--qxt-action-buy:#24664b;--qxt-action-sell:#9e3f32;--qxt-action-ink:#fff}
+#qxt-ticket .qxt-go:not(:disabled){background:var(--qxt-action-buy);color:var(--qxt-action-ink)}
+#qxt-ticket[data-side="sell"] .qxt-go:not(:disabled){background:var(--qxt-action-sell);color:var(--qxt-action-ink)}
+#qxt-ticket .qx-oneclick{position:static;min-width:0;grid-template-columns:minmax(0,1fr);height:auto;overflow:visible}
+#qxt-ticket .qx-oneclick-disclosure{position:static;display:block;max-width:100%;white-space:normal}
+.qxt-av>img.qxt-av-logo[hidden]{display:none!important}
+#qxt-ticket .qxt-presets button{min-height:44px}
+#qxt-ticket .qtx-status:empty{display:none!important}
+.qxt-market-position[hidden]{display:none!important}
+.qxt-market-position h2{font-size:13px;font-weight:600;margin:0 0 12px;color:var(--qx-muted)}
+.qxt-position-size{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font:500 16px var(--qx-mono);margin:0 0 14px}
+.qxt-position-size strong{font-weight:650;color:var(--qx-ink)}
+.qxt-market-position dl{display:grid;gap:10px;margin:0 0 16px}
+.qxt-market-position dl>div{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.qxt-market-position dt{color:var(--qx-muted)}
+.qxt-market-position dd{margin:0;font-family:var(--qx-mono)}
+.qxt-position-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.qxt-position-actions button{min-height:44px;border:1px solid var(--qx-line-2);border-radius:8px;background:var(--qx-bg);font-size:12px;color:var(--qxt-down)}
+.qxt-position-actions button:hover{background:var(--qx-panel-2)}
+.qxt-position-actions button:focus-visible,.qxt-ticket-settings>summary:focus-visible{outline:2px solid var(--qx-brass);outline-offset:2px}
+@media(max-width:760px){#qxt-ticket .qxt-pay{margin-bottom:10px}#qxt-ticket .qxt-amount input{font-size:28px}#qxt-ticket .qxt-out{min-height:0}.qxt-position-size{font-size:15px}}
+
 /* Day/night toggle in the terminal header (2026-11-10): the site's shared theme.js + qhooks.theme key. */
 .qxt-theme-toggle{flex:none;display:inline-grid;place-items:center;width:34px;height:34px;padding:0;border-radius:50%;border:1px solid var(--qx-line-2);background:transparent;color:var(--qx-ink);cursor:pointer}
 .qxt-theme-toggle[hidden]{display:none}.qxt-theme-toggle:hover{background:var(--qx-panel-2)}.qxt-theme-toggle:focus-visible{outline:2px solid var(--qx-brass);outline-offset:2px}
