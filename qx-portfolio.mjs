@@ -130,7 +130,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   const notes = [...failed];
   for (const c of m.chains) {
    const code = c.error, name = chainName(c);
-   if (code) notes.push(name + ': ' + ({balances_unavailable: 'Refreshing balances', prices_unavailable: 'Refreshing prices', index_unavailable: 'Refreshing QHooks positions', metadata_unavailable: 'Refreshing token details', token_limit: 'more tokens may be held than this reading includes', metadata_limit: 'some token balances have unknown units'}[code] || 'Refreshing data'));
+   if (code) notes.push(name + ': ' + ({balances_unavailable: 'Refreshing balances', prices_unavailable: 'Refreshing prices', prices_refreshing: 'Refreshing', index_unavailable: 'Refreshing QHooks positions', metadata_unavailable: 'Refreshing token details', token_limit: 'more tokens may be held than this reading includes', metadata_limit: 'some token balances have unknown units'}[code] || 'Refreshing data'));
    if (c.source === 'index-only' && c.chainId !== 'solana') notes.push(name + ': native balance and indexed QHooks tokens only');
   }
   if (m.rows.some(r => !r.spam && r.valueUsd === null)) notes.push('Unpriced holdings are not included in the total.');

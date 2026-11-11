@@ -42,7 +42,7 @@ export function buildWalletView(portfolio, activity) {
       open: trade.controller ? {chainId, controller: trade.controller} : null,
       txUrl: explorer && /^0x[0-9a-fA-F]{64}$/.test(trade.tx) ? explorer.replace(/\/$/, '') + '/tx/' + trade.tx : null};
   }).sort((a, b) => b.ts - a.ts);
-  return {address: portfolio?.address || '', totalUsd: holdings.reduce((sum, row) => sum + (row.valueUsd ?? 0), 0), unpriced: holdings.some(row => row.valueUsd === null), chains, holdings, trades};
+  return {address: portfolio?.address || '', totalUsd: holdings.reduce((sum, row) => sum + (row.valueUsd ?? 0), 0), unpriced: holdings.some(row => row.valueUsd === null), refreshing: portfolio?.chains?.some(chain => chain.error === 'prices_refreshing') === true, chains, holdings, trades};
 }
 
 // Completed lookups are reused for a minute; cancellation never stores an incomplete response.
@@ -134,7 +134,7 @@ export function renderWalletPanel(container, view, handlers = {}) {
   });
   panel.append(el('header', {class: 'qxfd-wallet-header'}, addressLabel,
     el('div', {class: 'qxfd-wallet-actions'}, copy, track, el('a', {href: '/profile#' + address}, 'Profile'))),
-    el('div', {class: 'qxfd-wallet-total'}, el('span', {class: 'qxfd-wallet-caption'}, 'Portfolio value'), el('strong', {}, view.unpriced && !view.totalUsd ? '—' : usd(view.totalUsd)), view.unpriced ? el('span', {class: 'qxfd-wallet-caption'}, 'Some prices refreshing') : null),
+    el('div', {class: 'qxfd-wallet-total'}, el('span', {class: 'qxfd-wallet-caption'}, 'Portfolio value'), el('strong', {}, view.unpriced && !view.totalUsd ? '—' : usd(view.totalUsd)), view.refreshing || view.unpriced ? el('span', {class: 'qxfd-wallet-caption'}, view.refreshing ? 'Refreshing' : 'Some prices refreshing') : null),
     view.chains.some(chain => chain.valueUsd >= 0.01) ? el('div', {class: 'qxfd-wallet-chips', tabindex: '0', 'aria-label': 'Value by chain'}, ...view.chains.filter(chain => chain.valueUsd >= 0.01).map(chain =>
       el('span', {class: 'qxfd-wallet-chip'}, chain.name + ' ', el('b', {}, usd(chain.valueUsd))))) : null, feedback);
 

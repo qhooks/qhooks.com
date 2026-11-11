@@ -49,7 +49,8 @@ export function portfolioHoldings(report, { family, owner }) {
   for (const chain of report.chains) {
     const id = String(chain?.chainId), native = chain?.native;
     if ((family === 'solana' ? id !== 'solana' : !chainById(id)) || !Array.isArray(chain.tokens)) { partial = true; notes.push('Some reported chains are not supported in this view.'); continue; }
-    if (chain.error) { partial = true; notes.push(chainName(id) + ': some balances, prices or indexed history are unavailable.'); }
+    if (chain.error === 'prices_refreshing') notes.push(chainName(id) + ': Refreshing');
+    else if (chain.error) { partial = true; notes.push(chainName(id) + ': some balances, prices or indexed history are unavailable.'); }
     if (chain.source === 'index-only') { partial = true; notes.push(chainName(id) + ': token discovery covers indexed launches and stablecoins; the selected token is also read directly.'); }
     if (native) {
       const balance = rawBalance(native.balance), dec = decimals(native.decimals), amount = units(balance, dec), priceUsd = positive(native.priceUsd);
