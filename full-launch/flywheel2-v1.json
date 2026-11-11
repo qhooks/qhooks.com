@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "chainId": "4663",
+  "safe": "0x2b1Cf7c4071A98A59709166DFA73C7acb7E83E71",
+  "owners": [
+    "0x88db60586866294409e47bbbb0b436104f09c1b5",
+    "0x9b13398df547c18e68d1cfe086ff1cb5f1a84127"
+  ],
+  "threshold": 2,
+  "weth": "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73",
+  "qhooks": "0x20429Af7cA3b0cE4d99EDBAA0693f26C5df05195",
+  "v1": "0x8DAe320425a1d1263FE13964F48322795B3cFbF7",
+  "v2": "0x2E4fBB8E6341faAB7b2c9d4E1734B4EF74D31Bf9",
+  "flywheel": "0xb85E67cf7728572033A9d36aEe3218DadF85bAA2",
+  "multiSend": "0x9641d764fc13c8B624c04430C7356C1C7C8102e2",
+  "dead": "0x000000000000000000000000000000000000dEaD",
+  "wethApproval": "5000000000000000000",
+  "qhooksApproval": "5000000000000000000000000",
+  "stop": {
+    "to": "0xb85E67cf7728572033A9d36aEe3218DadF85bAA2",
+    "fn": "setBatch(uint128,uint128,uint256,address)",
+    "args": [
+      "2000000000000000",
+      "20000000000000000",
+      "100000000000000000000000",
+      "0x000000000000000000000000000000000000dEaD"
+    ]
+  },
+  "target": {
+    "to": "0xb85E67cf7728572033A9d36aEe3218DadF85bAA2",
+    "fn": "setTarget((address,address,uint24,int24,address),address,bool,bool,uint128,uint128,address)",
+    "args": [
+      [
+        "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73",
+        "0x20429Af7cA3b0cE4d99EDBAA0693f26C5df05195",
+        10000,
+        200,
+        "0x023623568f41c032EC2f4bBa368DBAFC123160CC"
+      ],
+      "0x2E4fBB8E6341faAB7b2c9d4E1734B4EF74D31Bf9",
+      true,
+      true,
+      "2000000000000000",
+      "20000000000000000",
+      "0x0000000000000000000000000000000000000000"
+    ]
+  }
+}

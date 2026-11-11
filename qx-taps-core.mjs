@@ -3,6 +3,7 @@ import {chainById} from './chains.mjs';
 import {FUND, SEL as DROP_SEL, decodeLock, vestedAt, fundStep} from './qdrops-fund.mjs';
 import {FOUNDING, grantBatch, dayCut} from './founding-config.mjs';
 import {decodeGrant, grantedSet, SEL as GRANT_SEL} from './founding-fund.mjs';
+import {approvalChecks} from './qx-flywheel2-setup.mjs';
 
 export const GROUPS = [{id: 'wallet', label: 'Your wallet'}, {id: 'solana', label: 'Your wallet (Solana)'}, {id: 'safe', label: 'Safe, both signers'}, {id: 'privy', label: 'Privy dashboard (one visit)'}];
 const pad = a => String(a).toLowerCase().replace(/^0x/, '').padStart(64, '0');
@@ -219,6 +220,7 @@ function ethereumEstimates(steps, gasPrice, ethUsd) {
 }
 
 export function setupHref(set, steps) {
+  if (set === 'flywheel2') return '/chain-setup?set=flywheel2&chain=4663&go=4663';
   const pending = steps.filter(s => s.status !== 'done');
   const chains = [...new Set(pending.map(s => s.chainId))];
   const factory = [...new Set(pending.filter(s => ['Launch contract', 'Terminal trading'].includes(s.stepGroup)).map(s => s.chainId))];
@@ -232,7 +234,7 @@ const describe = (name, chains) => `${name} on ${chains.map(c => c.name).join(',
 export function groupSteps(steps) {
   const result = GROUPS.map(g => ({...g, rows: [], checking: steps.filter(s => s.group === g.id && s.reading).length}));
   const done = steps.filter(s => !s.reading && s.status === 'done' && s.counted !== false);
-  const pending = steps.filter(s => !s.reading && s.status !== 'done' && s.counted !== false);
+  const pending = steps.filter(s => !s.reading && s.status !== 'done' && (s.counted !== false || s.optional));
   const heads = new Map(), buckets = new Map();
   for (const s of pending) {
     const ethereum = s.kind === 'manifest' && s.catalogueId === 'base-setup' && s.chainId === '1';
@@ -262,7 +264,7 @@ export function groupSteps(steps) {
       : describe(row.sentence || row.name, row.chains);
     if (row.kind === 'perpsBuilder' && row.status === 'pending') row.note = row.waiting ? 'Waiting on the fee update to 0.1%. The button appears once it is live.' : 'Needs a 100 USDC deposit on Hyperliquid for the builder wallet.';
     if (row.kind === 'perpsBuilder' && row.waiting) row.button = null;
-    if (row.kind === 'jsonFlag' && row.status === 'pending' && row.waiting) { row.button = null; row.note = row.gateText || 'Waiting on an update. The button appears once it is live.'; }
+    if (['jsonFlag', 'call'].includes(row.kind) && row.waiting) { row.button = null; row.note = row.gateText || 'Waiting on an update. The button appears once it is live.'; }
     if (row.kind === 'privyFlags' && row.status === 'pending' && row.missing?.length) row.note = (row.missingText || 'Still off:') + ' ' + row.missing.join(', ') + '.';
     if (row.status === 'unknown') row.text += ' Refreshing…';
   }
@@ -288,7 +290,7 @@ export async function evaluateCatalogue(catalogue, io, {onUpdate} = {}) {
   const privyConfig = () => (privyRead ||= readPrivyConfig(io.request || (() => Promise.reject(Error('No read client for Privy')))));
   const prepare = async row => {
     const items = [], chainIds = row.chains?.map(c => String(typeof c === 'object' ? c.id : c)) || [String(row.chainId || '4663')];
-    const base = id => ({gateText: row.gate?.text || null, missingText: row.missingText || null, catalogueId: row.id, id: row.id + ':' + id, kind: row.kind, group: row.group, name: row.title, sentence: row.sentence, href: row.href, linkLabel: row.linkLabel || null, rowKey: row.id, recurring: !!row.recurring, chainId: String(id), chain: chainInfo(id, networks[id]), status: 'unknown', reading: true, counted: true});
+    const base = id => ({gateText: row.gate?.text || null, waiting: !!row.gate, missingText: row.missingText || null, catalogueId: row.id, id: row.id + ':' + id, kind: row.kind, group: row.group, name: row.title, sentence: row.sentence, href: row.href, linkLabel: row.linkLabel || null, rowKey: row.id, recurring: !!row.recurring, optional: !!row.optional, chainId: String(id), chain: chainInfo(id, networks[id]), status: 'unknown', reading: true, counted: !row.optional});
     const add = (step, check) => items.push({step, check});
     try {
       for (const source of row.sources || (row.source ? [row.source] : [])) {
@@ -323,8 +325,27 @@ export async function evaluateCatalogue(catalogue, io, {onUpdate} = {}) {
           checks = allowChecks(allow, remove); chain = allow.chainId;
         } else if (row.adapter === 'floorAllowances') {
           const art = await json(row.manifest); checks = floorChecks(art); chain = art.chainId;
+          if (row.replacementManifest) {
+            const replacement = await json(row.replacementManifest);
+            add({...base(chain), href: '/flywheel2-setup'}, async () => {
+              const migrated = await checkCalls(approvalChecks(replacement), chain, io.rpc);
+              if (migrated.status === 'done') return migrated;
+              // Avoid offering the old setup page, which could re-enable v1 after its approvals were removed.
+              return {...await checkCalls(checks, chain, io.rpc), href: '/flywheel2-setup'};
+            });
+            return items;
+          }
         }
-        add(base(chain), () => checkCalls(checks, chain, io.rpc));
+        add(base(chain), async () => {
+          if (!row.gate) return checkCalls(checks, chain, io.rpc);
+          const config = await json(row.gate.url), value = at(config, row.gate.field);
+          const open = row.gate.expect === 'positiveWei'
+            ? typeof value === 'string' && /^[1-9][0-9]*$/.test(value) && BigInt(value) < 2n ** 256n
+            : value === (row.gate.equals ?? true);
+          // The amount gate remains visible even when an allowance read is unavailable.
+          const result = await checkCalls(checks, chain, io.rpc).catch(e => { if (open) throw e; return {status: 'pending'}; });
+          return {...result, ...(open ? {} : {status: 'pending'}), waiting: !open};
+        });
       } else if (row.kind === 'perpsBuilder') {
         add(base(chainIds[0]), () => checkPerpsBuilder(json, io.request || ((u, i) => fetch(u, i))));
       } else if (row.kind === 'privyFlags') {
@@ -362,7 +383,7 @@ export async function evaluateCatalogue(catalogue, io, {onUpdate} = {}) {
     let value;
     try { value = await owners.get(step).check(); }
     catch { value = {status: 'unknown', reason: 'Chain or funding read could not be completed'}; }
-    Object.assign(step, value, {reading: false, counted: !(step.recurring && value.status === 'done')});
+    Object.assign(step, value, {reading: false, counted: !step.optional && !(step.recurring && value.status === 'done')});
     emit();
   });
   if (ethereumSteps.length) {
