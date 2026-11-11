@@ -43,7 +43,7 @@ export const DROPS = {
       minAverage: '100000000000000000000000', // 100,000 QHOOKS average (held + staked + self-locked); Randall 2026-11-09, matches the 100K cashback tier
       minDays: 4, // and at least that much at 4 day-ends (launch week: 4 of 6, QHOOKS went live Nov 8 02:03 UTC; weekly: 4 of 7)
       stakeMultiplier: 1.5, lockMultiplier: 1.5,
-      shareCap: 0.02, // at most 2% of a drop per wallet
+      shareCap: 0.02, // at most 2% per first-sender cluster (single wallets keep the same cap)
     },
     callouts: [{token: '0x0bd7d308f8e1639fab988df18a8011f41eacad73', feeCurrencies: [ZERO, '0x0bd7d308f8e1639fab988df18a8011f41eacad73'], poolBps: 1000, shareCap: 0.25}],
     referrals: null,
