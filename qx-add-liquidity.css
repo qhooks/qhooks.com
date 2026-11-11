@@ -1,0 +1,36 @@
+.qal{max-width:760px;width:100%;min-width:0;box-sizing:border-box;padding-inline:18px}
+.qal *{box-sizing:border-box;font-style:normal}
+.qal [hidden]{display:none!important}
+.qal .qlk-head{margin-bottom:28px}
+.qal h1{font-size:clamp(30px,7vw,46px);line-height:1.12;letter-spacing:-.035em;max-width:15ch}
+.qal h2{font-size:19px;line-height:1.35;margin:0 0 14px}
+.qal p{line-height:1.6;overflow-wrap:anywhere}
+.qal a{overflow-wrap:anywhere}
+.qal .qlk-head>a,.qal button,.qal-transactions a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;max-width:100%;line-height:1.4;white-space:normal;text-align:center}
+.qal button{font:inherit;cursor:pointer;padding:11px 16px;border:1px solid var(--qx-line,#77786b);border-radius:6px;background:transparent;color:inherit}
+.qal button.qas-go{background:var(--qx-ink,#e4e6d9);color:var(--qx-bg,#151712);font-weight:650;text-decoration:none}
+.qal button:disabled{opacity:.55;cursor:default}
+.qal button:focus-visible,.qal a:focus-visible,.qal input:focus-visible{outline:2px solid var(--qx-good,#7eaa6d);outline-offset:4px}
+.qal-terms{padding:20px;border:1px solid var(--qx-line,#77786b);border-left:3px solid var(--qx-good,#8fbf7f);border-radius:6px}
+.qal-terms p:last-child{font-size:14px;margin-bottom:0}
+.qal-total-card{padding:26px 0 22px;border-bottom:1px solid var(--qx-line,#77786b)}
+.qal-total-card h2{font-size:15px;margin-bottom:6px}
+.qal .qal-total{font-size:clamp(28px,7vw,40px);font-weight:650;letter-spacing:-.025em;line-height:1.3;margin:6px 0}
+.qal-total-card p:not(.qal-total){font-size:14px;margin:4px 0}
+.qal-contribution{padding:28px 0 20px}
+.qal-address{font-family:var(--qx-mono,ui-monospace,monospace);font-size:12px;line-height:1.7}
+.qal-balances{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;padding:16px 0 24px;margin:0}
+.qal-balances dt{font-size:13px;margin-bottom:5px}
+.qal-balances dd{font-size:14px;overflow-wrap:anywhere;margin:0;font-variant-numeric:tabular-nums}
+.qal label{display:block;font-size:15px;font-weight:650;margin-bottom:8px}
+.qal-input-row{display:flex;gap:8px;min-width:0}
+.qal input{min-width:0;width:100%;font:inherit;font-size:20px;font-variant-numeric:tabular-nums;min-height:52px;padding:10px 12px;border:1px solid var(--qx-line,#77786b);border-radius:6px;color:inherit;background:transparent}
+.qal .qal-note{font-size:13px;line-height:1.6}
+.qal #qal-status{font-weight:600}
+.qal #qal-status:empty,.qal #qal-reserve:empty{display:none}
+.qal-transactions{display:flex;align-items:flex-start;flex-direction:column;gap:6px}
+.qal-transactions a{font-size:14px;text-align:left}
+.qal-recovery{display:flex;flex-wrap:wrap;gap:8px}
+.qal-refresh{margin-bottom:28px}
+@media(max-width:560px){.qal .qas-go{width:100%}.qal-terms{padding:18px}.qal-balances{gap:12px}.qal-recovery button{width:100%}}
+@media(prefers-reduced-motion:reduce){.qal *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
