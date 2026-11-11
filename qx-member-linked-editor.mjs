@@ -46,11 +46,22 @@ export function mountMemberLinkedAccounts(target,{hub,auth,client,document:doc=g
    if(!onUser())throw Object.assign(Error('This wallet is not on the same QHooks sign-in as your X account.'),{linkedCode:'wallet_not_on_privy_user'});
   }
  }
+ // A fresh identity token. Right after a page load or an OAuth return Privy may not be ready yet: on a failed or empty
+ // first try, wait (≤ 6 s) until it reports ready and signed in, then try exactly once more.
+ async function freshProof(ctx){
+  let empty=false;const once=async()=>{try{const t=await bridge.identityToken();empty=!(typeof t==='string'&&t);return empty?null:t;}catch{empty=false;return null;}};
+  let token=await once();if(token)return token;ctx.check();
+  status.textContent='Waiting for your sign-in to be ready…';
+  for(let waited=0;waited<6000&&!(bridge.state?.ready&&bridge.state?.authenticated);waited+=200){await wait(200);ctx.check();}
+  token=await once();if(token)return token;
+  if(empty)throw Object.assign(Error('Your sign-in did not return a proof. Tap Sync from your sign-in again.'),{linkedCode:'no_identity_token'});
+  throw Object.assign(Error('QHooks could not get a fresh proof from your sign-in. Tap Sync from your sign-in again.'),{linkedCode:'identity_token_unavailable'});
+ }
  async function sync(ctx,method='POST',expectedKind){
   // The shipped Privy getIdentityToken awaits updateUserAndIdToken before returning.
   // Link callbacks can precede that update: retry only this confirmation race, with a fresh proof each time.
   for(let attempt=0;attempt<3;attempt++){
-   let identityToken;try{identityToken=await bridge.identityToken();}catch{throw Object.assign(Error('QHooks could not get a fresh proof from your sign-in. Tap Sync from your sign-in again.'),{linkedCode:'identity_token_unavailable'});}ctx.check();
+   let identityToken=await freshProof(ctx);ctx.check();
    if(typeof identityToken!=='string'||!identityToken)throw Object.assign(Error('Your sign-in did not return a proof. Tap Sync from your sign-in again.'),{linkedCode:'no_identity_token'});
    try{const result=await client.syncAccounts(ctx.who,{identityToken,...(expectedKind?{expectedKind}:{})},{...ctx.options,method});ctx.check();install(result);pending(null);return result;}
    catch(error){if(error?.linkedCode!=='linked_account_not_shared'||attempt===2)throw error;status.textContent='Waiting for your sign-in to confirm the linked account…';await wait(200*(attempt+1));ctx.check();}

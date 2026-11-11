@@ -1,3 +1,4 @@
+import {profileUrl} from './qx-profile-address.mjs';
 import {clampInto} from '/qx-more-text.mjs';
 import {COMMUNITY_CHAINS,communityTarget,communityKey,communityPath,callLinks} from './qx-community-intent.mjs';
 import {communityFollowing,followingQuery,mountCommunityFollowButton} from './qx-community-follow.mjs';
@@ -47,7 +48,7 @@ export function mountCommunityActivity(target,{board=null,caller=null,compact=fa
  function cleanControls(){for(const dispose of followDisposers)dispose();followDisposers=[];}
  function followControl(host,subject){const control=mountCommunityFollowButton(host,subject,{store:following,document:doc,events});followDisposers.push(control.dispose);}
  function renderSaved(){saved.replaceChildren();if(view!=='following')return;const list=following.list();if(!list.length){saved.append(h('p',{},'Follow a token or caller to build your return feed. Those choices stay on this device.'));return;}
-  saved.append(h('h3',{},'Following on this device'),...list.map(subject=>{const value=h('div',{class:'qcaf-saved-item'}),href=subject.kind==='caller'?'/profile#'+subject.wallet:communityPath(subject.board),label=subject.label||(subject.kind==='caller'?short(subject.wallet):labelFor(subject.board)),control=h('span',{});value.append(h('a',{href},label),control);followControl(control,subject);return value;}));
+  saved.append(h('h3',{},'Following on this device'),...list.map(subject=>{const value=h('div',{class:'qcaf-saved-item'}),href=subject.kind==='caller'?profileUrl({wallet:subject.wallet,handle:subject.handle}):communityPath(subject.board),label=subject.label||(subject.kind==='caller'?short(subject.wallet):labelFor(subject.board)),control=h('span',{});value.append(h('a',{href},label),control);followControl(control,subject);return value;}));
  }
  function renderCalls(){
   cleanControls();renderSaved();feed.replaceChildren();authors.replaceChildren();for(const[value,button]of tabs)button.setAttribute('aria-pressed',String(value===view));

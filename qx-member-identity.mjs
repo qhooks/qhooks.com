@@ -1,3 +1,4 @@
+import {profileUrl} from './qx-profile-address.mjs';
 import {memberWallet,memberWalletKey} from './qx-member-wallet.mjs';
 // Compact public identity for author/caller rows. This reads profiles only; wallet identity stays visible.
 import {createMemberProfileClient} from './qx-member-profile.mjs';
@@ -15,7 +16,7 @@ function publicIdentity(value,wallet){
   if(value?.version!==1||value.wallet!==wallet||!value.profile||value.updatedAt!==null&&(!Number.isSafeInteger(value.updatedAt)||value.updatedAt<=0))return null;
   const profile=normalizeMemberProfile({...value.profile,image:''});
   const image=Number.isSafeInteger(value.updatedAt)&&value.updatedAt>0&&value.profile.image===memberProfilePath(wallet)+'/image?v='+value.updatedAt?value.profile.image:'';
-  return{name:profile.name,image,accounts:normalizeMemberAccounts(value.accounts)};
+  return{name:profile.name,handle:value.handle||null,image,accounts:normalizeMemberAccounts(value.accounts)};
 }
 
 /** One reader per page: at most 4 concurrent and 128 cached/queued wallets by default, with no polling.
@@ -54,7 +55,7 @@ export function createMemberIdentityRenderer({client=createMemberProfileClient()
     const wallet=address(value),shown=wallet||String(value||'').slice(0,80),element=doc.createElement(linked&&wallet?'a':'span'),avatar=doc.createElement('span'),fallback=mark||doc.createElement('span'),words=doc.createElement('span'),name=doc.createElement('span'),code=doc.createElement('code');
     let disposed=false;const identity=memberWallet(wallet),display=identity?.address||shown;
     element.className='qmi'+(className?' '+className:'');element.title=display;element.setAttribute('data-wallet',shown);
-    if(linked&&wallet)element.href='/profile#'+wallet;
+    if(linked&&wallet)element.href=profileUrl({wallet});
     avatar.className='qmi-avatar';avatar.setAttribute('aria-hidden','true');
     if(!mark){fallback.className='qmi-default';fallback.textContent=shown.slice(-2).toUpperCase();}
     avatar.append(fallback);words.className='qmi-words';name.className='qmi-name';name.hidden=true;code.className='qmi-wallet';code.textContent=short(display)+(identity?.family==='solana'?' · Solana':'');code.title=display;words.append(name,code);element.append(avatar,words);
@@ -62,6 +63,7 @@ export function createMemberIdentityRenderer({client=createMemberProfileClient()
     const isCurrent=()=>{try{return!dead&&!disposed&&element.isConnected&&element.getAttribute('data-wallet')===shown&&address(getWallet())===wallet;}catch{return false;}};
     const ready=wallet?read(wallet,isCurrent).then(profile=>{
       if(!profile||!isCurrent())return;
+      if(linked)element.href=profileUrl({wallet,handle:profile.handle});
       if(profile.name){name.textContent=profile.name;name.hidden=false;element.setAttribute('aria-label',profile.name+' · '+display+(identity?.family==='solana'?' · Solana':''));}
       appendMemberAccountChips(words,profile.accounts,{document:doc,compact:true,linked:false});
       if(supplement)element.hidden=!profile.name&&!profile.accounts.some(row=>row.kind==='x'||row.kind==='farcaster');

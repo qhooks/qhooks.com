@@ -1,3 +1,4 @@
+import {profileUrl,resolveProfileAddress} from './qx-profile-address.mjs';
 import {memberWallet} from './qx-member-wallet.mjs';
 
 const SESSION_KEY='qhooks:trader-session:v1';
@@ -74,7 +75,7 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
   catch(error){status.textContent=error.message;}finally{node.disabled=false;}
  }
  function traderName(row,{follow=true}={}){
-  const wallet=key(row.wallet),name=h('div',{class:'qt-trader'},h('a',{href:'/profile#'+encodeURIComponent(wallet||row.wallet||'')},row.name||short(wallet)),h('code',{title:wallet||''},wallet?short(wallet):'Wallet unavailable'));
+  const wallet=key(row.wallet),name=h('div',{class:'qt-trader'},h('a',{href:profileUrl({wallet:wallet||row.wallet||'',handle:row.handle})},row.name||short(wallet)),h('code',{title:wallet||''},wallet?short(wallet):'Wallet unavailable'));
   if(follow&&wallet&&wallet!==selectedOwner()){const control=button(following.has(wallet)?'Following':'Follow trader',()=>void toggleFollow(wallet,control),{'aria-pressed':following.has(wallet),'data-follow-wallet':wallet});name.append(control);}return name;
  }
  function fact(label,value,cls=''){return h('div',{},h('dt',{},label),h('dd',{class:cls},value));}
@@ -107,7 +108,7 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
   if(auth?.selectFamily){for(const[family,label]of[['evm','EVM wallet'],['solana','Solana wallet']])accountButtons.append(button(label,()=>{auth.selectFamily(family);accountControls();void load();},{'aria-pressed':auth.family()===family}));}
   const connect=button(owner?'Sign in to manage':'Connect wallet',async()=>{try{if(!owner){auth?.connect?.();return;}await signedIn();status.textContent='Signed in. Review your sharing setting below.';accountControls();await load();}catch(error){status.textContent=error.message;}});
   accountButtons.append(connect);
-  if(owner)accountButtons.append(h('a',{class:'qa-btn',href:'/profile#'+encodeURIComponent(owner)},'My public profile'));
+  if(owner)accountButtons.append(h('a',{class:'qa-btn',href:profileUrl({wallet:owner})},'My public profile'));
   controls.append(walletLine,accountButtons);
   if(auth?.family?.()==='solana'&&!owner&&solHub){const snapshot=solHub.snapshot(),select=h('select',{'aria-label':'Solana wallet'});for(const wallet of snapshot.wallets)select.append(h('option',{value:wallet.id},wallet.name));const solConnect=button('Connect Solana wallet',async()=>{try{await solHub.connect(select.value);accountControls();void load();}catch(error){status.textContent=error.message;}});solConnect.disabled=!snapshot.wallets.length||snapshot.busy;controls.append(h('div',{class:'qa-actions'},select,solConnect));}
   if(!owner||!mine)return;
@@ -155,7 +156,7 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
   clock.textContent=traderCountdown(round,now());timers.clearInterval(countdownTimer);countdownTimer=timers.setInterval(()=>{if(!disposed)clock.textContent=traderCountdown(round,now());},1000);
   const info=h('div',{class:'qt-round-info'},h('section',{},h('h4',{},'How to enter'),h('p',{},'Trade outside tokens in the terminal. Opt in to a public trading profile.'),h('a',{class:'qa-btn qa-btn-primary',href:'/terminal'},'Open terminal')),h('section',{},h('h4',{},'Eligibility'),h('p',{},'All chains. Tokens launched on QHooks never count.'),h('p',{},'At least '+(round.minTrades??5)+' trades and '+traderUsd(round.minVolumeUsd??0)+' in terminal volume during this round.')),h('section',{},h('h4',{},'Rules'),h('p',{},'Ranked by real PnL from eligible terminal trades. Buys and sells with no market risk are excluded. Wallets sharing a funder cluster cannot both rank.'),...rules.map(text=>h('p',{},text))));
   const excluded=h('section',{class:'qt-excluded'},h('h4',{},'Excluded wallets'));
-  if(value.excluded?.length)excluded.append(h('ul',{},...value.excluded.map(row=>h('li',{},h('a',{href:'/profile#'+encodeURIComponent(row.wallet)},row.name||short(row.wallet)),h('span',{},({self_trade:'Matching buys and sells had no market risk.',same_funder_cluster:'Shares a funding cluster with another ranked wallet.',lineage_unchecked:'Funding checks are incomplete.',price_unavailable:'A required USD price is unavailable.',incomplete_trade_basis:'A recorded sale has no verified entry cost.'})[row.reason]||row.reason||'Does not meet this round’s rules.')))));else excluded.append(h('p',{class:'qa-empty'},'No exclusions recorded for this round.'));
+  if(value.excluded?.length)excluded.append(h('ul',{},...value.excluded.map(row=>h('li',{},h('a',{href:profileUrl({wallet:row.wallet,handle:row.handle})},row.name||short(row.wallet)),h('span',{},({self_trade:'Matching buys and sells had no market risk.',same_funder_cluster:'Shares a funding cluster with another ranked wallet.',lineage_unchecked:'Funding checks are incomplete.',price_unavailable:'A required USD price is unavailable.',incomplete_trade_basis:'A recorded sale has no verified entry cost.'})[row.reason]||row.reason||'Does not meet this round’s rules.')))));else excluded.append(h('p',{class:'qa-empty'},'No exclusions recorded for this round.'));
   body.replaceChildren(summary,value.refreshing&&!value.rows?.length?h('p',{class:'qa-empty'},'Refreshing standings…'):standings(value.rows||[],{competition:true}),info,excluded);
  }
  function schedule(){timers.clearTimeout(refreshTimer);if(!disposed&&!doc.hidden)refreshTimer=timers.setTimeout(()=>void load(),pollMs);}
@@ -163,7 +164,7 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
   if(disposed||doc.hidden)return;const mine=++generation;busy=true;refresh.disabled=true;refresh.textContent='Refreshing…';status.textContent='Refreshing…';body.setAttribute('aria-busy','true');
   let pendingProjection=false,computedAt=null;
   try{
-   if(profile){const candidate=key(decodeURIComponent(events.location?.hash?.slice(1)||''));if(candidate!==profileWallet){profileWallet=candidate;body.replaceChildren();accountControls();}if(!candidate){body.replaceChildren(h('p',{class:'qa-empty'},'Look up a wallet to read its shared terminal trades.'));status.textContent='';return;}
+   if(profile){const resolved=await resolveProfileAddress(events.location||{},{readWalletHandle:false});if(mine!==generation||disposed)return;const candidate=resolved.notFound?null:key(resolved.wallet);if(candidate!==profileWallet){profileWallet=candidate;body.replaceChildren();accountControls();}if(!candidate){body.replaceChildren(h('p',{class:'qa-empty'},'Look up a wallet to read its shared terminal trades.'));status.textContent='';return;}
     void follows().then(refreshFollowControls);
     const value=await readProfile(candidate);pendingProjection=!!value.refreshing;computedAt=value.refreshedAt||value.computedAt;if(mine!==generation||disposed)return;if(!value.publicTrades){body.replaceChildren(h('p',{class:'qa-empty'},'This wallet does not share its terminal trading record.'));status.textContent='';return;}
     // The profile response already carries its current public trades. Following is optional metadata.
@@ -178,9 +179,9 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
  const onVisibility=()=>{if(doc.hidden){generation++;timers.clearTimeout(refreshTimer);busy=false;refresh.disabled=false;refresh.textContent='Refresh';body.setAttribute('aria-busy','false');}else void load();};
  const onHash=()=>{if(profile)void load();else if(['#competition','#leaderboard','#trading-feed'].includes(events.location?.hash)){selectTab(events.location.hash==='#competition'?(competition?'competition':'leaderboard'):events.location.hash==='#leaderboard'?'leaderboard':'feed');target.scrollIntoView?.({block:'start'});}};
  let initialized=false;const onWallet=()=>{if(!initialized)return;generation++;accountControls();void load();};
- doc.addEventListener('visibilitychange',onVisibility);events?.addEventListener?.('hashchange',onHash);events?.addEventListener?.('storage',onWallet);const offHub=hub?.subscribe?.(onWallet),offSol=solHub?.subscribe?.(()=>{if(auth?.family?.()==='solana')onWallet();});
+ doc.addEventListener('visibilitychange',onVisibility);events?.addEventListener?.('hashchange',onHash);events?.addEventListener?.('popstate',onHash);events?.addEventListener?.('qhooks:profile-address',onHash);events?.addEventListener?.('storage',onWallet);const offHub=hub?.subscribe?.(onWallet),offSol=solHub?.subscribe?.(()=>{if(auth?.family?.()==='solana')onWallet();});
  initialized=true;accountControls();selectTab(!profile&&events.location?.hash==='#competition'?(competition?'competition':'leaderboard'):!profile&&events.location?.hash==='#leaderboard'?'leaderboard':'feed');if(!profile&&['#competition','#leaderboard','#trading-feed'].includes(events.location?.hash))target.scrollIntoView?.({block:'start'});
- return{refresh:load,selectTab,get state(){return{tab,filter,windowKey,profileWallet,busy};},dispose(){disposed=true;generation++;timers.clearTimeout(refreshTimer);timers.clearInterval(countdownTimer);offHub?.();offSol?.();doc.removeEventListener('visibilitychange',onVisibility);events?.removeEventListener?.('hashchange',onHash);events?.removeEventListener?.('storage',onWallet);}};
+ return{refresh:load,selectTab,get state(){return{tab,filter,windowKey,profileWallet,busy};},dispose(){disposed=true;generation++;timers.clearTimeout(refreshTimer);timers.clearInterval(countdownTimer);offHub?.();offSol?.();doc.removeEventListener('visibilitychange',onVisibility);events?.removeEventListener?.('hashchange',onHash);events?.removeEventListener?.('popstate',onHash);events?.removeEventListener?.('qhooks:profile-address',onHash);events?.removeEventListener?.('storage',onWallet);}};
 }
 
 async function boot(){

@@ -1,3 +1,4 @@
+import {profileUrl,resolveProfileAddress} from './qx-profile-address.mjs';
 // Callouts on the site: "Call it" in the terminal, Follow on profiles, the callout inbox in My QHooks and
 // the callout points board on Community. Mounts itself on whichever of those pages loads it.
 import {holderMinTokens,shortText} from '/qx-holder-min.mjs';
@@ -72,9 +73,9 @@ export function mountFollow(target,wallet,{onChange}={}){
  load();return{reload:load};
 }
 function mountProfile(anchor){
- const box=h('div',{class:'qco-profile',id:'qco-profile',hidden:true});anchor.after(box);let current=null;
- const update=()=>{const m=/^#(0x[0-9a-fA-F]{40})/.exec(location.hash);const w=m?m[1].toLowerCase():null;if(w===current)return;current=w;box.hidden=!w;if(w)mountFollow(box,w);};
- addEventListener('hashchange',update);update();
+ const box=h('div',{class:'qco-profile',id:'qco-profile',hidden:true});anchor.after(box);let current=null,revision=0;
+ const update=async()=>{const mine=++revision;let w=null;try{const value=await resolveProfileAddress(location,{readWalletHandle:false});if(/^0x[0-9a-f]{40}$/.test(value.wallet||''))w=value.wallet;}catch{}if(mine!==revision||w===current)return;current=w;box.hidden=!w;box.replaceChildren();if(w)mountFollow(box,w);};
+ addEventListener('hashchange',update);addEventListener('popstate',update);addEventListener('qhooks:profile-address',update);void update();
 }
 
 // ---------- My QHooks: callout inbox ----------
@@ -96,7 +97,7 @@ function mountInbox(before){
    actions.append(h('a',{class:'qa-btn',href:'/community#callout-points'},'Callout points'));
    if(!inbox.items.length){list.append(h('p',{class:'qco-empty'},'No callouts yet. Find callers on ',h('a',{href:'/community#callers'},'Community'),' and tap Follow on their profile.'));return;}
    for(const it of inbox.items)list.append(h('article',{class:'qco-item'+(it.read?'':' is-unread')},
-    h('div',{class:'qco-item-head'},h('a',{class:'qco-sym',href:it.links.terminal},it.board.symbol?'$'+it.board.symbol:'Token'),h('span',{},' called by '),h('a',{href:'/profile#'+it.caller},short(it.caller)),h('time',{datetime:new Date(it.at).toISOString()},ago(it.at))),
+    h('div',{class:'qco-item-head'},h('a',{class:'qco-sym',href:it.links.terminal},it.board.symbol?'$'+it.board.symbol:'Token'),h('span',{},' called by '),h('a',{href:profileUrl({wallet:it.caller,handle:it.handle})},short(it.caller)),h('time',{datetime:new Date(it.at).toISOString()},ago(it.at))),
     clampInto(h('p',{class:'qco-text'}),it.text||''),h('div',{class:'qco-item-links'},h('a',{class:'qa-btn qa-btn-primary',href:it.links.terminal},'Open'),h('a',{class:'qa-btn',href:it.links.board},'Board'))));
   }catch{status.textContent='Refreshing…';setTimeout(load,15000);}
  }

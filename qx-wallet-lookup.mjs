@@ -1,3 +1,4 @@
+import {profileUrl} from './qx-profile-address.mjs';
 import {chainById} from './chains.mjs';
 
 const EVM = /^0x[0-9a-fA-F]{40}$/;
@@ -133,7 +134,7 @@ export function renderWalletPanel(container, view, handlers = {}) {
     } catch { feedback.textContent = 'Could not track this wallet on this device. Try again.'; }
   });
   panel.append(el('header', {class: 'qxfd-wallet-header'}, addressLabel,
-    el('div', {class: 'qxfd-wallet-actions'}, copy, track, el('a', {href: '/profile#' + address}, 'Profile'))),
+    el('div', {class: 'qxfd-wallet-actions'}, copy, track, el('a', {href: profileUrl({wallet:EVM.test(address)?address:'solana:'+address,handle:view.handle})}, 'Profile'))),
     el('div', {class: 'qxfd-wallet-total'}, el('span', {class: 'qxfd-wallet-caption'}, 'Portfolio value'), el('strong', {}, view.unpriced && !view.totalUsd ? '—' : usd(view.totalUsd)), view.refreshing || view.unpriced ? el('span', {class: 'qxfd-wallet-caption'}, view.refreshing ? 'Refreshing' : 'Some prices refreshing') : null),
     view.chains.some(chain => chain.valueUsd >= 0.01) ? el('div', {class: 'qxfd-wallet-chips', tabindex: '0', 'aria-label': 'Value by chain'}, ...view.chains.filter(chain => chain.valueUsd >= 0.01).map(chain =>
       el('span', {class: 'qxfd-wallet-chip'}, chain.name + ' ', el('b', {}, usd(chain.valueUsd))))) : null, feedback);

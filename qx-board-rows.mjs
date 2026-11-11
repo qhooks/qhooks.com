@@ -1,3 +1,4 @@
+import {profileUrl} from './qx-profile-address.mjs';
 // Board rows and small formatters shared by the board page, the Community hub and profiles (no side effects on import).
 import { CHAIN_NAME, h } from '/qx-chain.mjs';
 import {memberIdentity} from './qx-member-identity.mjs';
@@ -65,7 +66,7 @@ function callRef(ref) {
 }
 export function callerRow(c,rank){
  const wallet=String(c.wallet||''),valid=c.version===2&&c.rankEligible&&c.coverage?.completeRecordSet;
- return h('a',{class:'qb-caller-row',href:'/profile#'+wallet,title:wallet},h('span',{class:'qb-caller-rank'},valid?String(rank):'—'),memberIdentity(wallet,{linked:false,mark:addressMark(wallet),className:'qb-caller-wallet'}),
+ return h('a',{class:'qb-caller-row',href:profileUrl({wallet,handle:c.handle}),title:wallet},h('span',{class:'qb-caller-rank'},valid?String(rank):'—'),memberIdentity(wallet,{linked:false,mark:addressMark(wallet),className:'qb-caller-wallet'}),
   h('span',{class:'qb-caller-hit'},h('b',{},valid?Math.round(c.hitRate*100)+'%':'—'),h('small',{},num(c.hits)+' / '+num(c.counted)+' timed hits')),
   h('span',{class:'qb-caller-quality'},h('b',{},qualityText(c.quality)),h('small',{},'24h/7d median · '+num(c.qualityN)+' calls')),
   h('span',{class:'qb-caller-count'},scoreCoverageText(c)));

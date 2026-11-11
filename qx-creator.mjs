@@ -1,3 +1,4 @@
+import {profileUrl} from './qx-profile-address.mjs';
 // Creator dashboard (/creator#m=<chain>:<controller>): one launch, everything a creator acts on. The header and
 // tables come from the terminal's index (/api/terminal/market); the panels below are the launch page's own panels
 // (rules and pots, terms and graduation, keys and recovery, staking, modules, vesting, team locks), opened by the
@@ -56,7 +57,7 @@ async function market(mine) {
   const m = r.meta, s = r.summary || {}, me = connectedAddress(), q = m.quoteSymbol;
   state.meta = m;
   $('qc-title').replaceChildren(m.name + ' ', h('span', { class: 'qc-sym' }, m.symbol));
-  $('qc-sub').replaceChildren(h('span', { class: 'qa-chain' }, CHAIN_NAME[chainId] || chainId), ' Created by ', h('a', { href: '/profile#' + (m.owner || ''), title: 'Creator profile' }, h('code', {}, short(m.owner || ''))),
+  $('qc-sub').replaceChildren(h('span', { class: 'qa-chain' }, CHAIN_NAME[chainId] || chainId), ' Created by ', h('a', { href: profileUrl({wallet:m.owner || ''}), title: 'Creator profile' }, h('code', {}, short(m.owner || ''))),
     me && m.owner === me ? h('span', { class: 'qc-you' }, 'you') : me ? h('span', { class: 'qc-not' }, 'not this wallet: actions that need the creator will ask for it') : null);
   const tile = (k, v, sub) => h('div', { class: 'qa-tile' }, h('span', {}, k), h('b', {}, v), sub ? h('small', {}, sub) : null);
   // Dollars first with the quote amount after it (2026-11-10, quoteusd); quote alone only when USD is not known.

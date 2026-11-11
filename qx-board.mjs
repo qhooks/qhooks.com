@@ -1,3 +1,4 @@
+import {profileUrl} from './qx-profile-address.mjs';
 // Community board for a listed launch (#m=<chain>:<controller>) or token (#t=<chain>:<address>). Reading is public. Posting identity is
 // the wallet: one free EIP-191 sign-in (no transaction) opens a 7-day session kept in this browser, then posts, replies,
 // reactions and reports need no further prompts. The board's creator can pin, hide and set a minimum holding to post.
@@ -297,7 +298,7 @@ function hero() {
     token ? null : h('span', { class: 'qb-gate-chip' + (b.gate ? ' is-gated' : '') }, b.gate ? 'Holders of ' + num(b.gate.min) + ' $' + b.gate.symbol + ' post' : 'Open to every wallet'));
   const links = h('div', { class: 'qa-launch-links' }, h('span',{id:'qb-follow-topic'}),isElysiumDiscussion(b)?h('a',{class:'qa-btn qa-btn-primary',href:'/elysium'},'Explore Elysium pools →'):h('a', { class: 'qa-btn qa-btn-primary', href: '/terminal#' + (token ? 't=' : 'm=') + key }, 'Trade $' + b.symbol),
     isElysiumDiscussion(b)?h('a',{class:'qa-btn',href:elysiumContractUrl(b),target:'_blank',rel:'noopener noreferrer'},'View contract on ElysScan'):null,
-    !token && b.creators?.[0] ? h('a', { class: 'qa-btn', href: '/profile#' + b.creators[0] }, 'Creator profile') : null);
+    !token && b.creators?.[0] ? h('a', { class: 'qa-btn', href: profileUrl({wallet:b.creators[0]}) }, 'Creator profile') : null);
   const tiles = h('div', { class: 'qa-tiles qb-tiles' },
     h('div', { class: 'qa-tile' }, h('span', {}, 'Posts'), h('b', {}, num(b.posts))), h('div', { class: 'qa-tile' }, h('span', {}, 'Replies'), h('b', {}, num(b.replies))),
     h('div', { class: 'qa-tile' }, h('span', {}, 'Latest'), h('b', {}, b.lastPostAt ? ago(b.lastPostAt) : '—')));
