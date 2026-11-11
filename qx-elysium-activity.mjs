@@ -35,7 +35,7 @@ export function mountElysiumActivity(container,{client,document:doc=container?.o
   heading.textContent='Recent swaps · '+name(subject.currency0)+' / '+name(subject.currency1);identity.textContent=subject.manager+' · '+subject.poolId;
   const previousFocused=doc.activeElement===previous;latest.setAttribute('aria-disabled',String(loading));previous.setAttribute('aria-disabled',String(loading||!data?.window.nextToBlock));previous.disabled=!data?.window.nextToBlock;close.disabled=false;if(previousFocused&&previous.disabled)latest.focus({preventScroll:true});
   status.dataset.state=error?'error':loading?'loading':'ready';
-  status.textContent=loading?'Reading this pool…'+(data?' Previous observation remains below.':''):error?error+(data?' Previous observation retained.':' No swap coverage is available.'):data?'Observed '+time(data.observedAt)+(now()-data.observedAt>=60000?' · Older observation; refresh for latest.':''):'';
+  status.textContent=loading?'Reading this pool…'+(data?' Previous observation remains below.':''):error?error+(data?' Previous observation retained.':' No swap coverage is available.'):data?'Observed '+time(data.observedAt)+(now()-data.observedAt>=60000?' · Refreshing; tap refresh for the latest.':''):'';
   if(!data){body.replaceChildren();return;}
   const focused=Array.from(body.querySelectorAll('button')).find(node=>node===doc.activeElement)?.getAttribute('data-swap-key');
   const context=make('p','Blocks '+block(data.window.fromBlock)+'–'+block(data.window.toBlock)+' · '+data.provider.name,{class:'ey-note'}),nodes=[context];

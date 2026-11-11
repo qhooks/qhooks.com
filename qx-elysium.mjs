@@ -143,7 +143,7 @@ export function mountElysiumPage({document:doc=globalThis.document,
   $('pools-context').append(title,make('span',observed(data.observedAt)));
   const retained=pools.error||pools.loading||data.venue.id!==selectedId;
   if(retained)$('pools-context').append(make('span','Previous results · '+data.venue.name,{class:'ey-stale'}));
-  else if(stale(pools))$('pools-context').append(make('span','Older observation · refresh for latest',{class:'ey-stale'}));
+  else if(stale(pools))$('pools-context').append(make('span','Refreshing · tap refresh for the latest',{class:'ey-stale'}));
   pairLabels=[];const rows=[...data.pools].sort((a,b)=>b.blockNumber-a.blockNumber);
   if(rows.length)$('pool-list').replaceChildren(...rows.map(poolCard));
   else{const empty=make('div',null,{class:'ey-empty'});empty.append(make('span','↗',{class:'ey-empty-mark','aria-hidden':'true'}),make('h3','No pool creations in this window.'),make('p','This covers only blocks '+decimal(data.window.fromBlock)+'–'+decimal(data.window.toBlock)+'. Try the previous 100 blocks or another deployment.'));$('pool-list').replaceChildren(empty);}
