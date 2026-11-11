@@ -266,6 +266,9 @@ export function groupSteps(steps) {
     if (row.kind === 'perpsBuilder' && row.waiting) row.button = null;
     if (['jsonFlag', 'call'].includes(row.kind) && row.waiting) { row.button = null; row.note = row.gateText || 'Waiting on an update. The button appears once it is live.'; }
     if (row.kind === 'privyFlags' && row.status === 'pending' && row.missing?.length) row.note = (row.missingText || 'Still off:') + ' ' + row.missing.join(', ') + '.';
+    // Name the step this row's button sends first (Monad review 2026-11-11: the row listed only the "Next" steps, so its
+    // first step, the fee Safe, looked missing). Ethereum rows already list each step with its gas.
+    if (row.kind === 'manifest' && !row.ethereumSection && row.next.length) row.first = `First: ${row.name} on ${row.chain.name}.`;
     if (row.status === 'unknown') row.text += ' Refreshing…';
   }
   for (const group of result) {
@@ -290,7 +293,7 @@ export async function evaluateCatalogue(catalogue, io, {onUpdate} = {}) {
   const privyConfig = () => (privyRead ||= readPrivyConfig(io.request || (() => Promise.reject(Error('No read client for Privy')))));
   const prepare = async row => {
     const items = [], chainIds = row.chains?.map(c => String(typeof c === 'object' ? c.id : c)) || [String(row.chainId || '4663')];
-    const base = id => ({gateText: row.gate?.text || null, waiting: !!row.gate, missingText: row.missingText || null, catalogueId: row.id, id: row.id + ':' + id, kind: row.kind, group: row.group, name: row.title, sentence: row.sentence, href: row.href, linkLabel: row.linkLabel || null, rowKey: row.id, recurring: !!row.recurring, optional: !!row.optional, chainId: String(id), chain: chainInfo(id, networks[id]), status: 'unknown', reading: true, counted: !row.optional});
+    const base = id => ({gasNote: row.gasNote || null, gateText: row.gate?.text || null, waiting: !!row.gate, missingText: row.missingText || null, catalogueId: row.id, id: row.id + ':' + id, kind: row.kind, group: row.group, name: row.title, sentence: row.sentence, href: row.href, linkLabel: row.linkLabel || null, rowKey: row.id, recurring: !!row.recurring, optional: !!row.optional, chainId: String(id), chain: chainInfo(id, networks[id]), status: 'unknown', reading: true, counted: !row.optional});
     const add = (step, check) => items.push({step, check});
     try {
       for (const source of row.sources || (row.source ? [row.source] : [])) {

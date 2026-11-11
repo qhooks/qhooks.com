@@ -56,3 +56,7 @@
 @media(max-width:640px){.taps-actions{flex-direction:column}.taps-actions .taps-action{width:100%}}
 .taps-row .taps-actions{grid-column:2;grid-row:1 / span 4;align-self:start;flex-direction:column}
 @media(max-width:640px){.taps-row .taps-actions{grid-column:auto;grid-row:auto}}
+
+/* First step named on multi-step rows (2026-11-11). */
+.taps-first{margin:4px 0 0;font-weight:600}
+.taps-get-gas{margin-left:4px}

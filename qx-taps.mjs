@@ -162,6 +162,14 @@ export function mountTaps({document: doc = document, target = window, hub = getW
         const icons = el('div', {class: 'taps-chains', 'aria-label': row.chains.map(c => c.name).join(', ')});
         if (!['perpsBuilder', 'privyFlags', 'manual'].includes(row.kind)) for (const c of row.chains) if (c.icon) icons.append(el('img', {src: `/chain-symbol-icons/${c.icon}.svg`, alt: c.name, width: 24, height: 24}));
         const body = el('div', {class: 'taps-row-body'}, icons, el('p', {class: 'taps-sentence'}, row.text));
+        if (row.first) body.append(el('p', {class: 'taps-first'}, row.first));
+        if (row.gasNote) {
+          // Gas on a chain the wallet may not hold yet (Monad: about 14.35M gas, keep twice the cost): one tap opens Move
+          // funds toward that chain, the same call /create uses.
+          const get = el('button', {type: 'button', class: 'taps-undo taps-get-gas'}, row.gasNote.button || 'Get gas');
+          get.addEventListener('click', () => import('/qx-move-funds.mjs').then(m => m.openMoveFunds({to: Number(row.gasNote.moveTo)})).catch(() => say('Refreshing… Open Move funds from your wallet menu.')));
+          body.append(el('p', {class: 'taps-note'}, row.gasNote.text + ' ', get));
+        }
         for (const step of row.steps) if (step.costText) body.append(el('p', {class: 'taps-cost'}, `${step.name}: estimated gas ${step.costText}`));
         let button;
         if (row.kind === 'balanceMin') {
