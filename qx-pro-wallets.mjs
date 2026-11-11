@@ -6,7 +6,7 @@ import '/qx-confirm-top.mjs'; // Privy confirms stay on top of these sheets
 import { connectedAddress, onWalletChange } from '/qx-chain.mjs';
 import { authHeaders, signIn, boardSession } from '/qx-board-session.mjs';
 import { chainById } from '/chains.mjs';
-import { createSmartBoard, walletSection } from '/qx-smart.mjs';
+import { createSmartBoard, walletSection, liveSection } from '/qx-smart.mjs';
 
 const ADDR = /^0x[0-9a-f]{40}$/, TERMINAL_KEY = 'qhooks:terminal:tracked';
 const SCOPE_NOTE = 'PnL on QHooks markets, from our own trade index.';
@@ -158,7 +158,7 @@ function followingView(me) {
     list.append(el('li', {}, el('button', { type: 'button', class: 'qpw-row', onclick: () => openCard(f.wallet) },
       el('span', { class: 'qpw-who' }, el('b', {}, (f.emoji ? f.emoji + ' ' : '') + (f.label || short(f.wallet))), el('small', {}, short(f.wallet) + (f.group ? ' · ' + f.group : ''))), stats)));
   }
-  box.append(list, el('h2', { class: 'qpw-h' }, 'Their latest trades'), el('ul', { class: 'qpw-act', id: 'qpw-act' }), ioRow());
+  box.append(list, el('p', { class: 'qpw-note' }, 'Trades by wallets you follow arrive within about a minute, here and in @qhooks_bot once your wallet is linked there. Choose which ones on each wallet’s card.'), el('h2', { class: 'qpw-h' }, 'Their latest trades'), el('ul', { class: 'qpw-act', id: 'qpw-act' }), ioRow());
   queueMicrotask(renderActivity);
   return box;
 }
@@ -250,13 +250,23 @@ export async function openCard(wallet, { windowKey = '30d', chainId = null, acro
       followBtn.disabled = true; try { await follow(wallet, f ? {} : { label: '' }, !f); draw(w); } catch (e) { followBtn.disabled = false; followBtn.after(el('p', { class: 'qpw-note' }, say(e))); }
     });
     const copyLink = me?.toLowerCase() !== wallet ? el('a', { class: 'qpw-btn', href: '/copy?w=' + wallet + (chainId ? '&chain=' + chainId : '') }, 'Copy trades') : null;
-    const links = el('div', { class: 'qpw-io' }, followBtn, copyLink, explorer ? el('a', { class: 'qpw-btn', href: explorer + '/address/' + wallet, target: '_blank', rel: 'noopener' }, 'Explorer') : null);
+    // Alerts for a wallet you follow: what reaches you on the site and in @qhooks_bot.
+    const alertPick = f && boardSession() ? el('label', { class: 'qpw-alerts' }, 'Alerts ', (() => {
+      const sel = el('select', { 'aria-label': 'Alerts for this wallet' }, ...[['all', 'Every trade'], ['buy', 'Buys'], ['sell', 'Sells'], ['first', 'First buys of a token'], ['off', 'Off']].map(([v, t]) => el('option', { value: v }, t)));
+      api('/api/wallets/alerts').then(j => { const p = (j.prefs || []).find(x => x.wallet === wallet) || (j.prefs || []).find(x => x.wallet === '*'); if (p) sel.value = p.mode; }, () => {});
+      sel.addEventListener('change', () => api('/api/wallets/alerts/prefs', { method: 'POST', body: JSON.stringify({ wallet, mode: sel.value }) }).catch(() => {}));
+      return sel; })()) : null;
+    const links = el('div', { class: 'qpw-io' }, followBtn, copyLink, alertPick, explorer ? el('a', { class: 'qpw-btn', href: explorer + '/address/' + wallet, target: '_blank', rel: 'noopener' }, 'Explorer') : null);
     sheet.replaceChildren(el('div', { class: 'qpw-sheet-in' }, head, links, windows, body)); // Follow and Copy trades up top
     if (!sheet.open) sheet.showModal();
     // Every chain, every token (sampled pools): PnL line, holdings, best and worst, recent trades. Above the QHooks-market detail.
     const across = el('section', { class: 'qpw-across', 'aria-label': 'Across chains' }, el('p', { class: 'qpw-empty' }, 'Refreshing…'));
+    // Live: this wallet's last hour on every chain, read on open (the board itself refreshes every 15 minutes).
+    const liveBox = el('div', {}, liveSection(null));
+    api('/api/wallets/live?w=' + wallet).then(l => liveBox.replaceChildren(...(l?.at ? [liveSection(l)] : [])), () => liveBox.replaceChildren());
+    const top = el('div', {}, liveBox, across);
     api('/api/wallets/activity?w=' + wallet + '&tf=' + (atf || (w === 'all' ? '30d' : w))).then(a => across.replaceChildren(walletSection(a)), () => across.replaceChildren(el('p', { class: 'qpw-empty' }, 'Refreshing. Try again in a moment.')));
-    body.replaceChildren(across, el('p', { class: 'qpw-empty' }, 'Refreshing…'));
+    body.replaceChildren(top, el('p', { class: 'qpw-empty' }, 'Refreshing…'));
     try {
       const c = await card(wallet, w);
       const tiles = el('div', { class: 'qpw-tiles' },
@@ -266,8 +276,8 @@ export async function openCard(wallet, { windowKey = '30d', chainId = null, acro
       const recent = el('ul', { class: 'qpw-mini' }, ...(c.recent.length ? c.recent.map(t => el('li', {}, el('a', { href: terminalLink(t.chainId, t.controller) }, el('span', { class: t.buy ? 'up' : 'down' }, t.buy ? 'Buy' : 'Sell'), el('b', {}, t.symbol || '—'), el('span', {}, compact(t.quote) + ' ' + (t.quoteSymbol || '')), el('span', {}, age(t.ts))))) : [el('li', { class: 'qpw-empty' }, 'No trades on QHooks markets in this period.')]));
       body.replaceChildren(el('h3', {}, 'On QHooks markets'), tiles, el('h3', {}, 'Holdings'), holdings, el('h3', {}, 'Recent trades'), recent,
         el('p', { class: 'qpw-note' }, (w === 'all' ? 'All indexed trades' : 'Last ' + (w === '7d' ? '7' : '30') + ' days') + ' · ' + SCOPE_NOTE + (c.partial ? ' Some tokens have no dollar price yet.' : '')));
-      body.prepend(across);
-    } catch { body.replaceChildren(across, el('p', { class: 'qpw-empty' }, 'QHooks-market detail is refreshing. Try again in a moment.')); }
+      body.prepend(top);
+    } catch { body.replaceChildren(top, el('p', { class: 'qpw-empty' }, 'QHooks-market detail is refreshing. Try again in a moment.')); }
   };
   draw(windowKey);
 }

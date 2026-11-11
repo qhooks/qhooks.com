@@ -175,6 +175,18 @@ function pnlChart(series, w = 640, h = 140) {
   return svg('svg', { viewBox: `0 0 ${w} ${h}`, class: 'qsm-chart ' + (end > 0 ? 'is-up' : end < 0 ? 'is-down' : ''), preserveAspectRatio: 'none', role: 'img', 'aria-label': 'Realised PnL over the period, ending at ' + signed(end) },
     svg('line', { x1: 0, x2: w, y1: Y(0), y2: Y(0), class: 'qsm-zero' }), svg('path', { d: d + ` V${Y(0)} H${X(x0)} Z`, class: 'qsm-area' }), svg('path', { d, fill: 'none', class: 'qsm-line' }));
 }
+/// The drawer's live strip: this wallet's trades on every chain in the last hour, read when the drawer opens (cached 60 s).
+export function liveSection(l) {
+  const sec = el('section', { class: 'qsm-live-sec', 'aria-label': 'Live' });
+  const stamp = l?.at ? 'Live · ' + ago(Math.floor(l.at / 1000)) + ' ago' : 'Live';
+  sec.append(el('div', { class: 'qsm-feed-h' }, el('span', { class: 'qsm-live', 'aria-hidden': 'true' }), el('h3', {}, stamp), el('small', { class: 'qsm-feed-note' }, 'last hour, every chain')));
+  if (!l?.trades?.length) { sec.append(el('p', { class: 'qsm-empty' }, l?.at ? 'No trades in the last hour.' : 'Refreshing…')); return sec; }
+  sec.append(el('ul', { class: 'qsm-list' }, l.trades.slice(0, 8).map(x => el('li', {}, el('a', { href: EXPLORER[x.chainId] + '/tx/' + x.tx, target: '_blank', rel: 'noopener', class: 'qsm-line-row' },
+    el('span', { class: 'qsm-side ' + (x.side === 'buy' ? 'up' : 'down') }, x.side === 'buy' ? 'Buy' : 'Sell'), tokenIcon(x, 20), el('b', {}, x.symbol || short(x.token)), el('span', { class: 'qsm-chain', 'data-chain': x.chainId }, SHORT[x.chainId]),
+    el('span', { class: 'num' }, x.usd == null ? '—' : money(x.usd)), el('span', { class: 'num qsm-muted' }, ago(x.ts)))))));
+  return sec;
+}
+
 export function walletSection(a) {
   const sec = el('section', { class: 'qsm-wallet', 'aria-label': 'Across chains' });
   if (!a?.total) { sec.append(el('h3', {}, 'Across chains'), el('p', { class: 'qsm-empty' }, 'No trades sampled for this wallet in this period.')); return sec; }
