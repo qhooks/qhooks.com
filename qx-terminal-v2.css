@@ -1,0 +1,419 @@
+/* QHooks terminal v2 (2026-11 redesign): the token page leads with price, chart and the buy/sell action.
+   Loaded after every other terminal sheet. Re-skin and re-layout only: the same nodes, ids and behaviour.
+   Needs qx-ds.css (tokens) and qx-terminal-v2.mjs (price line, Info tab, phone trade sheet). */
+
+/* ================= 1. Skin, every width ================= */
+.qv2 body.qxt{
+  --qxt-up:var(--q-up);--qxt-down:var(--q-down);--qxt-up-a:var(--q-up-a);--qxt-down-a:var(--q-down-a);
+  --qxt-grid:var(--q-line);--qx-mono:var(--q-sans);--qx-faint:var(--q-text-3);
+  background:var(--q-bg);color:var(--q-text);font:400 13px/1.45 var(--q-sans);letter-spacing:-.003em;
+}
+.qv2 #qxt-ticket{--qxt-action-buy:var(--q-buy);--qxt-action-sell:var(--q-sell);--qxt-action-ink:var(--q-on-action)}
+.qv2 body.qxt :is(code,.qxt-contract,.qop-id){font-family:var(--q-mono);letter-spacing:0}
+.qv2 body.qxt :is(dt,th,.qxt-rail-kicker,.qxb-cell>span,.qxt-contract-kind,.qxt-route-label,.qxt-chain-label){text-transform:none;letter-spacing:0}
+
+/* top bar */
+.qv2 .qxt-top{background:var(--q-bg);border-bottom:1px solid var(--q-line);gap:var(--q-3)}
+.qv2 .qxt-brand{font-weight:650;letter-spacing:-.02em;color:var(--q-text)}
+.qv2 .qxt-brand img{border-radius:7px}
+.qv2 .qxt-nav a{color:var(--q-text-2);font-weight:500;padding:6px 9px;white-space:nowrap;border-radius:var(--q-r-in);transition:color var(--q-fast) ease-out,background var(--q-fast) ease-out}
+.qv2 .qxt-nav a:hover{color:var(--q-text)}
+.qv2 .qxt-nav a[aria-current="page"]{color:var(--q-text);background:var(--q-raised-2);box-shadow:none}
+.qv2 .qxt-chains{gap:2px;padding:2px;border:1px solid var(--q-line);border-radius:var(--q-r-in);background:var(--q-inset)}
+.qv2 .qxt-chains button{border:0;border-radius:6px;background:none;color:var(--q-text-2);min-height:26px}
+.qv2 .qxt-chains button[aria-pressed="true"]{background:var(--q-raised-2);color:var(--q-text);box-shadow:none}
+.qv2 .qxt-search{border:1px solid var(--q-line);border-radius:var(--q-r-in);background:var(--q-inset);transition:border-color var(--q-fast) ease-out}
+.qv2 .qxt-search:focus-within{border-color:var(--q-gold)}
+.qv2 .qxt-search input{background:none;color:var(--q-text)}
+.qv2 .qxt-search input::placeholder{color:var(--q-text-3)}
+.qv2 .qxt-search kbd{border:1px solid var(--q-line);border-radius:5px;color:var(--q-text-3);background:none}
+.qv2 #qxt-connect,.qv2 .qxt-wallet>.qhc-trigger{height:34px;padding:0 14px;border:0;border-radius:var(--q-r-in);background:var(--q-gold-metal);color:var(--q-on-gold);font-weight:650;box-shadow:var(--q-gold-edge);transition:filter var(--q-fast) ease-out}
+.qv2 #qxt-connect:hover,.qv2 .qxt-wallet>.qhc-trigger:hover{filter:brightness(1.05)}
+.qv2 .qxt-theme-toggle{border:1px solid var(--q-line);background:none;color:var(--q-text-2);border-radius:var(--q-r-in)}
+.qv2 .qxt-wallet{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;flex:none}
+.qv2 .qxt-search{min-width:0}
+.qv2 .qxt-rewards-btn{border:1px solid var(--q-line);border-radius:var(--q-r-in);color:var(--q-text);font-weight:550}
+.qv2 .qxt-site-menu-toggle{border:1px solid var(--q-line);background:none;border-radius:var(--q-r-in);color:var(--q-text-2)}
+
+/* the drop line: one slim line under the nav */
+.qv2 .qx-drop{padding:0;border:0;border-bottom:1px solid var(--q-line);background:var(--q-inset)}
+.qv2 .qx-drop .qx-drop-text{margin:0;padding:6px var(--q-4);font:500 12px/1.5 var(--q-sans);color:var(--q-text-2);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qv2 .qx-drop a{color:var(--q-gold);text-decoration:none;font-weight:600}
+.qv2 .qx-drop a:hover{text-decoration:underline}
+
+/* columns and cards */
+.qv2 .qxt-grid{background:var(--q-bg)}
+.qv2 .qxt-feed{background:var(--q-bg);border-right:1px solid var(--q-line)}
+.qv2 .qxt-side{background:var(--q-bg);border-left:1px solid var(--q-line);gap:var(--q-3)}
+.qv2 .qxt-card{border:1px solid var(--q-line);border-radius:var(--q-r);background:var(--q-raised);box-shadow:none}
+.qv2 .qxt-feed-head h2{font:650 15px/1.2 var(--q-sans);letter-spacing:-.02em}
+.qv2 .qxt-feed-caption{color:var(--q-text-3);font-size:12px}
+.qv2 .qxt-rail-selected{border:1px solid var(--q-line);border-radius:var(--q-r);background:var(--q-raised)}
+.qv2 .qxt-rail-kicker{color:var(--q-gold);font:600 11px/1 var(--q-sans)}
+.qv2 .qxt-rail-note{color:var(--q-text-3)}
+.qv2 .qxt-rail-note a{color:var(--q-text-2)}
+
+/* segmented tabs and chips */
+.qv2 .qxt-tabs{gap:2px}
+.qv2 .qxt-tabs button{border-radius:6px;color:var(--q-text-2);font-weight:550;transition:color var(--q-fast) ease-out,background var(--q-fast) ease-out}
+.qv2 .qxt-tabs button:hover{color:var(--q-text)}
+.qv2 .qxt-tabs button:is([aria-selected="true"],[aria-pressed="true"]){background:var(--q-raised-2);color:var(--q-text)}
+.qv2 .qxt-feed-head .qxt-tabs,.qv2 .qxt-chartbar .qxt-tabs{padding:2px;border:1px solid var(--q-line);border-radius:var(--q-r-in);background:var(--q-inset)}
+.qv2 .qxt-filters button{border:1px solid var(--q-line);border-radius:var(--q-r-chip);background:none;color:var(--q-text-2);font-weight:500}
+.qv2 .qxt-filters button[aria-pressed="true"]{border-color:transparent;background:var(--q-raised-2);color:var(--q-text)}
+.qv2 :is(.qxt-context-action,.qxt-addr,.qxt-icon,.qxfd-back){border:1px solid var(--q-line);border-radius:var(--q-r-in);background:var(--q-raised);color:var(--q-text-2);font-weight:550;box-shadow:none;transition:color var(--q-fast) ease-out,border-color var(--q-fast) ease-out}
+.qv2 :is(.qxt-context-action,.qxt-addr,.qxt-icon,.qxfd-back):hover{color:var(--q-text);border-color:var(--q-line-2)}
+
+/* token header */
+.qv2 .qxt-id h1{font:680 20px/1.15 var(--q-sans);letter-spacing:-.02em;color:var(--q-text)}
+.qv2 .qxt-id #qxt-name{color:var(--q-text-3);font-size:12.5px}
+.qv2 .qxo-official{border:0;border-radius:var(--q-r-chip);background:var(--q-up-a);color:var(--q-up);font:600 11.5px/1 var(--q-sans);padding:4px 8px}
+.qv2 .qxt-token-details>summary{color:var(--q-text-2)}
+.qv2 .qxt-identity-context{color:var(--q-text-2)}
+.qv2 :is(.qxt-chain-label,.qxt-route-label){border:0;border-radius:var(--q-r-chip);background:var(--q-raised-2);color:var(--q-text-2);font:500 11.5px/1 var(--q-sans);padding:5px 9px}
+.qv2 .qxt-contract-kind{color:var(--q-text-3);font:500 11.5px/1 var(--q-sans)}
+.qv2 .qxt-contract{color:var(--q-text-2);font-size:11.5px}
+
+/* price line (built by qx-terminal-v2.mjs from the Price and 24h stats) */
+.qv2 .qv2-price{display:grid;grid-template-columns:auto auto;justify-content:start;align-items:center;gap:4px 10px;min-width:0}
+.qv2 .qv2-price[hidden]{display:none}
+.qv2 .qv2-price-now{font:680 30px/1.05 var(--q-sans);letter-spacing:-.025em;color:var(--q-text);font-variant-numeric:tabular-nums}
+.qv2 .qv2-price-chg{font:650 14px/1 var(--q-sans);padding:5px 8px;border-radius:6px;background:var(--q-raised-2);color:var(--q-text-2)}
+.qv2 .qv2-price-chg:empty{display:none}
+.qv2 .qv2-price-chg.up{background:var(--q-up-a);color:var(--q-up)}
+.qv2 .qv2-price-chg.down{background:var(--q-down-a);color:var(--q-down)}
+.qv2 .qv2-price-chg small{font:500 11px/1 var(--q-sans);opacity:.75;margin-left:5px}
+.qv2 .qv2-price-sub{grid-column:1/-1;font:500 12px/1.3 var(--q-sans);color:var(--q-text-3)}
+.qv2 .qv2-price-sub:empty{display:none}
+
+/* stat strip: one line, scrolls sideways, nothing cut off */
+.qv2 .qxt-stats{display:flex;flex-wrap:nowrap;gap:0;margin:0;padding:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;border:0;-webkit-overflow-scrolling:touch}
+.qv2 .qxt-stats::-webkit-scrollbar{display:none}
+.qv2 .qxt-stats div,.qv2 .qxt-stats div:first-child{flex:none;min-width:0;padding:0 16px 0 0;margin:0 16px 0 0;border:0!important;border-right:1px solid var(--q-line)!important;gap:3px}
+.qv2 .qxt-stats div:last-child{border-right:0!important;margin-right:0}
+.qv2 .qxt-stats dt{font:500 11.5px/1.2 var(--q-sans);color:var(--q-text-3)}
+.qv2 .qxt-stats dd{font:620 13.5px/1.25 var(--q-sans);color:var(--q-text);font-variant-numeric:tabular-nums}
+.qv2 .qxt-stats dd.up{color:var(--q-up)}
+.qv2 .qxt-stats dd.down{color:var(--q-down)}
+.qv2 .qxt-stats.qv2-mirrored .qv2-m{display:none}
+
+/* chart */
+.qv2 .qxt-chartbar{border:0;background:none;gap:var(--q-2)}
+.qv2 .qxt-sync{color:var(--q-text-3);font-size:12px}
+.qv2 .qxt-chart{background:var(--q-bg);border:0}
+.qv2 .qxt-chart-stage{background:var(--q-bg);border-block:1px solid var(--q-line)}
+.qv2 .qxt-chart-tools{border:0;background:none;color:var(--q-text-3);gap:2px}
+.qv2 .qxt-chart-tools :is(summary,button){border:0;background:none;color:var(--q-text-2);border-radius:6px;font-weight:550}
+.qv2 .qxt-chart-tools :is(summary,button):hover{color:var(--q-text);background:var(--q-raised-2)}
+.qv2 .qxt-chart-asset{color:var(--q-text-3);font-weight:500}
+.qv2 .qxt-chart-tool-status{color:var(--q-text-3)}
+.qv2 .qxt-layer-legend{border:0;background:none}
+.qv2 .qxt-layer-chip{border:1px solid var(--q-line);border-radius:var(--q-r-chip);background:none;color:var(--q-text-3);font-weight:500;transition:color var(--q-fast) ease-out,border-color var(--q-fast) ease-out}
+.qv2 .qxt-layer-chip[aria-pressed="true"]{color:var(--q-text);border-color:var(--q-line-2);background:var(--q-raised)}
+
+/* data tabs: underline tabs, the gold line marks the open one */
+.qv2 #qxt-data-tabs{gap:var(--q-1);padding:0 var(--q-3);border-bottom:1px solid var(--q-line);background:var(--q-bg);align-items:center}
+.qv2 #qxt-data-tabs>button{position:relative;min-height:40px;padding:0 10px;border-radius:0;background:none;color:var(--q-text-2);font:600 13px/1 var(--q-sans)}
+.qv2 #qxt-data-tabs>button:is([aria-selected="true"],[aria-pressed="true"]){background:none;color:var(--q-text)}
+.qv2 #qxt-data-tabs>button:is([aria-selected="true"],[aria-pressed="true"])::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;border-radius:2px;background:var(--q-gold)}
+.qv2 .qv2-info #qxt-data-tabs>button[role="tab"][aria-selected="true"]{color:var(--q-text-2)}
+.qv2 .qv2-info #qxt-data-tabs>button[role="tab"][aria-selected="true"]::after{content:none}
+.qv2 .qv2-info #qxt-trade-filters{visibility:hidden}
+
+/* tape and tables */
+.qv2 .qxt-tape-tools{border:0;background:none;color:var(--q-text-3)}
+.qv2 .qxt-tape-tools :is(summary,button){border:1px solid var(--q-line);border-radius:var(--q-r-in);background:none;color:var(--q-text-2);font-weight:550}
+.qv2 .qxt-tape-status{color:var(--q-text-3)}
+.qv2 .qxt-table{font-variant-numeric:tabular-nums}
+.qv2 .qxt-table th{background:var(--q-bg);color:var(--q-text-3);font:500 11.5px/1 var(--q-sans);padding:9px 12px;border-bottom:1px solid var(--q-line)}
+.qv2 .qxt-table td{padding:8px 12px;border-bottom:1px solid var(--q-line);color:var(--q-text);font:500 13px/1.3 var(--q-sans)}
+.qv2 .qxt-table td:first-child{color:var(--q-text-3)}
+.qv2 .qxt-table tbody tr{transition:background var(--q-fast) ease-out}
+.qv2 .qxt-table tbody tr:hover{background:var(--q-raised)}
+.qv2 .qxt-table a{color:var(--q-text-2);text-decoration:none}
+.qv2 .qxt-table a:hover{color:var(--q-gold)}
+.qv2 .qxt-table td.up{color:var(--q-up);font-weight:650}
+.qv2 .qxt-table td.down{color:var(--q-down);font-weight:650}
+.qv2 .qxt-empty{color:var(--q-text-3)}
+.qv2 .qxt-credits{color:var(--q-text-3);font-size:11px;border:0}
+.qv2 .qxt-credits a{color:var(--q-text-3)}
+
+/* ticket */
+.qv2 #qxt-ticket{padding:var(--q-3)}
+.qv2 .qxt-side-toggle{padding:3px;gap:3px;border:1px solid var(--q-line);border-radius:var(--q-r);background:var(--q-inset)}
+.qv2 .qxt-side-toggle button{min-height:38px;border-radius:7px;color:var(--q-text-2);font:650 14px/1 var(--q-sans);transition:background var(--q-fast) ease-out,color var(--q-fast) ease-out}
+.qv2 .qxt-side-toggle button[data-side="buy"][aria-pressed="true"]{background:var(--q-buy);color:var(--q-on-action);box-shadow:none}
+.qv2 .qxt-side-toggle button:is([data-side="sell"],[data-side="cash"])[aria-pressed="true"]{background:var(--q-sell);color:var(--q-on-action);box-shadow:none}
+.qv2 .qxt-side-toggle button[data-side="cash"]{font-size:12.5px;font-weight:550;min-height:30px}
+.qv2 .qxt-pay>span{color:var(--q-text-3);font:500 12px/1.3 var(--q-sans)}
+.qv2 #qxt-ticket :is(select,input:not([type="checkbox"]):not([type="radio"])){border:1px solid var(--q-line);border-radius:var(--q-r-in);background:var(--q-inset);color:var(--q-text);transition:border-color var(--q-fast) ease-out}
+.qv2 #qxt-ticket :is(select,input):focus{border-color:var(--q-gold);outline:0}
+.qv2 #qxt-ticket .qxt-amount input{height:60px;padding:0 64px 0 14px;font:650 28px/1 var(--q-sans);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.qv2 #qxt-ticket .qxt-amount input::placeholder{color:var(--q-text-3)}
+.qv2 #qxt-ticket .qxt-unit{color:var(--q-text-2);font:600 13px/1 var(--q-sans)}
+.qv2 #qxt-ticket .qxt-presets{gap:6px}
+.qv2 #qxt-ticket .qxt-presets button{min-height:38px;border:1px solid var(--q-line);border-radius:var(--q-r-in);background:var(--q-raised-2);color:var(--q-text);font:600 13px/1 var(--q-sans);font-variant-numeric:tabular-nums;transition:border-color var(--q-fast) ease-out}
+.qv2 #qxt-ticket .qxt-presets button:hover{border-color:var(--q-line-2)}
+.qv2 #qxt-ticket .qxt-out{color:var(--q-text-2);font-size:12.5px}
+.qv2 #qxt-ticket .qxt-go{min-height:50px;border:0;border-radius:var(--q-r);font:680 16px/1 var(--q-sans);letter-spacing:-.01em;transition:filter var(--q-fast) ease-out,transform var(--q-fast) ease-out}
+.qv2 #qxt-ticket .qxt-go:not(:disabled):hover{filter:brightness(.94)}
+.qv2 #qxt-ticket .qxt-go:not(:disabled):active{transform:translateY(1px)}
+.qv2 #qxt-ticket .qxt-go:disabled{background:var(--q-raised-2);color:var(--q-text-3);box-shadow:none}
+.qv2 #qxt-ticket .qxt-go.qxt-signin{background:var(--q-gold-metal);color:var(--q-on-gold);box-shadow:var(--q-gold-edge)}
+.qv2 .qxt-impact.warn{color:var(--q-warn)}
+.qv2 .qxt-ticket-settings>summary{color:var(--q-text-2);font-weight:550}
+.qv2 .qtr-risk-summary{color:var(--q-text-2)}
+.qv2 #qx-pro-limit{min-height:40px;border:1px solid var(--q-line);border-radius:var(--q-r);background:var(--q-raised);color:var(--q-text);font:600 13px/1 var(--q-sans);transition:border-color var(--q-fast) ease-out}
+.qv2 #qx-pro-limit:hover{border-color:var(--q-line-2)}
+
+/* quiet notices: said once, small, never a banner.
+   The official-pool note keeps its current box and place above the chart. The quiet line in the Info tab is a
+.qv2 .qx-burn-ticker{margin:0;color:var(--q-text-2);font:500 13px/1.45 var(--q-sans)}
+.qv2 .qx-burn-ticker .qbt-live,.qv2 .qxb-live{color:var(--q-text-3);font:500 12px/1.3 var(--q-sans)}
+.qv2 .qxt-launch-caps{margin:0;color:var(--q-text-3);font:500 12px/1.4 var(--q-sans)}
+
+/* buyback panel and the other info cards */
+.qv2 .qxb{border:1px solid var(--q-line);border-radius:var(--q-r);background:var(--q-raised)}
+.qv2 .qxb-cell{border:1px solid var(--q-line);border-radius:var(--q-r-in);background:var(--q-inset)}
+.qv2 .qxb-cell>span{color:var(--q-text-3);font:500 11.5px/1.3 var(--q-sans)}
+.qv2 .qxb-cell>b{font:650 15px/1.3 var(--q-sans);color:var(--q-text)}
+.qv2 .qxb-cell>small,.qv2 .qxb-note{color:var(--q-text-3)}
+.qv2 .qxb-dot{background:var(--q-gold)}
+.qv2 :is(.qxt-data-health,.qxt-market-checks,.qxt-builder){border:1px solid var(--q-line);border-radius:var(--q-r);background:var(--q-raised)}
+.qv2 .qxt-token-profile{background:none;border:0}
+.qv2 .qgl-panel{border:1px solid var(--q-line);border-radius:var(--q-r);background:var(--q-raised)}
+.qv2 .qgl-panel h3{font:650 15px/1.3 var(--q-sans);letter-spacing:-.01em}
+
+/* ---- what makes it ours ---- */
+/* 1. Each token page takes its light from the token's own image (set by qx-terminal-v2.mjs), fading into graphite. */
+.qv2 .has-market .qxt-center{position:relative;isolation:isolate}
+.qv2 .has-market .qxt-center::before{content:"";position:absolute;left:0;right:0;top:0;height:300px;z-index:-1;pointer-events:none;background:var(--qv2-art,linear-gradient(120deg,hsl(var(--qv2-hue,38) 60% 42%),transparent 70%)) center/cover no-repeat;filter:blur(56px) saturate(1.5);opacity:.3;-webkit-mask-image:linear-gradient(#000 10%,transparent);mask-image:linear-gradient(#000 10%,transparent)}
+:root.qv2[data-theme="light"] .has-market .qxt-center::before{opacity:.2}
+.qv2 .has-market #qxt-av{box-shadow:0 0 0 1px var(--q-line-2),0 8px 24px -8px hsl(var(--h,38) 70% 45%/.55)}
+/* 2. A gold hairline under the top bar: the hook's metal, used once. */
+.qv2 .qxt-top{box-shadow:inset 0 -1px 0 var(--q-line),0 1px 0 0 transparent}
+.qv2 .qxt-top::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,var(--q-gold) 18%,var(--q-gold) 32%,transparent 60%);opacity:.55;pointer-events:none}
+/* 3. The tape shows size: each trade's bar is as long as its value, green for buys, red for sells. */
+.qv2 .qxt-table tbody tr.qv2-sized{background-image:linear-gradient(90deg,var(--qv2-tint) 0,var(--qv2-tint) var(--qv2-w),transparent var(--qv2-w));background-repeat:no-repeat}
+.qv2 .qxt-table tbody tr.qv2-sized.qv2-buy{--qv2-tint:var(--q-up-a)}
+.qv2 .qxt-table tbody tr.qv2-sized.qv2-sell{--qv2-tint:var(--q-down-a)}
+.qv2 .qxt-table tbody tr.qv2-sized.qv2-big td{font-weight:650}
+.qv2 #qxt-ticket:focus{outline:0}
+/* 4. Buys against sells as one small meter under the count. */
+.qv2 .qxt-stats div.qv2-ratio{position:relative;padding-bottom:6px!important}
+.qv2 .qxt-stats div.qv2-ratio::after{content:"";position:absolute;left:0;right:16px;bottom:0;height:3px;border-radius:3px;background:linear-gradient(90deg,var(--q-up) 0,var(--q-up) calc(var(--qv2-buys) - 1.5%),transparent calc(var(--qv2-buys) - 1.5%),transparent calc(var(--qv2-buys) + 1.5%),var(--q-down) calc(var(--qv2-buys) + 1.5%))}
+/* 5. The price ticks: a short fade in the move's colour, never a slide. */
+.qv2 .qv2-price-now{transition:color 700ms ease-out}
+.qv2 .qv2-price-now.tick-up{color:var(--q-up);transition:none}
+.qv2 .qv2-price-now.tick-down{color:var(--q-down);transition:none}
+
+/* ================= 2. Token page layout (a market is open) ================= */
+/* The head and the bottom block dissolve into the centre column, so price, stats and chart can lead and the
+   secondary panels sit behind the Info tab. */
+.qv2 .has-market .qxt-center{display:grid;grid-template-columns:auto auto minmax(0,1fr);grid-auto-rows:max-content;align-content:start;gap:0}
+.qv2 .has-market :is(#qxt-head,.qxt-bottom){display:contents}
+.qv2 .has-market .qxt-center>*,.qv2 .has-market #qxt-head>*,.qv2 .has-market .qxt-bottom>*{grid-column:1/-1;min-width:0;order:40}
+
+.qv2 .has-market #qxt-head>.qxfd-back{grid-area:1/1/2/2;order:0;align-self:center;margin:14px 0 0 16px;min-height:34px;padding:0 10px;white-space:nowrap}
+.qv2 .has-market #qxt-head>.qxt-id{grid-area:1/2/2/-1;order:0;margin:14px 16px 0 12px;align-items:center;gap:4px 10px}
+.qv2 .has-market #qxt-head>:is(#qxt-impostor-head,.qx-relaunch-badge){order:1;margin:10px 16px 0}
+.qv2 .has-market #qxt-head>#qxt-market-identity{grid-area:2/1/3/-1;order:0;margin:10px 16px 0}
+.qv2 .has-market #qxt-head>.qv2-price{grid-area:3/1/4/-1;order:0;margin:14px 16px 0}
+.qv2 .has-market #qxt-head>#qxt-stats{grid-area:4/1/5/-1;order:0;margin:12px 16px 14px}
+.qv2 .has-market .qxt-center>.qxt-chartbar{order:6;padding:0 16px 10px;min-height:0}
+.qv2 .has-market .qxt-center>.qxt-chart-stage{order:7;display:flex;flex-direction:column}
+.qv2 .has-market .qxt-center>.qxt-chart{order:7}
+.qv2 .has-market .qxt-chart-stage>.qxt-chart{order:0}
+.qv2 .has-market .qxt-chart-stage>.qxt-chart-tools{order:1;padding:4px 12px;min-height:0;border-top:1px solid var(--q-line)}
+.qv2 .has-market #qxt-chart{height:clamp(340px,calc(100vh - 440px),700px);min-height:0;flex:none}
+/* the Expand (fullscreen) chart still fills its stage */
+.qv2 .has-market .qxt-chart-stage:fullscreen #qxt-chart{height:auto;flex:1}
+.qv2 .has-market .qxt-center>:is(.qxt-layer-legend,.qxt-layer-list){order:8;padding:8px 12px}
+.qv2 .has-market .qxt-bottom>#qxt-data-tabs{order:10;position:sticky;top:0;z-index:3}
+.qv2 .has-market .qxt-bottom>.qxt-tape-tools{order:11;padding:8px 12px}
+.qv2 .has-market .qxt-bottom>#qxt-pane{order:12;max-height:none;overflow:visible;min-height:0}
+.qv2 .has-market .qxt-bottom>#qxt-credits{order:99;padding:16px}
+
+@media (min-width:761px){
+  .qv2 .has-market #qxt-head>#qxt-stats{flex-wrap:wrap;row-gap:10px;overflow:visible;justify-content:flex-start}
+  .qv2 .has-market #qxt-head>#qxt-stats div{margin-right:10px;padding-right:10px}
+}
+
+/* wide screens: the marker layers share the timeframe row, so the tabs stay in view under the chart */
+@media (min-width:1181px){
+  .qv2 .has-market .qxt-center>.qxt-chartbar{grid-column:1/3;order:6}
+  .qv2 .has-market .qxt-center>.qxt-layer-legend{grid-column:3/-1;order:6;justify-content:flex-end;align-self:center;padding:0 16px 10px 0;overflow-x:auto}
+  .qv2 .has-market .qxt-layer-chip{min-height:28px;padding:0 10px;font-size:12px}
+}
+
+/* Info tab: every other part of the head and the centre column */
+.qv2 .has-market:not(.qv2-info) #qxt-head>:not(.qxfd-back,.qxt-id,#qxt-market-identity,.qv2-price,#qxt-stats,#qxt-impostor-head,.qx-relaunch-badge,.qop-warn),
+.qv2 .has-market:not(.qv2-info) .qxt-center>:is(#qxt-token-profile,.qxt-workspace-context){display:none!important}
+.qv2 .has-market.qv2-info .qxt-bottom>:is(.qxt-tape-tools,#qxt-pane){display:none!important}
+.qv2 .has-market.qv2-info #qxt-head>:not(.qxfd-back,.qxt-id,#qxt-market-identity,.qv2-price,#qxt-stats,#qxt-impostor-head,.qx-relaunch-badge,.qop-warn),
+.qv2 .has-market.qv2-info .qxt-center>:is(#qxt-token-profile,.qxt-workspace-context){margin:16px 16px 0;width:auto;max-width:none}
+.qv2 .has-market.qv2-info #qxt-head>.qx-burn-ticker{order:20}
+.qv2 .has-market.qv2-info #qxt-head>.qxt-launch-caps{order:21;margin-top:6px}
+.qv2 .has-market.qv2-info #qxt-head>.qxb{order:22}
+.qv2 .has-market.qv2-info .qxt-center>.qxt-workspace-context{order:24;padding:0}
+.qv2 .has-market.qv2-info .qxt-center>#qxt-token-profile{order:25;padding:0}
+
+/* ================= 3. Phone (≤760px): flat page, chart first, Buy | Sell bar ================= */
+.qv2 :is(.qv2-bar,.qv2-backdrop,.qv2-sheet-x){display:none}
+@media (max-width:760px){
+  .qv2 body.qxt{font-size:14px}
+  .qv2.q-has-tabbar body.qxt:has(main.has-market){padding-bottom:calc(122px + env(safe-area-inset-bottom))}
+  .qv2 .qxt-mnav{display:none!important}
+  .qv2 .qxt-top{padding:8px 12px;gap:8px}
+  .qv2 .qx-drop .qx-drop-text{padding:6px 12px;text-align:left}
+
+  .qv2 body:has(main.has-market) .qxt-chains{display:none}
+  .qv2 body:has(main.has-market) .qxt-top{padding-bottom:8px}
+  .qv2 .qxt-search{min-height:40px}
+  .qv2 .qxt-top:has(.qxt-rewards-wrap) .qxt-brand span{display:none}
+  .qv2 .qxt-top .qxt-rewards-btn{height:34px;padding:0 10px;border:1px solid var(--q-line);border-radius:var(--q-r-in)}
+  .qv2 .has-market .qxt-id{display:grid;grid-template-columns:auto auto auto minmax(0,1fr) auto auto;gap:3px 8px;align-items:center}
+  .qv2 .has-market .qxt-id>*{grid-column:1/-1;min-width:0}
+  .qv2 .has-market .qxt-id>#qxt-av{grid-area:1/1/3/2}
+  .qv2 .has-market .qxt-id>h1{grid-area:1/2/2/5;font-size:19px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .qv2 .has-market .qxt-id>#qxt-name{grid-area:2/2/3/3;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .qv2 .has-market .qxt-id>#qxt-official{grid-area:2/3/3/4}
+  .qv2 .has-market .qxt-id>#qxt-trust{grid-area:2/4/3/7}
+  .qv2 .has-market .qxt-id>#qxt-star{grid-area:1/5/2/6;margin:0}
+  .qv2 .has-market .qxt-id>#qxt-share{grid-area:1/6/2/7;margin:0}
+  .qv2 .has-market .qxt-id>:is(#qxt-star,#qxt-share){min-height:36px;height:36px;padding:0 10px;font-size:12.5px;white-space:nowrap}
+  .qv2 .has-market .qxo-official{font-size:11px;padding:3px 7px;white-space:nowrap}
+  .qv2 .has-market .qxt-token-details>summary{display:flex;align-items:center;gap:8px;min-height:32px;padding:0;font-size:12.5px}
+  .qv2 .has-market .qxt-token-details>summary>span:first-child{border-radius:var(--q-r-chip);background:var(--q-raised-2);color:var(--q-text-2);font:500 11.5px/1 var(--q-sans);padding:5px 9px;white-space:nowrap}
+  .qv2 .has-market .qxt-token-details>summary>code{color:var(--q-text-2);font-size:11.5px}
+  .qv2 .has-market .qxt-token-details>summary>.qxt-token-details-label{margin-left:auto;color:var(--q-text-3);font-size:12px;white-space:nowrap}
+
+  .qv2 .has-market.qxt-grid{display:grid;grid-template-columns:auto minmax(0,1fr);grid-auto-rows:max-content;gap:0;background:none}
+  /* on a phone the glow sits on the page itself, so the trade sheet keeps its place above everything */
+  .qv2 body.qxt:has(main.has-market)::before{content:"";position:absolute;left:0;right:0;top:0;height:460px;z-index:-1;pointer-events:none;background:var(--qv2-art,linear-gradient(120deg,hsl(var(--qv2-hue,38) 60% 42%),transparent 70%)) center/cover no-repeat;filter:blur(56px) saturate(1.5);opacity:.3;-webkit-mask-image:linear-gradient(#000 10%,transparent);mask-image:linear-gradient(#000 10%,transparent)}
+  :root.qv2[data-theme="light"] body.qxt:has(main.has-market)::before{opacity:.2}
+  .qv2 .has-market :is(.qxt-center,.qxt-side){display:contents}
+  .qv2 .has-market.qxt-grid>*,.qv2 .has-market .qxt-side>*{grid-column:1/-1;min-width:0;order:40}
+  .qv2 .has-market .qxt-center>*,.qv2 .has-market #qxt-head>*,.qv2 .has-market .qxt-bottom>*{grid-column:1/-1}
+
+  .qv2 .has-market #qxt-head>.qxfd-back{grid-area:1/1/2/2;margin:10px 0 0 12px;width:40px;min-height:40px;padding:0;overflow:hidden;font-size:0;color:transparent;display:grid;place-items:center}
+  .qv2 .has-market #qxt-head>.qxfd-back::before{content:"←";font:500 18px/1 var(--q-sans);color:var(--q-text)}
+  .qv2 .has-market #qxt-head>.qxt-id{grid-area:1/2/2/-1;margin:10px 12px 0 10px;min-height:40px}
+  .qv2 .has-market #qxt-head>:is(#qxt-impostor-head,.qx-relaunch-badge){order:1;margin:8px 12px 0}
+  .qv2 .has-market #qxt-head>#qxt-market-identity{grid-area:auto;grid-column:1/-1;order:2;margin:6px 12px 0}
+  .qv2 .has-market #qxt-head>.qv2-price{grid-area:auto;grid-column:1/-1;order:3;margin:12px 12px 0}
+  .qv2 .has-market #qxt-head>#qxt-stats{grid-area:auto;grid-column:1/-1;order:4;margin:12px 0 0;padding:0 12px}
+  .qv2 .qv2-price-now{font-size:30px}
+  .qv2 .has-market .qxt-center>.qxt-chartbar{order:6;padding:12px 12px 8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .qv2 .has-market .qxt-chartbar .qxt-tabs{flex:none}
+  .qv2 .has-market .qxt-chartbar .qxt-tabs button{min-height:32px;min-width:34px;padding:0 8px;font-size:12px}
+  .qv2 .has-market .qxt-chartbar .qxt-sync{flex:none;width:auto}
+  .qv2 .has-market #qxt-chart{height:max(300px,45vh);height:max(300px,45dvh)}
+  .qv2 .has-market .qxt-chart-stage:fullscreen #qxt-chart{height:auto}
+  .qv2 .has-market .qxt-chart-stage>.qxt-chart-tools{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:2px 8px}
+  .qv2 .has-market .qxt-chart-tools :is(summary,button){min-height:36px;white-space:nowrap}
+  .qv2 .has-market .qxt-chart-tools :is(.qxt-chart-asset,.qxt-chart-tool-status){display:none!important}
+  .qv2 .has-market .qxt-center>:is(.qxt-layer-legend,.qxt-layer-list){order:8;padding:8px 12px}
+  .qv2 .has-market .qxt-layer-chip{min-height:32px}
+  .qv2 .has-market .qxt-side>.qxt-market-position{order:9;margin:4px 12px 8px}
+  .qv2 .has-market .qxt-bottom>#qxt-data-tabs{order:10;top:0;padding:0 4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .qv2 .has-market #qxt-data-tabs>button{flex:none;min-height:44px}
+  .qv2 .has-market #qxt-data-tabs>#qxt-trade-filters{display:none}
+  .qv2 .has-market .qxt-bottom>#qxt-pane{order:12;overflow-x:auto}
+  .qv2 .qxt-table th{padding:8px 8px}
+  .qv2 .qxt-table td{padding:9px 8px;font-size:12.5px}
+  .qv2 .qxt-table :is(th,td):first-child{padding-left:12px}
+
+  /* Info tab also holds the side column's cards on a phone */
+  .qv2 .has-market:not(.qv2-info) .qxt-side>:not(#qxt-ticket,.qxt-market-position,#qxt-impostor){display:none!important}
+  .qv2 .has-market .qxt-side>#qx-pro-limit{display:none!important}
+  .qv2 .has-market.qv2-info .qxt-side>:not(#qxt-ticket,.qxt-market-position,#qx-pro-limit){order:30;margin:16px 12px 0}
+  .qv2 .has-market.qv2-info #qxt-head>:not(.qxfd-back,.qxt-id,#qxt-market-identity,.qv2-price,#qxt-stats,#qxt-impostor-head,.qx-relaunch-badge,.qop-warn),
+  .qv2 .has-market.qv2-info .qxt-center>:is(#qxt-token-profile,.qxt-workspace-context){margin:16px 12px 0}
+  .qv2 .has-market .qxt-side>#qxt-impostor{order:1;margin:8px 12px 0}
+  .qv2 .has-market:has(#qxt-impostor-head) .qxt-side>#qxt-impostor{display:none}
+  .qv2 .has-market.qxt-grid>.qxt-feed{order:90;margin-top:24px;border-right:0;border-top:1px solid var(--q-line)}
+
+  /* sticky Buy | Sell bar; the old jump bar is folded into it */
+  .qv2 main.has-market~.qv2-bar{position:fixed;left:0;right:0;bottom:env(safe-area-inset-bottom);z-index:40;display:grid;grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) auto;gap:8px;padding:8px 12px;background:var(--q-bg);background:color-mix(in srgb,var(--q-bg) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--q-line)}
+  .qv2.q-has-tabbar main.has-market~.qv2-bar{bottom:calc(58px + env(safe-area-inset-bottom));border-top:1px solid var(--q-line)}
+  .qv2 .qv2-bar button{min-height:46px;border:0;border-radius:var(--q-r);font:680 16px/1 var(--q-sans);letter-spacing:-.01em;cursor:pointer;transition:filter var(--q-fast) ease-out,transform var(--q-fast) ease-out}
+  .qv2 .qv2-bar button:active{transform:translateY(1px)}
+  .qv2 .qv2-bar .qv2-bar-buy{background:var(--q-buy);color:var(--q-on-action)}
+  .qv2 .qv2-bar .qv2-bar-sell{background:var(--q-sell);color:var(--q-on-action)}
+  .qv2 .qv2-bar :is(.qv2-bar-list,.qv2-bar-limit){background:var(--q-raised-2);color:var(--q-text);border:1px solid var(--q-line);font:600 13px/1 var(--q-sans)}
+  .qv2 .qv2-bar .qv2-bar-limit{padding:0 14px}
+  .qv2 .qv2-bar .qv2-bar-limit[hidden]{display:none}
+  .qv2 .qv2-bar .qv2-bar-list{font-size:18px;padding:0}
+
+  /* the ticket opens as a bottom sheet */
+  .qv2 .has-market .qxt-side>#qxt-ticket{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:46;margin:0;width:auto;max-height:86vh;max-height:min(90dvh,calc(100dvh - 56px));overflow-y:auto;overscroll-behavior:contain;border:1px solid var(--q-line-2);border-bottom:0;border-radius:18px 18px 0 0;background:var(--q-raised);padding:26px 16px calc(18px + env(safe-area-inset-bottom));box-shadow:var(--q-shadow);transform:translateY(104%);visibility:hidden;transition:transform 220ms var(--q-ease),visibility 0s linear 220ms}
+  .qv2.qv2-sheet .has-market .qxt-side>#qxt-ticket{transform:none;visibility:visible;transition:transform 220ms var(--q-ease)}
+  .qv2 .has-market .qxt-side>#qxt-ticket::before{content:"";position:absolute;top:9px;left:50%;width:40px;height:4px;margin-left:-20px;border-radius:4px;background:var(--q-line-2)}
+  .qv2 .has-market #qxt-ticket .qxt-side-toggle{margin-right:48px}
+  .qv2 .has-market #qxt-ticket .qv2-sheet-x{display:grid;place-items:center;position:absolute;top:22px;right:12px;width:44px;height:44px;border:0;border-radius:var(--q-r);background:none;color:var(--q-text-2);font:400 22px/1 var(--q-sans);cursor:pointer}
+  .qv2 .has-market #qxt-ticket .qxt-amount input{height:64px;font-size:30px}
+  .qv2 .has-market #qxt-ticket .qxt-presets button{min-height:44px}
+  .qv2 .has-market #qxt-ticket .qxt-go{min-height:54px;font-size:17px}
+  .qv2.qv2-sheet .qv2-backdrop{display:block;position:fixed;inset:0;z-index:45;border:0;padding:0;background:var(--q-shade);cursor:default;touch-action:none}
+}
+
+/* ================= 4. Review pass (main thread + Codex, 2026-11-11) ================= */
+/* gold only on the one primary action per view: the wallet button is a quiet secondary; no hairline, calmer glow */
+.qv2 #qxt-connect,.qv2 .qxt-wallet>.qhc-trigger{background:var(--q-raised-2);color:var(--q-text);border:1px solid var(--q-line-2);box-shadow:none}
+.qv2 #qxt-connect:hover,.qv2 .qxt-wallet>.qhc-trigger:hover{filter:none;border-color:var(--q-text-3)}
+.qv2 .qxt-top::after{content:none}
+.qv2 .has-market .qxt-center::before{opacity:.22}
+:root.qv2[data-theme="light"] .has-market .qxt-center::before{opacity:.1}
+/* the name is not repeated when it is the symbol */
+.qv2 .qxt-id.qv2-same-name>#qxt-name{display:none}
+/* stats: dollars first, the quote amount second */
+.qv2 .qxt-stats .qv2-sec{color:var(--q-text-3);font-weight:500}
+/* official pool: one quiet linked line under the trade action and in the Info tab; the box is not drawn */
+.qv2 #qxt-pool-warning{display:none!important}
+.qv2 .qv2-poolnote{margin:10px 0 0;font:500 12px/1.45 var(--q-sans);color:var(--q-text-3)}
+.qv2 .qv2-poolnote[hidden]{display:none}
+.qv2 .qv2-poolnote a{color:var(--q-text-2);text-decoration:none}
+.qv2 .qv2-poolnote a:hover{color:var(--q-gold)}
+.qv2 #qxt-ticket .qv2-poolnote{text-align:center}
+.qv2 .has-market #qxt-head>.qv2-poolnote{order:23}
+@media (max-width:760px){
+  /* phone header: icons for Watch and Share, tighter rows, so the chart starts in the first third of the screen */
+  .qv2 .has-market #qxt-head>.qxfd-back{margin:6px 0 0 12px;width:38px;min-height:38px}
+  .qv2 .has-market #qxt-head>.qxt-id{margin:6px 12px 0 10px;min-height:38px}
+  .qv2 .has-market .qxt-id>:is(#qxt-star,#qxt-share){width:38px;min-height:38px;height:38px;padding:0;font-size:0;display:grid;place-items:center;color:var(--q-text-2)}
+  .qv2 .has-market .qxt-id>#qxt-star::before{content:"☆";font:400 18px/1 var(--q-sans)}
+  .qv2 .has-market .qxt-id>#qxt-star[aria-pressed="true"]::before{content:"★";color:var(--q-gold)}
+  .qv2 .has-market .qxt-id>#qxt-share::before{content:"";width:17px;height:17px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 15V4M8 8l4-4 4 4M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 15V4M8 8l4-4 4 4M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6'/%3E%3C/svg%3E") center/contain no-repeat}
+  .qv2 .has-market #qxt-head>#qxt-market-identity{margin:2px 12px 0}
+  .qv2 .has-market .qxt-token-details>summary{min-height:26px}
+  .qv2 .has-market #qxt-head>.qv2-price{margin:6px 12px 0;grid-template-columns:auto minmax(0,1fr);column-gap:10px;row-gap:2px}
+  .qv2 .has-market .qv2-price-now{grid-row:1/3;font-size:29px}
+  .qv2 .has-market .qv2-price-chg{grid-column:2;grid-row:1;justify-self:start;align-self:end;padding:4px 7px;font-size:13px}
+  .qv2 .has-market .qv2-price-sub{grid-column:2;grid-row:2;align-self:start}
+  .qv2 .has-market .qv2-price:has(.qv2-price-sub:empty) .qv2-price-chg{grid-row:1/3;align-self:center}
+  .qv2 .has-market #qxt-head>#qxt-stats{margin:8px 0 0;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent)}
+  .qv2 .has-market .qxt-stats .qv2-sec{display:none}
+  .qv2 .has-market .qxt-stats div,.qv2 .has-market .qxt-stats div:first-child{padding-right:12px;margin-right:12px}
+  .qv2 .has-market .qxt-center>.qxt-chartbar{padding:8px 12px 6px}
+  .qv2 .has-market #qxt-head>.qv2-poolnote{margin:16px 12px 0}
+  /* the terminal's own toasts sit above the bars, not on them */
+  .qv2.q-has-tabbar .qxt-toasts{bottom:calc(60px + env(safe-area-inset-bottom))}
+  .qv2.q-has-tabbar body:has(main.has-market) .qxt-toasts{bottom:calc(110px + env(safe-area-inset-bottom))}
+  /* bottom stack: the trade row and the app bar together are about 98px */
+  .qv2.q-has-tabbar body.qxt:has(main.has-market){padding-bottom:calc(100px + env(safe-area-inset-bottom))}
+  .qv2 main.has-market~.qv2-bar{padding:4px 12px;gap:6px;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr) auto}
+  .qv2 .qv2-bar button{min-height:40px;font-size:15px}
+  .qv2 .qv2-bar .qv2-bar-list{font-size:12.5px;padding:0 10px}
+  .qv2 .qv2-bar .qv2-bar-limit{padding:0 12px}
+  .qv2.q-has-tabbar main.has-market~.qv2-bar{bottom:calc(50px + env(safe-area-inset-bottom))}
+}
+
+/* The chart's OHLC readout (built in qx-terminal.mjs by the chartohlc job): the system's type and colours only. */
+.qv2 .qxt-chart-ohlc{font:500 12px/1.35 var(--q-sans);font-variant-numeric:tabular-nums;color:var(--q-text-2);letter-spacing:0}
+.qv2 .qxt-chart-ohlc-label{color:var(--q-text-3);font-weight:500}
+.qv2 .qxt-chart-ohlc-field{color:var(--q-text);font-weight:600}
+.qv2 .qxt-chart-ohlc-change{font-weight:650}
+.qv2 .qxt-chart-ohlc-change.up{color:var(--q-up)}
+.qv2 .qxt-chart-ohlc-change.down{color:var(--q-down)}
+.qv2 .qxt-chart-ohlc-volume{color:var(--q-text-3)}
