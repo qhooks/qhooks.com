@@ -24,3 +24,4 @@ if (header && nav) {
 }
 
 import './qx-repoproof-entrypoints.mjs';
+import '/qx-getapp.mjs';

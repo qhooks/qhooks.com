@@ -30,3 +30,4 @@ if (!inTelegram && !document.querySelector('.q-tabbar')) {
   document.body.append(nav);
   root.classList.add('q-has-tabbar');
 }
+import '/qx-getapp.mjs';

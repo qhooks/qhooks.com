@@ -1,0 +1,22 @@
+/* /android: QHooks for Android download page (2026-11-11). Phone-first. */
+.qand{max-width:680px}
+.qand-card{margin:0 0 18px;padding:20px;border:1px solid var(--qx-line,rgba(241,238,227,.1));border-radius:18px;background:var(--qx-panel,var(--q-surface,#151a17))}
+.qand-card h2{margin:0 0 8px;font-size:18px}
+.qand-card p{margin:0;color:var(--qx-muted,#a7aea3);line-height:1.55}
+.qand-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.qand-download{display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;padding:16px 20px;border-radius:16px;background:var(--qx-brass,#d2ad72);color:var(--qx-on-brass,#1a1408)!important;text-decoration:none}
+.qand-download img{border-radius:10px;flex:none}
+.qand-download span{display:flex;flex-direction:column;gap:2px}
+.qand-download strong{font-size:20px;line-height:1.2}
+.qand-download small{font-size:13px;opacity:.8}
+.qand-download:hover,.qand-download:focus-visible{filter:brightness(1.06)}
+.qand-steps{margin:18px 0 0;padding:0 0 0 22px;display:grid;gap:8px;line-height:1.5}
+.qand-steps b{color:var(--qx-ink,#f1eee3)}
+.qand-facts{margin:18px 0 12px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.qand-facts div{min-width:0;padding:10px 12px;border:1px solid var(--qx-line,rgba(241,238,227,.1));border-radius:12px}
+.qand-facts dt{font-size:12px;color:var(--qx-muted,#a7aea3)}
+.qand-facts dd{margin:2px 0 0;font-weight:600}
+.qand-facts .qand-hash{grid-column:1/-1}
+.qand-facts code{font-size:13px;overflow-wrap:anywhere}
+.qand-note{font-size:14px}
+@media (max-width:480px){.qand-card{padding:16px}.qand-facts div:nth-child(3){grid-column:1/-1}.qand-facts{grid-template-columns:1fr 1fr}.qand-download strong{font-size:18px}}

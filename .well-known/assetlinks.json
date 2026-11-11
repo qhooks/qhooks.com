@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.qhooks.app",
+    "sha256_cert_fingerprints": ["12:DA:14:D8:94:71:E1:2A:6F:22:3B:11:47:45:AD:C0:70:2D:30:6F:53:8C:35:07:88:F4:12:94:35:F0:84:CD"]
+  }
+}]

@@ -1,0 +1,5 @@
+/* Get the app bar (qx-getapp.mjs), Android browsers on home and terminal only. */
+.qx-getapp{position:fixed;left:12px;right:12px;bottom:12px;z-index:45;max-width:520px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:8px 6px 8px 10px;border-radius:16px;background:var(--qx-panel,var(--q-surface,#151a17));border:1px solid var(--qx-line-2,rgba(241,238,227,.18));box-shadow:0 10px 30px rgba(0,0,0,.35);color:var(--qx-ink,#f1eee3);font:600 14px/1.3 var(--qx-sans,system-ui,sans-serif)}
+.qx-getapp img{border-radius:7px;flex:none}.qx-getapp span{flex:1;min-width:0}
+.qx-getapp a{flex:none;padding:6px 14px;border-radius:999px;background:var(--qx-brass,#d2ad72);color:var(--qx-on-brass,#1a1408);text-decoration:none;font-weight:700}
+.qx-getapp button{flex:none;width:32px;height:32px;border:0;background:transparent;color:var(--qx-muted,#a7aea3);font-size:20px;line-height:1;cursor:pointer}
