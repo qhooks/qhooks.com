@@ -40,7 +40,7 @@
 
 /* the drop notice: one slim line */
 .qv2 .hx-copy .qx-drop.qx-drop-hero{margin:0 0 18px;padding:0!important;border:0!important;background:none!important;box-shadow:none!important;max-width:100%}
-.qv2 .qx-drop-hero .qx-drop-text{margin:0;padding:7px 12px;border:1px solid var(--q-line);border-radius:var(--q-r-chip);background:rgba(18,21,20,.7);font:500 12.5px/1.35 var(--q-sans);color:var(--q-text-2);text-align:left;white-space:normal}
+.qv2 .qx-drop-hero .qx-drop-text{margin:0;padding:7px 12px;border:1px solid var(--q-line);border-radius:12px;background:rgba(18,21,20,.7);font:500 12.5px/1.35 var(--q-sans);color:var(--q-text-2);text-align:left;white-space:normal}
 .qv2 .qx-drop-hero a{color:var(--q-gold);font-weight:600;text-decoration:none}
 
 /* ---- the live product panel: real launches, styled like terminal rows; contract and burn line as its footer ---- */
@@ -101,7 +101,9 @@
   .qv2 .hx-lattice{display:none}
   .qv2 .hx-scrim{background:linear-gradient(90deg,rgba(10,13,11,.55) 0%,rgba(10,13,11,0) 52%)}
   .qv2 .hx-copy{padding:92px 16px 0;max-width:none}
-  .qv2 .hx-copy .qx-drop.qx-drop-hero{max-width:56%;margin-bottom:12px}
+  /* Randall, 2026-11-11: the launch-week drop notice is not needed in the phone hero (it stays on desktop, on the
+     terminal's top line and on the QHOOKS page). */
+  .qv2 .hx-copy .qx-drop.qx-drop-hero{display:none!important}
   .qv2 .hx-copy>.qx-eyebrow{max-width:56%;line-height:1.35;align-items:flex-start}
   .qv2 .hx-title{max-width:none;font-size:clamp(38px,10.6vw,48px);margin:0 0 14px;padding-top:var(--hx-clear,96px)}
   .qv2 .hx-lede{max-width:none;font-size:15px;line-height:1.5;margin-bottom:18px}

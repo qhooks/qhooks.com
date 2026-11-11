@@ -69,12 +69,15 @@ if (main && stats && tabs && ticket) {
     syncPoolNote(sym);
   }
   // Official pool: one quiet linked line under the trade action and in the Info tab (Randall, 2026-11-11: "quiet line
-  // but also 'for best routes' or something instead of Only trade"). It shows exactly when the terminal shows its own
-  // official-pool notice, which stays in the page but is no longer drawn as a box.
+  // but also 'for best routes' or something instead of Only trade"). The terminal's own notice stays in the page but is
+  // no longer drawn as a box.
   const poolNote = () => { const a = el('a', { href: '/lp-proof' }); return el('p', { class: 'qv2-poolnote', hidden: true }, a); };
   const noteTicket = poolNote(), noteInfo = poolNote();
   function syncPoolNote(sym) {
-    const box = $('qxt-pool-warning'), on = !!box && !box.hidden && !!sym;
+    // On for the official token (the terminal's own "Official" mark, which does not wait for any scan), and for any
+    // other token whenever the terminal shows its unofficial-pools notice.
+    const box = $('qxt-pool-warning'), official = !!$('qxt-official')?.querySelector('.qxo-official');
+    const on = !!sym && (official || (!!box && !box.hidden));
     // Only write what changed: this runs inside the head's observer, and a repeated write would call it again.
     for (const n of [noteTicket, noteInfo]) { if (n.hidden !== !on) n.hidden = !on; const t = 'For the best route, trade ' + sym + ' on qhooks.com or the official pool →'; if (on && n.firstChild.textContent !== t) n.firstChild.textContent = t; }
     const after = ticket.querySelector(':scope > .qxt-followup') || ticket.querySelector(':scope > .qxt-go');

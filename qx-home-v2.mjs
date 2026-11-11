@@ -44,12 +44,33 @@ if (frame && img && !still.matches) {
   const title = frame.querySelector('.hx-title'), phone = matchMedia('(max-width:760px)');
   function clearHook() {
     if (!title) return; title.style.removeProperty('--hx-clear'); if (!phone.matches) return;
-    const need = art.getBoundingClientRect().bottom - 14 - title.getBoundingClientRect().top;   // the box's top does not move with its padding
+    const need = art.getBoundingClientRect().bottom - 6 - title.getBoundingClientRect().top;   // the box's top does not move with its padding
     title.style.setProperty('--hx-clear', Math.max(0, Math.round(need)) + 'px');
   }
   addEventListener('resize', clearHook, { passive: true }); new MutationObserver(clearHook).observe(frame.querySelector('.hx-copy'), { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
   clearHook();
   if (img.complete) pivot(); else img.addEventListener('load', pivot, { once: true });
   pivot(); wake();
+}
+
+// Launch tiles: when the panel has only a letter for a token, use the token's published profile image, the same
+// address /tokenlist.json gives (/api/token-profiles/<chain>/<token>/image; it answers 404 when there is none, and
+// then the letter stays). A miss is remembered for the visit, so it is asked once.
+{
+  const list = document.querySelector('[data-home-tokens]');
+  const missed = k => { try { return sessionStorage.getItem('qv2:noimg:' + k) === '1'; } catch { return false; } };
+  const miss = k => { try { sessionStorage.setItem('qv2:noimg:' + k, '1'); } catch { /* fine without storage */ } };
+  function fill() {
+    for (const a of list.querySelectorAll('a.qx-live-token')) {
+      const av = a.querySelector('.qx-live-avatar'), m = /#m=([a-z0-9]+):(0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(a.getAttribute('href') || '');
+      if (!av || !m || av.querySelector('img')) continue;
+      const key = m[1] + ':' + m[2].toLowerCase(); if (missed(key)) continue;
+      const img = new Image(32, 32); img.alt = ''; img.decoding = 'async';
+      img.addEventListener('error', () => { miss(key); img.remove(); }, { once: true });
+      img.src = '/api/token-profiles/' + m[1] + '/' + m[2] + '/image';
+      av.append(img);
+    }
+  }
+  if (list) { new MutationObserver(fill).observe(list, { childList: true, subtree: true }); fill(); }
 }
 

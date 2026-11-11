@@ -400,6 +400,7 @@
   /* the terminal's own toasts sit above the bars, not on them */
   .qv2.q-has-tabbar .qxt-toasts{bottom:calc(60px + env(safe-area-inset-bottom))}
   .qv2.q-has-tabbar body:has(main.has-market) .qxt-toasts{bottom:calc(110px + env(safe-area-inset-bottom))}
+  .qv2.q-has-tabbar body:has(main.has-market) #qhooks-refreshing{bottom:calc(110px + env(safe-area-inset-bottom))!important}
   /* bottom stack: the trade row and the app bar together are about 98px */
   .qv2.q-has-tabbar body.qxt:has(main.has-market){padding-bottom:calc(100px + env(safe-area-inset-bottom))}
   .qv2 main.has-market~.qv2-bar{padding:4px 12px;gap:6px;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr) auto}

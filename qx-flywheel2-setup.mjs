@@ -52,6 +52,17 @@ export function safeTransactionHash(tx, nonce, chainId, safe) {
   return hashHex('0x1901' + domain.slice(2) + struct.slice(2));
 }
 export const settled = (w, q) => BigInt(w) === 0n && BigInt(q) === 0n;
+// A plain externally owned address for read-only gas checks (feed() requires an EOA caller).
+const SIM_FROM = '0x000000000000000000000000000000000000dEaD';
+export function revertReason(e) {
+  const data = String(e?.data?.data || e?.data || '').match(/0x[0-9a-f]{8}/i)?.[0];
+  const msg = String(e?.message || '').replace(/^.*execution reverted:?\s*/i, '').slice(0, 120);
+  return data ? `it would fail right now (${data.toLowerCase()})` : msg ? `it would fail right now (${msg})` : 'it would fail right now';
+}
+const ETH = w => { const v = Number(BigInt(w)) / 1e18; return v ? v.toPrecision(3).replace(/\.?0+$/, '') : '0'; };
+/// v1 can no longer pull once the Safe's allowances to it are 0 (approvals moved to v2); its owed WETH stays in the Safe.
+export const settleNotNeeded = s => s?.settle?.status === 'ok' && !s.settle.done && s.approvals?.status === 'ok' && BigInt(s.approvals.values[0]) === 0n && BigInt(s.approvals.values[1]) === 0n;
+const settleOk = s => s.settle.done || settleNotNeeded(s);
 export const approvalsDone = values => values.length === 4 && BigInt(values[0]) === 0n && BigInt(values[1]) === 0n && BigInt(values[2]) > 0n && BigInt(values[3]) > 0n;
 const attempt = async fn => { try { return {status: 'ok', ...await fn()}; } catch (e) { return {status: 'unknown', reason: e.message || 'Refreshing'}; } };
 function decodeOwners(h) {
@@ -67,7 +78,13 @@ export async function readFlywheel2(art, rpc) {
   const call = (to, data) => rpc('eth_call', [{to, data}, tag]);
   const [create, settle, approvals, stop, target, safe] = await Promise.all([
     attempt(async () => { const code = await rpc('eth_getCode', [art.v2, tag]); if (!/^0x(?:[0-9a-f]{2})*$/i.test(code)) throw Error('Incomplete code read'); return {done: code !== '0x'}; }),
-    attempt(async () => { const [w, q] = await Promise.all([call(art.v1, SEL.owedWeth), call(art.v1, SEL.owedQhooks)]); return {weth: uint(w).toString(), qhooks: uint(q).toString(), done: settled(uint(w), uint(q))}; }),
+    attempt(async () => {
+      const [w, q] = await Promise.all([call(art.v1, SEL.owedWeth), call(art.v1, SEL.owedQhooks)]), done = settled(uint(w), uint(q));
+      // Never offer a send that would revert (2026-11-11: v1.feed() reverts once the Safe's approvals moved to v2).
+      let simError = null;
+      if (!done) { try { await rpc('eth_estimateGas', [{from: SIM_FROM, to: art.v1, data: SEL.feed, value: '0x0'}]); } catch (e) { simError = revertReason(e); } }
+      return {weth: uint(w).toString(), qhooks: uint(q).toString(), done, simError};
+    }),
     attempt(async () => { const values = await Promise.all(approvalChecks(art).map(c => call(c.to, c.data).then(uint))); return {values: values.map(String), done: approvalsDone(values), waiting: art.qhooksApproval == null}; }),
     attempt(async () => { const keeper = address(await call(art.flywheel, SEL.keeper)); return {keeper, done: same(keeper, art.dead)}; }),
     attempt(async () => { const [manager, stalled, last] = await Promise.all([call(art.flywheel, SEL.manager), call(art.flywheel, SEL.stalled), call(art.flywheel, SEL.lastProgress)]); return {manager: address(manager), stalled: bool(stalled), lastProgress: uint(last).toString(), remaining: Math.max(0, Number(uint(last)) + 604801 - Number(BigInt(block.timestamp))), done: same(address(manager), art.v2)}; }),
@@ -83,7 +100,10 @@ export async function readFlywheel2(art, rpc) {
   const signatures = Object.fromEntries(await Promise.all(Object.entries(transactions).map(async ([id, tx]) => [id, tx && safe.status === 'ok' ? await attempt(async () => {
     const hash = await call(art.safe, safeHashCall(tx, safe.nonce)); uint(hash);
     const approved = await Promise.all(art.owners.map(o => call(art.safe, approvedHashData(o, hash)).then(v => uint(v) > 0n)));
-    return {hash, approved, nonce: safe.nonce};
+    // Both approved: check that execution would succeed before offering it.
+    let execError = null;
+    if (approved.every(Boolean)) { try { await rpc('eth_estimateGas', [{from: art.owners[0], to: art.safe, data: safeExecData(tx, art.owners), value: '0x0'}]); } catch (e) { execError = revertReason(e); } }
+    return {hash, approved, nonce: safe.nonce, execError};
   }) : {status: 'unknown'}])));
   return {block: tag, timestamp: Number(BigInt(block.timestamp)), create, settle, approvals, stop, target, safe, signatures};
 }
@@ -93,10 +113,15 @@ export function stepAction(art, s, id, owner) {
   const part = s[id];
   if (part.status !== 'ok') return {text: 'Refreshing', buttons: []};
   if (id === 'create') return {text: part.done ? 'Created' : 'Not created yet', buttons: part.done ? [] : ['create']};
-  if (id === 'settle') return {text: part.done ? 'Settled · nothing owed' : 'v1 has tokens to settle', buttons: ['feed'], disabled: part.done};
+  if (id === 'settle') {
+    if (part.done) return {text: 'Settled · nothing owed', buttons: []};
+    if (settleNotNeeded(s)) return {text: `Not needed: the approvals moved to v2; the ${ETH(part.weth)} WETH stays in the Safe`, buttons: []};
+    if (part.simError) return {text: 'Settle v1 is not available: ' + part.simError, buttons: []};
+    return {text: 'v1 has tokens to settle', buttons: ['feed']};
+  }
   if (id === 'approvals' && part.waiting) return {text: WAIT_AMOUNT, buttons: []};
   if (part.done || (id === 'stop' && s.target.done)) return {text: 'Done', buttons: []};
-  if (!s.create.done || !s.settle.done) return {text: 'Complete the wallet steps first', buttons: []};
+  if (!s.create.done || !settleOk(s)) return {text: 'Complete the wallet steps first', buttons: []};
   if (id !== 'approvals' && !s.approvals.done) return {text: 'Move approvals to v2 first', buttons: []};
   if (id === 'target' && (!s.stop.done || !part.stalled)) return {text: 'Waiting for 7 days', buttons: []};
   const sig = s.signatures[id];
@@ -104,7 +129,8 @@ export function stepAction(art, s, id, owner) {
   const index = art.owners.findIndex(o => same(o, owner));
   if (index < 0) return {text: 'Connect a Safe owner wallet', buttons: ['connect']};
   if (!sig.approved[index]) return {text: 'Approve this Safe transaction', buttons: ['approve']};
-  return sig.approved.every(Boolean) ? {text: 'Both owners approved', buttons: ['execute']} : {text: 'Waiting for the other Safe owner', buttons: []};
+  if (sig.approved.every(Boolean)) return sig.execError ? {text: 'Execute is not available: ' + sig.execError, buttons: []} : {text: 'Both owners approved', buttons: ['execute']};
+  return {text: 'Waiting for the other Safe owner', buttons: []};
 }
 export function mountFlywheel2({document: doc, hub, io, pollMs = 30000}) {
   const root = doc.getElementById('qfw2-root');
@@ -121,7 +147,7 @@ export function mountFlywheel2({document: doc, hub, io, pollMs = 30000}) {
       const card = el('section', {class: 'qfw2-step', 'aria-labelledby': 'fw2-' + id, 'data-step': id}, el('h2', {id: 'fw2-' + id}, title));
       if (id === 'stop' || id === 'target') card.append(el('p', {class: 'qfw2-label'}, 'Optional · 7-day flywheel switch'));
       if (id === 'create') card.append(el('p', {class: 'qfw2-address'}, art.v2));
-      if (id === 'settle') card.append(el('p', {}, 'Any connected wallet can settle the tokens v1 is owed. Do this before moving approvals.'));
+      if (id === 'settle') card.append(el('p', {}, 'Any connected wallet can settle the tokens v1 is owed, while the Safe still approves v1.'));
       if (id === 'approvals') card.append(el('p', {}, 'One Safe batch removes both v1 approvals and approves v2 for 5 WETH and the QHOOKS amount. Both owners approve, then one executes.'));
       if (id === 'stop') card.append(el('p', {}, 'Set the keeper to the burn address so buybacks stop.'));
       if (id === 'target') card.append(el('p', {}, 'Switch to v2 once the flywheel has gone 7 days without a successful buyback.'));
