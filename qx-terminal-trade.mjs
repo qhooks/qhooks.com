@@ -1,6 +1,9 @@
 import {poolQuoteInfo} from './qx-best-pool.mjs';
 import {chainById} from './chains.mjs';
 import {quoteUsd as readQuoteUsd} from '/qx-native-usd.mjs';
+import {homePicker, homeConfig, loadHomePref, instantHomeEnabled, withHomeRails} from './qx-home-currency.mjs';
+import {loadLocalHome, homeTicketDefault, homeName, homeToken, homeSlippage, homeReturnNeeded} from './qx-home-core.mjs';
+import {encodeBuyFor} from './qx-pro-xbuy.mjs';
 import { tradeError } from './qx-chain-guard.mjs';
 import { executeTicketSwap } from './qx-ticket-execution.mjs';
 import {prepareTradeThesis,recordTerminalTrade} from './qx-trade-record.mjs';
@@ -12,7 +15,7 @@ import {resolveTradingTolerance} from './qx-trading-preferences.mjs';
 // Every quote runs through the real pool and hook, so charges are in the number shown. Trades go through the
 // platform fee router: 1% per trade, 30% of it back to the trader as cashback they claim here (40% for QHOOKS holders on Robinhood Chain).
 import { rpc, livePoolKey, parseUnits, formatUnits, erc20, send, ensureAllowance, connectedAddress, onWalletChange, NATIVE, CHAIN_NAME, h } from '/qx-chain.mjs';
-import { quotePoolRoutes, quoteSingle, nativeRoute, quoteNative, FEE_BPS, feeSwapCall, viaSwapCall, cashbackOf, referralLink, claimCall, savedReferrer } from '/qx-swap.mjs';
+import { quotePoolRoutes, quoteSingle, nativeRoute, quoteNative, quotePayAsset, nativeHops, hookData, FEE_BPS, feeSwapCall, viaSwapCall, cashbackOf, referralLink, claimCall, savedReferrer } from '/qx-swap.mjs';
 import { extraAddress, isLive, setUp } from '/qx-extras.mjs';
 import { hasDirectRoute, resolveDirectPool, refusalText } from '/qx-elysium-direct.mjs';
 import { holderMinTokens, shortText } from '/qx-holder-min.mjs';
@@ -60,6 +63,7 @@ export const validTradeTolerance = value => /^\d{1,5}$/.test(String(value ?? '')
 export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) {
   const savedTolerance = store('tol');
   let st = null, side = 'buy', pay = 'quote', tol = validTradeTolerance(savedTolerance) ? String(Number(savedTolerance)) : '100', current = null, qseq = 0, timer = null, busy = false;
+  let homeSelected = false, homeEnabled = false, homePref = loadLocalHome(connectedAddress());
   let priceUsd = null, armedAt = null, armTimer = null, sellCash = false, recovery = null, impactArmedAt = null;
   let sellPrefillOwner = null, pendingSellPrefill = false;
   let selection=null, selectionRevision=0, layoutRevision=0;
@@ -67,6 +71,35 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   let marketPrices=[];
   const hub = getWalletHub(window);
   loadFundingStyle();
+  const homeSettings = homePicker({getOwner: () => connectedAddress()});
+  if (!document.getElementById('qhome-style')) { const style = document.createElement('link'); style.id = 'qhome-style'; style.rel = 'stylesheet'; style.href = '/qx-home-currency.css'; document.head.append(style); }
+  const homeMarketPay = () => st?.multi ? (st.pools.some(p => nativeRoute(st.chainId, p.quote)) ? 'native' : st.pools[0].quote) : [...paySel.options].some(o => o.value === 'native') ? 'native' : 'quote';
+  async function syncHome(defaultSelection = false) {
+    const intent = selection, state = st, owner = connectedAddress();
+    const config = await homeConfig().catch(() => ({enabled: false}));
+    const pref = await loadHomePref(owner).catch(() => loadLocalHome(owner));
+    if (intent !== selection || state !== st || busy || recovery || owner !== connectedAddress()) return;
+    homeEnabled = config.enabled; homePref = pref;
+    paySel.querySelector('option[value="home"]')?.remove();
+    if (!st?.sol && homeTicketDefault(st?.chainId, pref, homeEnabled) === 'home') {
+      paySel.prepend(h('option', {value: 'home'}, 'Home (' + homeName(pref) + ')'));
+      if (defaultSelection && side === 'buy') { homeSelected = true; pay = homeMarketPay(); }
+    } else {
+      homeSelected = false;
+      if (homeEnabled && defaultSelection && side === 'buy' && st && !st.sol && Number(st.chainId) === pref.chainId) {
+        if (homeToken(pref).native && [...paySel.options].some(o => o.value === 'native')) pay = 'native';
+        if (pref.asset === 'USDC') {
+          let asset; try {asset = homeToken(pref);} catch (error) {status.textContent = tradeError(error); void homeSettings.refresh(); return;}
+          if (st.multi && st.pools.some(p => p.quote.toLowerCase() === asset.address)) pay = st.pools.find(p => p.quote.toLowerCase() === asset.address).quote;
+          else if (!st.multi && st.quote?.toLowerCase() === asset.address) pay = 'quote';
+          else {paySel.querySelector('option[value="homeAsset"]')?.remove(); paySel.prepend(h('option', {value: 'homeAsset'}, asset.symbol)); pay = 'homeAsset';}
+        }
+      }
+    }
+    paySel.value = homeSelected ? 'home' : pay;
+    void homeSettings.refresh();
+  }
+  window.addEventListener('qhooks:home', () => { if (!busy && !recovery) void syncHome(true).then(layout); });
   const status = h('p', { class: 'qtx-status', role: 'status', ariaLive: 'polite' });
   const amount = h('input', { type: 'text', inputMode: 'decimal', placeholder: '0.0', autocomplete: 'off', ariaLabel: 'Amount', id: 'qxt-amount' });
   const thesis = h('input', {type:'text',maxLength:280,placeholder:'Buy thesis · optional, 140 characters',ariaLabel:'Public buy thesis',autocomplete:'off'});
@@ -126,13 +159,13 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   const followup = h('div');
   const funding = createFundingRow({ h, getPlan: q => tradePlan(current, q), onChange: ({ quote, ready }) => {
     clearArmed(); if (current) current.funding = quote;
-    go.disabled = busy || !quoteMatches(current) || !ready || (st?.safety?.verdict === 'danger' && !risk.querySelector('input')?.checked);
+    go.disabled = busy || !!(current?.homeRequired && !current.home) || !quoteMatches(current) || !ready || (st?.safety?.verdict === 'danger' && !risk.querySelector('input')?.checked);
   } });
   card.replaceChildren(
     tradingSettings.element,
     h('div', { class: 'qxt-side-toggle', role: 'group', ariaLabel: 'Trade side' }, ...sideBtns, sellToCash),
     h('div', { class: 'qxt-row2' }, payRow, h('label', { class: 'qxt-pay' }, h('span', {}, 'Tolerance'), tolSel)),
-    risk, h('div', { class: 'qxt-amount' }, amount, unit), h('div', { class: 'qxt-meta' }, balance), addFunds, presets, thesisRow, out, quoteTools, funding.element, go, signIn, status, followup, cashSettings(h), cash);
+    risk, h('div', { class: 'qxt-amount' }, amount, unit), h('div', { class: 'qxt-meta' }, balance), addFunds, presets, thesisRow, out, quoteTools, funding.element, go, signIn, status, followup, homeSettings.element, cashSettings(h), cash);
   import('/qx-oneclick.mjs').then(m => m.mountOneClickToggle(card)).catch(() => {}); // One-click trading toggle (hidden unless an email/Google wallet is connected)
 
   const targetKey=t=>!t?'none':t.kind==='launch'?'m:'+String(t.chainId)+':'+String(t.controller).toLowerCase():'t:'+String(t.chainId)+':'+(String(t.chainId)==='solana'?String(t.address):String(t.address).toLowerCase());
@@ -140,7 +173,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   function beginSelection(target) {
     if(busy||recovery){status.textContent=busy?'Finish the current trade before opening another token.':'Resolve the funded trade below before opening another token.';return false;}
     selection=Object.freeze({revision:++selectionRevision,key:targetKey(target)});thesis.value='';
-    clearTimeout(timer);qseq++;current=null;st=null;priceUsd=null;marketPrices=[];sellCash=false;sellPrefillOwner=null;pendingSellPrefill=false;
+    clearTimeout(timer);qseq++;current=null;st=null;priceUsd=null;marketPrices=[];sellCash=false;homeSelected=false;sellPrefillOwner=null;pendingSellPrefill=false;
     funding.clear();followup.replaceChildren();cash.replaceChildren();risk.replaceChildren();risk.hidden=true;
     amount.value='';unit.textContent='';balance.textContent='';balance.disabled=true;paySel.replaceChildren();
     clearArmed();go.disabled=true;status.textContent='';out.textContent=target?(target.kind==='launch'?'Loading the launch…':'Loading the token…'):'Choose a token to trade.';
@@ -152,7 +185,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     if(retry){const again=h('button',{type:'button',class:'qxt-context-action'},'Retry trade setup');again.addEventListener('click',async()=>{if(!isSelection(intent)||busy||recovery)return;again.disabled=true;out.textContent='Preparing trade…';await retry();});out.append(again);}
     return true;}
   const quoteMatches=c=>!!c&&!!st&&isSelection(c.selection)&&c.revision===qseq&&c.chainId===st.chainId&&c.token===st.token&&c.side===side&&c.pay===pay;
-  const bindQuote=(fields,revision,owner,tolerance=tol)=>({...fields,selection,revision,chainId:st.chainId,token:st.token,owner,readAt:now(),toleranceBps:Number(tolerance)});
+  const bindQuote=(fields,revision,owner,tolerance=tol)=>({...fields,payAsset: !st.sol && side==='buy' && pay==='homeAsset' ? homeToken(homePref) : null,homeRequired:homeSelected&&side==='buy',selection,revision,chainId:st.chainId,token:st.token,owner,readAt:now(),toleranceBps:Number(tolerance)});
   const quoteOwner = () => st?.sol ? solAddress() : connectedAddress();
   const sameOwner = (a,b,sol) => sol ? a===b : a?.toLowerCase()===b?.toLowerCase();
   function hasQuoteAmount() { try { return !!st&&parseUnits(amount.value,payDecimals())>0n; } catch { return false; } }
@@ -182,8 +215,8 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   function assertSelection(c){if(!quoteMatches(c))throw new Error('This token selection changed. Review a fresh quote before trading.');}
   const selectedPool = () => st?.multi ? st.pools.find(p=>p.quote===pay) || st.pools[0] : null;
   const selectedQuote = () => selectedPool() || st;
-  const payUnit = () => side === 'sell' ? st.symbol : pay === 'native' ? (st.sol ? 'SOL' : NATIVE[st.chainId]) : selectedQuote().quoteSymbol;
-  const payDecimals = () => side === 'sell' ? st.decimals : pay === 'native' ? (st.sol ? 9 : 18) : selectedQuote().quoteDecimals;
+  const payUnit = () => side === 'sell' ? st.symbol : pay === 'homeAsset' ? homeToken(homePref).symbol : pay === 'native' ? (st.sol ? 'SOL' : NATIVE[st.chainId]) : selectedQuote().quoteSymbol;
+  const payDecimals = () => side === 'sell' ? st.decimals : pay === 'homeAsset' ? homeToken(homePref).decimals : pay === 'native' ? (st.sol ? 9 : 18) : selectedQuote().quoteDecimals;
   async function balances() {
     if (st?.sol) {
       const me = solAddress(); if (!me) return null;
@@ -192,9 +225,9 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     }
     const me = connectedAddress(); if (!me || !st) return null;
     const [t, q, n] = await Promise.all([erc20(st.chainId, st.token, me), st.quote && !st.nativePool ? erc20(st.chainId, selectedQuote().quote, me) : { balance: 0n }, rpc(st.chainId, 'eth_getBalance', [me, 'latest'])]);
-    return { token: t.balance, quote: q.balance, native: BigInt(n) };
+    return { token: t.balance, quote: q.balance, native: BigInt(n), home: pay === 'homeAsset' ? (await erc20(st.chainId, homeToken(homePref).address, me)).balance : 0n };
   }
-  const spendable = b => side === 'sell' ? b.token : pay === 'native' ? b.native : b.quote;
+  const spendable = b => side === 'sell' ? b.token : pay === 'homeAsset' ? b.home : pay === 'native' ? b.native : b.quote;
   const buttonText = () => sellCash ? 'Sell all to cash' : (side === 'buy' ? 'Buy ' : 'Sell ') + (st?.symbol || '');
   function clearArmed() { clearTimeout(armTimer); armedAt = null; impactArmedAt = null; go.textContent = buttonText(); }
   // Pool depth in USD for the low-liquidity line: the direct route's pool, else the open market's header (same token only).
@@ -227,7 +260,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   }
   function ticketPlan(c) {
     const inputUsd = Number(c.funding?.details?.currencyIn?.amountUsd), usd = inputUsd > 0 ? inputUsd : tradeUsd(c), plan = tradePlan(c);
-    if (pressGate({ plan, armedAt, now: Date.now() }) === 'arm') {
+    if (!homeEnabled && pressGate({ plan, armedAt, now: Date.now() }) === 'arm') {
       clearArmed(); armedAt = Date.now();
       go.textContent = Number.isFinite(usd) && usd > 0 ? 'Confirm $' + Math.round(usd) : 'Confirm ' + c.side;
       if (recovery) go.disabled = false;
@@ -245,10 +278,17 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const activeState=st,intent=selection,mine=++layoutRevision;
     syncProfile();
     sideBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.side === side)));
-    card.dataset.side = side;
+    card.dataset.side = side; paySel.value = homeSelected ? 'home' : pay;
     thesisRow.hidden = side !== 'buy';
     sellToCash.setAttribute('aria-pressed', String(sellCash));
-    if(st.multi){const automatic=side==='sell'||st.pools.some(p=>nativeRoute(st.chainId,p.quote)),first=side==='sell'?'auto':'native',options=[...(automatic?[h('option',{value:first},side==='sell'?'Best USD value':NATIVE[st.chainId])]:[]),...st.pools.map(p=>h('option',{value:p.quote},p.quoteSymbol||p.quote))];if(!options.some(o=>o.value===pay))pay=automatic?first:st.pools[0].quote;paySel.replaceChildren(...options);paySel.value=pay;}
+    if (st.multi) {
+      const automatic = side === 'sell' || st.pools.some(p => nativeRoute(st.chainId, p.quote)), first = side === 'sell' ? 'auto' : 'native';
+      const options = [...(automatic ? [h('option', {value: first}, side === 'sell' ? 'Best USD value' : NATIVE[st.chainId])] : []), ...st.pools.map(p => h('option', {value: p.quote}, p.quoteSymbol || p.quote))];
+      if (side === 'buy' && pay === 'homeAsset') options.push(h('option', {value: 'homeAsset'}, homeToken(homePref).symbol));
+      if (!options.some(o => o.value === pay)) pay = automatic ? first : st.pools[0].quote;
+      if (side === 'buy' && homeTicketDefault(st.chainId, homePref, homeEnabled) === 'home') options.unshift(h('option', {value: 'home'}, 'Home (' + homeName(homePref) + ')'));
+      paySel.replaceChildren(...options); paySel.value = side === 'buy' && homeSelected ? 'home' : pay;
+    }
     payRow.hidden = side === 'sell' && !st.multi || paySel.options.length < 2;
     payLabel.textContent = st.multi && side === 'sell' ? 'Receive' : 'Pay with';
     unit.textContent = payUnit();
@@ -265,7 +305,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
 
   // ---- Outside tokens: 0x routes, 1% platform fee taken by 0x on the coin/dollar side ----
   const xTokens = () => {
-    const quoteSide = pay === 'native' || !st.quote ? XNATIVE : st.quote;
+    const quoteSide = pay === 'homeAsset' ? homeToken(homePref).address : pay === 'native' || !st.quote ? XNATIVE : st.quote;
     return side === 'buy' ? { sell: quoteSide, buy: st.token, outDec: st.decimals, outSym: st.symbol } : { sell: st.token, buy: quoteSide, outDec: quoteSide === XNATIVE ? 18 : st.quoteDecimals, outSym: quoteSide === XNATIVE ? NATIVE[st.chainId] : st.quoteSymbol };
   };
   // Outside tokens go through our fee router too (swapVia), so they pay the same 30% cashback and 20% referral: the
@@ -428,10 +468,10 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     cash.replaceChildren(...items.map(([cur, v, d, sym]) => {
       const b = h('button', { type: 'button', class: 'qxt-mini' }, 'Claim');
       b.addEventListener('click', async () => { if (busy||!alive()||connectedAddress()!==me) return; b.disabled = true; try { await send(activeState.chainId, { to: router, data: claimCall(cur) }, t => { status.textContent = t; }); status.textContent = 'Rewards claimed.'; await showCashback(); document.dispatchEvent(new CustomEvent('qhooks:rewards-claimed')); } catch (e) { status.textContent = tradeError(e); b.disabled = false; } });
-      return h('p', {}, h('em', {}, 'Rewards'), h('span', {}, small(v, d) + ' ' + sym), b);
+      return h('p', {}, h('span', {}, 'Rewards'), h('span', {}, small(v, d) + ' ' + sym), b);
     }), h('p', {}, link));
     } catch {
-      if(alive())cash.replaceChildren(h('p', {class:'qxt-muted',role:'status'}, 'Reward balances are unavailable. Your referral link is ready.'),h('p',{},link));
+      if(alive())cash.replaceChildren(h('p', {class:'qxt-muted',role:'status'}, 'Reward balances are refreshing. Your referral link is ready.'),h('p',{},link));
     }
   }
 
@@ -461,6 +501,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   async function quote() {
     if (!st) return;
     syncProfile();
+    if (!st.sol && (homeSelected || homeReturnNeeded(st.chainId, homePref, homeEnabled))) tol = String(homeSlippage(tol));
     const mine = ++qseq,read={revision:mine,state:st,selection,owner:quoteOwner(),sol:!!st.sol,toleranceBps:Number(tol)}; let a;
     quoteLoading=true;renderQuoteFreshness();
     try {
@@ -476,7 +517,15 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       const spend = side === 'buy' ? a - a * FEE_BPS / 10000n : a;
       // Impact on every pool route: the same path for a thousandth of the amount (flat charges cancel out of the ratio).
       const small = spend / 1000n > 0n ? spend / 1000n : 1n;
-      if (st.multi) {
+      if (side === 'buy' && pay === 'homeAsset') {
+        if (st.multi) {
+          const candidates = await Promise.all(st.pools.map(async pool => {try {return {...await quotePayAsset(chainId, pool.key, token, pool.quote, homeToken(homePref).address, spend), pool};} catch {return null;}}));
+          route = candidates.filter(Boolean).sort((a,b) => a.out > b.out ? -1 : 1)[0];
+          if (!route) throw Error('No route for this home asset');
+        } else route = await quotePayAsset(chainId, key, token, qt, homeToken(homePref).address, spend);
+        got = route.out;
+      }
+      else if (st.multi) {
         const tradeSide=side,tradePay=pay,pools=st.pools,receiveQuote=selectedQuote().quote,nativeUsd=tradeSide==='sell'?await readQuoteUsd(NATIVE[chainId]).catch(()=>null):null;
         route=await quotePoolRoutes(chainId,pools,token,spend,tradeSide,tradeSide==='sell'?tradePay==='auto':tradePay==='native',receiveQuote,nativeUsd);got=route.out;
         const rr=await quotePoolRoutes(chainId,[route.pool],token,small,tradeSide,tradeSide==='buy'&&tradePay==='native',route.pool.quote,nativeUsd).catch(()=>null);refGot=rr?.out??null;
@@ -492,13 +541,13 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       if (!quoteReadIsCurrent(read)) return;
       const minOut = got * (10000n - BigInt(read.toleranceBps)) / 10000n;
       const outDec = side === 'buy' ? st.decimals : st.multi?route.pool.quoteDecimals:selectedQuote().quoteDecimals, outSym = side === 'buy' ? st.symbol : st.multi?route.pool.quoteSymbol:selectedQuote().quoteSymbol;
-      current = bindQuote({ side, pay, a, got, minOut, route },mine,read.owner,read.toleranceBps);
+      current = bindQuote({ side, pay, a, got, minOut, route, payAsset: pay === 'homeAsset' ? homeToken(homePref) : null },mine,read.owner,read.toleranceBps);
       out.replaceChildren(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
         h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4) + ' · block charges included'),
         ...impactNodes(impactPct),
         feeLine(chainId),
         ...(route ? [h('span', {}, route.label)] : []));
-      go.disabled = !connectedAddress() || busy;
+      go.disabled = !connectedAddress() || busy || homeSelected;
       if (!connectedAddress()) status.textContent = 'Connect a wallet to trade.';
       await offerFunding(mine);
     } catch (e) { if (mine === qseq) {current=null;go.disabled=true;out.textContent = /revert|execution/i.test(e.message || '') ? 'The pool refuses this trade right now (its rules may be closed to it).' : tradeError(e);} }
@@ -528,12 +577,12 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         assertContext();
         if (!live) { s('One-time setup of trading on ' + CHAIN_NAME[chainId] + '…'); await setUp(chainId, 'feeRouter', s, assertContext); }
         // One-click (qx-oneclick.mjs): QHooks markets, ETH/BNB in or token out, no wallet popup. Off or not eligible: wallet signs below.
-        const oneClickDone = (!st.multi&&(c.side === 'sell' || c.pay === 'native' || st.nativePool)||st.multi&&(c.side==='sell'&&c.route.quoteUsd>0||c.side==='buy'&&c.pay==='native')) && await tryOneClick(c, s);
+        const oneClickDone = !c.payAsset && (!st.multi&&(c.side === 'sell' || c.pay === 'native' || st.nativePool)||st.multi&&(c.side==='sell'&&c.route.quoteUsd>0||c.side==='buy'&&c.pay==='native')) && await tryOneClick(c, s);
         if (!oneClickDone) {
           let receipt;
           if (st.multi) {
             // Several pools: the chosen pool's own hops through the fee router (qx-best-pool picked the route).
-            if(c.side==='sell'||c.pay!=='native')await ensureAllowance(chainId,c.side==='sell'?token:c.route.pool.quote,router,c.a,s,assertContext);
+            if(c.side==='sell'||c.pay!=='native')await ensureAllowance(chainId,c.side==='sell'?token:c.payAsset?.address || c.route.pool.quote,router,c.a,s,assertContext);
             assertTradeOwner(c);
             receipt=await send(chainId,{to:router,data:feeSwapCall(chainId,c.route.hops,c.a,c.minOut,c.route.wrap,c.side==='buy',deadline),value:c.side==='buy'&&c.pay==='native'?c.a:0n},s,assertContext);
           } else receipt = await executeTicketSwap({chainId,key,token,quote:qt,nativePool:st.nativePool,router,trade:c,deadline,onStatus:s,assertContext});
@@ -544,7 +593,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         amount.value = ''; thesis.value=''; document.dispatchEvent(new CustomEvent('qhooks:traded')); try { await onTraded({ side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s }); } catch {}
   }
 
-  const payAsset = () => fundingAsset(st.chainId, pay === 'native' ? 'native' : { address: selectedQuote().quote, decimals: selectedQuote().quoteDecimals });
+  const payAsset = () => pay === 'homeAsset' ? homeToken(homePref) : fundingAsset(st.chainId, pay === 'native' ? 'native' : { address: selectedQuote().quote, decimals: selectedQuote().quoteDecimals });
   function assertTradeOwner(c) { assertSelection(c); if(st.sol){if(c.owner!==solAddress())throw new Error('Reconnect the Solana wallet that reviewed this trade.');return;} if (c.owner && connectedAddress()?.toLowerCase() !== c.owner.toLowerCase()) throw new Error('Reconnect the wallet that reviewed this trade.'); }
   async function offerFunding(mine) {
     if (!quoteMatches(current) || mine !== qseq) return;
@@ -553,7 +602,25 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     try {
       const b = await balances();
       if (mine !== qseq||!quoteMatches(current)) return;
-      if (b && spendable(b) >= current.a) { funding.clear(); return; }
+      if (homeSelected) {
+        funding.clear(); go.disabled = true;
+        const reviewed = current;
+        const engine = await import('./qx-home-engine.mjs');
+        let data = null;
+        if (!st.ext && (pay === 'native' || st.nativePool) && instantHomeEnabled()) {
+          const path = st.multi ? reviewed.route : st.nativePool ? {hops: [{key: st.key, zeroForOne: BigInt(st.key.currency0) === 0n}], wrap: null} : nativeHops(st.chainId, st.key, st.quote, reviewed.route);
+          data = encodeBuyFor({user: reviewed.owner, hops: path.hops.map(hop => ({...hop, hookData: hookData(hop.key)})), wrapNative: path.wrap, minOut: reviewed.minOut, referrer: savedReferrer(), deadline: Math.floor(Date.now() / 1000) + 900});
+        }
+        const asset = payAsset();
+        const costs = await destinationCosts({owner: reviewed.owner, chainId: st.chainId, asset, amountNeeded: reviewed.a, spender: await extraAddress('feeRouter', st.chainId), setup: await isLive(st.chainId, 'feeRouter') ? 0 : 1});
+        const q = await engine.quoteHomeBuy({owner: reviewed.owner, pref: homePref, chainId: st.chainId, asset, amountNeeded: reviewed.a, estimatedGasCost: costs.estimatedGasCost, slippageBps: reviewed.toleranceBps, instant: instantHomeEnabled(), data});
+        if (mine !== qseq || current !== reviewed) return;
+        current.home = q;
+        out.append(h('span', {class: 'qhome-cost'}, engine.homeCostLine(q, {lpBps: (reviewed.route?.pool?.key || st.key)?.fee / 100 || null})));
+        go.disabled = busy;
+        return;
+      }
+      if (pay === 'homeAsset' || b && spendable(b) >= current.a) { funding.clear(); return; }
       const asset = payAsset(), owner = current.owner, chainId = st.chainId, amountNeeded = current.a;
       await funding.update({ owner, chainId, asset, amountNeeded, balance: b ? spendable(b) : undefined, review: async () => destinationCosts({ owner, chainId, asset, amountNeeded,
         spender: await extraAddress('feeRouter', chainId), setup: await isLive(chainId, 'feeRouter') ? 0 : 1 }) });
@@ -587,12 +654,13 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   async function submit() {
     if (!current || busy || !st || go.disabled && !recovery) return;
     const c = {...current};
+    if(c.homeRequired && !c.home){go.disabled=true;status.textContent='Refreshing home quote.';return;}
     if(!quoteMatches(c)){go.disabled=true;status.textContent='This token selection changed. Review a fresh quote before trading.';return;}
     if (!st.sol && c.owner && connectedAddress()?.toLowerCase() !== c.owner.toLowerCase()) { refresh(); return; }
     if (c.funding && !recovery && !funding.fresh()) { status.textContent = 'Refresh funding to review the current fees.'; go.disabled = true; return; }
     // Above 15% impact: one extra tap ("Buy anyway"), for every wallet including one-click. That tap also counts as the
     // one-click "Confirm $X" press, so the trade needs exactly one extra tap. Nothing is blocked: minOut stays on chain.
-    if (impactGate({ impactPct: c.impactPct, armedAt: impactArmedAt, now: Date.now() }) === 'arm') {
+    if (!homeEnabled && impactGate({ impactPct: c.impactPct, armedAt: impactArmedAt, now: Date.now() }) === 'arm') {
       const copy = confirmCopy(c.side, c.impactPct);
       clearArmed(); impactArmedAt = Date.now(); go.textContent = copy.button; status.textContent = copy.status;
       armTimer = setTimeout(() => { clearArmed(); if (status.textContent === copy.status) status.textContent = ''; }, 15000);
@@ -610,19 +678,37 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     try {
       await withOneClick(plan, async () => {
         if (recovery) { await retryLanded(recovery, { owner: connectedAddress(), swap: swapArrived }); recovery = null; return; }
+        if (c.home) {
+          const wallet = await relayWallet();
+          try {
+            const {executeHomeBuy} = await import('./qx-home-engine.mjs');
+            const result = await executeHomeBuy({quote: c.home, wallet, swap: swapArrived, onStep: step => {if (step.message) status.textContent = step.message;}});
+            if (result.landed && !result.completed) {recovery = result; landed = true; followup.replaceChildren(recoveryView(h, {...result, error: {message: tradeError(result.error)}}, () => submit()));}
+            else if (c.home.home.path === 'instant') {status.textContent = 'Bought into your wallet.'; amount.value = ''; document.dispatchEvent(new CustomEvent('qhooks:traded'));}
+          } finally {wallet.dispose();}
+          return;
+        }
         if (c.funding) {
           const wallet = await relayWallet();
           try {
             const result = await runCrossChainBuy({ quote: c.funding, wallet, swap: swapArrived,
               onStep: s => { if (s.message) status.textContent = s.message; } });
-            if (!result.completed) { recovery = result; landed = true; followup.replaceChildren(recoveryView(h, result, () => submit())); }
+            if (!result.completed) { recovery = result; landed = true; followup.replaceChildren(recoveryView(h, {...result, error: {message: tradeError(result.error)}}, () => submit())); }
           } finally { wallet.dispose(); }
           return;
         }
-        const asset = sellCash ? (st.ext ? payAsset() : st.multi?{address:c.route.pool.quote,decimals:c.route.pool.quoteDecimals,symbol:c.route.pool.quoteSymbol}:{ address: selectedQuote().quote, decimals: selectedQuote().quoteDecimals, symbol: selectedQuote().quoteSymbol }) : null;
+        const autoHome = c.side === 'sell' && homeReturnNeeded(st.chainId, homePref, homeEnabled);
+        const asset = (sellCash || autoHome) ? (st.ext ? payAsset() : st.multi?{address:c.route.pool.quote,decimals:c.route.pool.quoteDecimals,symbol:c.route.pool.quoteSymbol}:{ address: selectedQuote().quote, decimals: selectedQuote().quoteDecimals, symbol: selectedQuote().quoteSymbol }) : null;
         const before = asset ? await readAssetBalance(c.owner, { chainId: st.chainId, asset }) : 0n;
-        await (st.ext ? extSubmit(c) : poolSubmit(c));
-        if (asset) { const after = await readAssetBalance(c.owner, { chainId: st.chainId, asset }); if (after > before) proceeds = { chainId: st.chainId, asset, amount: after - before }; }
+        await (autoHome || c.payAsset ? withHomeRails(c.owner, () => st.ext ? extSubmit(c) : poolSubmit(c)) : st.ext ? extSubmit(c) : poolSubmit(c));
+        if (asset) { const after = await readAssetBalance(c.owner, { chainId: st.chainId, asset }); if (after > before) {
+          proceeds = { chainId: st.chainId, asset, amount: after - before };
+          if (autoHome) {
+            const wallet = await relayWallet();
+            try {const {settleHome} = await import('./qx-home-engine.mjs'); status.textContent = 'Sending proceeds home…'; await settleHome({...proceeds, owner: c.owner, pref: homePref, slippageBps: c.toleranceBps, wallet}); status.textContent = 'Sold and settled home.'; proceeds = null;}
+            finally {wallet.dispose();}
+          }
+        } }
       });
     } catch (e) { status.textContent = tradeError(e); landed = !!recovery; }
     finally { lock(false); if (landed) { go.disabled = true; if (recovery?.retryable === false) for (const el of followup.querySelectorAll('button')) el.disabled = true; } else await layout(); }
@@ -635,24 +721,24 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
 
   document.addEventListener('qhooks:rewards-claimed', () => showCashback().catch(() => cash.replaceChildren()));
   sideBtns.forEach(b => b.addEventListener('click', () => setSide(b.dataset.side)));
-  paySel.addEventListener('change', () => { if (busy||recovery) return; clearArmed(); pay = paySel.value; amount.value = '';sellPrefillOwner=null; refresh(); layout(); });
+  paySel.addEventListener('change', () => { if (busy||recovery) return; clearArmed(); homeSelected = paySel.value === 'home'; pay = homeSelected ? homeMarketPay() : paySel.value; amount.value = '';sellPrefillOwner=null; refresh(); layout(); });
   tolSel.addEventListener('change', () => {if(busy||recovery)return;try{if(!tradingSettings.setTolerance(side,tolSel.value)){syncProfile();status.textContent='Choose Auto or a valid manual tolerance (maximum 50% on Solana, 100% on EVM).';return;}if(tolSel.value!=='auto')store('tol',tolSel.value);}catch(error){syncProfile();status.textContent=tradeError(error);}});
   amount.addEventListener('input', () => { sellPrefillOwner=null;refresh(); });
   amount.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) submit(); } });
   balance.addEventListener('click', async () => { if(busy||recovery||!st)return;const intent=selection,activeState=st,mine=++qseq;clearTimeout(timer);current=null;go.disabled=true;sellPrefillOwner=null;clearArmed();quoteLoading=false;renderQuoteFreshness(); const b = await balances(); if(!isSelection(intent)||st!==activeState||mine!==qseq)return;if (b) { amount.value = formatUnits(spendable(b), payDecimals(), payDecimals()).replace(/,/g, ''); refresh(); } });
   go.addEventListener('click', submit);
-  onWalletChange(() => { clearArmed(); if (!busy&&!recovery&&!st?.sol) {if(sellPrefillOwner&&sellPrefillOwner.toLowerCase()!==connectedAddress()?.toLowerCase()){amount.value='';sellPrefillOwner=null;}refresh();layout();} });
+  onWalletChange(() => { clearArmed(); if (!busy&&!recovery&&!st?.sol) {if(sellPrefillOwner&&sellPrefillOwner.toLowerCase()!==connectedAddress()?.toLowerCase()){amount.value='';sellPrefillOwner=null;}void syncHome(true).then(() => {refresh();layout();});} });
 
   sellToCash.addEventListener('click', async () => {
     if (!st || busy||recovery) return;
-    clearArmed(); sellCash = true; side = 'sell'; pay = st.multi?st.pools.find(p=>/USD/.test(p.quoteSymbol))?.quote||st.pools[0].quote:st.quote ? 'quote' : 'native'; paySel.value = pay;
+    clearArmed(); sellCash = true; side = 'sell'; homeSelected = false; pay = st.multi?st.pools.find(p=>/USD/.test(p.quoteSymbol))?.quote||st.pools[0].quote:st.quote ? 'quote' : 'native'; paySel.value = pay;
     await layout(); await preset(3);
     const symbol = st.sol ? 'USDC' : selectedQuote().quoteSymbol || NATIVE[st.chainId];
     status.textContent = st.sol || !['1', '8453', '42161', '56', '4663'].includes(String(st.chainId)) || symbol === cashAsset(st.chainId).symbol ? 'Sell your whole position for ' + symbol + '.' :
       'This pool sells to ' + symbol + '. Cash conversion is available in Move funds after the sale.';
   });
 
-  function setSide(s) { if (busy||recovery || !['buy','sell'].includes(s) || side === s && !sellCash&&!pendingSellPrefill) return; clearArmed(); sellCash = false; side = s;if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} amount.value = '';sellPrefillOwner=null;pendingSellPrefill=false; refresh(); layout(); }
+  function setSide(s) { if (busy||recovery || !['buy','sell'].includes(s) || side === s && !sellCash&&!pendingSellPrefill) return; clearArmed(); sellCash = false; side = s;homeSelected = s === 'buy' && homeTicketDefault(st?.chainId, homePref, homeEnabled) === 'home';if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} amount.value = '';sellPrefillOwner=null;pendingSellPrefill=false; refresh(); layout(); }
 
   return {
     beginSelection,isSelection,failSelection,canSelect:()=>!busy&&!recovery,
@@ -670,13 +756,14 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       if((pools.length>1||pools.some(p=>poolQuoteInfo(registry,p).kind==='custom'))&&pools.every(p=>p.key&&p.quote)){
         st.multi=true;st.pools=pools.slice().sort((a,b)=>Number(!!b.main)-Number(!!a.main));
         paySel.replaceChildren(h('option',{value:'native'},NATIVE[st.chainId]),...st.pools.map(p=>h('option',{value:p.quote},p.quoteSymbol)));
-        pay=st.pools.some(p=>nativeRoute(st.chainId,p.quote))?'native':st.pools[0].quote;paySel.value=pay;renderRisk();const view=h('div');trustRisk(view,pool).then(()=>{if(isSelection(intent)){risk.replaceChildren(view);risk.hidden=view.hidden;}}).catch(()=>{});await layout();return isSelection(intent);
+        pay=st.pools.some(p=>nativeRoute(st.chainId,p.quote))?'native':st.pools[0].quote;paySel.value=pay;await syncHome(true);renderRisk();const view=h('div');trustRisk(view,pool).then(()=>{if(isSelection(intent)){risk.replaceChildren(view);risk.hidden=view.hidden;}}).catch(()=>{});await layout();return isSelection(intent);
       }
       const native = nativeRoute(pool.chainId, quoteToken);
       paySel.replaceChildren(h('option', { value: 'quote' }, q.symbol), ...(native ? [h('option', { value: 'native' }, NATIVE[pool.chainId])] : []));
       // Wrapped-native launches default to paying in the coin people actually hold.
       pay = native?.wrap || native?.stock || native?.usdg ? 'native' : 'quote'; paySel.value = pay;
       // QHooks launches: verified creator, copy warning, RepoProof verdict and on-chain facts (qx-trust.mjs).
+      await syncHome(true);
       renderRisk(); const view=h('div');trustRisk(view,pool).then(()=>{if(isSelection(intent)){risk.replaceChildren(view);risk.hidden=view.hidden;}}).catch(()=>{}); await layout();return isSelection(intent);
     },
     /// Any token, traded through 0x: { chainId, address, symbol, decimals, safety }.
@@ -688,7 +775,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         st = { ext: true, sol: true, chainId: 'solana', token: t.address, symbol: t.symbol || 'token', decimals: Number(t.decimals ?? 6), quote: SOL_USDC, quoteSymbol: 'USDC', quoteDecimals: 6, safety: t.safety || null };
         paySel.replaceChildren(h('option', { value: 'native' }, 'SOL'), h('option', { value: 'quote' }, 'USDC'));
         pay = 'native'; paySel.value = pay;
-        renderRisk(); await layout(); return isSelection(intent);
+        await syncHome(true); renderRisk(); await layout(); return isSelection(intent);
       }
       const meta = t.decimals == null ? await erc20(t.chainId, t.address).catch(() => ({ decimals: 18 })) : { decimals: t.decimals };
       if(!isSelection(intent))return false;
@@ -703,13 +790,13 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         const wrapRoute = !native && !d.refused && nativeRoute(t.chainId, d.quote);
         paySel.replaceChildren(h('option', { value: 'native' }, NATIVE[t.chainId]), ...(wrapRoute ? [h('option', { value: 'quote' }, st.quoteSymbol)] : []));
         pay = 'native'; paySel.value = pay;
-        renderRisk(); await layout(); if (st.noRoute) { out.textContent = st.noRoute; go.disabled = true; } return isSelection(intent);
+        await syncHome(true); renderRisk(); await layout(); if (st.noRoute) { out.textContent = st.noRoute; go.disabled = true; } return isSelection(intent);
       }
       const [qa, qs, qd] = STABLE[t.chainId] || [null, null, null];
       st = { ext: true, chainId: String(t.chainId), token: t.address, symbol: t.symbol || 'token', decimals: Number(meta.decimals ?? 18), quote: qa, quoteSymbol: qs, quoteDecimals: qd, safety: t.safety || null };
       paySel.replaceChildren(h('option', { value: 'native' }, NATIVE[t.chainId]), ...(qa ? [h('option', { value: 'quote' }, qs)] : []));
       pay = 'native'; paySel.value = pay;
-      renderRisk(); await layout();return isSelection(intent);
+      await syncHome(true); renderRisk(); await layout();return isSelection(intent);
     },
     setSafety(v,intent=selection) { if (isSelection(intent)&&(st?.ext||st?.direct)) { st.safety = v; renderRisk(); } },
     // The market poll updates this every few seconds; a price tick must not disarm a pending "Confirm $X".
@@ -737,7 +824,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         if(typeof held!=='bigint'||held<0n||held>=1n<<256n||!Number.isInteger(precision)||precision<0||precision>36||precision!==st.decimals)throw Error('Token precision is unavailable or changed. Reopen this token before selling.');
         const value=held*BigInt(percent)/100n;
         if(!value)throw Error(held===0n?'This wallet has no available tokens to sell.':'This balance is too small for that percentage.');
-        pendingSellPrefill=false;side='sell';sellCash=false;if(st.multi)pay='auto';paySel.value=pay;sellPrefillOwner=me;
+        pendingSellPrefill=false;side='sell';sellCash=false;homeSelected=false;if(st.multi)pay='auto';paySel.value=pay;sellPrefillOwner=me;
         amount.value=formatUnits(value,precision,precision).replace(/,/g,'');
         void layout();refresh();status.textContent='Sell '+percent+'% prepared. Review the current quote, fees and minimum received before selling.';
         return true;

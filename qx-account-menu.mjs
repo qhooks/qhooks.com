@@ -1,3 +1,5 @@
+import {homePicker} from './qx-home-currency.mjs';
+import {loadLocalHome, homeToken} from './qx-home-core.mjs';
 // The shared wallet dialog does one job per state (Randall, 2026-11-04: "this should just be a static connect page").
 //  - Connected → Account: short address, wallet type and chain, Balances on every chain (native + USDC/USDG, dollar
 //    values, a total; tap a chain to switch the wallet there), Copy address / View on explorer (qx-wallet-copy.mjs),
@@ -12,6 +14,7 @@ import { chainById, visibleChains } from '/chains.mjs';
 import { cachedBalances, refreshBalances } from '/qx-balances.mjs';
 import { walletActions } from '/qx-wallet-actions.mjs';
 
+const homeStyle = document.createElement('link'); homeStyle.rel = 'stylesheet'; homeStyle.href = '/qx-home-currency.css'; document.head.append(homeStyle);
 const hub = getWalletHub(window);
 const $ = id => document.getElementById(id);
 const dialog = $('qhc-dialog');
@@ -55,6 +58,14 @@ if (dialog) {
     + '<section class="qwm-bals" aria-label="Balances on every chain"><div class="qwm-total"><b></b><span></span></div>'
     + '<ul class="qwm-chains"></ul><button type="button" class="qwm-more" hidden></button><p class="qwm-bal-status" role="status" aria-live="polite"></p></section>';
   card.querySelector('.qwm-move').addEventListener('click', () => { if (cur && moveFunds) { dialog.close(); moveFunds.openMoveFunds({ from: Number(cur.chainId) }); } });
+  const home = homePicker({getOwner: () => cur?.owner, getUsd: pref => {
+    const rows = cur && cachedBalances(cur.owner).data?.rows;
+    const r = rows?.find(r => Number(r.chainId) === pref.chainId);
+    return pref.asset === r?.native?.symbol ? r.native.usd : pref.asset === 'USDC' && r?.stable?.symbol === 'USDC' ? r.stable.usd : null;
+  }});
+  card.prepend(home.element);
+  window.addEventListener('qhooks:home-transfer', () => home.refresh());
+  window.addEventListener('qhooks:home', () => {home.refresh(); renderBalances();});
   const links = el('nav', 'qwm-links'); links.setAttribute('aria-label', 'Your QHooks');
   const trades = el('section', 'qwm-trades');
   trades.innerHTML = '<h3>Trades</h3><div class="qwm-seg" role="radiogroup" aria-label="How trades confirm">'
@@ -98,7 +109,7 @@ if (dialog) {
   function chainRow(r, here) {
     const b = el('button', 'qwm-chain'); b.type = 'button'; b.dataset.chain = r.chainId;
     const img = el('img'); img.src = '/chain-symbol-icons/' + r.icon + '.svg'; img.alt = ''; img.width = img.height = 18;
-    const name = el('span', 'qwm-chain-name', r.name); if (here) name.append(el('i', 'qwm-here', 'Current'));
+    const name = el('span', 'qwm-chain-name', r.name); if (here) name.append(el('span', 'qwm-here', 'Current'));
     const amts = el('span', 'qwm-amts'), line = (a, sym, usd) => { const s = el('span', 'qwm-amt'); s.append(el('b', null, fmtAmt(a) + ' ' + sym), el('small', null, fmtUsd(usd))); return s; };
     amts.append(line(r.native.amount, r.native.symbol, r.native.usd));
     if (r.stable?.amount > 0) amts.append(line(r.stable.amount, r.stable.symbol, r.stable.usd));
@@ -119,6 +130,12 @@ if (dialog) {
       const bar = acts?.querySelector('.qwm-act-bar');
       if (bar) bar.append(mv); else { const box = el('div', 'qwm-acts'), b = el('div', 'qwm-act-bar'); b.append(mv); box.append(b); li.append(box); }
     }
+    const pref = loadLocalHome(cur?.owner);
+    if (moveFunds && Number(r.chainId) !== pref.chainId && !r.error && r.native.amount > 0) {
+      const back = el('button', 'qwm-act', fmtAmt(r.native.amount) + ' ' + r.native.symbol + ' on ' + r.name + ' · Move home'); back.type = 'button';
+      back.addEventListener('click', async () => { try { const token = homeToken(pref); dialog.close(); await moveFunds.openMoveFunds({homeCurrency: true, from: {chainId: Number(r.chainId), token: moveFunds.NATIVE_TOKEN}, to: {chainId: pref.chainId, token: token.address}}); } catch { balStatus.textContent = 'Home asset is refreshing.'; } });
+      li.append(back);
+    }
     return li;
   }
   // An open Send/Unwrap form is never rebuilt under the user: a refresh that lands meanwhile waits until it closes.
@@ -129,6 +146,7 @@ if (dialog) {
     if (list.querySelector('.qwm-act-panel:not([hidden])')) { heldRender = true; return; }
     const { data } = cachedBalances(cur.owner), total = bals.querySelector('.qwm-total');
     if (!data) { total.firstChild.textContent = '…'; total.lastChild.textContent = 'Reading your balances on every chain'; list.replaceChildren(); more.hidden = true; return; }
+    home.repaint();
     const here = String(cur.chainId), rows = [...data.rows].sort((a, b) => value(b) - value(a));
     const shown = rows.filter(r => showAll || !empty(r) || r.chainId === here), hidden = rows.length - rows.filter(r => !empty(r) || r.chainId === here).length;
     const held = rows.filter(r => !empty(r) && !r.error).length;
@@ -190,12 +208,12 @@ if (dialog) {
     card.querySelector('.qwm-wtype').textContent = TYPE[cur.entry?.rdns] || cur.entry?.name || 'Browser wallet';
     renderSwitcher();
     links.replaceChildren(...[['My QHooks', '/me'], ['Portfolio', portfolio], ['Rewards', '/me#qa-rewards'], ['My launches', '/me#qa-launches'], ['Wallets', '/wallets']].map(([t, h]) => { const a = el('a', null, t); a.href = h; a.addEventListener('click', () => dialog.close()); return a; }));
-    renderTrades(); loadBalances(); renderCash();
+    renderTrades(); loadBalances(); renderCash(); home.refresh();
   };
   // The fund button arrives later (email-login script); keep the footer complete whenever the dialog changes.
   new MutationObserver(() => { if (cur && $('qhc-fund') && $('qhc-fund').parentElement !== foot) foot.prepend($('qhc-fund')); }).observe(dialog, { childList: true, subtree: true });
   window.addEventListener('qhooks:trade-prefs', renderTrades);
-  new MutationObserver(() => { if (dialog.open && cur) { if (!switching) balStatus.textContent = ''; probe(); loadBalances(); } }).observe(dialog, { attributes: true, attributeFilter: ['open'] });
+  new MutationObserver(() => { if (dialog.open && cur) { if (!switching) balStatus.textContent = ''; probe(); loadBalances(); home.refresh(); } }).observe(dialog, { attributes: true, attributeFilter: ['open'] });
   hub.subscribe(s => {
     const c = s.current;
     if (c) {

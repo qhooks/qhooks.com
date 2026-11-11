@@ -1,3 +1,5 @@
+import {homeFetch, withHomeRails} from './qx-home-currency.mjs';
+import {homeSlippage} from './qx-home-core.mjs';
 import { chainById } from './chains.mjs';
 import { quote, summarize, execute, status } from './qx-relay.mjs';
 import { relayWallet, relayRpc, relayFees, relayChainId, gasWithHeadroom } from './qx-relay-wallet.mjs';
@@ -469,7 +471,7 @@ export function createMoveFunds({ document = globalThis.document, target = globa
 
   async function quoteFetch(url, init) {
     const controller = new AbortController(), timer = setTimer(() => controller.abort(), 12_000);
-    try { return await fetchImpl(url, { ...init, signal: controller.signal }); }
+    try { return s.homeCurrency && init?.method === 'POST' ? await homeFetch(s.owner, url, {...init, signal: controller.signal}, fetchImpl) : await fetchImpl(url, { ...init, signal: controller.signal }); }
     finally { clearTimer(timer); }
   }
 
@@ -480,7 +482,7 @@ export function createMoveFunds({ document = globalThis.document, target = globa
     try {
       stillOwner();
       const route = routeInput();
-      const params = { user: s.owner, recipient: s.owner, originChainId: route.from.chainId,
+      const params = { ...(s.homeCurrency ? {homeCurrency: true, slippageTolerance: String(s.homeSlippage)} : {}), user: s.owner, recipient: s.owner, refundTo: s.owner, originChainId: route.from.chainId,
         destinationChainId: route.to.chainId, originCurrency: route.from.address, destinationCurrency: route.to.address,
         amount: route.amount, tradeType: 'EXACT_INPUT' };
       const [q, fees] = await Promise.all([
@@ -620,7 +622,7 @@ export function createMoveFunds({ document = globalThis.document, target = globa
         note(index === 0 ? 'Approve in your wallet to continue.' : index === 1 ? 'Confirm the send in your wallet.' : 'Bridging… Relay is checking arrival.');
       } });
       // Moves are like withdrawals: they always keep the wallet's own confirmation screen (never one-click).
-      const result = await run();
+      const result = await (s.homeCurrency ? withHomeRails(s.owner, run, {fetchImpl}) : run());
       await arrived(result, s.run);
     } catch (error) {
       if (error.txHash) { s.sent = true; addLink(error.chainId ?? s.from?.chainId, error.txHash); }
@@ -668,6 +670,7 @@ export function createMoveFunds({ document = globalThis.document, target = globa
     if (!view.dialog.open) { opener = document.activeElement; view.dialog.showModal(); }
     if (s.busy || s.locked) { watchWhileOpen(); controls(); return view.dialog; }
     const opening = ++revision; quoteRevision++;
+    s.homeCurrency = options.homeCurrency === true; s.homeSlippage = homeSlippage(options.slippageBps || 100);
     s.from = null; s.to = null; s.quote = null; s.feePerGas = null; s.finished = false;
     s.usingMax = false; s.requestId = null; s.run = null; s.owner = null;
     view.amount.value = ''; view.progress.hidden = true; view.links.hidden = true; paintQuote(null); controls();

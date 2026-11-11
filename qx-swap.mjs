@@ -167,3 +167,19 @@ export async function quotePoolRoutes(chainId, pools, token, amountIn, side, nat
  }));
  const best = side==='sell'?bestSellPool(quotes,{chain,nativeUsd,pools,quoteToken:native?null:quoteToken}):bestPool(quotes);if(!best)throw Error('No route for this amount');return best;
 }
+
+// Same-chain home USDC uses the existing v4 quoter and QFeeRouter route.
+export async function quotePayAsset(chainId, key, token, quoteToken, asset, amountIn) {
+  if (asset.toLowerCase() === quoteToken.toLowerCase()) return {out: await quoteSingle(chainId,key,key.currency0.toLowerCase() === asset.toLowerCase(),amountIn), hops:[{key,zeroForOne:key.currency0.toLowerCase() === asset.toLowerCase()}]};
+  const tries = await Promise.all(TIERS.map(async ([fee,tickSpacing]) => {
+    const bridge = plainKey(asset,quoteToken,fee,tickSpacing);
+    try {
+      const path = [[quoteToken,fee,tickSpacing,Z,'0x'],[token,key.fee,key.tickSpacing,key.hooks,hookData(key)]];
+      const r = await ethCall(chainId,ROUTES[chainId].quoter,calldata('0xca253dc9',[`(address,${PATH_T}[],uint128)`],[[asset,path,amountIn]]),connectedAddress() || undefined);
+      return {out:BigInt(r.slice(0,66)),hops:[{key:bridge,zeroForOne:bridge.currency0.toLowerCase() === asset.toLowerCase()},{key,zeroForOne:key.currency0.toLowerCase() === quoteToken.toLowerCase()}],label:'USDC → ' + token};
+    } catch { return null; }
+  }));
+  const best = tries.filter(Boolean).sort((a,b) => a.out > b.out ? -1 : 1)[0];
+  if (!best) throw Error('No route for this home asset');
+  return best;
+}

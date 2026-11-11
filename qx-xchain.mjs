@@ -2,7 +2,7 @@
 // Amounts at the public seams are raw bigint units; Move funds alone takes decimal strings.
 import { chainById } from './chains.mjs';
 import { quote as relayQuote, summarize, execute } from './qx-relay.mjs';
-import { relayRpc } from './qx-relay-wallet.mjs';
+import { relayRpc, relayFees } from './qx-relay-wallet.mjs';
 import { MOVE_CHAINS, TOKEN_CANDIDATES, NATIVE_TOKEN, readMoveBalances, formatAmount, displayAmount,
   assertSelfQuote, promptCounts, maxAmount, openMoveFunds, moveBackOffer } from './qx-move-funds.mjs';
 
@@ -62,14 +62,15 @@ export async function fundingOptions(owner, { chainId, asset, amountNeeded, read
 // adapters with an exact estimate can supply estimatedGasCost instead. Actual send() still estimates gas.
 export async function destinationCosts({ owner, chainId, asset, spender, amountNeeded, setup = 0, gasUnits = 650000n }, { rpc = relayRpc } = {}) {
   const token = fundingAsset(chainId, asset);
-  const [gasPrice, allowance] = await Promise.all([
-    rpc(chainId, 'eth_gasPrice', []).then(BigInt),
+  const [fees, allowance] = await Promise.all([
+    relayFees(chainId, {rpc}),
     token.native ? positive(amountNeeded) : rpc(chainId, 'eth_call', [{ to: token.address,
       data: '0xdd62ed3e' + owner.slice(2).padStart(64, '0') + spender.slice(2).padStart(64, '0') }, 'latest']).then(BigInt),
   ]);
+  const gasPrice = BigInt(fees.maxFeePerGas ?? fees.gasPrice);
   if (gasPrice <= 0n) throw error('gas_unavailable', 'Could not estimate destination gas. Refresh the quote.');
   const approvals = allowance < positive(amountNeeded) ? 1 : 0;
-  return { approvals, setup, estimatedGasCost: (BigInt(gasUnits) + BigInt(approvals) * 100000n + BigInt(setup) * 3000000n) * gasPrice };
+  return { approvals, setup, estimatedGasCost: ((BigInt(gasUnits) + BigInt(approvals) * 100000n + BigInt(setup) * 3000000n) * 13n + 9n) / 10n * gasPrice };
 }
 
 export async function planFunding({ from, to, amountNeeded, owner, nativeBalance, estimatedGasCost }, {
@@ -79,6 +80,14 @@ export async function planFunding({ from, to, amountNeeded, owner, nativeBalance
   if (origin.chainId === asset.chainId) throw error('same_route', 'Choose another chain to fund this trade.');
   if (!/^0x[0-9a-f]{40}$/i.test(owner ?? '') || same(owner, NATIVE_TOKEN)) throw error('wallet_disconnected', 'Connect your wallet.');
   let topupGas = false;
+  const needed = positive(amountNeeded), buffered = (needed * 1005n + 999n) / 1000n;
+  let deliveryAmount = buffered;
+  if (asset.native && estimatedGasCost != null) {
+    const balance = BigInt(nativeBalance ?? await readBalance(owner, {chainId: asset.chainId, asset})), cost = BigInt(estimatedGasCost);
+    if (cost <= 0n || balance < 0n) throw error('gas_unavailable', 'Could not estimate destination gas.');
+    const shortfall = cost - balance - (buffered - needed);
+    if (shortfall > 0n) deliveryAmount += shortfall;
+  }
   if (!asset.native) {
     const [balance, cost] = await Promise.all([
       nativeBalance ?? readBalance(owner, { chainId: asset.chainId, asset: fundingAsset(asset.chainId, 'native') }),
@@ -87,19 +96,19 @@ export async function planFunding({ from, to, amountNeeded, owner, nativeBalance
     if (BigInt(cost) <= 0n || BigInt(balance) < 0n) throw error('gas_unavailable', 'Could not estimate destination gas.');
     topupGas = BigInt(balance) < 2n * BigInt(cost);
   }
-  return { user: owner, recipient: owner, originChainId: origin.chainId, destinationChainId: asset.chainId,
+  return { user: owner, recipient: owner, refundTo: owner, originChainId: origin.chainId, destinationChainId: asset.chainId,
     originCurrency: origin.address, destinationCurrency: asset.address,
-    amount: ((positive(amountNeeded) * 1005n + 999n) / 1000n).toString(), tradeType: 'EXACT_OUTPUT', topupGas };
+    amount: deliveryAmount.toString(), tradeType: 'EXACT_OUTPUT', topupGas };
 }
 
-export function assertFundingQuote(q, { owner, from, to, amountNeeded }) {
+export function assertFundingQuote(q, { owner, from, to, amountNeeded, deliveryAmount }) {
   assertSelfQuote(q, owner);
   const input = q.details?.currencyIn, output = q.details?.currencyOut;
   const a = fundingAsset(from.chainId, from.asset ?? from), b = fundingAsset(to.chainId, to.asset);
   if (Number(input?.currency?.chainId) !== a.chainId || !same(input?.currency?.address, a.address) ||
       Number(output?.currency?.chainId) !== b.chainId || !same(output?.currency?.address, b.address) ||
       Number(input?.currency?.decimals) !== a.decimals || Number(output?.currency?.decimals) !== b.decimals ||
-      positive(output?.amount) !== (positive(amountNeeded) * 1005n + 999n) / 1000n) {
+      positive(output?.amount) !== (deliveryAmount ?? (positive(amountNeeded) * 1005n + 999n) / 1000n)) {
     throw error('relay_route_mismatch', 'Relay returned a different funding route or amount. Refresh the quote.');
   }
   // No hook/router calls on the destination via Relay: the user sends the swap after delivery.
@@ -128,7 +137,7 @@ export function assertFundingQuote(q, { owner, from, to, amountNeeded }) {
 export async function requestFunding(input, { quote = relayQuote, now = Date.now, ...adapters } = {}) {
   const params = await planFunding(input, adapters), q = await quote(params);
   const context = { ...input, to: { chainId: Number(input.to.chainId), asset: fundingAsset(input.to.chainId, input.to.asset) },
-    amountNeeded: positive(input.amountNeeded), quotedAt: now() };
+    amountNeeded: positive(input.amountNeeded), deliveryAmount: BigInt(params.amount), quotedAt: now() };
   assertFundingQuote(q, context);
   const source = { ...fundingAsset(input.from.chainId, input.from.asset ?? input.from), ...input.from };
   const gas = (q.steps ?? []).flatMap(s => s.items ?? []).find(i => i?.data?.maxFeePerGas)?.data;

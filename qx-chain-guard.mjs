@@ -8,6 +8,19 @@ const causes = e => { const out = [], seen = new Set(); for (let n = e; n && !se
 const hasCode = (e, code) => causes(e).some(n => Number(n.code) === code);
 
 export function tradeError(error) {
+  const home = {
+    home_off: 'Home currency is switched off.',
+    home_sign_in: 'Sign in with the wallet you chose for home.',
+    home_recipient: 'Choose your own wallet for the transfer and refund.',
+    home_asset_refreshing: 'This home asset is refreshing on this chain.',
+    home_invalid_pref: 'Choose a home chain and ETH or USDC.',
+    home_invalid_slippage: 'Choose a valid price tolerance.',
+    home_quote_mismatch: 'Refresh the home quote to match this trade.',
+    home_quote_expired: 'Refresh the home quote before buying.',
+    home_refreshing: 'Home currency is refreshing.',
+  };
+  if (home[error?.code]) return home[error.code];
+  if (/^relay_(timeout|refund|failure|fallback)/.test(error?.code || '')) return 'Relay is checking the transfer and any refund to your source wallet.';
   const list = causes(error), text = list.map(e => [e.message, e.shortMessage, e.details].filter(Boolean).join(' ')).join(' ');
   if (list.some(e => plainErrors.has(e))) return list.find(e => plainErrors.has(e)).message;
   if (hasCode(error, 4001) || /user rejected|user denied|declined|cancelled in your wallet/i.test(text)) return 'You declined the wallet request.';
@@ -26,6 +39,7 @@ export function chainParams(id) {
   return { chainId: c.hex, chainName: c.name, nativeCurrency: { name: c.native, symbol: c.native, decimals: 18 }, rpcUrls: [c.rpc], blockExplorerUrls: [c.explorer] };
 }
 export async function assertWalletChain(provider, id, assert = () => {}) {
+  await globalThis.__qhooksHomeCheck?.();
   assert(); const actual = await provider.request({ method: 'eth_chainId' }); assert();
   if (BigInt(actual) !== BigInt(chain(id).id)) throw failure('Switch to ' + chain(id).name + ' and try again.');
 }
