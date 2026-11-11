@@ -48,6 +48,7 @@ function row(l) {
   const trust = el('span', {class: 'qfd-trust'}, el('a', {href: '/verify'}, 'Verify launch'));
   const li = el('li', {class: 'qfd-launch'},
     el('p', {class: 'qfd-head'}, el('b', {}, '#' + l.slot + ' ' + (l.symbol || 'Token')), ' ', el('span', {}, (l.name || '') + ' · ' + chain + ' · ' + (l.chainId==='solana'?'Solana launch':l.kind === 'studio' ? 'Studio' : 'One-tap') + ' · launched ' + day(l.launchedAt))),
+    l.carriedFrom?.id === 'qwerty-relaunch-20261111' ? el('p', {}, 'Relaunch of QWERTY, spot held from ' + new Date(l.carriedFrom.launchedAt * 1000).toISOString().slice(11, 16) + ' UTC.') : null,
     el('p', {}, 'Creator ', el('a', {href: '/profile#' + l.creator}, short(l.creator)),
       l.chainId==='solana' ? (l.waitingForLink?' · waiting for a wallet link':' · rewards to '+short(l.payTo)) : l.creatorShareOpen ? ' · earns on volume until ' + day(l.creatorShareUntil) : ' · volume share ended',
       l.boostOpen ? ' · 50% cashback for traders until ' + day(l.boostUntil) : ''),

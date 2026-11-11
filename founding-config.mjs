@@ -42,6 +42,9 @@ export const FOUNDING = {
   // bounty only to creators holding the entry minimum at that moment (else it waits for a later list).
   payouts: true,
   spots: 50,
+  carryOver: [{id: 'qwerty-relaunch-20261111', chainId: '4663', creator: '0xca04742a4fa7dda1eb02f48bc0fe2be2d8b92c34',
+    fromToken: '0xfef5b1acdddd0c4674fc63feb8d91a15986fd0ae', fromLaunchedAt: 1794364239, kind: 'one-tap',
+    note: 'QWERTY relaunch after the guided start-price bug; approved 2026-11-11'}],
   // QHooks' own wallets: never founding creators, never paid a top-up.
   exclude: [
     SAFE,
@@ -77,17 +80,35 @@ const tokenKey = foundingKey;
 export const beneficiary = l => l.chainId === 'solana' ? l.payTo : l.creator;
 export const isOwnWallet = (a, cfg = FOUNDING) => cfg.exclude.includes(lower(a));
 
+const compareLaunch = (a, b) => Number(a.launchedAt) - Number(b.launchedAt) || String(a.chainId).localeCompare(String(b.chainId)) || foundingKey(a).localeCompare(foundingKey(b));
+// Resolve before entry checks: a failed first relaunch still retires the old token, with no later replacement.
+export function foundingCarryTargets(launches, cfg = FOUNDING) {
+  return (cfg.carryOver || []).flatMap(entry => {
+    const target = launches.filter(l => String(l.chainId) === entry.chainId && lower(l.creator) === lower(entry.creator)
+      && l.kind === entry.kind && Number(l.launchedAt) > entry.fromLaunchedAt && lower(l.token) !== lower(entry.fromToken))
+      .sort(compareLaunch)[0];
+    return target ? [{entry, target}] : [];
+  });
+}
+
 /// The founding list from every QHooks launch: [{chainId, token, creator, launchedAt (s), kind, ...}] → the first
 /// `spots` launches at or after start, one per creator (their earliest), ties broken by chain then token. Each gets
-/// its slot number and its reward end times.
+/// its slot number and its reward end times. Approved carry-overs change slot order only, never reward time.
 export function pickFounding(launches, cfg = FOUNDING, nowS = Math.floor(Date.now() / 1000)) {
   if (!cfg.start) return [];
+  const carries = foundingCarryTargets(launches, cfg), retired = new Set(), targets = new Map(), reserved = new Map();
+  for (const {entry, target} of carries) {
+    retired.add(foundingKey({chainId: entry.chainId, token: entry.fromToken}));
+    targets.set(foundingKey(target), entry); reserved.set(lower(entry.creator), foundingKey(target));
+  }
   const skipTok = new Set(cfg.excludeTokens.map(t=>String(t).startsWith('solana:')||!String(t).includes(':')&&!/^0x/i.test(t)?String(t):lower(t))), chainIds = new Set((cfg.chains || []).map(c => c.id));
-  const sorted = [...launches].filter(l => Number(l.launchedAt) >= cfg.start && (!chainIds.size || chainIds.has(String(l.chainId))))
-    .sort((a,b) => Number(a.launchedAt)-Number(b.launchedAt) || String(a.chainId).localeCompare(String(b.chainId)) || (a.chainId==='solana'?String(a.token):lower(a.token)).localeCompare(b.chainId==='solana'?String(b.token):lower(b.token)));
+  const sorted = launches.filter(l => Number(l.launchedAt) >= cfg.start && (!chainIds.size || chainIds.has(String(l.chainId))) && !retired.has(foundingKey(l)))
+    .map(l => { const c = targets.get(foundingKey(l)); return c ? {...l, orderAt: c.fromLaunchedAt, carriedFrom: {token: c.fromToken, launchedAt: c.fromLaunchedAt, id: c.id}} : l; })
+    .sort((a,b) => compareLaunch({...a, launchedAt: a.orderAt ?? a.launchedAt, token: a.carriedFrom?.token ?? a.token}, {...b, launchedAt: b.orderAt ?? b.launchedAt, token: b.carriedFrom?.token ?? b.token}));
   const seen = new Set(), paid = new Set(), out = [];
   for (const l of sorted) {
     const sol = l.chainId === 'solana', token = sol ? String(l.token) : lower(l.token), creator = sol ? String(l.creator) : lower(l.creator);
+    if (!sol && reserved.has(creator) && reserved.get(creator) !== foundingKey(l)) continue;
     if (cfg.entry && l.entry == null && (!sol || l.entryState !== 'waiting')) break; // unchecked is retried; a known waiting link can be listed around
     const waiting = sol && l.entry !== true && Number(l.waitUntil) > nowS;
     if (cfg.entry && l.entry !== true && !waiting) continue;
