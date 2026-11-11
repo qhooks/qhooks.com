@@ -1,6 +1,6 @@
 import {mountSolCreate} from './qx-sol-launch.mjs';
 import {checkTicker,assertTickerFree,TickerTaken,tickerBlockNodes} from '/qx-ticker-guard.mjs';
-import {CREATE_EXECUTION_ENABLED,CREATE_EXECUTION_HOLD} from './qx-create-release.mjs';
+import {CREATE_EXECUTION_ENABLED,CREATE_EXECUTION_HOLD,GUIDED_NEW_LAUNCHES,START_PRICING_HOLD} from './qx-create-release.mjs';
 import {appendArbRecaptureLine,createCostView,walletStepLabel,showRequiredQuantum,bindFundWallet} from './qx-create-display.mjs';
 import {readCreateNativeUSD} from './qx-create-prices.mjs';
 import {visibleChains,chainById} from './chains.mjs';
@@ -43,7 +43,7 @@ function checkTickerSoon(){clearTimeout(tickerTimer);const run=++tickerRun;ticke
  if(record||!config.symbol){if(taken){taken=null;note('');}render();return;}
  const r=await checkTicker({symbol:config.symbol,chainId:config.chainId,creator:hub.snapshot().current?.owner||''});if(run!==tickerRun)return;
  if(!r.available)showTaken(r);else if(taken){taken=null;note('');}render();},350);}
-const executionAllowed=()=>{if(CREATE_EXECUTION_ENABLED)return true;note(CREATE_EXECUTION_HOLD);return false;};
+const executionAllowed=()=>{if(!record&&!GUIDED_NEW_LAUNCHES){note(START_PRICING_HOLD,true);return false;}if(CREATE_EXECUTION_ENABLED)return true;note(CREATE_EXECUTION_HOLD);return false;};
 function restoreDraft(){let hadDraft=false;try{const text=localStorage.getItem(DRAFT);hadDraft=text!==null;const d=JSON.parse(text||'null');if(d?.version===1&&d.config){config={...config,...d.config};liquidityState=liquidityDraftState(config,d.liquidityState);if(typeof d.profileScope==='string'&&/^[a-z0-9-]{1,80}$/i.test(d.profileScope))profileScope=d.profileScope;screen=[1,2,3].includes(d.screen)?d.screen:1;}
  const id=localStorage.getItem(ACTIVE);if(id&&/^[a-z0-9-]{1,80}$/i.test(id)){const r=JSON.parse(localStorage.getItem(RECORD_PREFIX+id)||'null');if(r?.version===1&&r.id===id&&validAddress(r.owner)&&r.steps&&chainById(r.chainId)){record=r;config=r.config;screen=3;}}
  }catch{note('The saved draft could not be opened. You can enter your settings again.',true);}
@@ -153,11 +153,11 @@ function render(){if(solCreate?.active){solCreate.render();return;}renderChainNo
  for(const field of $('profile-slot').querySelectorAll('input,textarea,button'))field.disabled=busy||!!record;for(const field of $('allocations').querySelectorAll('input,button'))field.disabled=busy||!!record;
  for(const id of ['next-1','next-2','back-2','back-3','refresh-cost'])$(id).disabled=busy;
  for(const id of ['next-1','next-2']){$(id).disabled=busy||!record&&(liquidity.blocked||guidedOff());$(id).title=!record&&liquidity.blocked?liquidity.message:'';$(id).setAttribute('aria-describedby','qc-liquidity-note');}
- renderSavedLaunch();$('execution-hold').hidden=CREATE_EXECUTION_ENABLED;$('key-panel').hidden=!CREATE_EXECUTION_ENABLED||record?.status==='done';$('launch').hidden=record?.status==='done';$('launch').textContent=record?'Resume launch':'Launch';
+ renderSavedLaunch();$('execution-hold').hidden=CREATE_EXECUTION_ENABLED&&(!!record||GUIDED_NEW_LAUNCHES);if(!record&&!GUIDED_NEW_LAUNCHES){const hold=$('execution-hold');hold.querySelector('h2').textContent=START_PRICING_HOLD;hold.querySelector('p').textContent='You can still set up and review your token here.';}$('key-panel').hidden=!CREATE_EXECUTION_ENABLED||record?.status==='done';$('launch').hidden=record?.status==='done';$('launch').textContent=record?'Resume launch':'Launch';
  let valid=true;try{validateConfig(config,c?.owner||'0x'+'1'.repeat(40));}catch{valid=false;}
  // A token image is required for a new launch (2026-11-10); a launch already underway can still resume.
  const needImage=!record&&!config.image;if(needImage)valid=false;$('need-image').hidden=!needImage;
- $('launch').disabled=!CREATE_EXECUTION_ENABLED||busy||!c||!record&&guidedOff()||!signer?.backupVerified||signer.locked||!quantumReady||!cost||!valid||!!record&&record.owner!==c?.owner||!record&&liquidity.blocked;
+ $('launch').disabled=!CREATE_EXECUTION_ENABLED||!record&&!GUIDED_NEW_LAUNCHES||busy||!c||!record&&guidedOff()||!signer?.backupVerified||signer.locked||!quantumReady||!cost||!valid||!!record&&record.owner!==c?.owner||!record&&liquidity.blocked;
  $('launch').title=!record&&liquidity.blocked?liquidity.message:'';
  quantumControl?.render();
  renderStyle();$('current-rules').textContent='Current draft: '+(CREATE_STYLES.find(p=>p.id===config.style)?.name||config.style)+'. '+$('style-summary').textContent;assistedPanel?.refresh();
