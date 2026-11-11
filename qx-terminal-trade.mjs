@@ -1,3 +1,4 @@
+import {prepareTradeThesis,recordTerminalTrade} from './qx-trade-record.mjs';
 import {renderSolanaRewards,enrollSolanaReferrer,recordSolanaRewards} from './qx-solana-rewards.mjs';
 import {mountTradingSettings} from './qx-trading-settings.mjs';
 import {resolveTradingTolerance} from './qx-trading-preferences.mjs';
@@ -63,6 +64,8 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   loadFundingStyle();
   const status = h('p', { class: 'qtx-status', role: 'status', ariaLive: 'polite' });
   const amount = h('input', { type: 'text', inputMode: 'decimal', placeholder: '0.0', autocomplete: 'off', ariaLabel: 'Amount', id: 'qxt-amount' });
+  const thesis = h('input', {type:'text',maxLength:280,placeholder:'Buy thesis · optional, 140 characters',ariaLabel:'Public buy thesis',autocomplete:'off'});
+  const thesisRow = h('label',{class:'qxt-trader-thesis'},h('span',{},'Public buy thesis'),thesis,h('small',{},'Shown with this buy when your public trading profile is on. ',h('a',{href:'/community#trading-feed'},'Trading profile')));
   const unit = h('span', { class: 'qxt-unit' });
   const balance = h('button', { type: 'button', class: 'qxt-bal', title: 'Use the whole balance' });
   const presets = h('div', { class: 'qxt-presets', role: 'group', ariaLabel: 'Amount presets' });
@@ -124,14 +127,14 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     tradingSettings.element,
     h('div', { class: 'qxt-side-toggle', role: 'group', ariaLabel: 'Trade side' }, ...sideBtns, sellToCash),
     h('div', { class: 'qxt-row2' }, payRow, h('label', { class: 'qxt-pay' }, h('span', {}, 'Tolerance'), tolSel)),
-    risk, h('div', { class: 'qxt-amount' }, amount, unit), h('div', { class: 'qxt-meta' }, balance), addFunds, presets, out, quoteTools, funding.element, go, signIn, status, followup, cashSettings(h), cash);
+    risk, h('div', { class: 'qxt-amount' }, amount, unit), h('div', { class: 'qxt-meta' }, balance), addFunds, presets, thesisRow, out, quoteTools, funding.element, go, signIn, status, followup, cashSettings(h), cash);
   import('/qx-oneclick.mjs').then(m => m.mountOneClickToggle(card)).catch(() => {}); // One-click trading toggle (hidden unless an email/Google wallet is connected)
 
   const targetKey=t=>!t?'none':t.kind==='launch'?'m:'+String(t.chainId)+':'+String(t.controller).toLowerCase():'t:'+String(t.chainId)+':'+(String(t.chainId)==='solana'?String(t.address):String(t.address).toLowerCase());
   const isSelection=intent=>!!intent&&intent===selection;
   function beginSelection(target) {
     if(busy||recovery){status.textContent=busy?'Finish the current trade before opening another token.':'Resolve the funded trade below before opening another token.';return false;}
-    selection=Object.freeze({revision:++selectionRevision,key:targetKey(target)});
+    selection=Object.freeze({revision:++selectionRevision,key:targetKey(target)});thesis.value='';
     clearTimeout(timer);qseq++;current=null;st=null;priceUsd=null;marketPrices=[];sellCash=false;sellPrefillOwner=null;pendingSellPrefill=false;
     funding.clear();followup.replaceChildren();cash.replaceChildren();risk.replaceChildren();risk.hidden=true;
     amount.value='';unit.textContent='';balance.textContent='';balance.disabled=true;paySel.replaceChildren();
@@ -235,6 +238,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     syncProfile();
     sideBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.side === side)));
     card.dataset.side = side;
+    thesisRow.hidden = side !== 'buy';
     sellToCash.setAttribute('aria-pressed', String(sellCash));
     payRow.hidden = side === 'sell' || paySel.options.length < 2;
     unit.textContent = payUnit();
@@ -304,11 +308,11 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       if (tin !== ZERO) await ensureAllowance(chainId, tin, router, c.a, s, assertContext);
       const now = BigInt((await rpc(chainId, 'eth_getBlockByNumber', ['latest', false])).timestamp);
       assertTradeOwner(c);
-      await send(chainId, { to: router, data: viaSwapCall(q.tx.to, q.tx.data, tin, tout, c.a, minOut, c.side === 'buy', now + 600n), value: tin === ZERO ? c.a : 0n }, s, assertContext);
+      await sendRecorded(c, { to: router, data: viaSwapCall(q.tx.to, q.tx.data, tin, tout, c.a, minOut, c.side === 'buy', now + 600n), value: tin === ZERO ? c.a : 0n }, s, assertContext);
       }
       const after = await erc20(chainId, token, me).catch(() => null), moved = after ? (after.balance > b.token ? after.balance - b.token : b.token - after.balance) : null;
       s(moved === null ? 'Trade confirmed. Refresh balances.' : (c.side === 'buy' ? 'Bought ' : 'Sold ') + formatUnits(moved, st.decimals, 4) + ' ' + st.symbol + '.');if (c.side === 'buy' && moved !== null) afterBuy();
-      amount.value = ''; document.dispatchEvent(new CustomEvent('qhooks:traded')); try { await onTraded({ side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s, ext: true }); } catch {}
+      amount.value = ''; thesis.value=''; document.dispatchEvent(new CustomEvent('qhooks:traded')); try { await onTraded({ side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s, ext: true }); } catch {}
   }
   // ---- Solana: Jupiter orders signed in the trader's Solana wallet; 1% referral fee in SOL or USDC ----
   const solMints = () => {
@@ -364,9 +368,10 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       const x = await r.json().catch(() => ({}));
       if (!r.ok || x.status !== 'Success') throw new Error('The swap did not land' + (x.error ? ': ' + x.error : ''));
       recordSolanaRewards(o.requestId,x);
+      queueRecord(c,x,{requestId:o.requestId});
       const after = await balances(), moved = after.token > b.token ? after.token - b.token : b.token - after.token;
       status.replaceChildren((c.side === 'buy' ? 'Bought ' : 'Sold ') + formatUnits(moved, st.decimals, 4) + ' ' + st.symbol + '. ', h('a', { href: 'https://solscan.io/tx/' + x.signature, target: '_blank', rel: 'noopener' }, 'View ↗'));
-      amount.value = ''; document.dispatchEvent(new CustomEvent('qhooks:traded')); await onTraded({ side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s, ext: true });
+      amount.value = ''; thesis.value=''; document.dispatchEvent(new CustomEvent('qhooks:traded')); await onTraded({ side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s, ext: true });
     } catch (e) { s(e.message || 'The trade did not go through'); }
     lock(false); layout();
   }
@@ -493,7 +498,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const done = await oc.oneClickTrade({ chainId: st.chainId, token: st.token, side: c.side, amountWei: c.a, slippageBps: c.toleranceBps || 300, referrer: savedReferrer() });
     if (!done) return false;
     const last = done.hashes[done.hashes.length - 1];
-    for (let i = 0; i < 90; i++) { const r = await rpc(st.chainId, 'eth_getTransactionReceipt', [last]).catch(() => null); if (r) { if (r.status !== '0x1') throw new Error('The trade reverted'); return true; } await new Promise(res => setTimeout(res, 1000)); }
+    for (let i = 0; i < 90; i++) { const r = await rpc(st.chainId, 'eth_getTransactionReceipt', [last]).catch(() => null); if (r) { if (r.status !== '0x1') throw new Error('The trade reverted'); queueRecord(c,r); return true; } await new Promise(res => setTimeout(res, 1000)); }
     return true;
   }
   async function poolSubmit(c) {
@@ -513,20 +518,20 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         else if (c.side === 'buy' && st.nativePool) {
           // Native-HYPE pool: HYPE goes straight in (router checks currency0 is native); no wrap.
           assertTradeOwner(c);
-          await send(chainId, { to: router, data: feeSwapCall(chainId, [{ key, zeroForOne: BigInt(key.currency0) === 0n }], c.a, c.minOut, null, true, deadline), value: c.a }, s, assertContext);
+          await sendRecorded(c, { to: router, data: feeSwapCall(chainId, [{ key, zeroForOne: BigInt(key.currency0) === 0n }], c.a, c.minOut, null, true, deadline), value: c.a }, s, assertContext);
         } else if (c.side === 'buy' && c.pay === 'native') {
           const { hops, wrap } = nativeHops(chainId, key, qt, c.route);
           assertTradeOwner(c);
-          await send(chainId, { to: router, data: feeSwapCall(chainId, hops, c.a, c.minOut, wrap, true, deadline), value: c.a }, s, assertContext);
+          await sendRecorded(c, { to: router, data: feeSwapCall(chainId, hops, c.a, c.minOut, wrap, true, deadline), value: c.a }, s, assertContext);
         } else {
           const tin = c.side === 'buy' ? qt : token;
           await ensureAllowance(chainId, tin, router, c.a, s, assertContext);
           assertTradeOwner(c);
-          await send(chainId, { to: router, data: feeSwapCall(chainId, [{ key, zeroForOne: key.currency0 === tin }], c.a, c.minOut, null, c.side === 'buy', deadline) }, s, assertContext);
+          await sendRecorded(c, { to: router, data: feeSwapCall(chainId, [{ key, zeroForOne: key.currency0 === tin }], c.a, c.minOut, null, c.side === 'buy', deadline) }, s, assertContext);
         }
         const after = await erc20(chainId, token, me).catch(() => null), moved = after ? (after.balance > b.token ? after.balance - b.token : b.token - after.balance) : null;
         status.textContent = moved === null ? 'Trade confirmed. Refresh balances.' : (c.side === 'buy' ? 'Bought ' : 'Sold ') + formatUnits(moved, st.decimals, 4) + ' ' + st.symbol + '.';if (c.side === 'buy' && moved !== null) afterBuy();
-        amount.value = ''; document.dispatchEvent(new CustomEvent('qhooks:traded')); try { await onTraded({ side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s }); } catch {}
+        amount.value = ''; thesis.value=''; document.dispatchEvent(new CustomEvent('qhooks:traded')); try { await onTraded({ side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s }); } catch {}
   }
 
   const payAsset = () => fundingAsset(st.chainId, pay === 'native' ? 'native' : { address: st.quote, decimals: st.quoteDecimals });
@@ -553,17 +558,24 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const floor = c.minOut * a / c.a, minOut = got * (10000n - BigInt(c.toleranceBps)) / 10000n;
     return poolSubmit({ ...c, a, got, route, minOut: minOut > floor ? minOut : floor });
   }
+  function queueRecord(c,receipt,extra={}) {
+    const tx=receipt?.transactionHash||receipt?.signature;
+    if(tx)void recordTerminalTrade({chainId:c.chainId,token:c.token,side:c.side,owner:c.owner,thesis:c.thesis||'',tx,...extra}).catch(()=>{});
+  }
+  async function sendRecorded(c,tx,onStatus,assertContext) {
+    const receipt=await send(c.chainId,tx,onStatus,assertContext);queueRecord(c,receipt);return receipt;
+  }
   function lock(value) {
     busy = value; funding.setBusy(value);
     tradingSettings.lock(value||!!recovery);
-    for (const el of [amount, paySel, tolSel, balance, sellToCash, ...sideBtns, ...presets.querySelectorAll('button'), ...cash.querySelectorAll('button')]) el.disabled = value||!!recovery;
+    for (const el of [amount, thesis, paySel, tolSel, balance, sellToCash, ...sideBtns, ...presets.querySelectorAll('button'), ...cash.querySelectorAll('button')]) el.disabled = value||!!recovery;
     for(const el of followup.querySelectorAll('button'))el.disabled=value;
     go.disabled = value||!!recovery;
     renderQuoteFreshness();
   }
   async function submit() {
     if (!current || busy || !st || go.disabled && !recovery) return;
-    const c = current;
+    const c = {...current};
     if(!quoteMatches(c)){go.disabled=true;status.textContent='This token selection changed. Review a fresh quote before trading.';return;}
     if (!st.sol && c.owner && connectedAddress()?.toLowerCase() !== c.owner.toLowerCase()) { refresh(); return; }
     if (c.funding && !recovery && !funding.fresh()) { status.textContent = 'Refresh funding to review the current fees.'; go.disabled = true; return; }
@@ -578,6 +590,8 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     if (impactArmedAt) { armedAt = Date.now(); impactArmedAt = null; }
     const plan = st.sol ? null : ticketPlan(c);
     if (!st.sol && !plan) return;
+    lock(true);
+    try {c.thesis=await prepareTradeThesis({chainId:c.chainId,owner:c.owner,token:c.token,side:c.side,thesis:c.side==='buy'?thesis.value:''});assertTradeOwner(c);}catch(error){status.textContent=error.message;lock(false);return;}
     if (st.sol) { lock(true); return solSubmit(c); }
     lock(true); status.textContent = '';
     const swapArrived = a => { if (plan.silent && !silentActive()) throw new Error('This one-click press expired. Retry the swap from the funds in your wallet.'); return arrivedTrade(c, a); };

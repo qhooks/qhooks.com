@@ -7,3 +7,17 @@ self.addEventListener('fetch', e => {
   if (e.request.mode !== 'navigate') return;
   e.respondWith(fetch(e.request).catch(() => caches.match(OFFLINE)));
 });
+// Push messages contain public terminal buys only. Navigation is confined to this app.
+self.addEventListener('push', e => {
+  let value;try{value=e.data?.json();}catch{return;}
+  if(!value||typeof value.title!=='string'||typeof value.body!=='string')return;
+  let destination='/traders';try{const url=new URL(value.url,self.location.origin);if(url.origin===self.location.origin&&url.pathname==='/traders')destination=url.pathname+url.search;}catch{}
+  e.waitUntil(self.registration.showNotification(value.title.slice(0,100),{body:value.body.slice(0,240),icon:'/app-icons/icon-192.png',tag:'qhooks-trader-buy',renotify:false,data:{url:destination}}));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();let destination='/traders';try{const url=new URL(e.notification.data?.url,self.location.origin);if(url.origin===self.location.origin&&url.pathname==='/traders')destination=url.pathname+url.search;}catch{}
+  e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(async clients=>{
+    const current=clients.find(client=>new URL(client.url).origin===self.location.origin);
+    if(current){await current.navigate(destination);return current.focus();}return self.clients.openWindow(destination);
+  }));
+});

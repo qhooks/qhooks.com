@@ -526,3 +526,7 @@ body.qx.qxt{font-size:13px;line-height:1.4}
 .qxt-list li.qxt-has-qb .qxt-qb{position:static;align-self:flex-end;margin:0 10px 9px auto;flex:none}
 .qxt-list li.qxt-has-qb .qxt-r1 b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .qxt-list li.qxt-has-qb .qxt-rail-chain{min-width:0;overflow:hidden;text-overflow:ellipsis}
+
+/* Optional public trade thesis. */
+.qxt-trader-thesis{display:grid;gap:6px;min-width:0;font-style:normal;font-size:12px;color:var(--qx-muted,#a6a196)}
+.qxt-trader-thesis[hidden]{display:none}.qxt-trader-thesis input{box-sizing:border-box;width:100%;min-width:0;background:transparent;color:inherit;border:1px solid #45433b;border-radius:6px;padding:10px;font:inherit;font-style:normal}.qxt-trader-thesis small{line-height:1.5;font-style:normal}.qxt-trader-thesis a{color:inherit}
