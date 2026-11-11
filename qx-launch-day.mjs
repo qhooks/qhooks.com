@@ -1,3 +1,7 @@
+import {mountGuidedStart} from './qx-guided-start-control.mjs';
+import {readRoundStart,assertRoundStart,readNewRoundStart} from './qx-round-start.mjs';
+import {START_PRICE_HOLD} from './qx-guided-start-core.mjs';
+import {usdShort} from './qx-quick-launch-core.mjs';
 // QHOOKS launch day: the launch wallet's deploys as buttons. Every transaction is built here from
 // /data/qhooks-launch-day.json (the rehearsed bytecode), checked against the chain with eth_call first, then sent
 // through the site's shared wallet path (browser wallets and the QHooks email wallet, as on /flywheel).
@@ -29,7 +33,7 @@ function parseEth(s) {
   return BigInt(a || '0') * E + BigInt((b + '0'.repeat(18)).slice(0, 18));
 }
 
-let cfg, me = null, busy = false, roundInfo = null, locksInfo = null;
+let cfg, me = null, busy = false, roundInfo = null, locksInfo = null, roundStart=null, roundStartControl=null, newStart={startTier:'standard',startSteps:'0',startUsd:''};
 
 async function rpc(method, params) {
   const r = await fetch(cfg.rpc, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({jsonrpc: '2.0', id: 1, method, params})});
@@ -58,12 +62,13 @@ const reason = e => (e?.message || String(e)).replace(/^execution reverted:?\s*/
 
 // Checks the transaction with eth_call, then sends it through the site's wallet path (switches to Robinhood
 // Chain, explicit fees, 30% gas headroom) and waits for the receipt. Returns the receipt or null.
-async function send(to, data, value, statusEl, label) {
+async function send(to, data, value, statusEl, label, beforeSign=async()=>{}) {
   if (busy) return null; busy = true; render();
   const from = me;
   try {
     statusEl.textContent = 'Checking…';
     try { await rpc('eth_call', [{from, to, data, value: '0x' + value.toString(16)}, 'latest']); } catch (e) { statusEl.textContent = label + ' would fail, so nothing was sent: ' + reason(e); return null; }
+    await beforeSign();
     const r = await siteSend(cfg.chainId, {to, data, value}, t => { statusEl.textContent = t; }, () => { if (connectedAddress() !== from) throw Error('Your wallet changed. Start this step again.'); });
     const cost = BigInt(r.gasUsed) * BigInt(r.effectiveGasPrice || 0);
     statusEl.textContent = 'Done. Gas used ' + Number(BigInt(r.gasUsed)).toLocaleString('en-US') + (cost ? ' (' + eth(cost, 6) + ')' : '') + ', block ' + BigInt(r.blockNumber) + ', tx ' + r.transactionHash.slice(0, 10) + '…';
@@ -93,7 +98,7 @@ const fromInput = v => v ? BigInt(Math.floor(new Date(v).getTime() / 1000)) : 0n
 function roundParams() {
   const start = fromInput($('ld-open').value), end = fromInput($('ld-close').value), deadline = fromInput($('ld-deadline').value);
   const minTotal = parseEth($('ld-min').value.trim());
-  return {factory: cfg.factory.address, launcher: me, canceller: cfg.safe, minTotal, maxBuy: BigInt(cfg.round.maxBuy), start, end, deadline, terms: {...cfg.round.terms, creator: me}};
+  return {factory: cfg.factory.address, launcher: me, canceller: cfg.safe, minTotal, maxBuy: BigInt(cfg.round.maxBuy), start, end, deadline, terms: {...cfg.round.terms, snipeSeconds:Number(BigInt(newStart.startSteps)*65536n+(BigInt(cfg.round.terms.snipeSeconds||0)&65535n)), creator: me}};
 }
 function roundProblem(p, now) {
   if (!me) return 'Connect the launch wallet first.';
@@ -112,14 +117,14 @@ async function predictRound() {
   predicted = null; const p = roundParams(), now = await chainNow(), bad = roundProblem(p, now);
   const sum = $('ld-round-summary');
   if (bad) { sum.textContent = bad; return; }
-  const tier = await tierStartCap();
-  if (tier.problem) { sum.textContent = tier.problem; return; }
+  let tier;try{tier=await readNewRoundStart({chainId:cfg.chainId,quote:(await import('./chains.mjs')).chainById(cfg.chainId).quote,tier:newStart.startTier,steps:newStart.startSteps,customUsd:newStart.startUsd,factory:cfg.factory.address,request:rpc});}catch{sum.textContent=START_PRICE_HOLD;return;}
+  p.terms.snipeSeconds=tier.steps*65536+Number(BigInt(cfg.round.terms.snipeSeconds||0)&65535n);
   let text = `Opens ${ct(p.start)}, closes ${ct(p.end)}, launch deadline ${ct(p.deadline)}. Minimum ${eth(p.minTotal)}, group buy up to ${eth(p.maxBuy)}. Launcher and creator ${short(me)}; the Safe ${short(cfg.safe)} can call it off.`;
   sum.textContent = text;
   const data = cfg.round.salt + cfg.round.init.slice(2) + roundArgs(p);
   try {
     const r = await call(cfg.ddp, data, {from: me});
-    predicted = {address: '0x' + r.slice(-40), data};
+    predicted = {address: '0x' + r.slice(-40), data, pricing:tier, selection:JSON.stringify(p,(_,v)=>typeof v==='bigint'?String(v):v)};
     sum.textContent = text + ' Round address will be ' + predicted.address + '.';
   } catch (e) { sum.textContent = text + ' The chain refuses these settings: ' + reason(e); }
 }
@@ -167,7 +172,8 @@ async function refresh() {
     const [t, b, f] = await Promise.all([cfg.token.address, cfg.blocks.address, cfg.factory.address].map(hasCode));
     Object.assign(engine, {token: t, blocks: b, factory: f});
     const addr = $('ld-round-addr').value.trim();
-    roundInfo = await readRound(addr);
+    roundInfo = await readRound(addr);roundStart=null;
+    if(roundInfo&&!roundInfo.launched&&!roundInfo.roundCancelled)try{roundStart=await readRoundStart({chainId:cfg.chainId,round:roundInfo.address,request:rpc});}catch{}
     locksInfo = roundInfo?.launched ? await readLocks(roundInfo) : null;
     if (me) {
       const bal = BigInt(await rpc('eth_getBalance', [me, 'latest']));
@@ -179,7 +185,7 @@ async function refresh() {
 
 function setBadge(id, text, done) { $(id).textContent = text; $(id).closest('.ld-step').dataset.state = done ? 'done' : ''; }
 
-function render() { renderMain(); renderLocks(); }
+function render() { renderMain(); renderLocks();roundStartControl?.refresh(); }
 function renderMain() {
   setBadge('ld-wallet-state', me ? 'Connected' : 'Not connected', !!me);
   $('ld-connect').textContent = me ? short(me) : 'Connect wallet';
@@ -200,7 +206,7 @@ function renderMain() {
   const roundDone = !!(r && r.factory === cfg.factory.address);
   setBadge('ld-round-state', roundDone ? 'Done' : 'To do', roundDone);
   $('ld-round-go').disabled = busy || !predicted;
-  for (const el of [document.querySelector('#ld-round .ld-times'), $('ld-round-summary'), $('ld-round-go')]) el.hidden = roundDone;
+  for (const el of [document.querySelector('#ld-round .ld-times'), $('ld-round-summary'), $('ld-round-go'),$('ld-start-cap')].filter(Boolean)) el.hidden = roundDone;
   $('ld-round-out').textContent = roundDone ? `Round ${r.address}: opens ${ct(r.start)}, closes ${ct(r.end)}, deadline ${ct(r.launchDeadline)}, minimum ${eth(r.minTotal)}. Send this address to the team.` : '';
 
   const L = $('ld-launch-line'), go = $('ld-launch-go'); go.disabled = true; go.hidden = !!(r && r.launched);
@@ -219,16 +225,17 @@ function renderMain() {
   if (!who) { setBadge('ld-launch-state', 'Ready', false); L.textContent = `Only the launch wallet ${short(r.launcher)} can press Launch. Connect it.`; return; }
   setBadge('ld-launch-state', 'Ready', false);
   L.textContent = `Ready. ${eth(r.total)} in from ${r.participants} wallets; the first buy is ${eth(buy)}. You send the 0.0002 ETH launch fee.`;
-  go.disabled = busy;
+  if(!roundStart){L.textContent=START_PRICE_HOLD;go.disabled=true;}else{L.textContent+=' Starts at ~'+usdShort(roundStart.capUsd)+'. The round then makes its first buy.';go.disabled=busy;}
 }
 
 async function launch() {
   const r = roundInfo; if (!r) return;
-  const {launchFee, startCap} = await chainFacts();
+  const shown=roundStart;if(!shown){$('ld-launch-status').textContent=START_PRICE_HOLD;return;}
+  const {launchFee} = await chainFacts(),startCap=shown.startCapWei;
   const buy = r.total > r.maxBuy ? r.maxBuy : r.total;
   const expect = curveTokens(buy, startCap), min = expect * 97n / 100n;
   $('ld-launch-line').textContent = `The first buy of ${eth(buy)} gets about ${millions(expect)} QHOOKS (${pct(expect)}). The launch refuses to go through if it would get less than ${millions(min)}.`;
-  const rc = await send(r.address, SEL.launch + w32(min), launchFee, $('ld-launch-status'), 'Launch');
+  const rc = await send(r.address, SEL.launch + w32(min), launchFee, $('ld-launch-status'), 'Launch',()=>assertRoundStart({shown,chainId:cfg.chainId,round:r.address,request:rpc}));
   if (rc) localStorage.setItem('qhooks-launch-day-round', r.address);
 }
 
@@ -239,6 +246,8 @@ async function main() {
   const pub = await fetch('/data/qhooks-round.json', {cache: 'no-store'}).then(r => r.ok ? r.json() : null).catch(() => null);
   let saved = null; try { saved = localStorage.getItem('qhooks-launch-day-round'); } catch {}
   $('ld-round-addr').value = (isAddr(pub?.round) && pub.round) || (isAddr(saved) && saved) || '';
+  const slot=document.createElement('div');slot.id='ld-start-cap';$('ld-round-summary').before(slot);
+  roundStartControl=mountGuidedStart({document,container:slot,prefix:'ld-',getState:()=>({chainId:cfg.chainId,...newStart,disabled:busy||!!roundInfo}),onChange:next=>{Object.assign(newStart,next);void predictRound().then(render);},request:rpc,resolveStart:options=>readNewRoundStart({...options,factory:cfg.factory.address})});
   const now = await chainNow().catch(() => BigInt(Math.floor(Date.now() / 1000)));
   const open = (now + 1200n + 299n) / 300n * 300n;
   $('ld-open').value = localInput(open); $('ld-close').value = localInput(open + 4n * 3600n); $('ld-deadline').value = localInput(open + 28n * 3600n);
@@ -252,8 +261,8 @@ async function main() {
   for (const id of ['ld-open', 'ld-close', 'ld-deadline', 'ld-min']) $(id).addEventListener('input', () => predictRound().then(render));
   $('ld-round-go').onclick = async () => {
     await predictRound(); if (!predicted) return;
-    const target = predicted.address;
-    const r = await send(cfg.ddp, predicted.data, 0n, $('ld-round-status'), 'Deploy the round');
+    const target = predicted.address,chosen=predicted;
+    const r = await send(cfg.ddp, predicted.data, 0n, $('ld-round-status'), 'Deploy the round',async()=>{const pricing=await readNewRoundStart({chainId:cfg.chainId,quote:(await import('./chains.mjs')).chainById(cfg.chainId).quote,tier:newStart.startTier,steps:newStart.startSteps,customUsd:newStart.startUsd,factory:cfg.factory.address,request:rpc});if(JSON.stringify(roundParams(),(_,v)=>typeof v==='bigint'?String(v):v)!==chosen.selection||pricing.tick0!==chosen.pricing.tick0||Math.abs(pricing.selectedCapUsd/chosen.pricing.selectedCapUsd-1)>.02)throw Error(START_PRICE_HOLD);});
     if (r) { $('ld-round-addr').value = target; try { localStorage.setItem('qhooks-launch-day-round', target); } catch {} await refresh(); }
   };
   $('ld-round-addr').addEventListener('change', refresh);

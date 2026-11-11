@@ -2,7 +2,7 @@
 import {chainById} from './chains.mjs';
 import {human,units} from './qx-create-plan.mjs';
 
-export const defaultStartingLiquidity=chainId=>chainById(chainId).quote.wrapNative?'0.02':'50';
+export const defaultStartingLiquidity=chainId=>'0';
 // Planning floors until a network estimate is available: 0.0005 ETH on L2s,
 // 0.01 ETH on L1, 0.005 BNB, 0.01 HYPE and 1 native USDC on Arc.
 // Reserve the larger of this floor and the existing costSummary network estimate.
@@ -20,7 +20,7 @@ export function liquidityDraftState(config,saved=null){
  return {userEdited:saved?.userEdited===true||config.liquidity!==defaultValue,defaultValue};
 }
 export function liquidityChainHandoff(config,chainId,saved=null){
- const state=liquidityDraftState(config,saved);if(config.chainId===chainId)return {liquidity:config.liquidity,liquidityState:state};
+ const state=liquidityDraftState(config,saved);if(config.chainId===chainId)return {liquidity:config.liquidity||'0',liquidityState:state};
  const defaultValue=defaultStartingLiquidity(chainId),reset=config.liquidity===state.defaultValue;
  return {liquidity:reset?defaultValue:config.liquidity,liquidityState:{userEdited:!reset,defaultValue}};
 }
@@ -36,13 +36,13 @@ export function liquidityAffordability(config,{nativeBalance=null,quoteBalance=n
  if(chain.family==='arc')available=native>overhead?(native-overhead)/10n**BigInt(18-chain.quote.decimals):0n;
  const suggested=roundLiquidityDown((available>0n?available:0n)*4n/5n),cap=units(defaultStartingLiquidity(config.chainId),chain.quote.decimals);
  const suggestion=human(suggested>cap?cap:suggested,chain.quote.decimals);
- let needed;try{needed=units(config.liquidity,chain.quote.decimals);}catch{return {known:true,blocked:true,suggestion,message:'Enter a plain starting liquidity amount with at most '+chain.quote.decimals+' decimals.'};}
+ let needed;try{needed=units(config.liquidity||'0',chain.quote.decimals);}catch{return {known:true,blocked:true,suggestion,message:'Enter a plain optional liquidity amount with at most '+chain.quote.decimals+' decimals.'};}
  const shortfall=needed>quote?needed-quote:0n;
- const nativeLiquidity=chain.family==='arc'?units(config.liquidity,18):chain.quote.wrapNative?shortfall:0n;
+ const nativeLiquidity=chain.family==='arc'?units(config.liquidity||'0',18):chain.quote.wrapNative?shortfall:0n;
  const requiredNative=overhead+nativeLiquidity;
  let message;
- if(native<requiredNative)message='Not enough '+chain.native+': you have '+show(native)+'. Keep at least '+human(requiredNative)+' for this launch (fee, gas and a small gas reserve'+(nativeLiquidity>0n?', plus liquidity':'')+'). Lower the starting liquidity or add '+chain.native+'.';
- else if(!chain.quote.wrapNative&&quote<needed)message='Not enough '+chain.quote.symbol+': you have '+human(quote,chain.quote.decimals)+', this needs '+config.liquidity+'. Lower the starting liquidity or add '+chain.quote.symbol+'.';
+ if(native<requiredNative)message='Not enough '+chain.native+': you have '+show(native)+'. Keep at least '+human(requiredNative)+' for this launch (fee, gas and a small gas reserve'+(nativeLiquidity>0n?', plus liquidity':'')+'). Lower the optional liquidity or add '+chain.native+'.';
+ else if(!chain.quote.wrapNative&&quote<needed)message='Not enough '+chain.quote.symbol+': you have '+human(quote,chain.quote.decimals)+', this needs '+config.liquidity+'. Lower the optional liquidity or add '+chain.quote.symbol+'.';
 
  // One source with the review: the needed figure is launch fee + the same network gas estimate (cost.networkGasWei).
  // The gas floor stays the affordability rule and is shown separately as the amount to keep on hand.
@@ -50,8 +50,8 @@ export function liquidityAffordability(config,{nativeBalance=null,quoteBalance=n
   message='You have '+show(native)+' '+chain.native+' on '+chain.name+'. '+(estGas===null?'Checking network gas. Keep at least '+human(requiredNative)+' '+chain.native:'This launch needs about '+human(shown)+' '+chain.native)+(chain.quote.wrapNative||chain.family==='arc'?' (liquidity + fee + gas).':' (fee + gas), plus '+config.liquidity+' '+chain.quote.symbol+' for liquidity. You have '+human(quote,chain.quote.decimals)+' '+chain.quote.symbol+'.');
   if(estGas!==null&&requiredNative>shown)message+=' Keep at least '+human(requiredNative)+' '+chain.native+' so a gas spike can\u2019t stop a step.';}
  if(chain.quote.wrapNative&&quote>0n)message+=' You also have '+human(quote,chain.quote.decimals)+' '+chain.quote.symbol+' for liquidity.';
- if(needed===0n&&native>=requiredNative)message+=' Enter starting liquidity greater than 0.';
- return {known:true,blocked:needed===0n||native<requiredNative||!chain.quote.wrapNative&&quote<needed,suggestion,message,requiredNative:requiredNative.toString(),gasReserveWei:gas.toString()};
+
+ return {known:true,blocked:native<requiredNative||!chain.quote.wrapNative&&quote<needed,suggestion,message,requiredNative:requiredNative.toString(),gasReserveWei:gas.toString()};
 }
 
 // Reuse the page's configured RPC transport, including its selected launch chain.

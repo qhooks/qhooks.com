@@ -1,7 +1,7 @@
 // Native-wrap panel binding.  It deliberately imports no wallet or crypto code.
 import {wrapSummary} from './wrap-summary.mjs';
 
-export function bindNativeWrap({document:d=document,target=window,loadWrap,connection=()=>null,downloadFile,clock=Date.now,onChange=()=>{},runAction=null,parentBusy=()=>false,parentHeld=()=>false}={}){
+export function bindNativeWrap({document:d=document,target=window,loadWrap,connection=()=>null,downloadFile,clock=Date.now,onChange=()=>{},runAction=null,parentBusy=()=>false,parentHeld=()=>false,requiredFunding=()=>null}={}){
  const $=id=>d.getElementById('ql-wrap-'+id), ensure=(ok,message)=>{if(!ok)throw Error(message);};
  const ids=['amount','review','transaction','cost','consent','send','check','save','hash','recover','new','download','file','import','status','feedback'];
  for(const id of ids)ensure($(id),'Missing wrapping control: ql-wrap-'+id);
@@ -20,9 +20,11 @@ export function bindNativeWrap({document:d=document,target=window,loadWrap,conne
  const setReview=q=>{clearReview();review=q;timer=target.setTimeout(()=>{clearReview();render();note('Wrapping fee review expired. Request a fresh estimate.');},Math.max(0,q.expiresAt-clock()));};
  function render(){
   const c=connection(),s=engine?.snapshot?.(),tx=stage(),held=parentHeld(),working=busy||parentBusy(),valid=!!review&&clock()<review.expiresAt&&!working&&!held&&!s?.invalid&&!s?.saveFailed&&!s?.recoveryOnly, enabled=!!c&&!!engine&&!working;
-  $('panel').hidden=!c?.quote?.wrapNative;
-  $('amount').disabled=!c||!!engine||working||opening;
-  $('review').disabled=!c||working||opening||held||(!!engine&&(s.recoveryOnly||s.invalid||!!tx&&!['pending','rejected'].includes(tx.status)||s.saveFailed));
+  let required=null;try{required=requiredFunding();}catch{}
+  $('panel').hidden=!c?.quote?.wrapNative||(!engine&&required!==null&&!required.needed);
+  if(!engine&&required!==null)$('amount').value=required.amount;
+  $('amount').disabled=!c||!!engine||working||opening||required!==null;
+  $('review').disabled=!c||(!engine&&required!==null&&!required.needed)||working||opening||held||(!!engine&&(s.recoveryOnly||s.invalid||!!tx&&!['pending','rejected'].includes(tx.status)||s.saveFailed));
   $('consent').disabled=!valid;$('send').disabled=!(valid&&$('consent').checked&&enabled&&!s.recoveryOnly&&tx?.status==='pending');
   $('check').disabled=!enabled;$('save').disabled=!enabled;$('recover').disabled=!(enabled&&tx?.status==='unknown');$('hash').disabled=$('recover').disabled;
   $('new').disabled=!(!!c&&!working&&!opening&&!held&&replaceable(tx));$('download').disabled=!engine||working;
@@ -36,12 +38,12 @@ export function bindNativeWrap({document:d=document,target=window,loadWrap,conne
  async function localRun(fn,message){if(dead||busy||parentBusy())return;busy=true;render();note('Working…');try{await fn();if(message)note(message);}catch(e){note(e?.message||'Wrapping stopped. Check saved progress.',true);}finally{busy=false;changed();}}
  const run=(fn,message)=>{if(dead||busy||parentBusy())return;return runAction?runAction(fn,message):localRun(fn,message);};
  async function open({saved=null}={}){
-  ensure(!engine,'Existing wrapping progress cannot be replaced');const c=connection();ensure(c?.quote?.wrapNative,'Native wrapping is unavailable on this network');opening=true;render();
+  ensure(!engine,'Existing wrapping progress cannot be replaced');const c=connection();ensure(c?.quote?.wrapNative,'Native wrapping is unavailable on this network');const required=requiredFunding();ensure(saved!==null||required===null||required.needed,'No quote liquidity needs wrapping.');opening=true;render();
   const rev=epoch,key='qhooks:native-wrap:v1:'+c.chainId+':'+c.owner.toLowerCase(),live=()=>!dead&&epoch===rev&&connection()?.chainId===c.chainId&&connection()?.owner===c.owner;
   // A broadcast may race a wallet change: persist recovery state under the
   // original owner/chain key, never under whichever wallet is current later.
   const scopedSave=text=>save(text,key);
-  try{const create=await loadWrap();ensure(live(),'Wrapping connection changed');const next=await create({provider:c.provider,session:c.session,chainId:c.chainId,amount:$('amount').value.trim(),saved,save:scopedSave,onChange:changed,clock,policyText:c.policyText});if(!live()){next?.dispose?.();throw Error('Wrapping connection changed');}engine=next;}
+  try{const create=await loadWrap();ensure(live(),'Wrapping connection changed');const next=await create({provider:c.provider,session:c.session,chainId:c.chainId,amount:required===null?$('amount').value.trim():required.amount,saved,save:scopedSave,onChange:changed,clock,policyText:c.policyText});if(!live()){next?.dispose?.();throw Error('Wrapping connection changed');}engine=next;}
   finally{opening=false;changed();}
  }
  $('amount').addEventListener('input',()=>{clearReview();changed();});$('consent').addEventListener('change',changed);

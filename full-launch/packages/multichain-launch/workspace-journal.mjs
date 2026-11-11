@@ -17,7 +17,8 @@ export function newWorkspaceJournal({chainId,owner,publicKey,fields,quoteDecimal
 }
 export function parseWorkspaceJournal(text,{chainId,owner,quoteDecimals}){
  ensure(typeof text==='string'&&text.length>0&&text.length<=2000000,'Bounded public launch progress required');const j=JSON.parse(text);
- ensure(shape(j,['version','kind','chainId','owner','publicKey','fields','artifacts','deployments','pools','actions'])&&j.version===1&&j.kind==='qhooks-full-launch'&&j.chainId===chainId&&j.owner===owner,'Launch progress identity mismatch');
+ ensure(shape(j,['version','kind','chainId','owner','publicKey','fields','artifacts','deployments','pools','actions',...(Object.hasOwn(j,'startPricing')?['startPricing']:[])])&&j.version===1&&j.kind==='qhooks-full-launch'&&j.chainId===chainId&&j.owner===owner,'Launch progress identity mismatch');
+ if(Object.hasOwn(j,'startPricing'))ensure(j.startPricing&&Object.getPrototypeOf(j.startPricing)===Object.prototype&&JSON.stringify(j.startPricing).length<=2048,'Bounded public start pricing required');
  const base=newWorkspaceJournal({chainId,owner,publicKey:j.publicKey,fields:j.fields,quoteDecimals});const legacy={...base.artifacts,toolkit:LEGACY_LAUNCH_TOOLKIT_SHA,metadata:LEGACY_LAUNCH_IMMUTABLES_SHA};ensure((JSON.stringify(j.artifacts)===JSON.stringify(base.artifacts)||JSON.stringify(j.artifacts)===JSON.stringify(legacy))&&JSON.stringify(j.fields)===JSON.stringify(base.fields),'Fixed artifact/configuration binding mismatch');
  ensure(shape(j.deployments,deploymentIds()),'Exact launch stages required');
  for(const id of deploymentIds()){const rows=j.deployments[id];ensure(Array.isArray(rows)&&rows.length<=8,'Bounded deployment attempts required');for(const row of rows)ensure(row&&Object.getPrototypeOf(row)===Object.prototype,'Public deployment data required');}

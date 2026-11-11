@@ -7,6 +7,7 @@ export function fillRecipeForm(document, recipe) {
   const normalized = normalizeLaunchRecipe(recipe);
   const chainId = normalized.chainId;
   const fields = normalized.fields;
+  for(const [suffix,value]of [['start-tier',fields.startTier||'standard'],['start-steps',fields.startSteps||'0'],['start-usd',fields.startUsd||'']]){const n=document.getElementById('ql-'+suffix);if(n)n.value=value;}
 
   const suffixes = [
     'chain', 'name', 'symbol', 'decimals', 'supply', 'notice', 'fee',

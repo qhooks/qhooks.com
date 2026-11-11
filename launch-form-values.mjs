@@ -12,7 +12,8 @@ export function readLaunchForm(document, parseAmount) {
     tokenName: read('name'), symbol: read('symbol'), decimals,
     totalSupply: parseAmount(read('supply'), Number(decimals)),
     notice: read('notice'), lpFeePpm: parseAmount(read('fee'), 4),
-    tokenAmount: read('token-funding'), quoteAmount: read('quote-funding'),
+    tokenAmount: read('token-funding'), quoteAmount: read('quote-funding')||'0',
+    ...(document.getElementById('ql-start-tier')?{startTier:read('start-tier'),startSteps:read('start-steps'),...(document.getElementById('ql-start-usd')?{startUsd:read('start-usd')}:{})}:{ }),
     graduationMode: mode, threshold: mode === '0' ? read('threshold') : '0',
     destinationFeePpm: parseAmount(read('destination-fee'), 4)
   };

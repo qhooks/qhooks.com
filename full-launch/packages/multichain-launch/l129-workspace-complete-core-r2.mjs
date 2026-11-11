@@ -1,3 +1,5 @@
+import {readGuidedStart} from '../../../qx-guided-start.mjs';
+import {planStartLiquidity,startSelection,assertStartPrice,START_PRICE_HOLD} from '../../../qx-guided-start-core.mjs';
 // L129 additive request-boundary variant of packages/multichain-launch/workspace-complete-core.mjs SHA 35df62f234698cfa65fa825d65131b761a28eaea5d38e0bdd2187a211f5bfa90.
 import {requireBoundWalletSession} from './l129-bound-session.mjs';
 import {createGuardedLaunchProvider} from './l129-guarded-provider-r2.mjs';
@@ -19,10 +21,10 @@ export async function createLaunchWorkspaceCore({provider,session,chainId,owner,
  requireBoundWalletSession(session,provider);
  const connection=session.current;ensure(connection?.chainId===chainId&&connection.owner===owner,'Connect selected chain and owner');
  const deps=await services.dependencies(chainId),quote=deps.profile.quote,manager=deps.profile.contracts.PoolManager.address;
- let j=saved===null?newWorkspaceJournal({chainId,owner,publicKey,fields,quoteDecimals:quote.decimals}):clone(parseWorkspaceJournal(saved,{chainId,owner,quoteDecimals:quote.decimals}));
+ let j=saved===null?newWorkspaceJournal({chainId,owner,publicKey,fields:{...fields,...startSelection(fields?.startTier,fields?.startSteps,fields?.startUsd)},quoteDecimals:quote.decimals}):clone(parseWorkspaceJournal(saved,{chainId,owner,quoteDecimals:quote.decimals}));
  let dead=false,invalid=false,busy=false,revision=0,saveFailed=false,attention=null,current='token',completed=[],addresses={},funding=null,context=null,state=null,action=null,actionIndex=-1,review=null,consent=null,sendAuthorization=null;
  const handles=new Map(),replacementNonces=new Map(),tf=workspaceTokenFields(j.fields),now=()=>{const n=clock();ensure(Number.isSafeInteger(n)&&n>=0,'Valid clock required');return n;};
- const snapshot=()=>freeze({chainId,owner,publicKey:j.publicKey,fields:j.fields,quote:{address:quote.address,symbol:quote.symbol,decimals:quote.decimals,wrapNative:quote.wrapNative,nativeSharedBalance:quote.nativeSharedBalance},busy,attention,saveFailed,completed:[...completed],current,addresses:{...addresses},funding,state,review,feesAccepted:!!review&&consent===review,keyReady:!!signer?.backupVerified&&!signer?.locked,action:action?.snapshot()||null,deployments:Object.fromEntries([...handles].map(([id,h])=>[id,h.snapshot()]))});
+ const snapshot=()=>freeze({chainId,owner,publicKey:j.publicKey,fields:j.fields,startPricing:j.startPricing||null,quote:{address:quote.address,symbol:quote.symbol,decimals:quote.decimals,wrapNative:quote.wrapNative,nativeSharedBalance:quote.nativeSharedBalance},busy,attention,saveFailed,completed:[...completed],current,addresses:{...addresses},funding,state,review,feesAccepted:!!review&&consent===review,keyReady:!!signer?.backupVerified&&!signer?.locked,action:action?.snapshot()||null,deployments:Object.fromEntries([...handles].map(([id,h])=>[id,h.snapshot()]))});
  const notify=()=>{try{onChange(snapshot());}catch{}};
  const journal=()=>JSON.stringify(j);
  async function persist(){try{const text=journal();ensure(text.length<=2000000,'Launch history limit reached; export progress');await save(text);saveFailed=false;}catch(e){saveFailed=true;attention='save-failed';throw new Error('Save public launch progress before continuing',{cause:e});}finally{notify();}}
@@ -65,13 +67,14 @@ export async function createLaunchWorkspaceCore({provider,session,chainId,owner,
  async function makeContext(){
   const last=j.deployments.controller.at(-1),tx=last?.stages?.[0]?.transaction;ensure(tx,'Confirmed controller transaction required');
   const next=await createLaunchActionContext({chainId,nonce:BigInt(tx.nonce).toString(),constructor:constructorFor('controller'),toolkitText,metadataText});ensure(next.plan.graph.controller===addresses.controller,'Controller CREATE identity changed');context=next;
-  funding=planV4LaunchLiquidity({token:addresses.token,quote:quote.address,tokenDecimals:Number(j.fields.decimals),quoteDecimals:quote.decimals,tokenAmount:j.fields.tokenAmount,quoteAmount:j.fields.quoteAmount});
+  const fundingInput={token:addresses.token,quote:quote.address,tokenDecimals:Number(j.fields.decimals),quoteDecimals:quote.decimals,tokenAmount:j.fields.tokenAmount,quoteAmount:j.fields.quoteAmount};
+  funding=j.startPricing?planStartLiquidity({...fundingInput,totalSupply:j.fields.totalSupply,pricing:j.startPricing}):planV4LaunchLiquidity(fundingInput);
   if(!j.pools){
-   const source=await context.planner.find({fee:j.fields.lpFeePpm,tickSpacing:'60'},()=>!dead&&!invalid),destination=j.fields.graduationMode==='2'?{key:{currency0:zeroAddress,currency1:zeroAddress,fee:'0',tickSpacing:'0',hooks:zeroAddress},hookSalt:zero32}:await context.planner.find({fee:j.fields.destinationFeePpm,tickSpacing:'60',start:(BigInt(source.hookSalt)+1n).toString()},()=>!dead&&!invalid);
+   const source=await context.planner.find({fee:j.fields.lpFeePpm,tickSpacing:funding.tickSpacing},()=>!dead&&!invalid),destination=j.fields.graduationMode==='2'?{key:{currency0:zeroAddress,currency1:zeroAddress,fee:'0',tickSpacing:'0',hooks:zeroAddress},hookSalt:zero32}:await context.planner.find({fee:j.fields.destinationFeePpm,tickSpacing:funding.tickSpacing,start:(BigInt(source.hookSalt)+1n).toString()},()=>!dead&&!invalid);
    await live();j.pools={source,destination};await persist();
   }
-  context.planner.describe(j.pools.source);ensure(j.pools.source.key.fee===j.fields.lpFeePpm&&j.pools.source.key.tickSpacing==='60','Source pool settings differ from launch');
-  if(j.fields.graduationMode!=='2'){context.planner.describe(j.pools.destination);ensure(j.pools.destination.key.fee===j.fields.destinationFeePpm&&j.pools.destination.key.tickSpacing==='60','Destination pool settings differ from launch');}
+  context.planner.describe(j.pools.source);ensure(j.pools.source.key.fee===j.fields.lpFeePpm&&j.pools.source.key.tickSpacing===funding.tickSpacing,'Source pool settings differ from launch');
+  if(j.fields.graduationMode!=='2'){context.planner.describe(j.pools.destination);ensure(j.pools.destination.key.fee===j.fields.destinationFeePpm&&j.pools.destination.key.tickSpacing===funding.tickSpacing,'Destination pool settings differ from launch');}
  }
  async function observe(){
   const admitted=await admission();state=await readLaunchActionState({provider:guardedProvider,context,live,tag:admitted.blockNumber,extraDescriptors:[j.pools.source,...(j.fields.graduationMode==='2'?[]:[j.pools.destination])]});ensure(state.blockHash===admitted.blockHash,'Launch dependencies and state block differ');return state;
@@ -83,6 +86,14 @@ export async function createLaunchWorkspaceCore({provider,session,chainId,owner,
  function bootstrapFields(){
   const threshold=j.fields.threshold==='0'?'0':parseDecimalAmount(j.fields.threshold,quote.decimals),policy=context.planner.policy({mode:j.fields.graduationMode,threshold,destination:j.pools.destination});
   return {kind:'bootstrap',bootstrap:{source:j.pools.source,sqrtPriceX96:funding.sqrtPriceX96,position:funding.position,maxAmount0:funding.maxAmount0,maxAmount1:funding.maxAmount1,policy,destination:j.pools.destination}};
+ }
+ async function assertBootstrapPricing(){
+  const raw=action?.snapshot()?.fields;if(raw?.kind!=='bootstrap')return;
+  ensure(j.startPricing&&funding,START_PRICE_HOLD);
+  const fresh=await readGuidedStart({chainId,quote,tier:j.fields.startTier||'standard',steps:j.fields.startSteps||'0',customUsd:j.fields.startUsd||'',request});await live();
+  ensure(fresh.tick0===j.startPricing.tick0&&fresh.startCapWei===j.startPricing.startCapWei&&fresh.quote===quote.address,START_PRICE_HOLD);
+  ensure(JSON.stringify(raw)===JSON.stringify(bootstrapFields()),START_PRICE_HOLD);
+  assertStartPrice({sqrtPriceX96:raw.bootstrap.sqrtPriceX96,tokenIs0:funding.tokenIs0,totalSupply:j.fields.totalSupply,quoteDecimals:quote.decimals,quoteUsd:fresh.quoteUsd,selectedCapUsd:fresh.selectedCapUsd});
  }
  async function confirmBootstrap(){
   ensure(JSON.stringify(state.source.descriptor)===JSON.stringify(j.pools.source)&&JSON.stringify(state.source.position)===JSON.stringify(funding.position),'Onchain source position differs from this launch');
@@ -124,7 +135,7 @@ export async function createLaunchWorkspaceCore({provider,session,chainId,owner,
   await loadCurrentKey();keyReady();return openAction(j.actions.length,raw);
  }
  async function prepareNext(){
-  review=null;consent=null;keyReady();await refresh();
+  review=null;consent=null;keyReady();ensure(j.startPricing||completed.includes('bootstrap'),START_PRICE_HOLD);await refresh();
   if(launchDeployments.includes(current)){
    const rows=j.deployments[current];if(!rows.length){const h=await deployment(current,0,false);rows.push(clone(h.journal()));await persist();return snapshot();}
    const key=current+':'+(rows.length-1),h=handles.get(key);ensure(h,'Prepare the deployment');const previous=h.snapshot();
@@ -151,7 +162,7 @@ export async function createLaunchWorkspaceCore({provider,session,chainId,owner,
   next?.backupVerified&&!next.locked,'Verified matching key required');signer=next;loadCurrentKey().then(notify,()=>{});review=null;consent=null;notify();},
   reconcile:()=>operation(refresh),prepareNext:()=>operation(prepareNext),
   prepareAction:raw=>operation(async()=>{review=null;consent=null;await refresh();ensure(context&&completed.includes('bootstrap'),'Complete launch setup first');await newAction(raw);return snapshot();}),
-  approve:()=>operation(async()=>{ensure(action,'Prepare a protected action');review=null;consent=null;keyReady();await action.approve();return snapshot();}),
+  approve:()=>operation(async()=>{ensure(action,'Prepare a protected action');review=null;consent=null;keyReady();await assertBootstrapPricing();await action.approve();return snapshot();}),
   review:()=>operation(async()=>{
    review=null;consent=null;keyReady();await admission();let q,id;
    if(launchDeployments.includes(current)){id=current;const key=id+':'+(j.deployments[id].length-1),h=handles.get(key);ensure(h,'Prepare the next deployment');q=await h.review();const prior=replacementNonces.get(key);if(prior)ensure(q.transaction.nonce===prior.nonce&&q.transaction.data===prior.data,'Replacement must use the original nonce and exact constructor');}
@@ -160,7 +171,7 @@ export async function createLaunchWorkspaceCore({provider,session,chainId,owner,
   }),
   acceptFees(q){ensure(!busy&&!dead&&!invalid&&!saveFailed&&q&&q===review&&now()>=q.reviewedAt&&now()<q.expiresAt,'Accept this exact launch fee review');keyReady();if(q.stageId==='action')action.acceptFees(q.inner);consent=q;notify();},
   submit:q=>operation(async()=>{
-   ensure(q&&q===review&&consent===review,'Explicit launch fee consent required');keyReady();const chosen=q;review=null;consent=null;sendAuthorization=chosen;
+   ensure(q&&q===review&&consent===review,'Explicit launch fee consent required');keyReady();ensure(j.startPricing||completed.includes('bootstrap'),START_PRICE_HOLD);await assertBootstrapPricing();const chosen=q;review=null;consent=null;sendAuthorization=chosen;
    try{if(chosen.stageId==='action')await action.submit(chosen.inner);else await handles.get(chosen.stageId+':'+(j.deployments[chosen.stageId].length-1)).submit(chosen.inner);await live();return await refresh();}finally{sendAuthorization=null;}
   }),
   recover:hash=>operation(async()=>{review=null;consent=null;if(launchDeployments.includes(current)){const rows=j.deployments[current];ensure(rows.length,'No deployment transaction');await handles.get(current+':'+(rows.length-1)).recover(hash);}else{ensure(action,'No action transaction');await action.recover(hash);}return refresh();}),
@@ -169,5 +180,5 @@ export async function createLaunchWorkspaceCore({provider,session,chainId,owner,
   invalidate,
   dispose(){if(dead)return;dead=true;invalidate();boundary.dispose();action?.dispose();for(const h of handles.values())h.dispose();for(const e of events)provider.removeListener(e,invalidate);}
  };
- try{await live();await refresh();}catch(e){api.dispose();throw e;}return Object.freeze(api);
+ try{await live();if(saved===null)j.startPricing=await readGuidedStart({chainId,quote,tier:j.fields.startTier,steps:j.fields.startSteps,customUsd:j.fields.startUsd||'',request});await refresh();}catch(e){api.dispose();throw e;}return Object.freeze(api);
 }

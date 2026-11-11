@@ -1,3 +1,4 @@
+import {mountGuidedStart} from './qx-guided-start-control.mjs';
 import {mountSolCreate} from './qx-sol-launch.mjs';
 import {checkTicker,assertTickerFree,TickerTaken,tickerBlockNodes} from '/qx-ticker-guard.mjs';
 import {CREATE_EXECUTION_ENABLED,CREATE_EXECUTION_HOLD,GUIDED_NEW_LAUNCHES,START_PRICING_HOLD} from './qx-create-release.mjs';
@@ -25,7 +26,7 @@ const $=id=>document.getElementById('qc-'+id),DRAFT='qhooks:create:draft:v1',ACT
 const hub=getWalletHub(window),chains=visibleChains();
 const chainPackage=mountCreateChainPackage({container:$('chain-package')});
 const el=(tag,attrs={},...kids)=>{const n=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')n.className=v;else if(k in n)n[k]=v;else n.setAttribute(k,v);}n.append(...kids.filter(x=>x!==null&&x!==undefined));return n;};
-let solCreate=null;
+let solCreate=null,startControl=null;
 let config=defaultConfig(),profileScope='',screen=1,record=null,signer=null,context=null,busy=false,openingMarket=false,cost=null,costRevision=0,costTimer=null;
 let liquidityState=liquidityDraftState(config),walletBalances=null,balanceIdentity=null,balanceRevision=0,balanceRead=null,liquidityGasCost=null;
 let usdPrices={},usdReads=new Map(),usdReadAt=new Map();
@@ -93,7 +94,7 @@ function summaryNode(){const c=chainById(config.chainId),a=allocationAmounts(con
  const quantity=value=>String(value).replace(/^\d+/,part=>BigInt(part).toLocaleString('en-US'));
  if(config.banner)box.append(el('img',{class:'qxc-review-banner',src:config.banner,alt:config.symbol+' token banner'}));
  if(config.image)box.append(el('img',{src:config.image,alt:config.symbol+' token image',width:48,height:48}));
- box.append(line('Token',config.name+' · '+config.symbol),line('Chain',c.name),line('Supply',BigInt(whole).toLocaleString('en-US')+(fraction?'.'+fraction:'')),line('In the pool',quantity(human(a.pool))+' '+config.symbol+' · '+human(a.poolBps,2)+'%'),line('Style',CREATE_STYLES.find(p=>p.id===config.style)?.name||config.style),line('Second key',config.quantum?'Required for protected creator actions':'Off'),el('p',{class:'qxc-fine'},$('style-summary').textContent));
+ box.append(line('Token',config.name+' · '+config.symbol),line('Chain',c.name),line('Supply',BigInt(whole).toLocaleString('en-US')+(fraction?'.'+fraction:'')),line(Number(config.liquidity)>0?'Pool token limit':'In the pool',quantity(human(a.pool))+' '+config.symbol+' · '+human(a.poolBps,2)+'%'),line('Style',CREATE_STYLES.find(p=>p.id===config.style)?.name||config.style),line('Second key',config.quantum?'Required for protected creator actions':'Off'),el('p',{class:'qxc-fine'},$('style-summary').textContent));
  appendArbRecaptureLine(box,c,CREATE_STYLES.find(p=>p.id===config.style)?.on||[],'studio');
  for(const r of config.allocations)box.append(line(r.label,r.pct+'% · '+(r.cliff?r.cliff/MONTH+' month cliff, ':'')+(r.duration?r.duration/MONTH+' months vesting':'available at launch')+' · '+r.notice/86400+' day notice'),line('Beneficiary',r.wallet));
  const lp=Number(workspaceFieldsForReview().lpFeePpm);box.append(el('p',{class:'qxc-fine'},'Creator LP fee: '+lp/10000+'%. Protocol pool fee: '+Math.floor(lp/5)/10000+'%. Selected block charges are shown above. Graduation needs your approval and both keys.'));
@@ -101,7 +102,7 @@ function summaryNode(){const c=chainById(config.chainId),a=allocationAmounts(con
 }
 function costNode(){const box=el('div'),view=createCostView(config,cost,usdPrices);
  const line=(k,v)=>el('div',{class:'qxc-summary-line'},el('span',{},k),el('b',{class:'qxc-number'},v));
- box.append(el('p',{class:'qxc-cost-total'},view.headline),line('Starting liquidity',view.liquidity),line('Platform launch fee',view.fee),line('Network gas · estimate',view.gas),el('p',{class:'qxc-fine'},view.note));
+ box.append(el('p',{class:'qxc-cost-total'},view.headline),line('Optional liquidity',view.liquidity),line('Platform launch fee',view.fee),line('Network gas · estimate',view.gas),el('p',{class:'qxc-fine'},view.note));
  if(cost)box.append(line('Native balance needed · estimate',human(cost.totalNativeWei)+' '+cost.native));
  if(cost&&!chainById(config.chainId).quote.wrapNative&&chainById(config.chainId).family!=='arc')box.append(el('p',{class:'qxc-fine'},'Plus '+cost.liquidity+' '+cost.liquidityUnit+' from your token balance.'));
  box.append(el('p',{class:'qxc-fine'},'Gas uses planning estimates for each step, with fresh network fees. Each transaction is estimated again before sending. Any wrapped balance you already hold reduces the native amount needed.'));return box;
@@ -141,13 +142,13 @@ function renderChainNote(){
   n.replaceChildren(el('p',{},'Guided Create isn’t on '+(c?.name||'this chain')+' yet. '),a);n.firstChild.append(a);n.hidden=false;return;}
  n.replaceChildren();n.hidden=true;
 }
-function render(){if(solCreate?.active){solCreate.render();return;}renderChainNote();
+function render(){startControl?.refresh();if(solCreate?.active){solCreate.render();return;}renderChainNote();
  const liquidity=liquidityStatus();if(!record&&liquidity.blocked)reviewGate.invalidate(liquidity.message);
  reviewGate.check();
  for(let n=1;n<=3;n++)$('screen-'+n).hidden=screen!==n;for(const b of document.querySelectorAll('[data-screen]')){if(Number(b.dataset.screen)===screen)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');b.disabled=busy||!record&&liquidity.blocked&&Number(b.dataset.screen)>screen;b.title=b.disabled&&!busy?liquidity.message:'';}
  const c=hub.snapshot().current,chain=chainById(config.chainId);$('wallet').textContent=c?c.entry.name+' · '+c.owner.slice(0,6)+'…'+c.owner.slice(-4):'Connect a wallet to launch.';$('wallet').title=c?.owner||'';$('connect').textContent=c?'Wallet options':'Connect wallet';$('connect').disabled=busy;
  chainPackage.refresh(config.chainId);
- $('quote-unit').textContent='· '+chain.quote.symbol;$('liquidity-note').textContent=liquidity.message;$('liquidity-note').dataset.error=String(liquidity.blocked);$('liquidity').setAttribute('aria-invalid',String(liquidity.blocked));$('refresh-balance').disabled=busy||!c;
+ $('extra-label').textContent='Add '+(chain.quote.wrapNative?chain.native:chain.quote.symbol)+' liquidity (optional)';$('quote-unit').textContent='· '+chain.quote.symbol;$('liquidity-note').textContent=liquidity.message;$('liquidity-note').dataset.error=String(liquidity.blocked);$('liquidity').setAttribute('aria-invalid',String(liquidity.blocked));$('refresh-balance').disabled=busy||!c;
  renderPool();for(const k of inputKeys)$(k).disabled=busy||!!record;for(const id of ['allocation-preset','add-allocation'])$(id).disabled=busy||!!record;for(const b of $('styles').children)b.disabled=busy||!!record;
  showRequiredQuantum($('quantum'));
  for(const field of $('profile-slot').querySelectorAll('input,textarea,button'))field.disabled=busy||!!record;for(const field of $('allocations').querySelectorAll('input,button'))field.disabled=busy||!!record;
@@ -170,7 +171,7 @@ function sameLiquidityIdentity(a,b){return a===b||!!a&&!!b&&a.owner===b.owner&&a
 function currentLiquidityBalances(){return sameLiquidityIdentity(balanceIdentity,liquidityIdentity())?walletBalances:null;}
 function liquidityStatus(estimate=cost||liquidityGasCost){return liquidityAffordability(config,{...currentLiquidityBalances(),cost:estimate});}
 function applyAffordableLiquidity(estimate=cost||liquidityGasCost){
- if(record||busy||liquidityState.userEdited)return false;const {suggestion}=liquidityStatus(estimate);if(suggestion===null||suggestion===config.liquidity)return false;
+ if(record||busy||liquidityState.userEdited||units(config.liquidity||'0',chainById(config.chainId).quote.decimals)===0n)return false;const {suggestion}=liquidityStatus(estimate);if(suggestion===null||suggestion===config.liquidity)return false;
  reviewGate.invalidate();config.liquidity=suggestion;liquidityState.defaultValue=suggestion;$('liquidity').value=suggestion;saveDraft();return true;
 }
 function refreshLiquidity({force=false}={}){
@@ -268,7 +269,7 @@ assistedPanel=mountAssistedLaunchPanel({getDraft:()=>structuredClone(config),get
 for(const k of inputKeys)$(k).addEventListener(k==='chainId'||k==='quantum'?'change':'input',()=>{
  if(k==='chainId'){const requested=chains.find(c=>c.id===$(k).value),handoff=prepareCreateChainHandoff({config,liquidityState,profileScope,requestedChain:requested,hasSavedDraft:true,hasActiveRecord:!!record});if(handoff.profileCarry){const c=handoff.profileCarry;setTokenProfileDraft(c.chainId,c.profile,c.scope);}config=handoff.config;liquidityState=liquidityDraftState(config,handoff.liquidityState||liquidityState);profileScope=handoff.profileScope;$('liquidity').value=config.liquidity;if(handoff.changedChain){adoptProfile();if(window.history?.replaceState){const url=new URL(location.href);url.searchParams.set('chain',config.chainId);window.history.replaceState(window.history.state,'',url);}}}
  else config[k]=k==='quantum'?$(k).checked:['stakers','referrals','antiSnipe'].includes(k)?Number($(k).value):$(k).value;
- if(k==='liquidity')liquidityState.userEdited=true;
+ if(k==='liquidity'){liquidityState.userEdited=true;if(!config.liquidity.trim())config.liquidity='0';}
  if(k==='symbol'){config.symbol=config.symbol.toUpperCase();$('symbol').value=config.symbol;}changed();if(k==='symbol'||k==='chainId')checkTickerSoon();if(k==='chainId'){void refreshLiquidity();if(screen===3)void refreshCost({refreshBalances:false});}});
 $('allocation-preset').addEventListener('change',()=>{config.allocationPreset=$('allocation-preset').value;if(config.allocationPreset==='ecosystem')config.allocations=ecosystem(hub.snapshot().current?.owner||'');else if(config.allocationPreset==='none')config.allocations=[];changed({rebuild:true});});
 $('add-allocation').addEventListener('click',()=>{const first=!config.allocations.length;config.allocations.push({id:first?'founder':crypto.randomUUID(),label:first?'Founder':'Allocation',pct:'1',wallet:first?hub.snapshot().current?.owner||'':'',cliff:0,duration:12*MONTH,notice:604800});config.allocationPreset='custom';$('allocation-preset').value='custom';changed({rebuild:true});});
@@ -294,4 +295,5 @@ hub.subscribe(s=>{void quantumControl.refresh();reviewGate.check();if(!record){l
 window.addEventListener('focus',()=>{void refreshLiquidity({force:true});if(screen===3)void refreshCost({refreshBalances:false});});
 window.addEventListener('pagehide',()=>{balanceRevision++;reviewGate.clear();context?.dispose();quantumControl.lock();});render();void quantumControl.refresh();if(screen===3)void refreshCost({refreshBalances:false});
 
+startControl=mountGuidedStart({document,container:$('start-cap'),prefix:'qc-',getState:()=>({...config,disabled:busy||!!record}),onChange:next=>{Object.assign(config,next);changed();},request:rpcRead});
 solCreate=mountSolCreate({chainSelect:$('chainId'),onExit:()=>{render();}});

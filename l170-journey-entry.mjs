@@ -17,7 +17,7 @@ if(entry.status!=='blocked'){
 }
 bindTokenBrief({blocked:entry.status==='blocked',snapshot:()=>core?.snapshot()||{}});
 bindLaunchLink({blocked:entry.status==='blocked',snapshot:()=>core?.snapshot()||{}});
-// SEV-1 2026-11-11: Studio prices the pool from the funding amounts, like the guided flow; new Studio launches are paused.
+// Both launch paths share this release switch; the workspace also checks exact start pricing before signing.
 import('./qx-create-release.mjs').then(({GUIDED_NEW_LAUNCHES,START_PRICING_HOLD})=>{if(GUIDED_NEW_LAUNCHES)return;const begin=document.getElementById('ql-begin');if(!begin)return;
  const note=document.createElement('p');note.id='ql-start-hold';note.className='qtd-need-image';note.setAttribute('role','status');note.textContent=START_PRICING_HOLD.replace('Quick launch above','Quick launch on /create');begin.after(note);begin.setAttribute('aria-disabled','true');
  begin.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();note.focus?.();},true);});

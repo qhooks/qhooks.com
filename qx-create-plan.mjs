@@ -41,12 +41,15 @@ export function validateAllocations(rows,supply,limits=QLOCKS_LIMITS) {
  }
  return true;
 }
-export const defaultConfig = () => ({chainId:'8453',name:'',symbol:'',supply:'1000000000',image:'',banner:'',description:'',x:'',discord:'',telegram:'',website:'',style:'none',stakers:0,referrals:0,antiSnipe:0,quantum:true,allocations:[],allocationPreset:'none',liquidity:'50'});
+export const defaultConfig = () => ({chainId:'8453',name:'',symbol:'',supply:'1000000000',image:'',banner:'',description:'',x:'',discord:'',telegram:'',website:'',style:'none',stakers:0,referrals:0,antiSnipe:0,quantum:true,allocations:[],allocationPreset:'none',liquidity:'0',startTier:'standard',startSteps:'0'});
 export function presetRules(id) {const p=CREATE_STYLES.find(p=>p.id===id);ensure(p,'Choose a launch style.');return {stakers:p.stakers||0,referrals:p.set?.referralShareBps||0,antiSnipe:p.guardMin||0};}
+// The budget only sizes automatic block settings; it never initializes a pool or requires a deposit.
+export function blockQuoteBudget(value,wrapNative){return Number(value)>0?String(value):wrapNative?'0.02':'50';}
 export function makeBlocks(config,owner) {
  const p=CREATE_STYLES.find(p=>p.id===config.style),chain=chainById(config.chainId);ensure(p&&chain&&validAddress(owner),'Choose a style, chain and launch wallet.');
  const on=[...p.on],settings=Object.fromEntries(BLOCKS.flatMap(b=>b.params.map(v=>[v.k,v.def])));Object.assign(settings,p.set||{});
- const c=emptyBlocks(owner.toLowerCase()),quote=units(config.liquidity,chain.quote.decimals);
+ // Automatic block budgets are settings, independent of whether the creator deposits quote.
+ const c=emptyBlocks(owner.toLowerCase()),quote=units(blockQuoteBudget(config.liquidity,chain.quote.wrapNative),chain.quote.decimals);
  if(Number(config.referrals)>0&&!on.includes('referrals'))on.push('referrals');
  c.mask=on.reduce((n,id)=>n|(1n<<BigInt(BLOCK_BITS[id])),0n).toString();
  c.guardSeconds=String(on.some(id=>BLOCKS.find(b=>b.id===id)?.guard)?Number(config.antiSnipe)*60:0);
@@ -66,7 +69,7 @@ export function validateConfig(c,owner,{quantumRequired=true}={}) {
  const chain=chainById(c.chainId);ensure(chain,'Choose a supported chain.');
  ensure(typeof c.name==='string'&&c.name.isWellFormed()&&c.name.trim().length>0&&new TextEncoder().encode(c.name.trim()).length<=64,'Enter a token name, up to 64 UTF-8 bytes.');
  ensure(/^[A-Za-z0-9]{1,10}$/.test(c.symbol),'Use 1–10 letters or digits for the ticker.');ensure(units(c.supply)>0n&&units(c.supply)<(1n<<128n),'Supply must fit the token engine.');
- ensure(units(c.liquidity,chain.quote.decimals)>0n,'Enter starting liquidity.');
+ ensure(units(c.liquidity||'0',chain.quote.decimals)>=0n,'Enter optional liquidity.');
  ensure(Number.isInteger(Number(c.antiSnipe))&&Number(c.antiSnipe)>=0&&Number(c.antiSnipe)<=10080,'Anti-snipe length is 0–10080 minutes.');
  for(const k of ['stakers','referrals'])ensure(Number(c[k])>=0&&Number(c[k])<=100,'Shares must be between 0 and 100%.');
  ensure(!quantumRequired||c.quantum,'This launch engine needs the second key. Turn quantum protection on to continue.');
@@ -74,7 +77,7 @@ export function validateConfig(c,owner,{quantumRequired=true}={}) {
  validateAllocations(c.allocations,c.supply);makeBlocks(c,owner);return true;
 }
 export const profileFromConfig = c => normalizeTokenProfile({description:c.description||'',image:c.image||'',banner:c.banner||'',links:{x:c.x||'',discord:c.discord||'',telegram:c.telegram||'',website:c.website||''}});
-export function workspaceFields(c,owner) {const a=allocationAmounts(c.supply,c.allocations);return {tokenName:c.name.trim(),symbol:c.symbol.toUpperCase(),decimals:'18',totalSupply:a.total,notice:'604800',lpFeePpm:'10000',tokenAmount:human(a.pool),quoteAmount:c.liquidity,graduationMode:'1',threshold:'0',destinationFeePpm:'3000',blocks:makeBlocks(c,owner)};}
+export function workspaceFields(c,owner) {const a=allocationAmounts(c.supply,c.allocations);return {tokenName:c.name.trim(),symbol:c.symbol.toUpperCase(),decimals:'18',totalSupply:a.total,notice:'604800',lpFeePpm:'10000',tokenAmount:human(a.pool),quoteAmount:c.liquidity||'0',...(c.startTier?{startTier:c.startTier,startSteps:String(c.startSteps||'0'),...(c.startUsd!==undefined?{startUsd:c.startUsd}:{})}:{ }),graduationMode:'1',threshold:'0',destinationFeePpm:'3000',blocks:makeBlocks(c,owner)};}
 export function engineFor(config,targets=SIMPLE_LAUNCH) {return !config.quantum&&config.allocations.length===0&&targets[String(config.chainId)]?'simple':'multi';}
 export const ENGINE_STAGES = Object.freeze([['token','Create token',1000000],['verifier','Deploy verifier',2000000],['collector','Deploy fee collector',1000000],['blocks','Deploy launch blocks',9000000],['controller','Deploy launch controller',12000000],['funding','Fund liquidity',160000],['bootstrap','Launch pool',7000000]]);
 export function plan(config,targets=SIMPLE_LAUNCH) {
@@ -91,8 +94,8 @@ export function costSummary(config,{gasPriceWei=0n,gasEstimates={},wrapNeeded=tr
  const steps=plan(config).map(s=>({...s,estimatedGas:String(gasEstimates[s.id]??s.gas),estimate:true}));
  const gas=steps.reduce((n,s)=>n+BigInt(s.id==='wrap'&&!wrapNeeded||s.id==='locks-setup'&&!locksSetupNeeded?0:s.estimatedGas)*BigInt(gasPriceWei),0n);
  const txCount=8+(chain.quote.wrapNative&&wrapNeeded?1:0)+(config.allocations.length?1+config.allocations.length+(locksSetupNeeded?1:0):0);
- const nativeLiquidity=chain.family==='arc'?units(config.liquidity,18):chain.quote.wrapNative&&wrapNeeded?units(config.liquidity,chain.quote.decimals):0n;
- return {steps,networkGasWei:gas.toString(),estimate:true,platformFee:chain.launchFee,platformFeeWei:fee.toString(),native:chain.native,liquidity:config.liquidity,liquidityUnit:chain.quote.symbol,txCount,signatureCount:1,walletConfirmations:txCount+1,totalNativeWei:(gas+fee+nativeLiquidity).toString()};
+ const nativeLiquidity=chain.family==='arc'?units(config.liquidity||'0',18):chain.quote.wrapNative&&wrapNeeded?units(config.liquidity||'0',chain.quote.decimals):0n;
+ return {steps,networkGasWei:gas.toString(),estimate:true,platformFee:chain.launchFee,platformFeeWei:fee.toString(),native:chain.native,liquidity:config.liquidity||'0',liquidityUnit:chain.quote.symbol,txCount,signatureCount:1,walletConfirmations:txCount+1,totalNativeWei:(gas+fee+nativeLiquidity).toString()};
 }
 // A saved "done" flag alone is never enough to skip a transaction.
 export function resumeDecision(step,record,observation={}) {
@@ -127,10 +130,10 @@ export function listingBody(pool,_metadata) {return typeof pool==='string'?pool:
 // Check the actual quote before any deployment. USDC pools keep their admitted
 // quote; wrapped-native pools only need the wrapped balance shortfall in ETH/BNB.
 export function fundingPreflight(config,{quoteBalance,nativeBalance,gasPriceWei=0n}={}) {
- const chain=chainById(config.chainId),quote=BigInt(quoteBalance),native=BigInt(nativeBalance),needed=units(config.liquidity,chain.quote.decimals);
+ const chain=chainById(config.chainId),quote=BigInt(quoteBalance),native=BigInt(nativeBalance),needed=units(config.liquidity||'0',chain.quote.decimals);
  const shortfall=needed>quote?needed-quote:0n,wrapAmount=chain.quote.wrapNative?shortfall:0n;
  const cost=costSummary(config,{gasPriceWei,wrapNeeded:wrapAmount>0n});
- const nativeLiquidity=chain.family==='arc'?units(config.liquidity,18):wrapAmount;
+ const nativeLiquidity=chain.family==='arc'?units(config.liquidity||'0',18):wrapAmount;
  const requiredNative=BigInt(cost.networkGasWei)+BigInt(chain.launchFeeWei)+nativeLiquidity;
  return {ready:(chain.quote.wrapNative||shortfall===0n)&&native>=requiredNative,missingQuote:chain.quote.wrapNative?'0':shortfall.toString(),wrapAmount:wrapAmount.toString(),requiredNative:requiredNative.toString(),quoteUnit:chain.quote.symbol,nativeUnit:chain.native};
 }

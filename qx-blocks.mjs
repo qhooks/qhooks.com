@@ -1,3 +1,4 @@
+import {blockQuoteBudget} from './qx-create-plan.mjs';
 // Studio launch-blocks picker. Writes the canonical blocks configuration into #ql-blocks,
 // with "@owner" standing for the connected wallet until the launch is opened.
 import { BLOCKS, CATEGORIES, PRESETS, QUOTE_ASSETS, AUCTION_ADDRESS, AUCTION_CONFLICTS, presetVisible } from '/qx-block-catalog.mjs';
@@ -46,7 +47,7 @@ if (root && out) {
   function remember() { try { sessionStorage.setItem(STORE, JSON.stringify(state)); } catch {} }
   const chainId = () => d.getElementById('ql-chain')?.value || '8453';
   const quoteAsset = () => { const p = selectedPair(chainId()); return p ? [stockPair(chainId(), p).symbol, 18] : QUOTE_ASSETS[chainId()] || ['USDC', 6]; };
-  const startingQuote = () => { const v = Number(d.getElementById('ql-quote-funding')?.value || 0); return Number.isFinite(v) && v > 0 ? v : 0; };
+  const startingQuote = () => Number(blockQuoteBudget(d.getElementById('ql-quote-funding')?.value, /^(WETH|WBNB|WHYPE)$/.test(quoteAsset()[0])));
   const isOn = id => state.on.includes(id);
   const autoQuote = k => { const s = startingQuote(); return k === 'maxBuyPerBlock' ? s * 0.005 : k === 'buybackMax' ? s * 0.01 : k === 'clockMinBuy' ? s * 0.001 : 0; };
   const valueOf = p => (p.def === 'auto' && (state.values[p.k] === 'auto' || state.values[p.k] === '')) ? autoQuote(p.k) : state.values[p.k];

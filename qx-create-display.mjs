@@ -15,7 +15,7 @@ export function createCostView(config,cost=null,prices={}){
   liquidity:String(config.liquidity)+' '+chain.quote.symbol+(liquidity!==null&&quoteRate!==null?' · ≈ '+dollars(liquidity*quoteRate):''),
   fee:chain.launchFee+' '+chain.native+(rate!==null?' · ≈ '+dollars(fee*rate):''),
   gas:gasKnown?human(cost.networkGasWei)+' '+chain.native+(rate!==null?' · ≈ '+dollars(gas*rate):''):'Unknown · + network gas',
-  note:chain.quote.symbol==='USDC'||chain.native==='USDC'?'Liquidity stays in your pool. Dollar estimates value USDC at $1.':'Liquidity stays in your pool.'
+  note:chain.quote.symbol==='USDC'||chain.native==='USDC'?'Entered liquidity is a limit. Unused assets stay in your wallet. Dollar estimates value USDC at $1.':'Entered liquidity is a limit. Unused assets stay in your wallet.'
  };
 }
 export function walletStepLabel(record,steps){

@@ -49,17 +49,18 @@ function renderPlan() {
   const supply = num('ql-supply'), pooled = num('ql-token-funding'), sym = ($('ql-symbol')?.value || '').trim() || 'tokens';
   const left = Number.isFinite(supply) && Number.isFinite(pooled) && supply > 0 && pooled >= 0 && pooled <= supply ? supply - pooled : null;
   const share = left !== null ? ' (' + (Math.round(left / supply * 1000) / 10) + '% of supply)' : '';
-  const line = left === null || !pooled
+  const optionalQuote = Number($('ql-quote-funding')?.value || 0) > 0;
+  const line = optionalQuote ? 'Pool tokens are a limit. Unused tokens stay in your wallet after launch; check the actual balance before choosing what to do with them.' : left === null || !pooled
     ? 'Whatever you do not put in the pool stays in your wallet after launch, and buyers can see it on Trade.'
     : left === 0 ? 'Your whole supply goes into the pool. Nothing stays in your wallet.'
       : left.toLocaleString('en-US') + ' ' + sym + share + ' stays in your wallet after launch, and buyers can see it on Trade.';
   plan.replaceChildren(...[
     h('h3', { id: 'qxt-plan-heading' }, 'Tokens outside the pool'),
     h('p', { class: 'qxt-note' }, line),
-    left === 0 ? null : choiceRow(readPlan(), v => { writePlan(v); renderPlan(); if (state) render(); }, 'What happens to tokens outside the pool'),
-    left === 0 ? null : h('p', { class: 'qxt-fine' }, 'You confirm this right after launch. Nothing is sent now.')].filter(Boolean));
+    left === 0 && !optionalQuote ? null : choiceRow(readPlan(), v => { writePlan(v); renderPlan(); if (state) render(); }, 'What happens to tokens outside the pool'),
+    left === 0 && !optionalQuote ? null : h('p', { class: 'qxt-fine' }, 'You confirm this right after launch. Nothing is sent now.')].filter(Boolean));
 }
-for (const id of ['ql-supply', 'ql-token-funding', 'ql-symbol']) $(id)?.addEventListener('input', renderPlan);
+for (const id of ['ql-supply', 'ql-token-funding', 'ql-quote-funding', 'ql-symbol']) $(id)?.addEventListener('input', renderPlan);
 renderPlan();
 
 // ---- After launch: the step itself ----
