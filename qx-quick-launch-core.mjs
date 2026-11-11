@@ -1,3 +1,4 @@
+import {requireBannerHash} from './qx-token-banner.mjs';
 // Quick launch (one transaction through QSimpleLaunch) and the launch-idea cards on /create.
 // Public configuration and pure helpers only: no DOM, wallet, storage or network.
 // Cards are built from the existing launch styles (CREATE_STYLES / presetRules / makeBlocks in qx-create-plan.mjs) and the
@@ -237,17 +238,18 @@ function stringTail(s) {const b = enc.encode(s), h = hexOf(b);return word(b.leng
 /// A token image is required to launch (2026-11-10).
 export const NEED_IMAGE = 'Add an image for your token.';
 /// Checks name, ticker and the token's meta JSON. Throws a plain sentence.
-export function validateQuick({name, symbol, image = ''}) {
+export function validateQuick({name, symbol, image = '', banner = ''}) {
  const n = String(name ?? '').trim(), s = String(symbol ?? '').trim().toUpperCase();
  if (!n || !n.isWellFormed() || enc.encode(n).length > 64) throw new TypeError('Enter a token name, up to 64 characters.');
  if (!/^[A-Z0-9]{1,10}$/.test(s)) throw new TypeError('Use 1–10 letters or digits for the ticker.');
  if (!image) throw new TypeError(NEED_IMAGE);
  if (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(image)) throw new TypeError('Choose a PNG, JPEG or WebP image.');
- const meta = quickMeta({image});
+ requireBannerHash(banner);
+ const meta = quickMeta({image,banner});
  if (enc.encode(meta).length > META_LIMIT) throw new TypeError('Choose a smaller image.');
  return {name: n, symbol: s, meta};
 }
-export const quickMeta = ({image = ''}) => JSON.stringify({...(image ? {image} : {}), launchedFrom: 'create-quick'});
+export const quickMeta = ({image = '',banner = ''}) => JSON.stringify({...(image ? {image} : {}),...(banner ? {banner} : {}), launchedFrom: 'create-quick'});
 
 /// A quote is a table index or an ERC-20 address encoded as uint160 in uint256[].
 export function quoteCode(value) {
@@ -256,7 +258,7 @@ export function quoteCode(value) {
  return n;
 }
 /// Calldata for QSimpleLaunch.launch from the card preset and the three typed fields.
-export function encodeQuickLaunch({name, symbol, image = '', style, snipe = 15, salt, steps = 0, startCap = false, pq = false, pqKey = null, lockRoles = false, quoteIndex = 0, quotes = null, ticks = null, weights = null}) {
+export function encodeQuickLaunch({name, symbol, image = '', banner = '', style, snipe = 15, salt, steps = 0, startCap = false, pq = false, pqKey = null, lockRoles = false, quoteIndex = 0, quotes = null, ticks = null, weights = null}) {
  const multi = quotes !== null, codes = multi && Array.isArray(quotes) ? quotes.map(quoteCode) : [];
  if (multi && (!pq || !startCap || !Array.isArray(quotes) || quotes.length < 1 || quotes.length > 8 || new Set(codes.map(String)).size !== quotes.length || !Array.isArray(ticks) || ticks.length !== quotes.length || ticks.some((t,i) => !Number.isInteger(t) || t % 200 || Math.abs(t) > 887200 || codes[i]>=256n&&t===0))) throw new TypeError('Choose valid pools and starting prices.');
  if (multi && (!Array.isArray(weights) || weights.length !== quotes.length || weights.some(w => !Number.isInteger(w) || w < 500 || w > 10000) || weights.reduce((sum, w) => sum + w, 0) !== 10000)) throw new TypeError('Pool weights must add up to 10000, with at least 500 per pool.');
@@ -265,7 +267,7 @@ export function encodeQuickLaunch({name, symbol, image = '', style, snipe = 15, 
  if (!Number.isInteger(qi) || qi < 0 || qi > 255) throw new TypeError('Choose a pair.');
  if (qi && (!pq || !startCap)) throw new TypeError('Pairs need the pairs launch contract on this chain.');
  if (qi && style === 'flywheel') throw new TypeError('Stakers’ share launches pair with ETH only.');
- const v = validateQuick({name, symbol, image});
+ const v = validateQuick({name, symbol, image,banner});
  if (!(style in SIMPLE_STYLE_IDS)) throw new TypeError('Choose a launch idea.');
  if (!SNIPE_OPTIONS.includes(Number(snipe))) throw new TypeError('Choose a supported anti-snipe length.');
  if (!/^0x[0-9a-f]{64}$/i.test(salt || '')) throw new TypeError('Missing launch salt.');

@@ -3,7 +3,7 @@ const safe=new Set([
  'Waiting for the new QHooks treasury wallet.','Solana launches open shortly.','Connect your Solana wallet.','Connect a Solana wallet first.','Connect the QHooks treasury wallet.','Connect this coin’s creator wallet.','Connect the wallet for this transaction.',
  'The wallet changed. Review again.','Wallet changed. Review again.','Use Solana mainnet.',
  'Review this transaction again before signing.','This wallet cannot sign this transaction. Use another Solana wallet.',
- 'Use a name of 1–32 UTF-8 bytes, without angle brackets.','Use 1–10 letters or digits for the ticker.','Add a token image.','Enter SOL with up to 9 decimal places.',
+ 'Use a name of 1–32 UTF-8 bytes, without angle brackets.','Use 1–10 letters or digits for the ticker.','Add a token image.','Add a banner for your token.','Enter SOL with up to 9 decimal places.',
  'Keep the description to 1,000 characters.','Choose a smaller profile picture.','Choose a PNG, JPEG or WebP image.','The image could not be read.','The image format does not match its file.','The token profile could not be read.',
  'Use your X profile link or @handle.','Use a t.me Telegram link.','Use a discord.gg or discord.com invite.',
  'Simulation failed. Nothing was sent. Check your SOL balance and retry.','Network cost unavailable. Refresh review.','Rent estimate unavailable. Refresh review.',

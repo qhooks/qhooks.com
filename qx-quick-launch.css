@@ -21,7 +21,7 @@
 .qq-preset strong{display:block;font-size:15px;margin-top:2px}.qxc-main .qq-preset p{margin:4px 0 10px;color:var(--qx-muted);font-size:12.5px}.qq-preset .qq-blocks{margin:0}
 .qq-fields{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1.4fr);gap:16px;margin-bottom:16px}
 .qq-image{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:end}.qq-image small{grid-column:1/-1}
-.qxc-main .qq-image input[type=file]{padding:9px 10px;font-size:12.5px}.qq-image img{width:44px;height:44px;border-radius:9px;object-fit:cover;border:1px solid var(--qx-line-2)}
+.qxc-main .qq-image input[type=file]{padding:9px 10px;font-size:12.5px}.qq-image img{width:44px;height:44px;border-radius:9px;object-fit:cover;border:1px solid var(--qx-line-2)}.qq-image img#qq-banner-preview{width:132px;height:44px}
 .qq-cost{margin:4px 0 8px}.qxc-main .qq-cost p.qq-total{font-size:22px;font-weight:650;letter-spacing:-.02em;margin:0 0 4px}
 .qq-done{margin-top:18px;padding-top:18px;border-top:1px solid var(--qx-line)}.qq-done h3{font-size:20px}
 .qxc-main p.qq-or{margin:26px 0 14px;font:600 11px var(--qx-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--qx-muted);display:flex;align-items:center;gap:14px}

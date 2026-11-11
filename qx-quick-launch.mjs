@@ -1,3 +1,4 @@
+import {prepareTokenBanner,uploadTokenBanner,LAUNCH_ICON_LIMIT} from './qx-token-banner.mjs';
 import {readFactoryStart} from './qx-guided-start.mjs';
 import {selectedStart,START_PRICE_HOLD} from './qx-guided-start-core.mjs';
 import {assertQuickStart,startTierLabel,startCapText} from './qx-quick-start-check.mjs';
@@ -20,8 +21,9 @@ import {pqFactory,primeCleanFactory} from './qx-quick-launch-core.mjs';
 import {multiFactory,multiQuotes,primeMultiFactory,multiLive,alignTick,poolWeights} from './qx-quick-launch-core.mjs';
 import {pairsFactory,pairQuotes,primePairsFactory,pairsLive,pairStartAtCall,readPairStartAt,usdFromSqrt} from './qx-quick-launch-core.mjs';
 import {mountAccountQuantum} from './qx-account-quantum-control.mjs';
-import {ideaCards,ideaCard,visibleGroups,quickFactory,encodeQuickLaunch,validateQuick,launchFeeWei,quickCost,ethText,launchedToken,marketPath,randomSalt,PLANNING_GAS,META_LIMIT} from './qx-quick-launch-core.mjs';
+import {ideaCards,ideaCard,visibleGroups,quickFactory,encodeQuickLaunch,validateQuick,launchFeeWei,quickCost,ethText,launchedToken,marketPath,randomSalt,PLANNING_GAS} from './qx-quick-launch-core.mjs';
 
+let banner='',bannerData='',bannerRevision=0,imageRevision=0;
 const $=id=>document.getElementById('qq-'+id),hub=getWalletHub(window),LAST='qhooks:create:quick:v1';
 const el=(tag,attrs={},...kids)=>{const n=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')n.className=v;else if(k in n)n[k]=v;else n.setAttribute(k,v);}n.append(...kids.filter(x=>x!=null));return n;};
 const SVG='http://www.w3.org/2000/svg';
@@ -262,7 +264,7 @@ function openQuick(id,{scroll=false}={}){
 }
 
 const costKey=v=>JSON.stringify(v,(_k,value)=>typeof value==='bigint'?value.toString():value);
-function fields(){return {name:$('name').value,symbol:$('symbol').value,image};}
+function fields(){return {name:$('name').value,symbol:$('symbol').value,image,banner};}
 function renderQuick(){
  if(!pick)return;const c=chainById(chainId),conn=hub.snapshot().current;
  let ready=true;try{validateQuick(fields());}catch{ready=false;}
@@ -274,11 +276,12 @@ function renderQuick(){
    line('Launch fee',ethText(cost.feeWei)+' '+c.native),line('Network gas · up to',ethText(cost.networkWei)+' '+c.native),
    ...(cost.live&&!cost.quote.funded?[el('p',{class:'qxc-fine qq-short','data-error':'true'},'Add '+ethText(BigInt(cost.quote.requiredBalance)-BigInt(cost.quote.balance))+' '+c.native+' on '+c.name+' to launch.')]:[]),el('p',{class:'qxc-fine'},cost.live?'Priced for this launch from your wallet’s estimate. One transaction, one confirmation.':'Planning estimate. Connect a wallet for this launch’s own estimate. One transaction, one confirmation.'));}
  appendArbRecaptureLine(box,c,pick.blocks||[],launchFactory());
+ for(const id of ['name','symbol','image','banner'])if($(id))$(id).disabled=busy;
  const b=$('launch');
  b.textContent=busy?'Launching…':!conn?'Connect wallet':conn.chainId!==chainId?'Switch to '+c.short+' and launch':priceBlocked()||poolsBlocked()?'Refreshing price…':pqBlocked()?'Unlock your quantum key to launch':'Launch for '+(cost?ethText(cost.totalWei)+' '+c.native:'…');
  // A token image is required (2026-11-10): no launch, or chain switch for one, until the image is ready.
- const needImage=!image;$('need-image').hidden=!needImage||busy;
- b.disabled=busy||!!taken||!!conn&&(needImage||conn.chainId===chainId&&(!ready||!cost||priceBlocked()||poolsBlocked()||pqBlocked()||cost.live&&!cost.quote.funded));
+ const needImage=!image,needBanner=!banner;$('need-image').hidden=!needImage||busy;$('need-banner').hidden=!needBanner||busy;
+ b.disabled=busy||!!taken||needImage||needBanner||!!conn&&(conn.chainId===chainId&&(!ready||!cost||priceBlocked()||poolsBlocked()||pqBlocked()||cost.live&&!cost.quote.funded));
 }
 
 async function rpc(method,params){const c=chainById(chainId);const r=await fetch(c.rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});const j=await r.json();if(j.error||typeof j.result!=='string')throw Error(j.error?.message||'RPC error');return j.result;}
@@ -325,13 +328,14 @@ let costTimer=null;const costSoon=()=>{clearTimeout(costTimer);costTimer=setTime
 async function thumbnail(file){
  if(!/^image\/(png|jpeg|webp)$/.test(file.type))throw Error('Choose a PNG, JPEG or WebP image.');
  if(file.size>8e6)throw Error('Choose an image under 8 MB.');
- const bitmap=await createImageBitmap(file);const side=Math.min(bitmap.width,bitmap.height);
+ const bitmap=await createImageBitmap(file);try{const side=Math.min(bitmap.width,bitmap.height);
  for(const [px,q] of [[96,.82],[80,.78],[64,.74],[64,.6],[48,.6]]){
   const canvas=el('canvas',{width:px,height:px}),ctx=canvas.getContext('2d');ctx.fillStyle='#fbf9f4';ctx.fillRect(0,0,px,px);
   ctx.drawImage(bitmap,(bitmap.width-side)/2,(bitmap.height-side)/2,side,side,0,0,px,px);
-  const url=canvas.toDataURL('image/jpeg',q);if(url.length<=META_LIMIT-200)return url;
+  const url=canvas.toDataURL('image/jpeg',q);if(url.length<=LAUNCH_ICON_LIMIT)return url;
  }
  throw Error('That image is too detailed to store. Try a simpler one.');
+ }finally{bitmap.close();}
 }
 
 const rememberLast=v=>{try{localStorage.setItem(LAST,JSON.stringify(v));}catch{/* the receipt is still shown on this page */}};
@@ -366,6 +370,7 @@ async function launch(){
   const selectedCapUsd=selectedStart({tier:startTier,steps:startSteps,customUsd,standardUsd:startBase?.usd}).selectedCapUsd;
   await assertQuickStart({chainId,transaction:sent,expectedFactory:launchFactory(),expectedSteps:startSteps,expectedQuoteIndex:curPair()?.index||0,shownCapUsd,selectedCapUsd,quoteUsd:startBase?.quoteUsd,request:walletRequest(conn)});
   if(startReviewKey!==JSON.stringify([startTier,startSteps,customUsd,startBase])||priceBlocked()||poolsBlocked()||key!==costKey([fields(),pick.style,pick.snipe,startCapOn()?startSteps:0,pqOnChain()?pqKeyHex():null,launchFactory(),curPair()?.index||0,multiFields()])||hub.snapshot().current!==conn)throw Error(START_PRICE_HOLD);
+  if(await uploadTokenBanner(bannerData)!==f.banner||hub.snapshot().current!==conn)throw Error('Your banner changed. Review your launch again.');
   note('Confirm '+ethText(cost.totalWei)+' '+chainById(chainId).native+' or less in your wallet: the launch fee plus network gas.');
   const hash=await conn.entry.provider.request({method:'eth_sendTransaction',params:[sent]});
   rememberLast({chainId,hash,name:f.name.trim(),symbol:f.symbol.trim().toUpperCase(),at:Date.now()});
@@ -387,9 +392,12 @@ function mount(){
  $('use-robinhood')?.addEventListener('click',()=>setQuickChain('4663'));
  $('open').addEventListener('click',()=>launchCard(pick?.id||'fair'));
  for(const id of ['name','symbol'])$(id).addEventListener('input',()=>{if(id==='symbol'){$('symbol').value=$('symbol').value.toUpperCase();checkTickerSoon();}renderQuick();costSoon();});
- $('image').addEventListener('change',async()=>{const file=$('image').files?.[0];if(!file)return;
-  try{image=await thumbnail(file);$('preview').src=image;$('preview').hidden=false;$('image-status').textContent='Image ready.';}
-  catch(e){image='';$('preview').hidden=true;$('image-status').textContent=e.message;}renderQuick();costSoon();});
+ $('image').addEventListener('change',async()=>{const file=$('image').files?.[0];if(!file)return;const rev=++imageRevision;image='';renderQuick();
+  try{const data=await thumbnail(file);if(rev!==imageRevision)return;image=data;$('preview').src=image;$('preview').hidden=false;$('image-status').textContent='Image ready.';}
+  catch(e){if(rev!==imageRevision)return;image='';$('preview').hidden=true;$('image-status').textContent=e.message;}renderQuick();costSoon();});
+ $('banner').addEventListener('change',async()=>{const file=$('banner').files?.[0];if(!file)return;const rev=++bannerRevision;banner='';bannerData='';cost=null;renderQuick();$('banner-status').textContent='Preparing your banner…';
+  try{const data=await prepareTokenBanner(file);if(rev!==bannerRevision)return;$('banner-preview').src=data;$('banner-preview').hidden=false;const hash=await uploadTokenBanner(data);if(rev!==bannerRevision)return;banner=hash;bannerData=data;$('banner-status').textContent='Banner ready.';}
+  catch(e){if(rev!==bannerRevision)return;banner='';$('banner-preview').hidden=true;$('banner-status').textContent=e.message;}renderQuick();costSoon();});
  $('launch').addEventListener('click',()=>void launch());
  $('change').addEventListener('click',()=>$('ideas').scrollIntoView({block:'start'}));
  hub.subscribe(()=>{void pqControl?.refresh();renderQuick();if(pick)costSoon();checkTickerSoon();});

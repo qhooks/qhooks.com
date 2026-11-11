@@ -1,3 +1,4 @@
+import {prepareTokenBanner} from './qx-token-banner.mjs';
 import {normalizeTokenProfile, profileImage, PROFILE_LIMITS, hasTokenProfile, poolFromShareLink} from './qx-token-profile-core.mjs';
 import {createProfileDraftStore, profileBackup, readProfileBackup} from './qx-token-profile-draft.mjs';
 const bus = new EventTarget();
@@ -25,6 +26,7 @@ export function onTokenProfileDraft(listener) {
   return ()=>bus.removeEventListener('change',receive);
 }
 async function imageFile(file, kind) {
+  if(kind==='banner')return prepareTokenBanner(file);
   if (!file) throw Error('Choose a picture.');
   if (file.size > 20 * 1024 * 1024) throw Error('That picture is over 20 MB. Choose a smaller PNG or JPEG.');
   if (file.type && !file.type.startsWith('image/')) throw Error('That file is not a picture. Choose a PNG or JPEG.');
@@ -45,7 +47,7 @@ async function imageFile(file, kind) {
     return profileImage(data,kind);
   } finally { image.close(); }
 }
-export function mountTokenProfileEditor({id,chain = () => document.getElementById('ql-chain')?.value || '8453',name = () => document.getElementById('ql-name')?.value || 'Your token',symbol = () => document.getElementById('ql-symbol')?.value || 'TICKER',scope=()=>'',imageRequired=false} = {}) {
+export function mountTokenProfileEditor({id,chain = () => document.getElementById('ql-chain')?.value || '8453',name = () => document.getElementById('ql-name')?.value || 'Your token',symbol = () => document.getElementById('ql-symbol')?.value || 'TICKER',scope=()=>'',imageRequired=false,bannerRequired=false} = {}) {
   const scopeKey=()=>String(scope()||''),localStore=()=>scopedStore(scopeKey()),draft=chain=>localStore().get(String(chain)),update=(chain,patch)=>localStore().update(String(chain),patch);
   const status = h('p',{class:'qtp-status',role:'status','aria-live':'polite'}), fields = h('div',{class:'qtp-fields'});
   const banner = h('img',{alt:'Token banner preview',class:'qtp-preview-banner'}), avatar = h('img',{alt:'Token profile picture preview',class:'qtp-preview-avatar'});
@@ -58,9 +60,9 @@ export function mountTokenProfileEditor({id,chain = () => document.getElementByI
     fields.append(h('label',{for:id+'-'+key},label,input));
   }
   const uploads = h('div',{class:'qtp-uploads'});
-  for (const [kind,label,hint] of [['image','Profile picture',imageRequired?'Square · PNG or JPEG · required':'Square · PNG or JPEG'],['banner','Token banner','Wide, 3:1 · optional']]) {
-    const file=h('input',{id:id+'-'+kind,type:'file',accept:'image/*'}),remove=h('button',{type:'button',class:'qtp-remove'},'Remove'); let revision=0;
-    file.addEventListener('change',async()=>{const turn=++revision,c=String(chain()),s=scopeKey(); status.textContent='Preparing your '+label.toLowerCase()+'…';try { const data=await imageFile(file.files?.[0],kind);if(turn!==revision||c!==String(chain())||s!==scopeKey())return;const saved=update(c,{[kind]:data});status.textContent=saved?'Image ready. Your token profile is saved in this browser.':storageNotice; } catch(e) { status.textContent=e.message; } finally {if(turn===revision)file.value='';} });
+  for (const [kind,label,hint] of [['image',imageRequired?'Image (required)':'Profile picture','Square · PNG or JPEG'],['banner',bannerRequired?'Banner (required)':'Token banner','Wide, 3:1 · PNG, JPEG or WebP · under 8 MB'+(bannerRequired?'':' · optional')]]) {
+    const file=h('input',{id:id+'-'+kind,type:'file',accept:kind==='banner'?'image/png,image/jpeg,image/webp':'image/*',...((kind==='banner'?bannerRequired:imageRequired)?{required:''}:{})}),remove=h('button',{type:'button',class:'qtp-remove'},'Remove'); let revision=0;
+    file.addEventListener('change',async()=>{const turn=++revision,c=String(chain()),s=scopeKey();if(kind==='banner'?bannerRequired:imageRequired)update(c,{[kind]:''}); status.textContent='Preparing your '+label.toLowerCase()+'…';try { const data=await imageFile(file.files?.[0],kind);if(turn!==revision||c!==String(chain())||s!==scopeKey())return;const saved=update(c,{[kind]:data});status.textContent=saved?'Image ready. Your token profile is saved in this browser.':storageNotice; } catch(e) { status.textContent=e.message; } finally {if(turn===revision)file.value='';} });
     remove.addEventListener('click',()=>{revision++;update(String(chain()),{[kind]:''});status.textContent=label+' removed.';});
     uploads.append(h('div',{class:'qtp-upload'},h('label',{for:id+'-'+kind},label,h('small',{},hint),file),remove));
   }
@@ -153,10 +155,10 @@ export function profilePublicationControl({chain=()=>document.getElementById('ql
 const tokenPanel=document.getElementById('qtd-token-panel');
 // Expert Studio: a token image is required to launch (2026-11-10). Continue and Prepare launch workspace stay blocked
 // with a plain note until the profile picture is ready.
-if(tokenPanel&&!document.getElementById('ql-profile')){const actions=tokenPanel.querySelector('.qtd-actions');actions?.before(mountTokenProfileEditor({id:'ql-profile',imageRequired:true}));
-  const chainOf=()=>document.getElementById('ql-chain')?.value||'8453',hasImage=()=>{try{return !!tokenProfileDraft(chainOf()).image;}catch{return false;}};
-  const note=h('p',{id:'ql-need-image',class:'qtd-need-image',role:'status','data-error':'true'},'Add an image for your token.');actions?.prepend(note);
-  const begin=document.getElementById('ql-begin'),note2=h('p',{id:'ql-need-image-begin',class:'qtd-need-image',role:'status','data-error':'true'},'Add an image for your token. Add it under “Make it yours” in Token details.');begin?.after(note2);
+if(tokenPanel&&!document.getElementById('ql-profile')){const actions=tokenPanel.querySelector('.qtd-actions');actions?.before(mountTokenProfileEditor({id:'ql-profile',imageRequired:true,bannerRequired:true}));
+  const chainOf=()=>document.getElementById('ql-chain')?.value||'8453',hasImage=()=>{try{const p=tokenProfileDraft(chainOf());return !!p.image&&!!p.banner;}catch{return false;}};
+  const note=h('p',{id:'ql-need-image',class:'qtd-need-image',role:'status','data-error':'true'},'Add an image and a banner for your token.');actions?.prepend(note);
+  const begin=document.getElementById('ql-begin'),note2=h('p',{id:'ql-need-image-begin',class:'qtd-need-image',role:'status','data-error':'true'},'Add an image and a banner for your token. Add them under “Make it yours” in Token details.');begin?.after(note2);
   const sync=()=>{const ok=hasImage();note.hidden=ok;note2.hidden=ok;for(const id of ['qj-next-token','ql-begin'])document.getElementById(id)?.setAttribute('aria-disabled',String(!ok));};
   for(const id of ['qj-next-token','ql-begin'])document.getElementById(id)?.addEventListener('click',e=>{if(hasImage())return;e.preventDefault();e.stopImmediatePropagation();sync();document.getElementById('ql-profile-image')?.focus();},true);
   onTokenProfileDraft(sync);document.getElementById('ql-chain')?.addEventListener('change',sync);sync();}

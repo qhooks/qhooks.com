@@ -1,19 +1,20 @@
+import {prepareTokenBanner,uploadTokenBanner,LAUNCH_ICON_LIMIT} from './qx-token-banner.mjs';
 // /create → "Sale first": opens a QSaleLaunch sale (fixed or falling price) in one transaction, then links to its sale
 // page. Only on chains whose sale contract has code (Randall's /chain-setup?set=sale tap); elsewhere the card says so.
 import {getWalletHub} from './wallet-hub-fresh.mjs';
 import {chainById, visibleChains} from './chains.mjs';
-import {SEL, feeFields, saleAddress, planSale, salePrices, saleCapText, assertSaleStart, encodeCreateSale, parseSaleCreated, saleLink, randomSalt, fromWei, compact, SALE_TOKENS, SUPPLY, WINDOWS, START_MULTIPLES, META_LIMIT} from './qx-sale-core.mjs';
+import {SEL, feeFields, saleAddress, planSale, salePrices, saleCapText, assertSaleStart, encodeCreateSale, parseSaleCreated, saleLink, randomSalt, fromWei, compact, SALE_TOKENS, SUPPLY, WINDOWS, START_MULTIPLES} from './qx-sale-core.mjs';
 import {START_TIERS} from './qx-quick-launch-core.mjs';
 import {startTierLabel,startCapText} from './qx-quick-start-check.mjs';
 import {assertStartPrice,START_PRICE_HOLD} from './qx-guided-start-core.mjs';
 import {readSaleStart} from './qx-sale-start.mjs';
 
 // Dependencies are injectable so the actual form and wallet boundary can be tested offline.
-export async function mountSaleCreate({document = globalThis.document, hub = getWalletHub(window), request, readStart = readSaleStart, makeThumbnail, navigate = url => location.assign(url), search = globalThis.location?.search || '', hash = globalThis.location?.hash || ''} = {}) {
+export async function mountSaleCreate({document = globalThis.document, hub = getWalletHub(window), request, readStart = readSaleStart, makeThumbnail, makeBanner=prepareTokenBanner, uploadBanner=uploadTokenBanner, navigate = url => location.assign(url), search = globalThis.location?.search || '', hash = globalThis.location?.hash || ''} = {}) {
 const root = document.getElementById('qsf-root');
 const el = (tag, attrs = {}, ...kids) => { const n = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else if (v !== false && v != null) n.setAttribute(k, v === true ? '' : v); } n.append(...kids.flat().filter(k => k != null && k !== false)); return n; };
 const chains = visibleChains().filter(c => saleAddress(c.id));
-let image = '', busy = false, live = new Map(), fee = new Map();
+let image = '', banner='', bannerData='', imageRevision=0,bannerRevision=0, busy = false, live = new Map(), fee = new Map();
 
 async function rpc(c, method, params) {
   if (request) return request(method, params, c.id);
@@ -36,14 +37,15 @@ function thumbnail(file) {
   return (async () => {
     if (!/^image\/(png|jpeg|webp)$/.test(file.type)) throw Error('Choose a PNG, JPEG or WebP image.');
     if (file.size > 8e6) throw Error('Choose an image under 8 MB.');
-    const bitmap = await createImageBitmap(file), side = Math.min(bitmap.width, bitmap.height);
+    const bitmap = await createImageBitmap(file);try{const side = Math.min(bitmap.width, bitmap.height);
     for (const [px, qq] of [[96, .82], [80, .78], [64, .74], [64, .6], [48, .6]]) {
       const canvas = el('canvas', {width: px, height: px}), ctx = canvas.getContext('2d');
       ctx.fillStyle = '#fbf9f4'; ctx.fillRect(0, 0, px, px);
       ctx.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, px, px);
-      const url = canvas.toDataURL('image/jpeg', qq); if (url.length <= META_LIMIT - 300) return url;
+      const url = canvas.toDataURL('image/jpeg', qq); if (url.length <= LAUNCH_ICON_LIMIT) return url;
     }
     throw Error('That image is too detailed to store. Try a simpler one.');
+    }finally{bitmap.close();}
   })();
 }
 
@@ -57,6 +59,7 @@ function thumbnail(file) {
   const name = el('input', {id: 'qsf-name', maxlength: '64', autocomplete: 'off', placeholder: 'Token name'});
   const symbol = el('input', {id: 'qsf-symbol', maxlength: '10', autocomplete: 'off', placeholder: 'TICKER'});
   const file = el('input', {id: 'qsf-image', type: 'file', accept: 'image/png,image/jpeg,image/webp'});
+  const bannerFile=el('input',{id:'qsf-banner',type:'file',accept:'image/png,image/jpeg,image/webp',required:true}),bannerPreview=el('img',{alt:'Token banner preview',width:'150',height:'50',hidden:true}),bannerStatus=el('small',{role:'status','aria-live':'polite'},'3:1 · PNG, JPEG or WebP · under 8 MB.');
   const preview = el('img', {class: 'qsf-preview', alt: 'Token image preview', hidden: true});
   const fixed = el('input', {type: 'radio', name: 'qsf-style', value: 'fixed', checked: true}), falling = el('input', {type: 'radio', name: 'qsf-style', value: 'falling'});
   const raise = el('input', {id: 'qsf-raise', inputmode: 'decimal', autocomplete: 'off', value: '1'});
@@ -82,7 +85,7 @@ function thumbnail(file) {
   const style = () => falling.checked ? 'falling' : 'fixed';
   const unit = () => chainById(chainSel.value)?.native || 'ETH';
   const prices = () => salePrices({style: style(), pricePerMillion: price.value, multiple: Number(multiple.value)});
-  const plan = (salt = '0x' + '0'.repeat(64)) => planSale({name: name.value, symbol: symbol.value, image, style: style(), pricePerMillion: price.value, minimum: minimum.value, window: Number(window_.value),
+  const plan = (salt = '0x' + '0'.repeat(64)) => planSale({name: name.value, symbol: symbol.value, image,banner, style: style(), pricePerMillion: price.value, minimum: minimum.value, window: Number(window_.value),
     walletCap: walletCap.value, multiple: Number(multiple.value), salt});
   function syncRaise() {
     try { const p = prices(); raise.value = fromWei(SALE_TOKENS * (style() === 'falling' ? p.floorPrice : p.price) / 10n ** 18n, 18); } catch { raise.value = ''; }
@@ -104,7 +107,7 @@ function thumbnail(file) {
     multRow.hidden = style() !== 'falling';
     custom.hidden = tier !== 'custom';
     for (const b of tierButtons) b.setAttribute('aria-pressed', String(b.dataset.tier === tier));
-    for (const x of [chainSel, name, symbol, file, fixed, falling, raise, price, custom, multiple, minimum, window_, walletCap, ...tierButtons]) x.disabled = busy;
+    for (const x of [chainSel, name, symbol, file,bannerFile, fixed, falling, raise, price, custom, multiple, minimum, window_, walletCap, ...tierButtons]) x.disabled = busy;
     minLabel.textContent = 'Minimum to go ahead (' + unit() + ')';
     raiseLabel.textContent = style() === 'falling' ? 'Raise if it sells at the floor (' + unit() + ')' : 'Raise if it sells out (' + unit() + ')';
     priceLabel.textContent = (style() === 'falling' ? 'Start price' : 'Fixed price') + ' per 1M tokens (' + unit() + ')';
@@ -132,9 +135,11 @@ function thumbnail(file) {
   }
   file.addEventListener('change', async () => {
     const f = file.files?.[0]; if (!f) return;
-    try { image = await (makeThumbnail || thumbnail)(f); preview.src = image; preview.hidden = false; } catch (e) { image = ''; preview.hidden = true; msg.textContent = e.message; }
+    const rev=++imageRevision;image='';render();
+    try { const data=await (makeThumbnail || thumbnail)(f);if(rev!==imageRevision)return;image=data; preview.src = image; preview.hidden = false; } catch (e) { if(rev!==imageRevision)return;image = ''; preview.hidden = true; msg.textContent = e.message; }
     void render();
   });
+  bannerFile.addEventListener('change',async()=>{const f=bannerFile.files?.[0];if(!f)return;const rev=++bannerRevision;banner='';bannerData='';render();bannerStatus.textContent='Preparing your banner…';try{const data=await makeBanner(f);if(rev!==bannerRevision)return;bannerPreview.src=data;bannerPreview.hidden=false;const hash=await uploadBanner(data);if(rev!==bannerRevision)return;banner=hash;bannerData=data;bannerStatus.textContent='Banner ready.';}catch(e){if(rev!==bannerRevision)return;banner='';bannerPreview.hidden=true;bannerStatus.textContent=e.message;}render();});
   for (const x of [name, symbol, fixed, falling, price, multiple, minimum, window_, walletCap]) x.addEventListener(x.tagName === 'SELECT' || x.type === 'radio' ? 'change' : 'input', () => { if (x === symbol) symbol.value = symbol.value.toUpperCase(); if ([price, fixed, falling, multiple].includes(x)) syncRaise(); msg.dataset.sticky = ''; render(); });
   raise.addEventListener('input', () => { try { const p = salePrices({style: style(), raise: raise.value, multiple: Number(multiple.value)}); price.value = fromWei(p.price * 10n ** 6n, 18); } catch { price.value = ''; } msg.dataset.sticky = ''; render(); });
   chainSel.addEventListener('change', () => { msg.dataset.sticky = ''; void refreshStart(); });
@@ -159,6 +164,7 @@ function thumbnail(file) {
       const fresh = await readStart({chainId: id, tier: selectedTier, customUsd, request: (m, ps) => rpc(c, m, ps)});
       assertSaleStart({data, ...fresh});
       assertSaleStart({data, selectedCapUsd: shown.selectedCapUsd, paymentUsd: fresh.paymentUsd});
+      if(await uploadBanner(bannerData)!==banner)throw Error('Your banner changed. Review your launch again.');
       const hash = await conn.entry.provider.request({method: 'eth_sendTransaction', params: [{from: conn.owner, to: a, data, value: '0x' + value.toString(16), ...fees}]});
       msg.textContent = 'Sent. Waiting for the network…';
       let r = null;
@@ -184,7 +190,7 @@ function thumbnail(file) {
       el('label', {}, falling, el('span', {}, el('strong', {}, 'Falling price'), ' · starts high, everyone pays the final price'))),
     el('div', {class: 'qsf-grid'},
       el('label', {}, 'Chain', chainSel), el('label', {}, 'Name', name), el('label', {}, 'Ticker', symbol),
-      el('label', {}, 'Image (required)', file, preview)),
+      el('label', {}, 'Image (required)', file, preview),el('label',{},'Banner (required)',bannerFile,bannerPreview,bannerStatus)),
     tiers,
     el('div', {class: 'qsf-grid'},
       el('label', {}, priceLabel, price, priceCap, floorCap), el('label', {}, raiseLabel, raise), multRow, el('label', {}, minLabel, minimum),

@@ -73,7 +73,7 @@ export function validateConfig(c,owner,{quantumRequired=true}={}) {
  ensure(Number.isInteger(Number(c.antiSnipe))&&Number(c.antiSnipe)>=0&&Number(c.antiSnipe)<=10080,'Anti-snipe length is 0–10080 minutes.');
  for(const k of ['stakers','referrals'])ensure(Number(c[k])>=0&&Number(c[k])<=100,'Shares must be between 0 and 100%.');
  ensure(!quantumRequired||c.quantum,'This launch engine needs the second key. Turn quantum protection on to continue.');
- profileFromConfig(c);
+ const profile=profileFromConfig(c);ensure(profile.image,'Add an image for your token.');ensure(profile.banner,'Add a banner for your token.');
  validateAllocations(c.allocations,c.supply);makeBlocks(c,owner);return true;
 }
 export const profileFromConfig = c => normalizeTokenProfile({description:c.description||'',image:c.image||'',banner:c.banner||'',links:{x:c.x||'',discord:c.discord||'',telegram:c.telegram||'',website:c.website||''}});
@@ -87,7 +87,7 @@ export function plan(config,targets=SIMPLE_LAUNCH) {
  ...ENGINE_STAGES.map(([id,label,gas])=>({id,label,kind:'engine',gas})),
  ...(config.allocations.length?[{id:'locks-setup',label:'Set up QLocks if needed',kind:'locks-setup',gas:1400000},{id:'locks-approve',label:'Approve allocation tokens',kind:'locks-approve',gas:65000}]:[]),
  ...config.allocations.map(r=>({id:'allocation-'+r.id,label:'Lock '+r.label+' · '+r.pct+'%',kind:'allocation',allocationId:r.id,gas:260000})),
- {id:'list-market',label:'List your market',kind:'listing',gas:0}];
+ {id:'list-market',label:'List your market',kind:'listing',gas:0},{id:'publish-profile',label:'Save token icon and banner',kind:'profile',gas:0}];
 }
 export function costSummary(config,{gasPriceWei=0n,gasEstimates={},wrapNeeded=true,locksSetupNeeded=true}={}) {
  const chain=chainById(config.chainId),fee=BigInt(chain.launchFeeWei);
@@ -95,7 +95,7 @@ export function costSummary(config,{gasPriceWei=0n,gasEstimates={},wrapNeeded=tr
  const gas=steps.reduce((n,s)=>n+BigInt(s.id==='wrap'&&!wrapNeeded||s.id==='locks-setup'&&!locksSetupNeeded?0:s.estimatedGas)*BigInt(gasPriceWei),0n);
  const txCount=8+(chain.quote.wrapNative&&wrapNeeded?1:0)+(config.allocations.length?1+config.allocations.length+(locksSetupNeeded?1:0):0);
  const nativeLiquidity=chain.family==='arc'?units(config.liquidity||'0',18):chain.quote.wrapNative&&wrapNeeded?units(config.liquidity||'0',chain.quote.decimals):0n;
- return {steps,networkGasWei:gas.toString(),estimate:true,platformFee:chain.launchFee,platformFeeWei:fee.toString(),native:chain.native,liquidity:config.liquidity||'0',liquidityUnit:chain.quote.symbol,txCount,signatureCount:1,walletConfirmations:txCount+1,totalNativeWei:(gas+fee+nativeLiquidity).toString()};
+ return {steps,networkGasWei:gas.toString(),estimate:true,platformFee:chain.launchFee,platformFeeWei:fee.toString(),native:chain.native,liquidity:config.liquidity||'0',liquidityUnit:chain.quote.symbol,txCount,signatureCount:2,walletConfirmations:txCount+2,totalNativeWei:(gas+fee+nativeLiquidity).toString()};
 }
 // A saved "done" flag alone is never enough to skip a transaction.
 export function resumeDecision(step,record,observation={}) {

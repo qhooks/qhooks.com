@@ -17,7 +17,7 @@ export function mountSolCreate({chainSelect,onExit=()=>{}}){
  const q=new URLSearchParams(location.search);if(q.get('chain')==='solana'){if(q.has('name'))name.value=q.get('name').slice(0,32);if(q.has('ticker'))symbol.value=q.get('ticker').slice(0,10).toUpperCase();}
  const save=()=>{try{localStorage.setItem('qhooks:sol-launch:draft',JSON.stringify({name:name.value,symbol:symbol.value,buy:buy.value}));}catch{}prepared=null;cost=null;mint=null;metadataUri=null;};
  for(const n of [name,symbol,buy])n.addEventListener('input',()=>{if(n===symbol)n.value=n.value.toUpperCase();save();});
- screens[0].append(el('div',{class:'qxc-fields'},el('label',{},'Name',name),el('label',{},'Ticker',symbol)),wallets,mountTokenProfileEditor({id:'qsc-profile',chain:()=> 'solana',name:()=>name.value,symbol:()=>symbol.value,imageRequired:true}),el('div',{class:'qxc-actions'},button('Hooks & rules →',()=>go(2),true)));
+ screens[0].append(el('div',{class:'qxc-fields'},el('label',{},'Name',name),el('label',{},'Ticker',symbol)),wallets,mountTokenProfileEditor({id:'qsc-profile',chain:()=> 'solana',name:()=>name.value,symbol:()=>symbol.value,imageRequired:true,bannerRequired:true}),el('div',{class:'qxc-actions'},button('Hooks & rules →',()=>go(2),true)));
  const rules=el('dl',{class:'qxc-sol-rules'},...solReviewLines().flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)]));
  screens[1].append(rules,el('label',{},'Your optional first buy · SOL',buy),el('p',{id:'qsc-buy-note',class:'qxc-fine'},'Included in the launch transaction. The opening 50% anti-snipe fee applies; 1% price tolerance. Leave 0 to launch without buying.'),el('div',{class:'qxc-actions'},button('← Your token',()=>go(1)),button('Review launch →',()=>go(3),true)));
  const review=el('div'),launch=button('Confirm and launch',()=>void confirm(),true),prepareButton=button('Prepare launch review',()=>void prepareLaunch(),true),recover=button('Check launch confirmation',()=>void recoverPending(),true),done=el('div',{class:'qxc-done'});
@@ -37,13 +37,14 @@ export function mountSolCreate({chainSelect,onExit=()=>{}}){
   wallets.replaceChildren(el('p',{class:'qxc-fine'},solAddress()?'Solana wallet · '+solAddress():'Connect your Solana wallet.'),...solWallets().map(w=>button((solAddress()?'Use ':'Connect ')+w.name,async()=>{try{await connectSol(w.name);prepared=null;render();}catch(e){notify(solLaunchError(e),true);}})));
   if(!solWallets().length)wallets.append(el('p',{class:'qxc-fine'},'Install a Wallet Standard wallet such as Phantom, Solflare or Backpack.'));
   receiptLink.replaceChildren(...(pending?[el('a',{href:'https://solscan.io/tx/'+pending.signature,target:'_blank',rel:'noopener'},'Transaction · '+pending.signature)]:[]));
-  launch.hidden=!config?.ready||!prepared||!!pending;launch.disabled=busy;prepareButton.hidden=!config?.ready||!!prepared||!!pending;prepareButton.disabled=busy||!solAddress();recover.hidden=!pending;recover.disabled=busy;
+  launch.hidden=!config?.ready||!prepared||!!pending;launch.disabled=busy||!artReady();prepareButton.hidden=!config?.ready||!!prepared||!!pending;prepareButton.disabled=busy||!solAddress()||!artReady();recover.hidden=!pending;recover.disabled=busy;
   chainSelect.disabled=busy;const quickPicker=document.getElementById('qq-chain');if(quickPicker)quickPicker.disabled=busy;
   for(const n of [name,symbol,buy,...screens[0].querySelectorAll('#qsc-profile input,#qsc-profile textarea,#qsc-profile button')])n.disabled=busy||!!pending;
   review.replaceChildren(el('p',{class:'qxc-kicker'},'Solana · Meteora DBC'),el('h3',{},name.value+' · '+symbol.value),el('dl',{class:'qxc-sol-rules'},...solReviewLines().flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)])));
   if(cost)review.append(el('dl',{class:'qxc-sol-rules'},el('dt',{},'Flat launch fee'),el('dd',{},solText(cost.lamports)+' SOL · about $'+C.flatLaunchUsd+' · one transfer to QHooks'),el('dt',{},'Rent · upfront estimate'),el('dd',{},solText(cost.rent)+' SOL · temporary wrapped SOL account rent may return'),el('dt',{},'Network fee · estimate'),el('dd',{},solText(prepared.networkLamports)+' SOL'),el('dt',{},'First buy'),el('dd',{},buy.value+' SOL · opening anti-snipe applies')));
   if(!config?.ready)notify('Solana launches open shortly.');
  }
+ function artReady(){try{const p=editableTokenProfileDraft('solana');return !!p.image&&!!p.banner;}catch{return false;}}
  async function prepareLaunch(){
   if(busy||pending)return;busy=true;render();try{
    if(!config?.ready)throw Error('Solana launches open shortly.');const owner=solAddress();if(!owner)throw Error('Connect your Solana wallet.');fields();const amount=solAmount(buy.value);

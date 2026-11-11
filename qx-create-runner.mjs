@@ -1,3 +1,4 @@
+import {publishRequiredLaunchProfile} from './qx-launch-profile-publication.mjs';
 import {chainById} from './chains.mjs';
 import {plan,runStep,runSteps,loadStudioClient} from './qx-launch-engine.mjs';
 import {allocationAmounts,workspaceFields,units,validateConfig,validateAllocations,listingBody,MARKET_METADATA_GAPS,profileFromConfig,fundingPreflight,human} from './qx-create-plan.mjs';
@@ -25,7 +26,7 @@ export async function loadCreateArtifacts(fetcher=globalThis.fetch) {
  const files=[['toolkitText','toolkit.json',1000000],['metadataText','metadata.json',100000],['tokenText','token.json',20000],['policyText','dependencies.json',100000],['extrasText','extras.json',1000000]];
  return Object.fromEntries(await Promise.all(files.map(async([key,path,limit])=>{const r=await fetcher('/full-launch/'+path,{cache:'no-store',redirect:'error'});ensure(r.ok,'Could not load the launch toolkit. Retry.');const t=await r.text();ensure(t.length<=limit,'Launch toolkit exceeded its size limit.');return [key,t];})));
 }
-export const LISTING_WAITING='Your token is live. Adding it to Markets as soon as its first price shows up, usually a minute or two. Nothing else to sign.';
+export const LISTING_WAITING='Your token is live. Adding it to Markets as soon as its first price shows up, usually a minute or two. Then save its icon and banner.';
 const LISTING_RETRYABLE=/market_observation_unavailable|unavailable|timeout|rate|network|^5\d\d$|^429$|^404$/i;
 // A launch that worked on-chain is listed as soon as the market can read its first price:
 // retry every 30 s for up to 10 min before asking the creator to press Try again.
@@ -41,7 +42,7 @@ export async function submitListing({fetcher,sleep,body,alive=()=>true,onWaiting
   await sleep(everyMs);
  }
 }
-export function createLaunchContext({record,hub,signer,save,onChange=()=>{},fetcher=globalThis.fetch,loadClient=loadStudioClient,loadArtifacts=()=>loadCreateArtifacts(fetcher),sleep=pause}) {
+export function createLaunchContext({record,hub,signer,save,onChange=()=>{},fetcher=globalThis.fetch,loadClient=loadStudioClient,loadArtifacts=()=>loadCreateArtifacts(fetcher),sleep=pause,publishProfile=publishRequiredLaunchProfile}) {
  const chain=chainById(record.chainId),allocations=allocationAmounts(record.config.supply,record.config.allocations).allocations;
  let joined=null,engine=null,client=null,artifacts=null,extras=null,disposed=false,workspaceSigner=signer?createLaunchSignerLease(signer):null;
  const persist=async()=>{await save();await onChange(record);};
@@ -139,19 +140,21 @@ export function createLaunchContext({record,hub,signer,save,onChange=()=>{},fetc
    const eventTopic='0x'+Array.from(keccak_256(new TextEncoder().encode('Locked('+event.inputs.map(x=>x.type).join(',')+')')),b=>b.toString(16).padStart(2,'0')).join('');
    const log=r.logs?.find(l=>l.address?.toLowerCase()===extras.contracts.locks.address&&l.topics?.[0]===eventTopic);ensure(log?.topics?.[1],'QLocks did not confirm the allocation id.');const lockId=BigInt(log.topics[1]).toString();
    ensure(lockMatches(await lockAt(lockId),a,token),'Confirmed lock differs from your allocation.');return {hash:row(step.id).hash,lockId};},
+  async profile(){await check();ensure(record.pool?.controller,'List your market before saving its artwork.');return publishProfile({chainId:record.chainId,controller:record.pool.controller,profile:record.metadata,getConnection:()=>hub.snapshot().current,fetcher});},
   async listing(){await workspace();const {exportSwapPoolPackage}=await import('./trade-client/packages/multichain-swap/pool-package.mjs');
    const pool=exportSwapPoolPackage(engine);record.pool=JSON.parse(pool);await persist();
    const r=row('list-market');
    try{await submitListing({fetcher,sleep,body:listingBody(pool,record.metadata),alive:()=>!disposed,onWaiting:async()=>{r.note=LISTING_WAITING;await persist();}});}
    finally{if(r.note){delete r.note;await persist();}}
    const listed=await fetcher('/api/markets/'+record.chainId+'/'+record.pool.controller,{cache:'no-store'});
-   ensure(listed.ok,'Your token is live. It isn\'t on Markets yet. Try again in a minute; nothing else to sign.');const body=await listed.json();ensure(body.pool?.controller===record.pool.controller&&body.pool?.chainId===record.chainId,'Market listing returned a different pool.');return {listed:true};}
+   ensure(listed.ok,'Your token is live. It isn\'t on Markets yet. Try again in a minute, then finish its icon and banner.');const body=await listed.json();ensure(body.pool?.controller===record.pool.controller&&body.pool?.chainId===record.chainId,'Market listing returned a different pool.');return {listed:true};}
  };
  async function engineResult(id,s){const j=JSON.parse(engine.journal()),stages=id==='funding'?j.actions.filter(r=>r.fields?.kind==='approve-token').map(r=>r.stage):id==='bootstrap'?j.actions.filter(r=>r.fields?.kind==='bootstrap').map(r=>r.stage):j.deployments[id]?.flatMap(r=>r.stages)||[];
   return {hashes:stages.filter(Boolean).map(r=>r.hash).filter(Boolean),address:s.addresses[id]||null,verified:true};}
  async function verify(step,prior){
   if(step.kind==='switch')return hub.snapshot().current?.owner===record.owner&&hub.snapshot().current?.chainId===record.chainId;
   if(step.kind==='engine'){const w=await workspace();await w.reconcile();return w.snapshot().completed.includes(step.id);}
+  if(step.kind==='profile'){const response=await fetcher('/api/token-profiles/'+record.chainId+'/'+record.pool?.controller,{cache:'no-store'});if(!response.ok)return false;const b=await response.json();return !!b.profile?.image&&!!b.profile?.banner;}
   if(step.kind==='listing'){if(!record.pool)return false;const response=await fetcher('/api/markets/'+record.chainId+'/'+record.pool.controller,{cache:'no-store'});if(!response.ok)return false;const b=await response.json();return b.pool?.controller===record.pool.controller&&b.pool?.chainId===record.chainId;}
   if(prior.hash){const r=await checkRecorded(step.id);if(!r)return false;if(r.reverted)return false;}
   if(step.kind==='preflight')return false; // Refresh balances before unfinished sends.

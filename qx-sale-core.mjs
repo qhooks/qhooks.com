@@ -1,3 +1,4 @@
+import {requireBannerHash} from './qx-token-banner.mjs';
 // Sale-first launches (QSaleLaunch): calldata, decoding and the plain-language plan, shared by /create, the sale page,
 // the terminal banner and tests. No network and no wallet here.
 import {keccak_256} from './full-launch/prototypes/qpools/client/vendor/hashes/sha3.js';
@@ -94,18 +95,19 @@ export function assertSaleStart({data, selectedCapUsd, paymentUsd}) {
   } catch { throw new TypeError(START_PRICE_HOLD); }
 }
 
-export function planSale({name, symbol, image = '', description = '', style = 'fixed', raise, pricePerMillion, minimum, window = 86400, walletCap = '', multiple = 4, fee = 10000, salt, start = 0}) {
+export function planSale({name, symbol, image = '', banner = '', description = '', style = 'fixed', raise, pricePerMillion, minimum, window = 86400, walletCap = '', multiple = 4, fee = 10000, salt, start = 0}) {
   const n = String(name ?? '').trim(), s = String(symbol ?? '').trim().toUpperCase();
   if (!n || new TextEncoder().encode(n).length > 64) throw new TypeError('Enter a token name (up to 64 characters).');
   if (!/^[A-Z0-9]{1,10}$/.test(s)) throw new TypeError('Enter a ticker of 1–10 letters or digits.');
   if (!image) throw new TypeError('Add an image for your token.');
+  requireBannerHash(banner);
   const minWei = toWei(minimum), {price, floorPrice, hardCap} = salePrices({style, raise, pricePerMillion, multiple});
   if (minWei < MIN_RAISE) throw new TypeError('Set a minimum above zero.');
   if (minWei > hardCap) throw new TypeError('The minimum can’t be more than the sale can raise.');
   const cap = String(walletCap ?? '').trim() ? toWei(walletCap) : 0n;
   if (cap !== 0n && cap * 10n < minWei / 10n) throw new TypeError('That wallet limit is very low; raise it or leave it empty.');
   if (!WINDOWS.some(([w]) => w === Number(window))) throw new TypeError('Pick how long the sale runs.');
-  const meta = JSON.stringify({image, ...(description ? {description: String(description).slice(0, 280)} : {}), launchedFrom: 'qhooks.com', sale: style});
+  const meta = JSON.stringify({image,banner, ...(description ? {description: String(description).slice(0, 280)} : {}), launchedFrom: 'qhooks.com', sale: style});
   if (enc.encode(meta).length > META_LIMIT) throw new TypeError('The image is too large to store. Try a simpler one.');
   if (!/^0x[0-9a-f]{64}$/.test(salt || '')) throw new TypeError('Missing salt.');
   return {name: n, symbol: s, meta, mode: style === 'falling' ? 1 : 0, fee, salt, price, floorPrice: style === 'falling' ? floorPrice : 0n,
