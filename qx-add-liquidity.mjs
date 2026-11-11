@@ -280,10 +280,31 @@ export function sumContributions(logs) {
   }
   return {total, count: transactions.size};
 }
-export async function readContributors({rpc, storage, chunk = 1000000n, sleep = ms => new Promise(r => setTimeout(r, ms))}) {
+// v2's deploy block (verified 2026-11-11: code first appears there; a wider range returns the same logs). Lead fix after
+// release: the relay answered each wide eth_getLogs slowly and the deploy-block search needed archive state the public
+// RPC doesn't keep, so the total never loaded. Now: one eth_getLogs over the whole range straight to RH's public RPC
+// (about 0.3 s), with the old relay loop only as a fallback.
+export const DEPLOY_BLOCK = 111634607n;
+// The site's cached server total first (one Worker read per minute for everyone).
+export async function readContributorsServer({fetchImpl = globalThis.fetch} = {}) {
+  const r = await fetchImpl('/api/add-liquidity/total', {cache: 'no-store', signal: AbortSignal.timeout(10000)});
+  const j = r.ok ? await r.json() : null;
+  if (!j || !/^\d+$/.test(j.total || '') || !Number.isSafeInteger(j.count)) throw Error('read');
+  return {total: BigInt(j.total), count: j.count, block: BigInt(j.block || 0)};
+}
+export async function readContributorsDirect({fetchImpl = globalThis.fetch, url = PUBLIC_RPC} = {}) {
+  const post = async body => { const r = await fetchImpl(url, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body), signal: AbortSignal.timeout(10000)}); if (!r.ok) throw Error('read'); return r.json(); };
+  const [h, l] = await post([{jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: []},
+    {jsonrpc: '2.0', id: 2, method: 'eth_getLogs', params: [{address: WETH, topics: [TRANSFER_TOPIC, null, addressTopic(LIQUIDITY)], fromBlock: hex(DEPLOY_BLOCK), toBlock: 'latest'}]}]).then(a => [a.find(x => x.id === 1), a.find(x => x.id === 2)]);
+  if (!h?.result || !Array.isArray(l?.result)) throw Error('read');
+  return {...sumContributions(l.result), block: uint(h.result)};
+}
+export async function readContributors({rpc, storage, chunk = 1000000n, sleep = ms => new Promise(r => setTimeout(r, ms)), direct = readContributorsDirect, server = readContributorsServer, start: startBlock = DEPLOY_BLOCK}) {
+  if (server) { try { return await server(); } catch { /* next source */ } }
+  if (direct) { try { return await direct(); } catch { /* fall back to the relay loop below */ } }
   chunk = BigInt(chunk);
   if (chunk < 1n || chunk > 10000000n) throw Error('Invalid log range');
-  const head = uint(await rpc('eth_blockNumber', [], 'display')), start = await findDeployBlock(rpc, head, storage);
+  const head = uint(await rpc('eth_blockNumber', [], 'display')), start = startBlock ?? await findDeployBlock(rpc, head, storage);
   const logs = [];
   for (let from = start; from <= head;) {
     const to = from + chunk - 1n < head ? from + chunk - 1n : head;
