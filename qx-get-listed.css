@@ -1,0 +1,8 @@
+.qgl-panel{box-sizing:border-box;min-width:0;width:100%;margin:20px 0;padding:18px;border:1px solid var(--line,#344239);border-radius:14px;background:var(--panel,#101b16);color:var(--text,#edf5ef);font-style:normal}
+.qgl-panel h3{font-size:18px;line-height:1.3;margin:0 0 8px}.qgl-panel p{font-size:13px;line-height:1.5;margin:8px 0;color:var(--muted,#afbeb4)}
+.qgl-links{display:flex;flex-wrap:wrap;gap:10px 18px;margin:14px 0}.qgl-links a{font-size:13px;color:var(--accent,#a6ef93);text-underline-offset:3px}
+.qgl-fields{display:grid;gap:10px}.qgl-field{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 8px;min-width:0}.qgl-field>span{grid-column:1/-1;font-size:12px;color:var(--muted,#afbeb4)}
+.qgl-field input{box-sizing:border-box;min-width:0;width:100%;font:13px ui-monospace,monospace;background:var(--bg,#09120d);color:inherit;border:1px solid var(--line,#344239);border-radius:7px;padding:10px}
+.qgl-field button{font:inherit;font-size:13px;min-height:44px;min-width:60px;border:1px solid var(--line,#344239);border-radius:7px;background:transparent;color:inherit;cursor:pointer}.qgl-field button:disabled{opacity:.5;cursor:default}
+.qgl-panel :is(a,button,input):focus-visible{outline:2px solid var(--accent,#a6ef93);outline-offset:3px}.qgl-panel .qgl-status{min-height:20px}.qgl-panel .qgl-note{font-size:12px}
+@media(min-width:700px){.qgl-fields{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px}}

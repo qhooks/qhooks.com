@@ -5,6 +5,7 @@
 import { ethCall, words, toAddress, formatUnits, erc20, send, connectedAddress, onWalletChange, CHAIN_NAME, h } from '/qx-chain.mjs';
 import { BLOCK_FIELDS } from '/full-launch/packages/multichain-launch/launch-blocks.mjs';
 import '/qx-account-wallet.mjs';
+import {mountGetListed} from './qx-get-listed.mjs';
 
 const $ = id => document.getElementById(id);
 const BLK = { config: '0x79502c55', release: '0x86d1a69f', creatorQuote: '0xe55e1ce9', creatorToken: '0x483a5f14' };
@@ -32,15 +33,19 @@ async function pick() {
 async function open(chainId, controller) {
   const mine = ++seq;
   $('qc-pick').hidden = true; $('qc-launch').hidden = false;
-  $('qc-title').textContent = 'Loading…'; $('qc-stats').replaceChildren(); $('qc-tables').replaceChildren(); $('qc-pay').replaceChildren();
+  $('qc-title').textContent = 'Loading…'; $('qc-stats').replaceChildren(); $('qc-tables').replaceChildren(); $('qc-pay').replaceChildren(); $('qc-listing').replaceChildren();
   const r = await fetch(`/api/markets/${chainId}/${controller}`, { cache: 'no-store' });
   if (mine !== seq) return;
   if (!r.ok) { $('qc-title').textContent = 'This launch is not listed'; $('qc-sub').textContent = 'List it from its Trade page, then open its dashboard again.'; return; }
   const pool = (await r.json()).pool;
+  if(mine!==seq)return;
   window.__qhooksPool = pool;
   document.dispatchEvent(new CustomEvent('qhooks:pool', { detail: pool }));
   state = { chainId, controller, pool };
   $('qc-trade').href = '/terminal#m=' + chainId + ':' + controller;
+  void (async()=>{let profile=null;try{const r=await fetch('/api/token-profiles/'+chainId+'/'+controller);if(r.ok)profile=(await r.json()).profile;}catch{}if(mine!==seq)return;
+    const c=pool.constructor||{},token=pool.token|| (c.currency0===c.quote?c.currency1:c.currency0)||controller;
+    const panel=mountGetListed({chainId,token,pool:pool.poolId,profile:profile||{}});$('qc-listing').replaceChildren(...(panel?[panel]:[]));})();
   await Promise.all([market(mine), payouts(mine)]);
 }
 
