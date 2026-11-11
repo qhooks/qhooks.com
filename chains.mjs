@@ -26,6 +26,7 @@
 const rows = [
   {
     id: '8453', hex: '0x2105', key: 'base', name: 'Base', short: 'Base', icon: 'base', status: 'live', family: 'op-stack',
+    simpleLaunchMulti: { address: '0x3fcf7693f799da31134970787f9f35578d0f60cc', from: 55793671, abi: 'pq', quotes: [[1, 'WETH', '0x4200000000000000000000000000000000000006', 18, 'weth']] },
     // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
     // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
     simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 55351284, abi: 'pq' },
@@ -73,6 +74,13 @@ const rows = [
       [4, 'PLTR', '0x894e1ec2d74ffe5aef8dc8a9e84686accb964f2a', 18, 'stock', '0xee430ee1003e1985e1828a01b9a20dad67ad4302994fe2abb4a173de4ac54623'],
       [5, 'AAPL', '0xaf3d76f1834a1d425780943c99ea8a608f8a93f9', 18, 'stock', '0xc748f4671a867db48b552f6b7650bf3255e05f80f00e3f7aad1b17ccb7898fdb'],
       [6, 'TSLA', '0x322f0929c4625ed5bad873c95208d54e1c003b2d', 18, 'stock', '0x8517f8071ae5b831b738052f12125e8e3d6c158b78728aa44ce3b25e5104d32e']] },
+    simpleLaunchMulti: { address: '0x3fcf7693f799da31134970787f9f35578d0f60cc', from: 111223856, abi: 'pq', quotes: [
+      [1, 'USDG', '0x5fc5360d0400a0fd4f2af552add042d716f1d168', 6, 'stable'],
+      [2, 'SPY', '0x117cc2133c37b721f49de2a7a74833232b3b4c0c', 18, 'stock', '0xfe2a80bb5618fd14984b92ca6d45bf5ba67443ddb1435e28b2e48df2fc1526cd'],
+      [3, 'META', '0xc0d6457c16cc70d6790dd43521c899c87ce02f35', 18, 'stock', '0x5875d407a42965b0e768c8925cea290e06fa50603ef34fc99eb92a1050e6ae36'],
+      [4, 'PLTR', '0x894e1ec2d74ffe5aef8dc8a9e84686accb964f2a', 18, 'stock', '0xee430ee1003e1985e1828a01b9a20dad67ad4302994fe2abb4a173de4ac54623'],
+      [5, 'AAPL', '0xaf3d76f1834a1d425780943c99ea8a608f8a93f9', 18, 'stock', '0xc748f4671a867db48b552f6b7650bf3255e05f80f00e3f7aad1b17ccb7898fdb'],
+      [6, 'TSLA', '0x322f0929c4625ed5bad873c95208d54e1c003b2d', 18, 'stock', '0x8517f8071ae5b831b738052f12125e8e3d6c158b78728aa44ce3b25e5104d32e']] },
     feeModel: 'nitro', feeAccounting: 'data-fee-in-estimate-gas', feeCapWei: '10000000000', gasFloorWei: null,
     native: 'ETH', rpc: 'https://rpc.mainnet.chain.robinhood.com', logsRpc: 'https://rpc.mainnet.chain.robinhood.com', logStep: 25000, blockTime: 0.1,
     explorer: 'https://robinhoodchain.blockscout.com',
@@ -93,6 +101,7 @@ const rows = [
   },
   {
     id: '1', hex: '0x1', key: 'ethereum', name: 'Ethereum', short: 'Ethereum', icon: 'ethereum', status: 'live', family: 'ethereum',
+    simpleLaunchMulti: { address: '0x3fcf7693f799da31134970787f9f35578d0f60cc', from: 26387450, abi: 'pq', quotes: [[1, 'WETH', '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', 18, 'weth']] },
     // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
     // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
     simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 26380174, abi: 'pq' },
@@ -111,6 +120,7 @@ const rows = [
   },
   {
     id: '42161', hex: '0xa4b1', key: 'arbitrum', name: 'Arbitrum One', short: 'Arbitrum', icon: 'arbitrum', status: 'live', family: 'nitro',
+    simpleLaunchMulti: { address: '0x3fcf7693f799da31134970787f9f35578d0f60cc', from: 523106870, abi: 'pq', quotes: [[1, 'WETH', '0x82af49447d8a07e3bd95bd0d56f35241523fbab1', 18, 'weth']] },
     // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
     // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
     simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 522799540, abi: 'pq' },
@@ -134,6 +144,7 @@ const rows = [
   },
   {
     id: '56', hex: '0x38', key: 'bnb', name: 'BNB Chain', short: 'BNB', icon: 'bnb', status: 'live', family: 'bsc',
+    simpleLaunchMulti: { address: '0x3fcf7693f799da31134970787f9f35578d0f60cc', from: 132855010, abi: 'pq', quotes: [[1, 'USDT', '0x55d398326f99059ff775485246999027b3197955', 18, 'stable']] },
     // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
     // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
     simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 132660352, abi: 'pq' },
@@ -195,6 +206,7 @@ const rows = [
     // Sources: elysium.kinetiq.xyz/docs/connecting-to-elysium (chain, RPC), /docs/contract-addresses (Permit2, deployer, Safe),
     // Uniswap/contracts PR #179 deployments/json/99901.json (v4), Uniswap/universal-router PR #534 (weth9 = WHYPE).
     id: '99901', hex: '0x1863d', key: 'elysium', name: 'Elysium', short: 'Elysium', icon: 'elysium', status: 'live', family: 'nitro',
+    simpleLaunchMulti: { address: '0x9a9d37bca2e9874a1da1a1bab51f242a9d1ca0cc', from: 4331176, abi: 'pq', quotes: [] },
     // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
     // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
     simpleLaunchClean: { address: '0xc7faaf2e1b01e5e2cae4f967a020b49b290ca0cc', from: 3539046, abi: 'pq' },

@@ -703,6 +703,205 @@
      "effect": "Runs only for the PoolManager during this contract\u2019s own calls: the launch add, fee collection, or paying out protocol fees it holds. None reduces a position."
     }
    ]
+  },
+  "multi": {
+   "sourcePath": "QSimpleLaunch.sol",
+   "seedLine": null,
+   "collectLine": null,
+   "functions": [
+    {
+     "name": "MAX_RESERVE_BPS",
+     "sig": "MAX_RESERVE_BPS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "REQUIRED_FLAGS",
+     "sig": "REQUIRED_FLAGS()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "SUPPLY",
+     "sig": "SUPPLY()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "afterAddLiquidity",
+     "sig": "afterAddLiquidity(address,tuple,tuple,int256,int256,bytes)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "afterDonate",
+     "sig": "afterDonate(address,tuple,uint256,uint256,bytes)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "afterInitialize",
+     "sig": "afterInitialize(address,tuple,uint160,int24)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "afterRemoveLiquidity",
+     "sig": "afterRemoveLiquidity(address,tuple,tuple,int256,int256,bytes)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "afterSwap",
+     "sig": "afterSwap(address,tuple,tuple,int256,bytes)",
+     "write": true,
+     "effect": "No liquidity change."
+    },
+    {
+     "name": "beforeAddLiquidity",
+     "sig": "beforeAddLiquidity(address,tuple,tuple,bytes)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "beforeDonate",
+     "sig": "beforeDonate(address,tuple,uint256,uint256,bytes)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "beforeInitialize",
+     "sig": "beforeInitialize(address,tuple,uint160)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "beforeRemoveLiquidity",
+     "sig": "beforeRemoveLiquidity(address,tuple,tuple,bytes)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "beforeSwap",
+     "sig": "beforeSwap(address,tuple,tuple,bytes)",
+     "write": true,
+     "effect": "No liquidity change."
+    },
+    {
+     "name": "chain",
+     "sig": "chain()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "collect",
+     "sig": "collect(tuple)",
+     "write": true,
+     "effect": "Modifies the position by 0 to collect LP fees to its payout."
+    },
+    {
+     "name": "launch",
+     "sig": "launch(tuple)",
+     "write": true,
+     "effect": "Adds locked launch liquidity once, split by the selected pool weights. No remove path."
+    },
+    {
+     "name": "launchMulti",
+     "sig": "launchMulti(tuple,uint256[],int24[],uint16[])",
+     "write": true,
+     "effect": "Adds locked launch liquidity once, split by the selected pool weights. No remove path."
+    },
+    {
+     "name": "launchOf",
+     "sig": "launchOf(bytes32)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "launchPaired",
+     "sig": "launchPaired(tuple,uint8)",
+     "write": true,
+     "effect": "Adds locked launch liquidity once, split by the selected pool weights. No remove path."
+    },
+    {
+     "name": "launches",
+     "sig": "launches()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "pairPreset",
+     "sig": "pairPreset(uint8,uint8,uint32,address)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "pairQuote",
+     "sig": "pairQuote(uint8)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "pairStartAt",
+     "sig": "pairStartAt(uint8,uint256)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "poolsOf",
+     "sig": "poolsOf(address)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "predictToken",
+     "sig": "predictToken(address,bytes32)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "progress",
+     "sig": "progress(bytes32)",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "setCreator",
+     "sig": "setCreator(bytes32,address)",
+     "write": true,
+     "effect": "No liquidity change."
+    },
+    {
+     "name": "setPayout",
+     "sig": "setPayout(bytes32,address)",
+     "write": true,
+     "effect": "No liquidity change."
+    },
+    {
+     "name": "sweep",
+     "sig": "sweep(address)",
+     "write": true,
+     "effect": "No liquidity change."
+    },
+    {
+     "name": "sweepNative",
+     "sig": "sweepNative()",
+     "write": true,
+     "effect": "No liquidity change."
+    },
+    {
+     "name": "tokenParams",
+     "sig": "tokenParams()",
+     "write": false,
+     "effect": "Read-only."
+    },
+    {
+     "name": "unlockCallback",
+     "sig": "unlockCallback(bytes)",
+     "write": true,
+     "effect": "Runs only during this contract\u2019s own PoolManager calls. No position decrease."
+    }
+   ]
   }
  },
  "chains": {
@@ -718,6 +917,16 @@
      [
       "BscScan",
       "https://bscscan.com/address/0xFB5a559886fCCbA6400cC52905ba3AA4658ba0CC#code"
+     ]
+    ]
+   },
+   {
+    "address": "0x3fcf7693f799da31134970787f9f35578d0f60cc",
+    "version": "multi",
+    "source": [
+     [
+      "Sourcify",
+      "https://repo.sourcify.dev/56/0x3fcf7693f799da31134970787f9f35578d0f60cc"
      ]
     ]
    }
@@ -750,6 +959,16 @@
       "https://robinhoodchain.blockscout.com/address/0xFB5a559886fCCbA6400cC52905ba3AA4658ba0CC?tab=contract"
      ]
     ]
+   },
+   {
+    "address": "0x3fcf7693f799da31134970787f9f35578d0f60cc",
+    "version": "multi",
+    "source": [
+     [
+      "Sourcify",
+      "https://repo.sourcify.dev/4663/0x3fcf7693f799da31134970787f9f35578d0f60cc"
+     ]
+    ]
    }
   ],
   "8453": [
@@ -780,6 +999,16 @@
       "https://basescan.org/address/0x34ac8C4E6CA3D5B70A5321b648D0Db9451C060Cc#code"
      ]
     ]
+   },
+   {
+    "address": "0x3fcf7693f799da31134970787f9f35578d0f60cc",
+    "version": "multi",
+    "source": [
+     [
+      "Sourcify",
+      "https://repo.sourcify.dev/8453/0x3fcf7693f799da31134970787f9f35578d0f60cc"
+     ]
+    ]
    }
   ],
   "42161": [
@@ -796,6 +1025,16 @@
       "https://arbiscan.io/address/0xFB5a559886fCCbA6400cC52905ba3AA4658ba0CC#code"
      ]
     ]
+   },
+   {
+    "address": "0x3fcf7693f799da31134970787f9f35578d0f60cc",
+    "version": "multi",
+    "source": [
+     [
+      "Sourcify",
+      "https://repo.sourcify.dev/42161/0x3fcf7693f799da31134970787f9f35578d0f60cc"
+     ]
+    ]
    }
   ],
   "99901": [
@@ -807,6 +1046,28 @@
      [
       "Elysium explorer",
       "https://elysium.kinetiq.xyz/address/0x8223F9ce8998fB436fc32Bdf541CC34d668420Cc"
+     ]
+    ]
+   },
+   {
+    "address": "0x9a9d37bca2e9874a1da1a1bab51f242a9d1ca0cc",
+    "version": "multi",
+    "source": [
+     [
+      "Sourcify",
+      "https://repo.sourcify.dev/99901/0x9a9d37bca2e9874a1da1a1bab51f242a9d1ca0cc"
+     ]
+    ]
+   }
+  ],
+  "1": [
+   {
+    "address": "0x3fcf7693f799da31134970787f9f35578d0f60cc",
+    "version": "multi",
+    "source": [
+     [
+      "Sourcify",
+      "https://repo.sourcify.dev/1/0x3fcf7693f799da31134970787f9f35578d0f60cc"
      ]
     ]
    }

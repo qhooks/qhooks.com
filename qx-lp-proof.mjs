@@ -1,8 +1,8 @@
 // /lp-proof: shows, from chain, that QHooks launch liquidity is held by the launch contract with no remove path.
 // Renders /api/v1/lp-proof (the same JSON scanners read). ?chain=&token= (or &pool=) shows one launch.
 const root = document.getElementById('lpp-root'), qs = new URLSearchParams(location.search);
-const NAMES = {'4663': 'Robinhood Chain', '8453': 'Base', '42161': 'Arbitrum One', '56': 'BNB Chain', '99901': 'Elysium'};
-const ORDER = ['4663', '8453', '42161', '56', '99901'];
+const NAMES = {'4663': 'Robinhood Chain', '8453': 'Base', '42161': 'Arbitrum One', '1': 'Ethereum', '56': 'BNB Chain', '99901': 'Elysium'};
+const ORDER = ['1', '4663', '8453', '42161', '56', '99901'];
 const el = (t, a = {}, ...k) => { const n = document.createElement(t); for (const [x, v] of Object.entries(a)) { if (v == null || v === false) continue; if (x.startsWith('on')) n.addEventListener(x.slice(2), v); else n.setAttribute(x, v === true ? '' : v); } n.append(...k.flat().filter(c => c != null && c !== false)); return n; };
 const link = (href, text) => el('a', {href, target: '_blank', rel: 'noopener'}, text);
 const short = a => a.slice(0, 6) + '…' + a.slice(-4);
@@ -16,7 +16,7 @@ function contractCard(chain, c) {
       el('dt', {}, 'Address'), el('dd', {}, c.address),
       el('dt', {}, 'Launches'), el('dd', {}, c.launches == null ? '–' : String(c.launches)),
       el('dt', {}, 'Verified source'), el('dd', {}, ...Object.entries(c.source).flatMap(([n, u], i) => [i ? ' · ' : '', link(u, n)])),
-      el('dt', {}, 'Calls that change a position'), el('dd', {}, c.liquidityCalls.map(x => 'line ' + x.line + ': ' + x.change).join('; ')),
+      el('dt', {}, 'Calls that change a position'), el('dd', {}, c.liquidityCalls.map(x => (x.line ? 'line ' + x.line + ': ' : '') + x.change).join('; ')),
       el('dt', {}, 'Remove or withdraw function'), el('dd', {}, 'None')),
     c.note ? el('p', {class: 'lpp-note'}, c.note) : null,
     el('details', {}, el('summary', {}, 'All ' + c.functions.length + ' external functions (' + writes.length + ' write, ' + views.length + ' read-only)'),
@@ -48,7 +48,7 @@ function holdersCard(j) {
 
 function launchCard(j) {
   return el('section', {class: 'lpp-launch'},
-    el('h2', {}, j.poolId === OFFICIAL.pool ? 'Official QHOOKS pool' : 'This launch'),
+    el('h2', {}, j.poolId === OFFICIAL.pool ? 'Official QHOOKS pool' : (j.quoteSymbol || 'Quote') + ' pool' + (j.main ? ' · main' : '')),
     el('dl', {class: 'lpp-facts'},
       el('dt', {}, 'Token'), el('dd', {}, j.token + (j.poolId === OFFICIAL.pool ? ' (QHOOKS, official pool)' : '')),
       el('dt', {}, 'Chain'), el('dd', {}, NAMES[j.chain] || j.chain),
@@ -75,7 +75,7 @@ async function render() {
   {
     const r = await fetch('/api/v1/lp-proof?chain=' + encodeURIComponent(token || pool ? chain : OFFICIAL.chain) + (pool ? '&pool=' + encodeURIComponent(pool) : token ? '&token=' + encodeURIComponent(token) : '&pool=' + OFFICIAL.pool));
     const j = await r.json().catch(() => ({}));
-    kids.push(r.ok ? launchCard(j) : el('p', {class: 'lpp-note', 'data-tone': 'bad'}, j.hint || 'That could not be read right now.'));
+    kids.push(...(r.ok ? (j.pools || [j]).map(p => launchCard({...p, readAt:j.readAt})) : [el('p', {class: 'lpp-note', 'data-tone': 'bad'}, j.hint || 'That could not be read right now.')]));
   }
   const all = await (await fetch('/api/v1/lp-proof')).json();
   kids.push(el('h2', {}, 'Launch contracts'), el('p', {}, all.statement));

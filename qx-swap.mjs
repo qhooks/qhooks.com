@@ -3,6 +3,8 @@
 // native → USDC → token). Quotes run through the same pool and hook, so block charges are included.
 import { abi, calldata, ethCall, words, keyTuple, KEY_T, send, ensureAllowance, connectedAddress, NATIVE, MANAGER } from '/qx-chain.mjs';
 import { stockPair } from '/full-launch/packages/multichain-launch/stock-pairs.mjs';
+import {bestPool,bestSellPool,sellPoolCandidates,directPoolPlan,poolQuoteInfo,sellQuoteUsd,nativePoolPlans,poolQuoteArgs} from './qx-best-pool.mjs';
+import {chainById} from './chains.mjs';
 import { chainMap } from '/chains.mjs';
 
 const Z = '0x0000000000000000000000000000000000000000';
@@ -66,6 +68,10 @@ export function nativeRoute(chainId, quoteToken) {
   if (route && STOCK_ROUTE[chainId] && stockPair(chainId, quoteToken)) return { ...route, wrap: null, stock: quoteToken, ...STOCK_ROUTE[chainId] };
   // USDG-paired launches on Robinhood Chain: the coin goes ETH → USDG (best plain pool) → token.
   if (route && STOCK_ROUTE[chainId] && String(quoteToken).toLowerCase() === STOCK_ROUTE[chainId].usdg) return { ...route, wrap: null, hop: STOCK_ROUTE[chainId].usdg, hopSymbol: 'USDG', usdg: true };
+  if (route && (route.hop || route.wrap) === quoteToken) return route;
+  const c = chainById(chainId), q = String(quoteToken).toLowerCase();
+  if (route && c?.wrappedNative?.toLowerCase() === q) return {...route, hop: null, wrap: quoteToken};
+  if (route && String(chainId) === '56' && q === '0x55d398326f99059ff775485246999027b3197955') return {...route, wrap: null, hop: quoteToken, hopSymbol: 'USDT'};
   return route && (route.hop || route.wrap) === quoteToken ? route : null;
 }
 const plainKey = (a, b, fee, tickSpacing) => { const [c0, c1] = BigInt(a) < BigInt(b) ? [a, b] : [b, a]; return { currency0: c0, currency1: c1, fee, tickSpacing, hooks: Z }; };
@@ -149,3 +155,15 @@ export function viaSwapCall(target, data, tokenIn, tokenOut, amountIn, minOut, f
 }
 export const cashbackOf = (chainId, router, who, currency) => ethCall(chainId, router, calldata('0x4f123156', ['address', 'address'], [who, currency])).then(BigInt);
 export const claimCall = currency => calldata('0x1e83409a', ['address'], [currency]);
+
+/// Multi-pool quotes carry their exact hops through review, funding and fee-router submission.
+export async function quotePoolRoutes(chainId, pools, token, amountIn, side, native = true, quoteToken = null, nativeUsd = null) {
+ const chain = chainById(chainId), eligible = side==='sell'?sellPoolCandidates(chain,pools,nativeUsd,native?null:quoteToken):native ? pools : pools.filter(p => p.quote.toLowerCase() === quoteToken?.toLowerCase()&&(poolQuoteInfo(chain,p).kind!=='custom'||sellQuoteUsd(chain,p,nativeUsd)>0));
+ const plans = eligible.flatMap(pool => side==='sell'?[directPoolPlan(pool,token)]:native ? nativePoolPlans(chain, pool, token) : [directPoolPlan(pool,token,'buy')]);
+ const quotes = await Promise.all(plans.map(async plan => {
+  try { const a = poolQuoteArgs(plan, amountIn, hookData), r = await ethCall(chainId, chain.contracts.quoter, calldata(a.selector,a.types,a.values),connectedAddress()||undefined);
+   const symbol=poolQuoteInfo(chain,plan.pool).quoteSymbol;return {...plan,out:BigInt(r.slice(0,66)),...(side==='sell'?{quoteUsd:sellQuoteUsd(chain,plan.pool,nativeUsd)}:{}),label:(side==='sell'?'Receive '+symbol+' · ':'')+'via '+symbol+' pool'};
+  } catch { return null; }
+ }));
+ const best = side==='sell'?bestSellPool(quotes,{chain,nativeUsd,pools,quoteToken:native?null:quoteToken}):bestPool(quotes);if(!best)throw Error('No route for this amount');return best;
+}

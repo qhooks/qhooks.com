@@ -1,3 +1,6 @@
+import {poolQuoteInfo} from './qx-best-pool.mjs';
+import {chainById} from './chains.mjs';
+import {quoteUsd as readQuoteUsd} from '/qx-native-usd.mjs';
 import { tradeError } from './qx-chain-guard.mjs';
 import { executeTicketSwap } from './qx-ticket-execution.mjs';
 import {prepareTradeThesis,recordTerminalTrade} from './qx-trade-record.mjs';
@@ -9,7 +12,7 @@ import {resolveTradingTolerance} from './qx-trading-preferences.mjs';
 // Every quote runs through the real pool and hook, so charges are in the number shown. Trades go through the
 // platform fee router: 1% per trade, 30% of it back to the trader as cashback they claim here (40% for QHOOKS holders on Robinhood Chain).
 import { rpc, livePoolKey, parseUnits, formatUnits, erc20, send, ensureAllowance, connectedAddress, onWalletChange, NATIVE, CHAIN_NAME, h } from '/qx-chain.mjs';
-import { quoteSingle, nativeRoute, quoteNative, FEE_BPS, viaSwapCall, cashbackOf, referralLink, claimCall, savedReferrer } from '/qx-swap.mjs';
+import { quotePoolRoutes, quoteSingle, nativeRoute, quoteNative, FEE_BPS, feeSwapCall, viaSwapCall, cashbackOf, referralLink, claimCall, savedReferrer } from '/qx-swap.mjs';
 import { extraAddress, isLive, setUp } from '/qx-extras.mjs';
 import { hasDirectRoute, resolveDirectPool, refusalText } from '/qx-elysium-direct.mjs';
 import { holderMinTokens, shortText } from '/qx-holder-min.mjs';
@@ -116,7 +119,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   }
   function profileChanged(){if(busy||recovery)return;status.textContent='';syncProfile();clearArmed();refresh();if(st)layout();}
   syncProfile();
-  const payRow = h('label', { class: 'qxt-pay' }, h('span', {}, 'Pay with'), paySel);
+  const payLabel = h('span', {}, 'Pay with'), payRow = h('label', { class: 'qxt-pay' }, payLabel, paySel);
 
   const cash = h('div', { class: 'qxt-cash' });
   const risk = h('div', { class: 'qxt-risk', hidden: true });
@@ -177,8 +180,10 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   }
   refreshQuote.addEventListener('click',()=>{if(!busy&&!recovery&&!quoteLoading&&hasQuoteAmount())refresh();});
   function assertSelection(c){if(!quoteMatches(c))throw new Error('This token selection changed. Review a fresh quote before trading.');}
-  const payUnit = () => side === 'sell' ? st.symbol : pay === 'native' ? (st.sol ? 'SOL' : NATIVE[st.chainId]) : st.quoteSymbol;
-  const payDecimals = () => side === 'sell' ? st.decimals : pay === 'native' ? (st.sol ? 9 : 18) : st.quoteDecimals;
+  const selectedPool = () => st?.multi ? st.pools.find(p=>p.quote===pay) || st.pools[0] : null;
+  const selectedQuote = () => selectedPool() || st;
+  const payUnit = () => side === 'sell' ? st.symbol : pay === 'native' ? (st.sol ? 'SOL' : NATIVE[st.chainId]) : selectedQuote().quoteSymbol;
+  const payDecimals = () => side === 'sell' ? st.decimals : pay === 'native' ? (st.sol ? 9 : 18) : selectedQuote().quoteDecimals;
   async function balances() {
     if (st?.sol) {
       const me = solAddress(); if (!me) return null;
@@ -186,7 +191,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       return { token: BigInt(t.token || 0), quote: BigInt(q.token || 0), native: BigInt(t.sol || 0) };
     }
     const me = connectedAddress(); if (!me || !st) return null;
-    const [t, q, n] = await Promise.all([erc20(st.chainId, st.token, me), st.quote && !st.nativePool ? erc20(st.chainId, st.quote, me) : { balance: 0n }, rpc(st.chainId, 'eth_getBalance', [me, 'latest'])]);
+    const [t, q, n] = await Promise.all([erc20(st.chainId, st.token, me), st.quote && !st.nativePool ? erc20(st.chainId, selectedQuote().quote, me) : { balance: 0n }, rpc(st.chainId, 'eth_getBalance', [me, 'latest'])]);
     return { token: t.balance, quote: q.balance, native: BigInt(n) };
   }
   const spendable = b => side === 'sell' ? b.token : pay === 'native' ? b.native : b.quote;
@@ -209,7 +214,8 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const dollars = sym => unitClass(sym) === 'usd' && /^(USDC|USDT|USDG)$/i.test(sym || '');
     const units = (v, d) => Number(formatUnits(v, d, d).replace(/,/g, ''));
     if (c.side === 'buy' && dollars(payUnit())) return units(c.a, payDecimals());
-    const sym = st.ext ? xTokens().outSym : st.quoteSymbol, dec = st.ext ? xTokens().outDec : st.quoteDecimals;
+    const selected=st.multi&&c.side==='sell'?c.route.pool:selectedQuote(),sym = st.ext ? xTokens().outSym : selected.quoteSymbol, dec = st.ext ? xTokens().outDec : selected.quoteDecimals;
+    if(st.multi&&c.side==='sell'&&c.route.quoteUsd>0)return units(c.got,dec)*c.route.quoteUsd;
     if (c.side === 'sell' && dollars(sym)) return units(c.got, dec);
     return priceUsd ? units(c.side === 'buy' ? c.got : c.a, st.decimals) * priceUsd : null;
   }
@@ -242,7 +248,9 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     card.dataset.side = side;
     thesisRow.hidden = side !== 'buy';
     sellToCash.setAttribute('aria-pressed', String(sellCash));
-    payRow.hidden = side === 'sell' || paySel.options.length < 2;
+    if(st.multi){const automatic=side==='sell'||st.pools.some(p=>nativeRoute(st.chainId,p.quote)),first=side==='sell'?'auto':'native',options=[...(automatic?[h('option',{value:first},side==='sell'?'Best USD value':NATIVE[st.chainId])]:[]),...st.pools.map(p=>h('option',{value:p.quote},p.quoteSymbol||p.quote))];if(!options.some(o=>o.value===pay))pay=automatic?first:st.pools[0].quote;paySel.replaceChildren(...options);paySel.value=pay;}
+    payRow.hidden = side === 'sell' && !st.multi || paySel.options.length < 2;
+    payLabel.textContent = st.multi && side === 'sell' ? 'Receive' : 'Pay with';
     unit.textContent = payUnit();
     go.textContent = buttonText();showSignIn();
     const profile=tradingSettings.profile(),list = side === 'sell' ? profile.sellPercentages.map(p => [p + '%', p]) : profile.amounts[unitClass(payUnit())].map(v => [v, v]);
@@ -468,7 +476,12 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       const spend = side === 'buy' ? a - a * FEE_BPS / 10000n : a;
       // Impact on every pool route: the same path for a thousandth of the amount (flat charges cancel out of the ratio).
       const small = spend / 1000n > 0n ? spend / 1000n : 1n;
-      if (st.nativePool) { const z = BigInt(key.currency0) === BigInt(side === 'buy' ? qt : token); [got, refGot] = await Promise.all([quoteSingle(chainId, key, z, spend), quoteSingle(chainId, key, z, small).catch(() => null)]); route = { label: side === 'buy' ? NATIVE[chainId] + ' → ' + st.symbol : st.symbol + ' → ' + NATIVE[chainId] }; }
+      if (st.multi) {
+        const tradeSide=side,tradePay=pay,pools=st.pools,receiveQuote=selectedQuote().quote,nativeUsd=tradeSide==='sell'?await readQuoteUsd(NATIVE[chainId]).catch(()=>null):null;
+        route=await quotePoolRoutes(chainId,pools,token,spend,tradeSide,tradeSide==='sell'?tradePay==='auto':tradePay==='native',receiveQuote,nativeUsd);got=route.out;
+        const rr=await quotePoolRoutes(chainId,[route.pool],token,small,tradeSide,tradeSide==='buy'&&tradePay==='native',route.pool.quote,nativeUsd).catch(()=>null);refGot=rr?.out??null;
+      }
+      else if (st.nativePool) { const z = BigInt(key.currency0) === BigInt(side === 'buy' ? qt : token); [got, refGot] = await Promise.all([quoteSingle(chainId, key, z, spend), quoteSingle(chainId, key, z, small).catch(() => null)]); route = { label: side === 'buy' ? NATIVE[chainId] + ' → ' + st.symbol : st.symbol + ' → ' + NATIVE[chainId] }; }
       else if (side === 'buy' && pay === 'native') { const [r, rr] = await Promise.all([quoteNative(chainId, key, token, qt, spend, st.symbol), quoteNative(chainId, key, token, qt, small, st.symbol).catch(() => null)]); route = r; got = r.out; refGot = rr?.out ?? null; }
       else {
         const zeroForOne = key.currency0 === (side === 'buy' ? qt : token);
@@ -478,7 +491,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       if (side === 'sell') got -= got * FEE_BPS / 10000n;
       if (!quoteReadIsCurrent(read)) return;
       const minOut = got * (10000n - BigInt(read.toleranceBps)) / 10000n;
-      const outDec = side === 'buy' ? st.decimals : st.quoteDecimals, outSym = side === 'buy' ? st.symbol : st.quoteSymbol;
+      const outDec = side === 'buy' ? st.decimals : st.multi?route.pool.quoteDecimals:selectedQuote().quoteDecimals, outSym = side === 'buy' ? st.symbol : st.multi?route.pool.quoteSymbol:selectedQuote().quoteSymbol;
       current = bindQuote({ side, pay, a, got, minOut, route },mine,read.owner,read.toleranceBps);
       out.replaceChildren(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
         h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4) + ' · block charges included'),
@@ -497,7 +510,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const oc = await import('/qx-oneclick.mjs').catch(() => null);
     if (!oc || !(await oc.oneClickOn().catch(() => false))) return false;
     assertTradeOwner(c); s('Placing your trade…');
-    const done = await oc.oneClickTrade({ chainId: st.chainId, token: st.token, side: c.side, amountWei: c.a, slippageBps: c.toleranceBps || 300, referrer: savedReferrer() });
+    const done = await oc.oneClickTrade({ chainId: st.chainId, token: st.token, side: c.side, amountWei: c.a, ...(st.multi&&c.side==='sell'?{quoteToken:c.route.pool.quote}:{}), slippageBps: c.toleranceBps || 300, referrer: savedReferrer() });
     if (!done) return false;
     const last = done.hashes[done.hashes.length - 1];
     for (let i = 0; i < 90; i++) { const r = await rpc(st.chainId, 'eth_getTransactionReceipt', [last]).catch(() => null); if (r) { if (r.status !== '0x1') throw new Error('The trade reverted'); queueRecord(c,r); return true; } await new Promise(res => setTimeout(res, 1000)); }
@@ -515,9 +528,15 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         assertContext();
         if (!live) { s('One-time setup of trading on ' + CHAIN_NAME[chainId] + '…'); await setUp(chainId, 'feeRouter', s, assertContext); }
         // One-click (qx-oneclick.mjs): QHooks markets, ETH/BNB in or token out, no wallet popup. Off or not eligible: wallet signs below.
-        const oneClickDone = (c.side === 'sell' || c.pay === 'native' || st.nativePool) && await tryOneClick(c, s);
+        const oneClickDone = (!st.multi&&(c.side === 'sell' || c.pay === 'native' || st.nativePool)||st.multi&&(c.side==='sell'&&c.route.quoteUsd>0||c.side==='buy'&&c.pay==='native')) && await tryOneClick(c, s);
         if (!oneClickDone) {
-          const receipt = await executeTicketSwap({chainId,key,token,quote:qt,nativePool:st.nativePool,router,trade:c,deadline,onStatus:s,assertContext});
+          let receipt;
+          if (st.multi) {
+            // Several pools: the chosen pool's own hops through the fee router (qx-best-pool picked the route).
+            if(c.side==='sell'||c.pay!=='native')await ensureAllowance(chainId,c.side==='sell'?token:c.route.pool.quote,router,c.a,s,assertContext);
+            assertTradeOwner(c);
+            receipt=await send(chainId,{to:router,data:feeSwapCall(chainId,c.route.hops,c.a,c.minOut,c.route.wrap,c.side==='buy',deadline),value:c.side==='buy'&&c.pay==='native'?c.a:0n},s,assertContext);
+          } else receipt = await executeTicketSwap({chainId,key,token,quote:qt,nativePool:st.nativePool,router,trade:c,deadline,onStatus:s,assertContext});
           queueRecord(c,receipt);
         }
         const after = await erc20(chainId, token, me).catch(() => null), moved = after ? (after.balance > b.token ? after.balance - b.token : b.token - after.balance) : null;
@@ -525,7 +544,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         amount.value = ''; thesis.value=''; document.dispatchEvent(new CustomEvent('qhooks:traded')); try { await onTraded({ side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s }); } catch {}
   }
 
-  const payAsset = () => fundingAsset(st.chainId, pay === 'native' ? 'native' : { address: st.quote, decimals: st.quoteDecimals });
+  const payAsset = () => fundingAsset(st.chainId, pay === 'native' ? 'native' : { address: selectedQuote().quote, decimals: selectedQuote().quoteDecimals });
   function assertTradeOwner(c) { assertSelection(c); if(st.sol){if(c.owner!==solAddress())throw new Error('Reconnect the Solana wallet that reviewed this trade.');return;} if (c.owner && connectedAddress()?.toLowerCase() !== c.owner.toLowerCase()) throw new Error('Reconnect the wallet that reviewed this trade.'); }
   async function offerFunding(mine) {
     if (!quoteMatches(current) || mine !== qseq) return;
@@ -544,6 +563,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     if (connectedAddress()?.toLowerCase() !== c.owner?.toLowerCase()) throw new Error('Reconnect the wallet that funded this trade.');
     if (st.ext) return extSubmit({ ...c, a, minOut: c.minOut * a / c.a });
     const spend = a - a * FEE_BPS / 10000n;
+    if(st.multi){const route=await quotePoolRoutes(st.chainId,st.pools,st.token,spend,'buy',c.pay==='native',c.route.pool.quote),got=route.out,floor=c.minOut*a/c.a,minOut=got*(10000n-BigInt(c.toleranceBps))/10000n;if(got<floor)throw Error('Price moved below the reviewed minimum. Refresh the quote.');return poolSubmit({...c,a,got,route,minOut:minOut>floor?minOut:floor});}
     const route = c.pay === 'native' ? await quoteNative(st.chainId, st.key, st.token, st.quote, spend, st.symbol) : null;
     const got = route ? route.out : await quoteSingle(st.chainId, st.key, st.key.currency0 === st.quote, spend);
     const floor = c.minOut * a / c.a, minOut = got * (10000n - BigInt(c.toleranceBps)) / 10000n;
@@ -599,7 +619,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
           } finally { wallet.dispose(); }
           return;
         }
-        const asset = sellCash ? (st.ext ? payAsset() : { address: st.quote, decimals: st.quoteDecimals, symbol: st.quoteSymbol }) : null;
+        const asset = sellCash ? (st.ext ? payAsset() : st.multi?{address:c.route.pool.quote,decimals:c.route.pool.quoteDecimals,symbol:c.route.pool.quoteSymbol}:{ address: selectedQuote().quote, decimals: selectedQuote().quoteDecimals, symbol: selectedQuote().quoteSymbol }) : null;
         const before = asset ? await readAssetBalance(c.owner, { chainId: st.chainId, asset }) : 0n;
         await (st.ext ? extSubmit(c) : poolSubmit(c));
         if (asset) { const after = await readAssetBalance(c.owner, { chainId: st.chainId, asset }); if (after > before) proceeds = { chainId: st.chainId, asset, amount: after - before }; }
@@ -625,14 +645,14 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
 
   sellToCash.addEventListener('click', async () => {
     if (!st || busy||recovery) return;
-    clearArmed(); sellCash = true; side = 'sell'; pay = st.quote ? 'quote' : 'native'; paySel.value = pay;
+    clearArmed(); sellCash = true; side = 'sell'; pay = st.multi?st.pools.find(p=>/USD/.test(p.quoteSymbol))?.quote||st.pools[0].quote:st.quote ? 'quote' : 'native'; paySel.value = pay;
     await layout(); await preset(3);
-    const symbol = st.sol ? 'USDC' : st.quoteSymbol || NATIVE[st.chainId];
+    const symbol = st.sol ? 'USDC' : selectedQuote().quoteSymbol || NATIVE[st.chainId];
     status.textContent = st.sol || !['1', '8453', '42161', '56', '4663'].includes(String(st.chainId)) || symbol === cashAsset(st.chainId).symbol ? 'Sell your whole position for ' + symbol + '.' :
       'This pool sells to ' + symbol + '. Cash conversion is available in Move funds after the sale.';
   });
 
-  function setSide(s) { if (busy||recovery || !['buy','sell'].includes(s) || side === s && !sellCash&&!pendingSellPrefill) return; clearArmed(); sellCash = false; side = s; amount.value = '';sellPrefillOwner=null;pendingSellPrefill=false; refresh(); layout(); }
+  function setSide(s) { if (busy||recovery || !['buy','sell'].includes(s) || side === s && !sellCash&&!pendingSellPrefill) return; clearArmed(); sellCash = false; side = s;if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} amount.value = '';sellPrefillOwner=null;pendingSellPrefill=false; refresh(); layout(); }
 
   return {
     beginSelection,isSelection,failSelection,canSelect:()=>!busy&&!recovery,
@@ -645,6 +665,13 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       const [key, t, q] = await Promise.all([pool.kind === 'qhooks-simple-launch' && pool.key ? pool.key : livePoolKey(pool.chainId, pool.controller), erc20(pool.chainId, token), erc20(pool.chainId, quoteToken)]);
       if(!isSelection(intent))return false;
       st = { chainId: String(pool.chainId), key, token, quote: quoteToken, symbol: t.symbol || meta?.symbol || 'token', decimals: t.decimals, quoteSymbol: q.symbol, quoteDecimals: q.decimals };
+      let pools=meta?.pools||pool.pools||[];
+      const registry=chainById(pool.chainId);pools=await Promise.all(pools.map(async p=>{if(poolQuoteInfo(registry,p).kind!=='custom')return p;try{const r=await fetch('/api/launch/quote-check?'+new URLSearchParams({chain:pool.chainId,token:p.quote}),{cache:'no-store'}),q=r.ok?await r.json():null;return {...p,quoteSymbol:q?.symbol||p.quoteSymbol,quoteDecimals:q?.decimals??p.quoteDecimals,quoteUsd:q?.ok?q.usd:null};}catch{return {...p,quoteUsd:null};}}));if(!isSelection(intent))return false;
+      if((pools.length>1||pools.some(p=>poolQuoteInfo(registry,p).kind==='custom'))&&pools.every(p=>p.key&&p.quote)){
+        st.multi=true;st.pools=pools.slice().sort((a,b)=>Number(!!b.main)-Number(!!a.main));
+        paySel.replaceChildren(h('option',{value:'native'},NATIVE[st.chainId]),...st.pools.map(p=>h('option',{value:p.quote},p.quoteSymbol)));
+        pay=st.pools.some(p=>nativeRoute(st.chainId,p.quote))?'native':st.pools[0].quote;paySel.value=pay;renderRisk();const view=h('div');trustRisk(view,pool).then(()=>{if(isSelection(intent)){risk.replaceChildren(view);risk.hidden=view.hidden;}}).catch(()=>{});await layout();return isSelection(intent);
+      }
       const native = nativeRoute(pool.chainId, quoteToken);
       paySel.replaceChildren(h('option', { value: 'quote' }, q.symbol), ...(native ? [h('option', { value: 'native' }, NATIVE[pool.chainId])] : []));
       // Wrapped-native launches default to paying in the coin people actually hold.
@@ -710,7 +737,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         if(typeof held!=='bigint'||held<0n||held>=1n<<256n||!Number.isInteger(precision)||precision<0||precision>36||precision!==st.decimals)throw Error('Token precision is unavailable or changed. Reopen this token before selling.');
         const value=held*BigInt(percent)/100n;
         if(!value)throw Error(held===0n?'This wallet has no available tokens to sell.':'This balance is too small for that percentage.');
-        pendingSellPrefill=false;side='sell';sellCash=false;paySel.value=pay;sellPrefillOwner=me;
+        pendingSellPrefill=false;side='sell';sellCash=false;if(st.multi)pay='auto';paySel.value=pay;sellPrefillOwner=me;
         amount.value=formatUnits(value,precision,precision).replace(/,/g,'');
         void layout();refresh();status.textContent='Sell '+percent+'% prepared. Review the current quote, fees and minimum received before selling.';
         return true;
@@ -728,6 +755,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       // Any-token tickets with no stable quote (Robinhood Chain) pay in the native coin, their only option.
       // HYPE (Elysium): pay in the coin people hold (native HYPE, wrapped by the router), as the ticket defaults to.
       pay = st.ext && !st.quote ? 'native' : st.nativePool ? 'native' : cls === 'hype' && native?.wrap && unitClass(NATIVE[st.chainId]) === 'hype' ? 'native' : unitClass(st.quoteSymbol) === cls ? 'quote' : native && unitClass(NATIVE[st.chainId]) === cls ? 'native' : 'quote';
+      if(st.multi){const q=st.pools.find(p=>unitClass(p.quoteSymbol)===cls);pay=unitClass(NATIVE[st.chainId])===cls?'native':q?.quote||'native';}
       paySel.value = pay; amount.value = value;
       await layout();if(!isSelection(intent))return; clearTimeout(timer); await quote();
       if (isSelection(intent)&&quoteMatches(current)) await submit();

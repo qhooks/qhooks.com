@@ -21,6 +21,7 @@ export const LAUNCH_SELECTOR = '0x30583324';
 export const LAUNCH_SELECTOR_PQ = '0x00cadb72';
 /// launchPaired(LaunchParams (the 'pq' layout), uint8 quoteIndex) on the pairs launch contract.
 export const LAUNCH_PAIRED_SELECTOR = '0x04e6619e';
+export const LAUNCH_MULTI_SELECTOR = '0xed37f30b';
 export const LAUNCHED_TOPIC = '0xb3dfc406bd21f3b0e4aec3411c79b38d392ec20d80835e456b24f42bc0ec245f';
 export const META_LIMIT = 4096;
 // Planning gas per style, measured on a Robinhood Chain fork (2026-11-08); a connected wallet's estimate replaces it.
@@ -62,7 +63,7 @@ const CARDS = [
 const addressOf = v => { const a = typeof v === 'string' ? v.toLowerCase() : ''; return /^0x[0-9a-f]{40}$/.test(a) && BigInt(a) !== 0n ? a : null; };
 /// The start-cap generation of QSimpleLaunch on a chain (chains.mjs simpleLaunchNext), or null while it isn't deployed.
 /// This is the feature flag: with it, new launches use that factory and can pick a starting market cap.
-export function startCapFactory(chainId) { return CLEAN_LIVE.has(String(chainId)) ? cleanFactory(chainId) : addressOf(chainById(chainId)?.simpleLaunchNext?.address); }
+export function startCapFactory(chainId) { return CLEAN_LIVE.has(String(chainId)) ? cleanFactory(chainId) : addressOf(chainById(chainId)?.simpleLaunchNext?.address) || (multiLive(chainId) ? multiFactory(chainId) : null); }
 /// The clean-token launch contract on a chain (chains.mjs simpleLaunchClean: full ERC-20 per launch, no clone), or null.
 export function cleanFactory(chainId) { return addressOf(chainById(chainId)?.simpleLaunchClean?.address); }
 // Chains where the clean-token launch contract has code (positives only, so a later deploy is picked up on the next check).
@@ -118,6 +119,42 @@ export async function primePairsFactory(chainId, getCode, {background = false} =
  if (background && checked) return {live: false, changed: false};
  return job;
 }
+export function multiFactory(chainId) { return addressOf(chainById(chainId)?.simpleLaunchMulti?.address); }
+export const multiQuotes = chainId => (chainById(chainId)?.simpleLaunchMulti?.quotes || []).map(([index, symbol, address, decimals, risk, usdPool]) => ({index, symbol, address, decimals, risk, usdPool: usdPool || null}));
+const MULTI_LIVE = new Set(), MULTI_CHECKED = new Map(), MULTI_INFLIGHT = new Map();
+/// Same as primeCleanFactory, for the pairs launch contract: pairs are offered only once it has code on the chain.
+export async function primeMultiFactory(chainId, getCode, {background = false} = {}) {
+ const id = String(chainId), a = multiFactory(id);
+ if (!a) return {live: false, changed: false};
+ if (MULTI_LIVE.has(id)) return {live: true, changed: false};
+ const checked = MULTI_CHECKED.get(id);
+ if (checked && Date.now() - checked < 30000) return {live: false, changed: false};
+ let job = MULTI_INFLIGHT.get(id);
+ if (!job) {
+  job = Promise.resolve().then(() => getCode(a)).catch(() => '0x').then(code => {
+   MULTI_INFLIGHT.delete(id);
+   if (typeof code === 'string' && /^0x[0-9a-fA-F]{2,}$/.test(code)) { MULTI_LIVE.add(id); return {live: true, changed: true}; }
+   MULTI_CHECKED.set(id, Date.now());
+   return {live: false, changed: false};
+  });
+  MULTI_INFLIGHT.set(id, job);
+ }
+ if (background && checked) return {live: false, changed: false};
+ return job;
+}
+export const multiLive = chainId => MULTI_LIVE.has(String(chainId)) && !!multiFactory(chainId);
+/// Main keeps 70%; extras split 30%, with integer-bps remainder returned to main.
+export function poolWeights(extras) {
+ if (!Number.isInteger(extras) || extras < 0 || extras > 6) throw new TypeError('Choose up to six extra pools.');
+ if (!extras) return [10000];
+ const each = Math.floor(3000 / extras);
+ return [10000 - each * extras, ...Array(extras).fill(each)];
+}
+/// Token has 18 decimals; pool ticks are on the contract's 200-tick grid (token as currency0).
+export function alignTick({usdPerToken, quoteUsd, quoteDecimals}) {
+ if (!(usdPerToken > 0) || !(quoteUsd > 0) || !Number.isFinite(usdPerToken) || !Number.isFinite(quoteUsd) || !Number.isInteger(quoteDecimals) || quoteDecimals < 0 || quoteDecimals > 36) throw new TypeError('Pool price unavailable.');
+ return Math.round(Math.log(usdPerToken / quoteUsd * 10 ** quoteDecimals / 1e18) / Math.log(1.0001) / 200) * 200;
+}
 export const pairsLive = chainId => PAIRS_LIVE.has(String(chainId)) && !!pairsFactory(chainId);
 /// pairStartAt(uint8 quoteIndex, uint256 steps) -> (address quote, int24 tick0, uint256 startCap)
 export const pairStartAtCall = (quoteIndex, steps) => '0xfb079b35' + word(quoteIndex) + word(checkSteps(steps));
@@ -136,7 +173,7 @@ export function usdFromSqrt(sqrtPriceX96, stockAddress, usdgAddress) {
 /// The QSimpleLaunch factory new launches go to on a chain, or null where none is deployed.
 export function quickFactory(chainId) { return startCapFactory(chainId) || addressOf(chainById(chainId)?.simpleLaunch); }
 /// True when new launches go to a factory whose launch() takes the post-quantum key fields.
-export function pqFactory(chainId) { const c = chainById(chainId); return !!startCapFactory(chainId) && (CLEAN_LIVE.has(String(chainId)) ? c?.simpleLaunchClean?.abi : c?.simpleLaunchNext?.abi) === 'pq'; }
+export function pqFactory(chainId) { const c = chainById(chainId); if (multiLive(chainId) && quickFactory(chainId) === multiFactory(chainId)) return true; return !!startCapFactory(chainId) && (CLEAN_LIVE.has(String(chainId)) ? c?.simpleLaunchClean?.abi : c?.simpleLaunchNext?.abi) === 'pq'; }
 
 // ---- Starting market cap (start-cap generation; work/qhooks-startcap-20261108/DESIGN.md §1, §6) ----
 // The creator picks steps 0..161 above the chain's standard start: each step is one 200-tick spacing (price x 1.0202).
@@ -212,9 +249,19 @@ export function validateQuick({name, symbol, image = ''}) {
 }
 export const quickMeta = ({image = ''}) => JSON.stringify({...(image ? {image} : {}), launchedFrom: 'create-quick'});
 
+/// A quote is a table index or an ERC-20 address encoded as uint160 in uint256[].
+export function quoteCode(value) {
+ let n;try { if(!['number','bigint','string'].includes(typeof value)||typeof value==='number'&&!Number.isSafeInteger(value)||typeof value==='string'&&!/^(?:0x[0-9a-f]{40}|[0-9]+)$/i.test(value))throw Error();n=BigInt(value); } catch { throw new TypeError('Choose a valid quote token.'); }
+ if(n<0n||n>=(1n<<160n))throw new TypeError('Choose a valid quote token.');
+ return n;
+}
 /// Calldata for QSimpleLaunch.launch from the card preset and the three typed fields.
-export function encodeQuickLaunch({name, symbol, image = '', style, snipe = 15, salt, steps = 0, startCap = false, pq = false, pqKey = null, lockRoles = false, quoteIndex = 0}) {
- const qi = Number(quoteIndex);
+export function encodeQuickLaunch({name, symbol, image = '', style, snipe = 15, salt, steps = 0, startCap = false, pq = false, pqKey = null, lockRoles = false, quoteIndex = 0, quotes = null, ticks = null, weights = null}) {
+ const multi = quotes !== null, codes = multi && Array.isArray(quotes) ? quotes.map(quoteCode) : [];
+ if (multi && (!pq || !startCap || !Array.isArray(quotes) || quotes.length < 1 || quotes.length > 8 || new Set(codes.map(String)).size !== quotes.length || !Array.isArray(ticks) || ticks.length !== quotes.length || ticks.some((t,i) => !Number.isInteger(t) || t % 200 || Math.abs(t) > 887200 || codes[i]>=256n&&t===0))) throw new TypeError('Choose valid pools and starting prices.');
+ if (multi && (!Array.isArray(weights) || weights.length !== quotes.length || weights.some(w => !Number.isInteger(w) || w < 500 || w > 10000) || weights.reduce((sum, w) => sum + w, 0) !== 10000)) throw new TypeError('Pool weights must add up to 10000, with at least 500 per pool.');
+ if (multi && style === 'flywheel' && (quotes.length !== 1 || codes[0] !== 0n)) throw new TypeError('Stakers’ share launches use one standard pool.');
+ const qi = Number(multi ? codes[0]<256n?codes[0]:0 : quoteIndex);
  if (!Number.isInteger(qi) || qi < 0 || qi > 255) throw new TypeError('Choose a pair.');
  if (qi && (!pq || !startCap)) throw new TypeError('Pairs need the pairs launch contract on this chain.');
  if (qi && style === 'flywheel') throw new TypeError('Stakers’ share launches pair with ETH only.');
@@ -233,6 +280,10 @@ export function encodeQuickLaunch({name, symbol, image = '', style, snipe = 15, 
  const p = QUICK_PRESET;
  const tuple = offsets.map(word).join('') + word(SIMPLE_STYLE_IDS[style]) + word(p.fee) + salt.slice(2).toLowerCase() + word(p.buyQuote) + word(p.minTokensOut) +
   word(st * 65536 + Number(snipe)) + word(0) + word(p.reserveBps) + (pq ? (key ? key.slice(2) : word(0)) + word(lockRoles ? 1 : 0) : '') + tails.join('');
+ if (multi) {
+  const qs = word(codes.length) + codes.map(word).join(''), ts = word(ticks.length) + ticks.map(t => word(BigInt.asUintN(256, BigInt(t)))).join(''), ws = word(weights.length) + weights.map(word).join('');
+  return LAUNCH_MULTI_SELECTOR + word(128) + word(128 + tuple.length / 2) + word(128 + (tuple.length + qs.length) / 2) + word(128 + (tuple.length + qs.length + ts.length) / 2) + tuple + qs + ts + ws;
+ }
  // launchPaired(params, uint8 quoteIndex): the tuple's head offset is 64, then the index, then the same tuple.
  if (qi) return LAUNCH_PAIRED_SELECTOR + word(64) + word(qi) + tuple;
  return (pq ? LAUNCH_SELECTOR_PQ : LAUNCH_SELECTOR) + word(32) + tuple;

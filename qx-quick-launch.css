@@ -47,3 +47,7 @@
 /* Token image required to launch (2026-11-10). */
 .qq-need-image[hidden],#qc-need-image[hidden]{display:none}
 .qxc-main #qq-need-image,.qxc-main #qc-need-image{color:#9d3f36;border-color:#d9b1a8}[data-theme="dark"] .qxc-main #qq-need-image,[data-theme="dark"] .qxc-main #qc-need-image{color:#e8a89a;border-color:var(--qx-line)}
+
+.qq-pools[hidden]{display:none}.qq-pool-chip{display:flex;flex-direction:column;align-items:flex-start;gap:5px;max-width:240px}.qq-pool-chip .qq-start-note{font-size:12px}.qq-pools button:disabled{opacity:.5;cursor:default}.qq-pools button:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+
+.qq-any-token{display:grid;gap:8px;margin-top:14px}.qq-any-token input{min-width:0;width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line,#bbb);border-radius:8px;background:transparent;color:inherit;font:inherit}.qq-any-results{display:grid;gap:6px}.qq-any-token button{min-height:40px;text-align:left}.qq-any-token label{font-weight:600}

@@ -70,10 +70,11 @@ const MESSAGES = {
   sell_check_failed: 'This token failed the sell check, so one-click won’t buy it.', no_route: 'No route for this trade right now.'
 };
 /// Sends one trade with no popup. Returns {hashes, explorer} or null when the wallet should sign instead (use_wallet / off).
-export async function oneClickTrade({ chainId, token, side, amountWei, pct, slippageBps, referrer }) {
+export async function oneClickTrade({ chainId, token, side, amountWei, pct, slippageBps, referrer, quoteToken }) {
+  if(quoteToken!=null&&!/^0x[0-9a-f]{40}$/i.test(quoteToken))throw Error('Choose a receive token.');
   const wallet = owner(), key = 'oc-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
   try {
-    return await api('/api/oneclick/trade', { method: 'POST', wallet, body: { chainId: String(chainId), token, side, amountWei: amountWei != null ? String(amountWei) : undefined, pct, slippageBps, referrer, idempotencyKey: key } });
+    return await api('/api/oneclick/trade', { method: 'POST', wallet, body: { chainId: String(chainId), token, side, amountWei: amountWei != null ? String(amountWei) : undefined, pct, slippageBps, referrer, ...(quoteToken?{quoteToken}:{}), idempotencyKey: key } });
   } catch (e) {
     if (['use_wallet', 'off', 'sign_in', 'link_wallet', 'paused'].includes(e.code)) { cache.at = 0; return null; }
     throw Error(MESSAGES[e.code] || 'One-click trade failed. Nothing was spent if no transaction is shown.');

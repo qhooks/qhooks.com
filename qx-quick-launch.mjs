@@ -1,3 +1,4 @@
+import {mountAnyTokenPicker,ANY_TOKEN_NOTE} from './qx-launch-any-token.mjs';
 import {appendArbRecaptureLine} from './qx-create-display.mjs';
 import {readLaunchPrefill,launchPostLink} from './qx-launch-prefill.mjs';
 // Quick launch and launch-idea cards on /create. An extra path beside the guided flow, which it never changes.
@@ -13,6 +14,7 @@ import {quoteBaseCall,recheckBaseCall} from './qx-base-call-fees.mjs';
 const quoteCall=a=>String(a.chainId)==='8453'?quoteBaseCall(a):quoteNextChain(a),recheckCall=(chainId,a)=>String(chainId)==='8453'?recheckBaseCall(a):recheckNextChain(a);
 import {startCapFactory,START_TIERS,START_STEPS_MAX,stepsForUsd,capAtSteps,startAtCall,readStartAt,usdShort} from './qx-quick-launch-core.mjs';
 import {pqFactory,primeCleanFactory} from './qx-quick-launch-core.mjs';
+import {multiFactory,multiQuotes,primeMultiFactory,multiLive,alignTick,poolWeights} from './qx-quick-launch-core.mjs';
 import {pairsFactory,pairQuotes,primePairsFactory,pairsLive,pairStartAtCall,readPairStartAt,usdFromSqrt} from './qx-quick-launch-core.mjs';
 import {mountAccountQuantum} from './qx-account-quantum-control.mjs';
 import {ideaCards,ideaCard,visibleGroups,quickFactory,encodeQuickLaunch,validateQuick,launchFeeWei,quickCost,ethText,launchedToken,marketPath,randomSalt,PLANNING_GAS,META_LIMIT} from './qx-quick-launch-core.mjs';
@@ -41,7 +43,7 @@ const urlChain=()=>new URLSearchParams(location.search).get('chain');
 let quickChain=null,solQuickPrevious=null;
 const currentChain=()=>quickChain||chainSelect?.value||urlChain()||'4663';
 const quickChains=()=>[...visibleChains().filter(c=>ideaCards(c.id).length),{id:'solana',name:'Solana',native:'SOL'}];
-function setQuickChain(id){const wasSol=quickChain==='solana';quickChain=id;if(id==='solana'||wasSol)document.dispatchEvent(new CustomEvent('qhooks:sol-create',{detail:{chain:id}}));try{const u=new URL(location.href);u.searchParams.set('chain',id);history.replaceState(history.state,'',u);}catch{}
+function setQuickChain(id){const wasSol=quickChain==='solana';if(id!==currentChain()){extraPools=[];poolPrices=null;pairIdx=0;}quickChain=id;if(id==='solana'||wasSol)document.dispatchEvent(new CustomEvent('qhooks:sol-create',{detail:{chain:id}}));try{const u=new URL(location.href);u.searchParams.set('chain',id);history.replaceState(history.state,'',u);}catch{}
  renderIdeas();if(pick)openQuick(pick.id);checkTickerSoon();costSoon();}
 function renderPicker(){
  let sel=$('chain');
@@ -68,6 +70,7 @@ function renderIdeas(){chainId=currentChain();renderPicker();if(chainId==='solan
  {const id=chainId;primeClean(id).then(r=>{if(r.changed&&id===chainId){costRun++;cost=null;renderIdeas();if(pick)void refreshCost();}}).catch(()=>{});}
  // Pairs launch contract (Robinhood): the pair picker appears once it has code on this chain.
  {const id=chainId;primePairs(id).then(r=>{if(r.changed&&id===chainId&&pick){renderPair();renderStart();renderQuick();}}).catch(()=>{});}
+ {const id=chainId;primeMulti(id).then(r=>{if(r.changed&&id===chainId){renderIdeas();if(pick){renderPair();void readStartBase();renderStart();renderPq();renderQuick();costSoon();}}}).catch(()=>{});}
  chainId=currentChain();const own=ideaCards(chainId),offChain=!own.length,cards=offChain?ideaCards(QUICK_CHAIN).filter(card=>card.id!=='arb-burns'):own,groups=visibleGroups(cards),c=chainById(chainId);
  if(!groups.some(([id])=>id===group))group='all';
  $('chips').replaceChildren(...groups.map(([id,label])=>{const b=el('button',{type:'button','aria-pressed':String(id===group),'data-group':id},label);b.addEventListener('click',()=>{group=id;renderIdeas();});return b;}));
@@ -97,7 +100,7 @@ const DEFAULT_TIER={'99901':'floor'};
 let startTier='standard',startSteps=0,startBase=null,startRun=0,startRetry=null;
 /// Floor/High are USD targets: without a live USD price their steps can't be known, so launching waits ("Refreshing price…").
 const priceBlocked=()=>startCapOn()&&(startTier==='floor'||startTier==='high')&&!startBase?.usd;
-const startCapOn=()=>!!curPair()||!!startCapFactory(chainId);
+const startCapOn=()=>!!curPair()||multiOn()||!!startCapFactory(chainId);
 // ---- Pair (Robinhood Chain, pairs launch contract only) ----
 // 0 = the chain's standard quote (WETH). Stakers' share stays on ETH (the contract refuses it on a pair).
 let pairIdx=0;
@@ -106,34 +109,35 @@ let pairIdx=0;
 let geo={country:null,read:false};
 function readGeo(){if(geo.read)return;geo.read=true;fetch('/api/geo',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{const c=typeof j?.country==='string'&&/^[A-Z]{2}$/.test(j.country)?j.country:null;if(c!==geo.country){geo.country=c;if(pick){renderPair();renderQuick();}}}).catch(()=>{});}
 const stocksOk=()=>!!geo.country&&geo.country!=='US';
-const offeredPairs=()=>pairQuotes(chainId).filter(q=>q.risk!=='stock'||stocksOk());
-const curPair=()=>pairIdx&&pick&&pick.style!=='flywheel'&&pairsLive(chainId)?offeredPairs().find(q=>q.index===pairIdx)||null:null;
-const launchFactory=()=>curPair()?pairsFactory(chainId):quickFactory(chainId);
-const pqOnChain=()=>!!curPair()||pqFactory(chainId);
+const offeredPairs=()=>(multiLive(chainId)?multiQuotes(chainId):pairQuotes(chainId)).filter(q=>q.risk!=='stock'||stocksOk());
+const curPair=()=>pairIdx&&pick&&pick.style!=='flywheel'&&(multiLive(chainId)||pairsLive(chainId))?offeredPairs().find(q=>q.index===pairIdx)||null:null;
+const pairFactory=()=>multiLive(chainId)?multiFactory(chainId):pairsFactory(chainId);
+const launchFactory=()=>multiOn()?multiFactory(chainId):curPair()?pairFactory():quickFactory(chainId);
+const pqOnChain=()=>multiOn()||!!curPair()||pqFactory(chainId);
 const RISK={stable:s=>s+' is a dollar stablecoin. Its issuer can freeze any address, this pool included, and can pause it. Either one stops trading in this pool.',
  stock:s=>s+' is a Robinhood stock token. Its issuer can block any address, this pool included, pause the token, burn from any holder, and apply splits. Blocking or pausing stops trading in this pool. Stock tokens are not offered to US persons.'};
 function renderPair(){
  readGeo();let box=$('pair');const list=offeredPairs(),hiddenStocks=geo.country==='US'&&pairQuotes(chainId).some(q=>q.risk==='stock');
- if(!pick||!list.length||!pairsLive(chainId)){box?.remove();return;}
+ if(!pick||!list.length||!multiLive(chainId)&&!pairsLive(chainId)){box?.remove();renderPools();return;}
  if(!box){box=el('div',{id:'qq-pair',class:'qq-startcap qq-pair'});$('style-blocks').after(box);}
- if(pick.style==='flywheel'){box.replaceChildren(el('p',{class:'qq-start-k'},'Pair with'),el('p',{class:'qq-start-note'},'Stakers’ share launches pair with ETH. Pick another idea to pair with USDG or a stock token.'));return;}
- const opt=(idx,label)=>{const b=el('button',{type:'button',class:'qq-start-opt','aria-pressed':String(idx===pairIdx),'data-pair':String(idx)},label);
-  b.addEventListener('click',()=>{if(busy)return;pairIdx=idx;renderPair();void readStartBase();renderStart();renderPq();renderQuick();costSoon();});return b;};
+ if(pick.style==='flywheel'){box.replaceChildren(el('p',{class:'qq-start-k'},'Pair with'),el('p',{class:'qq-start-note'},'Stakers’ share launches pair with ETH. Pick another idea to pair with USDG or a stock token.'));renderPools();return;}
+ const opt=(idx,label)=>{const b=el('button',{type:'button',class:'qq-start-opt','aria-pressed':String(idx===pairIdx),'data-pair':String(idx)},label+(idx===pairIdx&&multiLive(chainId)?' · '+poolWeights(extraPools.length)[0]/100+'%':''));
+  b.addEventListener('click',()=>{if(busy)return;pairIdx=idx;extraPools=extraPools.filter(i=>i!==idx);poolPrices=null;renderPair();void readStartBase();renderStart();renderPq();renderQuick();costSoon();});return b;};
  if(pairIdx&&!list.some(q=>q.index===pairIdx)){pairIdx=0;void readStartBase();renderStart();costSoon();} // not offered here: back to ETH
- const p=curPair(),kids=[el('p',{class:'qq-start-k'},'Pair with'),el('div',{class:'qq-start-opts',role:'group','aria-label':'Pair with'},opt(0,'ETH'),...list.map(q=>opt(q.index,q.symbol)))];
+ renderPools();const p=curPair(),kids=[el('p',{class:'qq-start-k'},'Pair with'),el('div',{class:'qq-start-opts',role:'group','aria-label':'Pair with'},opt(0,chainById(chainId).quote.symbol.replace(/^W/,'')),...list.map(q=>opt(q.index,q.symbol)))];
  if(hiddenStocks)kids.push(el('p',{class:'qq-start-note',id:'qq-pair-region'},'Stock-token pairs aren’t available in your region.'));
- if(p)kids.push(el('p',{class:'qq-start-note'},'Buyers pay in '+p.symbol+'. The terminal also takes ETH and routes it through '+(p.risk==='stable'?'USDG':'USDG and '+p.symbol)+'.'),el('p',{class:'qq-start-note qq-pair-risk'},RISK[p.risk](p.symbol)));
- box.replaceChildren(...kids);
+ if(p){const native=chainById(chainId).native,line='Buyers pay in '+p.symbol+'. The terminal also takes '+native+(p.risk==='weth'?'.':' and routes it through '+(p.risk==='stock'?'USDG and '+p.symbol:p.symbol)+'.');kids.push(el('p',{class:'qq-start-note'},line));if(RISK[p.risk])kids.push(el('p',{class:'qq-start-note qq-pair-risk'},RISK[p.risk](p.symbol)));}
+ box.replaceChildren(...kids);renderPools();
 }
 async function readStartBase(){
  const run=++startRun,c=chainById(chainId);startBase=null;
  try{
   const p=curPair();
-  if(p){const r=readPairStartAt(await rpc('eth_call',[{to:pairsFactory(chainId),data:pairStartAtCall(p.index,0)},'latest']));if(!r)throw Error('no start');
-   const cap=Number(r.startCapWei)/10**p.decimals,each=p.usdPool?await stockUsd(p).catch(()=>null):1;
+  if(p){const r=readPairStartAt(await rpc('eth_call',[{to:pairFactory(),data:pairStartAtCall(p.index,0)},'latest']));if(!r)throw Error('no start');
+   const cap=Number(r.startCapWei)/10**p.decimals,each=await quoteUsd(p).catch(()=>null);
    if(run===startRun)startBase={cap,unit:p.symbol,usd:each>0?cap*each:null};
   }else{
-  const r=readStartAt(await rpc('eth_call',[{to:startCapFactory(chainId),data:startAtCall(0)},'latest']));if(!r)throw Error('no start');
+  const r=multiLive(chainId)?readPairStartAt(await rpc('eth_call',[{to:multiFactory(chainId),data:pairStartAtCall(0,0)},'latest'])):readStartAt(await rpc('eth_call',[{to:startCapFactory(chainId),data:startAtCall(0)},'latest']));if(!r)throw Error('no start');
   const q=c.quote?.symbol||'',usd=/USD/.test(q)?1:await readCreateNativeUSD(q.replace(/^W/,'')).catch(()=>null);
   const cap=Number(r.startCapWei)/10**(c.quote?.decimals??18);
   if(run===startRun)startBase={cap,unit:q.replace(/^W/,''),usd:usd>0?cap*usd:null};}
@@ -145,22 +149,80 @@ async function readStartBase(){
 // A stock token's USD price from its USDG pool (StateView.getSlot0 on the chain's own pool), for the start-cap tiers.
 async function stockUsd(p){const c=chainById(chainId),usdg=pairQuotes(chainId).find(q=>q.risk==='stable')?.address;
  const r=await rpc('eth_call',[{to:c.contracts.stateView,data:'0xc815641c'+p.usdPool.slice(2)},'latest']);return usdg?usdFromSqrt('0x'+r.slice(2,66),p.address,usdg):null;}
+// ---- Extra pools (v4 only, opt-in; prices and table bounds are read before enabling a chip) ----
+let extraPools=[],poolPrices=null,poolRun=0,poolReadKey='',poolDefaults=new Map(),anyQuotes=new Map(),anyPicker=null,anyPanel=null;
+const multiOn=()=>!!pick&&pick.style!=='flywheel'&&multiLive(chainId)&&extraPools.length>0;
+const isAddressPool=q=>typeof q.index==='string';
+const anyOnChain=()=>[...(anyQuotes.get(chainId)?.values()||[])].filter(q=>q.risk!=='stock'||stocksOk());
+const allPoolQuotes=()=>[{index:0,...chainById(chainId).quote,risk:chainById(chainId).quote.wrapNative?'weth':'stable'},...offeredPairs(),...anyOnChain()];
+const poolKey=()=>[chainId,pairIdx,startSteps,stocksOk(),anyOnChain().map(q=>q.address).join(',')].join(':');
+const pricesFresh=()=>poolPrices?.key===poolKey()&&(!anyOnChain().length||Date.now()-poolPrices.at<600000);
+const mainQuote=()=>curPair()||{index:0,...chainById(chainId).quote,risk:chainById(chainId).quote.wrapNative?'weth':'stable'};
+const quoteUsd=p=>isAddressPool(p)?readAnyQuote(p):p.risk==='stock'?stockUsd(p):p.risk==='stable'?Promise.resolve(1):readCreateNativeUSD(chainById(chainId).native);
+const poolsBlocked=()=>multiOn()&&(!pricesFresh()||extraPools.some(i=>!poolPrices.rows.find(r=>r.index===i)?.ok));
+function multiFields(){
+ if(!multiOn())return {};
+ if(poolsBlocked())throw Error('Refresh pool prices before launching.');
+ return {quotes:[pairIdx,...extraPools.map(i=>typeof i==='string'?BigInt(i):i)],ticks:[0,...extraPools.map(i=>poolPrices.rows.find(r=>r.index===i).tick)],weights:poolWeights(extraPools.length)};
+}
+function selectedAddresses(){const list=allPoolQuotes();return [mainQuote().address,...extraPools.map(i=>list.find(q=>q.index===i)?.address).filter(Boolean)];}
+async function addAnyPool(q){
+ if(busy)throw Error('Finish this launch before adding a pool.');
+ if(extraPools.length>=6)throw Error('The 70/30 split fits up to six extra pools.');
+ if(extraPools.length+2>8)throw Error('Choose up to eight pools.');
+ if(!anyQuotes.has(chainId))anyQuotes.set(chainId,new Map());anyQuotes.get(chainId).set(q.address,q);
+ extraPools=[...extraPools,q.index];poolDefaults.set(chainId+':'+pairIdx,[...extraPools]);poolPrices=null;poolReadKey='';poolRun++;costRun++;cost=null;renderPair();renderPq();renderQuick();costSoon();
+}
+async function readAnyQuote(q){
+ if(q.usd>0&&Date.now()-q.checkedAt<600000)return q.usd;
+ const r=await fetch('/api/launch/quote-check?'+new URLSearchParams({chain:chainId,token:q.address}),{cache:'no-store'}),check=r.ok?await r.json():null;
+ if(check?.ok!==true){q.usd=null;return null;}Object.assign(q,{symbol:check.symbol,decimals:check.decimals,usd:check.usd,checkedAt:Date.now()});return q.usd;
+}
+function renderPools(){
+ const box=$('pools');if(!box)return;
+ const show=!!pick&&pick.style!=='flywheel'&&multiLive(chainId)&&multiQuotes(chainId).length>0;box.hidden=!show;
+ if(!show){if(pick?.style==='flywheel')extraPools=[];return;}
+ const list=allPoolQuotes().filter(q=>q.address.toLowerCase()!==mainQuote().address.toLowerCase()),choice=chainId+':'+pairIdx;
+ if(!poolDefaults.has(choice)){poolDefaults.set(choice,[pairIdx===0?multiQuotes(chainId)[0].index:0]);costRun++;cost=null;}
+ extraPools=poolDefaults.get(choice).filter(i=>list.some(q=>q.index===i));
+ const weights=poolWeights(extraPools.length),fresh=pricesFresh();
+ const chips=list.map(q=>{const r=fresh?poolPrices.rows.find(r=>r.index===q.index):null,selected=extraPools.includes(q.index),duplicate=extraPools.some(i=>i!==q.index&&list.find(p=>p.index===i)?.address.toLowerCase()===q.address.toLowerCase()),full=!selected&&extraPools.length>=6;
+  const note=duplicate?'This pool is already selected.':full?'The 70/30 split fits up to six extra pools.':r&&!r.ok?r.tick!=null?"Can't open this pool at today's price.":'Price unavailable.':!r?'Reading price…':'';
+  const b=el('button',{type:'button',class:'qq-start-opt','aria-pressed':String(selected),disabled:busy||!r?.ok||duplicate||full,'data-extra-pool':String(q.index),...(note?{'aria-describedby':'qq-pool-note-'+q.index}:{}),...(q.risk==='stock'?{title:RISK.stock(q.symbol)}:{})},q.symbol+(selected?' · '+weights[extraPools.indexOf(q.index)+1]/100+'%':''));
+  b.addEventListener('click',()=>{if(busy||!r?.ok||duplicate||full||!selected&&extraPools.length>=6)return;extraPools=selected?extraPools.filter(i=>i!==q.index):[...extraPools,q.index];poolDefaults.set(choice,[...extraPools]);costRun++;cost=null;renderPair();renderPq();renderQuick();costSoon();$('pools').querySelector?.('[data-extra-pool="'+q.index+'"]')?.focus();});
+  return el('div',{class:'qq-pool-chip'},b,isAddressPool(q)?el('span',{class:'qq-start-note'},'Any token'):null,note?el('span',{class:'qq-start-note',id:'qq-pool-note-'+q.index},note):null,isAddressPool(q)?el('span',{class:'qq-start-note'},ANY_TOKEN_NOTE):null);});
+ const single=el('button',{type:'button',class:'qq-pq-skip',disabled:busy},'Use one pool');single.addEventListener('click',()=>{if(busy)return;extraPools=[];poolDefaults.set(choice,[]);costRun++;cost=null;renderPair();renderPq();renderQuick();costSoon();});
+ if(!anyPanel){anyPanel=el('div',{class:'qq-any-token'});anyPicker=mountAnyTokenPicker(anyPanel,{chainId:()=>chainId,stocksOk,selected:selectedAddresses,onAdd:addAnyPool,enabled:()=>!busy,doc:document,fetchImpl:(...a)=>fetch(...a)});}anyPicker.setChain(chainId);
+ box.replaceChildren(el('p',{class:'qq-start-k'},'Pools'),el('p',{class:'qq-start-note'},'Open more pools for your token in the same launch. Your main pool keeps 70% of the supply; the others share 30%.'),el('div',{class:'qq-start-opts',role:'group','aria-label':'Extra pools'},...chips),...(extraPools.length?[single]:[]),...list.filter(q=>q.risk==='stock'&&extraPools.includes(q.index)).map(q=>el('p',{class:'qq-start-note qq-pair-risk'},RISK.stock(q.symbol))),anyPanel);
+ if(!fresh&&poolReadKey!==poolKey())void readPoolPrices();
+}
+async function readPoolPrices(){
+ const run=++poolRun,key=poolKey(),steps=startSteps,main=mainQuote(),list=allPoolQuotes(),fixed=list.filter(q=>!isAddressPool(q));poolReadKey=key;
+ try{
+  const tables=await rpcMany(fixed.map(q=>['eth_call',[{to:multiFactory(chainId),data:pairStartAtCall(q.index,steps)},'latest']])),byIndex=new Map(fixed.map((q,i)=>[q.index,readPairStartAt(tables[i])]));
+  const prices=await Promise.all(list.map(q=>quoteUsd(q).catch(()=>null))),mi=list.findIndex(q=>q.index===main.index),table=byIndex.get(main.index),usdPerToken=table&&prices[mi]>0?Number(table.startCapWei)/10**main.decimals*prices[mi]/1e9:null;
+  const rows=list.map((q,i)=>{const table=byIndex.get(q.index);let tick=null;try{tick=alignTick({usdPerToken,quoteUsd:prices[i],quoteDecimals:q.decimals});}catch{}return {...q,tick,ok:tick!==null&&(isAddressPool(q)?tick!==0&&Math.abs(tick)<=887200:!!table&&Math.abs(tick-table.tick0)<=7000)};});
+  if(run===poolRun&&key===poolKey()){poolPrices={key,rows,at:Date.now()};renderPools();renderQuick();if(extraPools.length){costRun++;cost=null;costSoon();}}
+ }catch{if(run===poolRun&&key===poolKey()){poolPrices={key,rows:[],at:Date.now()};renderPools();renderQuick();}}
+ finally{if(run===poolRun)poolReadKey='';}
+}
+async function rpcMany(calls){const c=chainById(chainId),r=await fetch(c.rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(calls.map(([method,params],id)=>({jsonrpc:'2.0',id,method,params})))}),j=await r.json();if(!Array.isArray(j))throw Error('RPC error');return calls.map((_,id)=>j.find(r=>r.id===id)?.result||'0x');}
 function tierSteps(t){const tier=START_TIERS.find(x=>x[0]===t);if(!tier||tier[2]===null)return startSteps;if(!tier[2])return 0;return startBase?.usd?stepsForUsd(tier[2],startBase.usd):0;}
 function capText(steps){if(!startBase)return '';const usd=startBase.usd?capAtSteps(startBase.usd,steps):null;return usd?'~'+usdShort(usd):+capAtSteps(startBase.cap,steps).toPrecision(3)+' '+startBase.unit;}
 function renderStart(){
  let box=$('startcap');
  if(!startCapOn()){box?.remove();startSteps=0;startTier='standard';return;}
- if(!box){box=el('div',{id:'qq-startcap',class:'qq-startcap'});($('pair')||$('style-blocks')).after(box);}
+ if(!box){box=el('div',{id:'qq-startcap',class:'qq-startcap'});($('pools')||$('pair')||$('style-blocks')).after(box);}
  if(startTier!=='custom')startSteps=tierSteps(startTier);
  const radios=START_TIERS.map(([id,label])=>{const b=el('button',{type:'button',class:'qq-start-opt','aria-pressed':String(id===startTier)},label+(id==='standard'&&startBase?' · '+capText(tierSteps(id)):''));
   b.addEventListener('click',()=>{startTier=id;if(id==='custom'&&!startSteps)startSteps=tierSteps('floor');renderStart();renderQuick();costSoon();});return b;});
  const kids=[el('p',{class:'qq-start-k'},'Starting market cap'),el('div',{class:'qq-start-opts',role:'group','aria-label':'Starting market cap'},...radios)];
  if(startTier==='custom'){const r=el('input',{type:'range',min:'0',max:String(START_STEPS_MAX),step:'1',value:String(startSteps),'aria-label':'Starting market cap'});
-  r.addEventListener('input',()=>{startSteps=Number(r.value);out.textContent=capText(startSteps);renderQuick();costSoon();});
+  r.addEventListener('input',()=>{startSteps=Number(r.value);out.textContent=capText(startSteps);renderPools();renderQuick();costSoon();});
   const out=el('span',{class:'qq-start-val'},capText(startSteps));kids.push(el('div',{class:'qq-start-custom'},r,out));}
  kids.push(el('p',{class:'qq-start-note'},'A higher start makes bundling and sniping cost more: buyers pay more for the same share of the supply. The price can’t go below where it starts, and Bonded comes at 25× the start.'));
  if(startSteps>0&&startBase)kids.push(el('p',{class:'qq-start-sum'},'Starts at '+capText(startSteps)+' · Bonded at '+capText(startSteps+161)));
- box.replaceChildren(...kids);
+ box.replaceChildren(...kids);renderPools();
 }
 
 // ---- Optional post-quantum key (next-generation factory only, chains.mjs simpleLaunchNext.abi 'pq') ----
@@ -200,6 +262,7 @@ function openQuick(id,{scroll=false}={}){
  if(scroll){$('quick').scrollIntoView({block:'start',behavior:'auto'});$('name').focus({preventScroll:true});}
 }
 
+const costKey=v=>JSON.stringify(v,(_k,value)=>typeof value==='bigint'?value.toString():value);
 function fields(){return {name:$('name').value,symbol:$('symbol').value,image};}
 function renderQuick(){
  if(!pick)return;const c=chainById(chainId),conn=hub.snapshot().current;
@@ -213,16 +276,16 @@ function renderQuick(){
    ...(cost.live&&!cost.quote.funded?[el('p',{class:'qxc-fine qq-short','data-error':'true'},'Add '+ethText(BigInt(cost.quote.requiredBalance)-BigInt(cost.quote.balance))+' '+c.native+' on '+c.name+' to launch.')]:[]),el('p',{class:'qxc-fine'},cost.live?'Priced for this launch from your wallet’s estimate. One transaction, one confirmation.':'Planning estimate. Connect a wallet for this launch’s own estimate. One transaction, one confirmation.'));}
  appendArbRecaptureLine(box,c,pick.blocks||[],launchFactory());
  const b=$('launch');
- b.textContent=busy?'Launching…':!conn?'Connect wallet':conn.chainId!==chainId?'Switch to '+c.short+' and launch':priceBlocked()?'Refreshing price…':pqBlocked()?'Unlock your quantum key to launch':'Launch for '+(cost?ethText(cost.totalWei)+' '+c.native:'…');
+ b.textContent=busy?'Launching…':!conn?'Connect wallet':conn.chainId!==chainId?'Switch to '+c.short+' and launch':priceBlocked()||poolsBlocked()?'Refreshing price…':pqBlocked()?'Unlock your quantum key to launch':'Launch for '+(cost?ethText(cost.totalWei)+' '+c.native:'…');
  // A token image is required (2026-11-10): no launch, or chain switch for one, until the image is ready.
  const needImage=!image;$('need-image').hidden=!needImage||busy;
- b.disabled=busy||!!taken||!!conn&&(needImage||conn.chainId===chainId&&(!ready||!cost||priceBlocked()||pqBlocked()||cost.live&&!cost.quote.funded));
+ b.disabled=busy||!!taken||!!conn&&(needImage||conn.chainId===chainId&&(!ready||!cost||priceBlocked()||poolsBlocked()||pqBlocked()||cost.live&&!cost.quote.funded));
 }
 
 async function rpc(method,params){const c=chainById(chainId);const r=await fetch(c.rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});const j=await r.json();if(j.error||typeof j.result!=='string')throw Error(j.error?.message||'RPC error');return j.result;}
 async function readFee(){
- if(!feeRead.has(chainId))feeRead.set(chainId,rpc('eth_call',[{to:quickFactory(chainId),data:'0xc763e5a1'},'latest']).then(r=>launchFeeWei(r,chainId)).catch(()=>{feeRead.delete(chainId);return launchFeeWei(null,chainId);}));
- return feeRead.get(chainId);
+ const key=chainId+':'+launchFactory();if(!feeRead.has(key))feeRead.set(key,rpc('eth_call',[{to:launchFactory(),data:'0xc763e5a1'},'latest']).then(r=>launchFeeWei(r,chainId)).catch(()=>{feeRead.delete(key);return launchFeeWei(null,chainId);}));
+ return feeRead.get(key);
 }
 // Cost shown before any wallet prompt. With a connected wallet on the right chain and valid fields, the guided flow's
 // own fee quote (quoteNextChain: wallet estimate +25%, 2 x base fee + tip, review caps) prices this exact transaction,
@@ -230,17 +293,18 @@ async function readFee(){
 const walletRequest=conn=>(method,params)=>conn.entry.provider.request({method,params});
 // Checks whether this chain's clean-token launch contract has code (cached; see qx-quick-launch-core primeCleanFactory).
 const getCodeOn=id=>a=>fetch(chainById(id).rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_getCode',params:[a,'latest']})}).then(r=>r.json()).then(j=>j.result);
-const primeClean=(id,o)=>primeCleanFactory(id,getCodeOn(id),o),primePairs=(id,o)=>primePairsFactory(id,getCodeOn(id),o);
+const primeClean=(id,o)=>primeCleanFactory(id,getCodeOn(id),o),primePairs=(id,o)=>primePairsFactory(id,getCodeOn(id),o),primeMulti=(id,o)=>primeMultiFactory(id,getCodeOn(id),o);
 async function refreshCost(){
  if(!pick)return null;
+ renderPools();if(poolsBlocked()){cost=null;renderQuick();return null;}
  // The launch contract must be settled before the price of the exact transaction is read.
  await primeClean(chainId,{background:true}).catch(()=>{});const run=++costRun,style=pick.style,snipe=pick.snipe,steps=startCapOn()?startSteps:0,pqKey=pqOnChain()?pqKeyHex():null,pair=curPair(),quoteIndex=pair?pair.index:0;
  try{
   const conn=hub.snapshot().current,fee=await readFee();let next=null;
   if(conn&&conn.chainId===chainId&&!pqBlocked()){let f=null;try{f=fields();validateQuick(f);}catch{f=null;}
-   if(f){const salt=randomSalt(),data=encodeQuickLaunch({...f,style,snipe,salt,steps,startCap:startCapOn(),pq:pqOnChain(),pqKey,quoteIndex}),call={to:launchFactory(),data,value:'0x'+fee.toString(16)};
+   if(f){const salt=randomSalt(),data=encodeQuickLaunch({...f,style,snipe,salt,steps,startCap:startCapOn(),pq:pqOnChain(),pqKey,quoteIndex,...multiFields()}),call={to:launchFactory(),data,value:'0x'+fee.toString(16)};
     const quote=await quoteCall({chainId,request:walletRequest(conn),owner:conn.owner,call});
-    next={...quickCost({feeWei:fee,gas:quote.gas,gasPriceWei:BigInt(quote.transaction.maxFeePerGas),dataFeeWei:quote.dataFeeWei||0}),live:true,quote,owner:conn.owner,key:JSON.stringify([f,style,snipe,steps,pqKey,call.to,quoteIndex])};}}
+    next={...quickCost({feeWei:fee,gas:quote.gas,gasPriceWei:BigInt(quote.transaction.maxFeePerGas),dataFeeWei:quote.dataFeeWei||0}),live:true,quote,owner:conn.owner,key:costKey([f,style,snipe,steps,pqKey,call.to,quoteIndex,multiFields()])};}}
   if(!next){const price=await rpc('eth_gasPrice',[]);next={...quickCost({feeWei:fee,gas:Math.ceil(PLANNING_GAS[style]*1.25),gasPriceWei:2n*BigInt(price)}),live:false};}
   if(run!==costRun)return cost;cost=next;
  }catch(e){if(run===costRun){cost=null;costError=/insufficient|exceeds balance/i.test(String(e?.message))?launchError(e):/review limit/i.test(String(e?.message))?launchError(e):'Reading network fees. Trying again in a few seconds.';clearTimeout(costTimer);costTimer=setTimeout(()=>void refreshCost(),10000);}}
@@ -282,8 +346,8 @@ async function launch(){
  try{
   if(conn.chainId!==chainId){note('Switching your wallet to '+chainById(chainId).name+'…');conn=await hub.switchChain(chainId);busy=false;await refreshCost();note('Check the cost, then launch.');return;}
   if(pqBlocked()){busy=false;note('Unlock your quantum key, or turn the post-quantum key off, then launch.',true);return;}
-  if(priceBlocked()){busy=false;note('Refreshing price… The starting market cap needs a live price. Try again in a moment, or choose Standard.',true);return;}
-  const key=JSON.stringify([f,pick.style,pick.snipe,startCapOn()?startSteps:0,pqOnChain()?pqKeyHex():null,launchFactory(),curPair()?.index||0]);
+  if(priceBlocked()||poolsBlocked()){if(poolsBlocked())void readPoolPrices();busy=false;note('Refreshing price… The starting market cap needs a live price. Try again in a moment, or choose Standard.',true);return;}
+  const key=costKey([f,pick.style,pick.snipe,startCapOn()?startSteps:0,pqOnChain()?pqKeyHex():null,launchFactory(),curPair()?.index||0,multiFields()]);
   // The person must have seen the price of this exact transaction before the wallet opens.
   if(!cost?.live||cost.key!==key||cost.owner!==conn.owner){busy=false;await refreshCost();note('Check the cost, then launch.');return;}
   const tx=await recheckCall(chainId,{request:walletRequest(conn),quote:cost.quote}).catch(async e=>{busy=false;await refreshCost();throw e;});
@@ -303,7 +367,7 @@ async function launch(){
 
 function mount(){
  if(!$('ideas'))return;
- {const u=urlChain();if(u&&ideaCards(u).length)quickChain=u;}
+ {const u=urlChain();if(u&&(ideaCards(u).length||multiFactory(u)))quickChain=u;}
  renderIdeas();
  chainSelect?.addEventListener('change',()=>{renderIdeas();if(pick)openQuick(pick.id);checkTickerSoon();});
  $('use-robinhood')?.addEventListener('click',()=>setQuickChain('4663'));
