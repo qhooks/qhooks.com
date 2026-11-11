@@ -15,6 +15,8 @@ export function tokenAvatarSources(m={},fallback=[]){
 // The letter stays visible until an image has decoded. A failed profile walks
 // the launch/legacy sources, then removes the image rather than covering it up.
 export function bindTokenAvatar(img,market={},fallback=[]){
+  // The image stays hidden until it decodes, and a hidden lazy image never loads, so load eagerly.
+  img.loading='eager';
   const sources=tokenAvatarSources(market,fallback);let next=0,stopped=false;
   const advance=()=>{
     if(stopped)return;img.hidden=true;

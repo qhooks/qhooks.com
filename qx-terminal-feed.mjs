@@ -192,7 +192,7 @@ function makeRow(vm) {
   }
   const avatar = el('span', { class: 'qxfd-avatar', 'aria-hidden': 'true' });
   const letter = el('span');
-  const logo = el('img', { alt: '', width: 26, height: 26, loading: 'lazy', referrerpolicy: 'no-referrer', hidden: '' });
+  const logo = el('img', { alt: '', width: 26, height: 26, referrerpolicy: 'no-referrer', hidden: '' });
   avatar.append(letter, logo);
   const symbol = el('b'), name = el('span', { class: 'qxfd-name' }), rowAge = el('span', { class: 'qxfd-age' });
   const chain = el('img', { class: 'qxfd-chain-icon', width: 13, height: 13, alt: '' });
