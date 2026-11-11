@@ -3,7 +3,8 @@ import {chainById} from './chains.mjs';
 import {FUND, SEL as DROP_SEL, decodeLock, vestedAt, fundStep} from './qdrops-fund.mjs';
 import {FOUNDING, grantBatch, dayCut} from './founding-config.mjs';
 import {decodeGrant, grantedSet, SEL as GRANT_SEL} from './founding-fund.mjs';
-import {approvalChecks} from './qx-flywheel2-setup.mjs';
+import {approvalChecks, allowanceData} from './qx-flywheel2-setup.mjs';
+import {verifyDeployment} from './qx-pool-fee-share.mjs';
 
 export const GROUPS = [{id: 'wallet', label: 'Your wallet'}, {id: 'solana', label: 'Your wallet (Solana)'}, {id: 'safe', label: 'Safe, both signers'}, {id: 'privy', label: 'Privy dashboard (one visit)'}];
 const pad = a => String(a).toLowerCase().replace(/^0x/, '').padStart(64, '0');
@@ -323,6 +324,13 @@ export async function evaluateCatalogue(catalogue, io, {onUpdate} = {}) {
         add(base(FOUNDING.pay.chain), () => checkFounding(io.rpc, json));
       } else if (row.kind === 'call') {
         let checks = row.checks, chain = row.chainId;
+        if (row.adapter === 'poolFeeShare') {
+          const art = await json(row.manifest); verifyDeployment(art);
+          add(base(art.chainId), () => row.step === 'create'
+            ? checkCode({address: art.address}, art.chainId, io.rpc)
+            : checkCalls([{to: art.safeBatch.calls[0].to, data: allowanceData(art.constructor.safe, art.address), expect: {kind: 'gte', value: art.safeBatch.calls[0].args[1]}}], art.chainId, io.rpc));
+          return items;
+        }
         if (row.adapter === 'arbAllow') {
           const [allow, remove] = await allReads([json(row.manifest), json(row.removeManifest)]);
           checks = allowChecks(allow, remove); chain = allow.chainId;

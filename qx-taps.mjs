@@ -16,7 +16,7 @@ export function createReadClient({fetchImpl = globalThis.fetch, origin = '', rel
   const envelope = task => ({jsonrpc: '2.0', id: task.id, method: task.method, params: task.params});
   function decode(entry, task) {
     if (entry?.error) {
-      const error = Error('RPC read did not complete');
+      const error = Object.assign(Error(entry.error.message || 'RPC read did not complete'), {data: entry.error.data});
       error.semantic = /revert/i.test(entry.error.message || '') || [-32600, -32601, -32602].includes(entry.error.code);
       return {error};
     }
