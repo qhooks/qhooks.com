@@ -374,13 +374,12 @@ async function load({ keep = false, focus } = {}) {
     if (j.redirect) {
       const next={kind:'launch',chainId:String(j.redirect.chainId),controller:String(j.redirect.controller).toLowerCase()},owner=session()?.wallet||'guest',previous=drafts.read(target,owner);
       if(previous.post||previous.call)drafts.save(next,owner,previous);
-      location.hash='m='+next.chainId+':'+next.controller+(callIntent()?'&compose=call':'');return;
+      const linkedPost=new URLSearchParams(location.hash.slice(1)).get('post');
+      location.hash='m='+next.chainId+':'+next.controller+(callIntent()?'&compose=call':'')+(/^p[0-9a-v]{12}$/.test(linkedPost||'')?'&post='+linkedPost:'');return;
     }
-    if(isElysiumDiscussion(j.board)){
-      const post=new URLSearchParams(location.hash.slice(1)).get('post');
-      if(/^p[0-9a-v]{12}$/.test(post||''))try{const thread=await api(boardApi(target)+'/thread/'+post);if(mine!==seq)return;const loaded=[...(j.posts||[]),...(j.pinned||[])].find(p=>p.id===thread.parentId);if(!loaded)j.linkedDiscussion=thread.post;focus=thread.parentId;}
-      catch{j.linkedDiscussionError='This discussion could not be opened. You can still read the board or refresh to retry.';}
-    }
+    const post=new URLSearchParams(location.hash.slice(1)).get('post');
+    if(/^p[0-9a-v]{12}$/.test(post||''))try{const thread=await api(boardApi(target)+'/thread/'+post);if(mine!==seq)return;const loaded=[...(j.posts||[]),...(j.pinned||[])].find(p=>p.id===thread.parentId);if(!loaded)j.linkedDiscussion=thread.post;focus=thread.parentId;}
+    catch{j.linkedDiscussionError='This discussion could not be opened. You can still read the board or refresh to retry.';}
     if(mine!==seq)return;
     const query=new URLSearchParams(location.search),call=query.get('call'),caller=query.get('caller');
     if(/^p[0-9a-v]{12}$/.test(call||'')&&/^0x[0-9a-f]{40}$/.test(caller||'')){
