@@ -295,6 +295,9 @@ function renderRows() {
   text(count, initialLoading ? 'Loading tokens…' : `${rows.length} token${rows.length === 1 ? '' : 's'} · ${rows.filter(r=>r.numeric.move!==null).length} with ${WINDOWS.find(([k])=>k===state.window)?.[1]} history`);
   panel.setAttribute('aria-busy', String(state.loading || state.searching));
   renderFeedFeedback({state,heading,status,notice,noticeText,empty,retry,emptyText});
+  // A pasted address that is not a token is most likely a wallet: offer its public profile (/profile#<address>).
+  const walletQuery = !rows.length && !state.searching && !state.searchError && (/^0x[0-9a-fA-F]{40}$/.test(state.query) || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(state.query)) ? state.query : '';
+  if (walletQuery) { empty.textContent = 'No token at this address.'; empty.append(el('a', { class: 'qxfd-wallet-hit', href: '/profile#' + walletQuery }, 'View wallet ' + walletQuery.slice(0, 6) + '…' + walletQuery.slice(-4) + ' →')); }
   text(source, state.tab === 'launches' ? '' : [state.data?.source,state.data?.coverage?.description].filter(Boolean).join(' · '));
   scroll.scrollTop = y;
   if (window.scrollY !== pageY) window.scrollTo({ top: pageY, behavior: 'instant' });
