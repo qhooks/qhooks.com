@@ -29,6 +29,9 @@ const rows = [
     // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
     // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
     simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 55351284, abi: 'pq' },
+    // Sale-first launches (QSaleLaunch, the same address on every chain; nothing there until Randall's /chain-setup?set=sale tap).
+    // from 0: the indexer starts at the chain head on its first scan; set the deploy block once it is on chain.
+    saleLaunch: { address: '0x707d79c32bea8f9773a81569fbacc64ab0502044', from: 0 },
     feeModel: 'op-stack', feeAccounting: 'separate-data-and-operator-fees', feeCapWei: null, gasFloorWei: null,
     native: 'ETH', rpc: 'https://mainnet.base.org', logsRpc: 'https://base-rpc.publicnode.com', logStep: 4000, blockTime: 2,
     explorer: 'https://basescan.org',
@@ -56,6 +59,9 @@ const rows = [
     // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
     // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
     simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 110390517, abi: 'pq' },
+    // Sale-first launches (QSaleLaunch, the same address on every chain; nothing there until Randall's /chain-setup?set=sale tap).
+    // from 0: the indexer starts at the chain head on its first scan; set the deploy block once it is on chain.
+    saleLaunch: { address: '0x707d79c32bea8f9773a81569fbacc64ab0502044', from: 0 },
     // Pairs launch contract (QSimpleLaunch v3: the clean contract plus launchPaired(params, quoteIndex)). /create offers the
     // pairs below only once it has code here (Randall's one tap: /chain-setup?set=pairs&chain=4663&go=4663&factory=4663).
     // quotes: [index, symbol, address, decimals, issuer risk, USDG pool id for its USD price]; the index is fixed in the
@@ -90,6 +96,9 @@ const rows = [
     // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
     // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
     simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 26380174, abi: 'pq' },
+    // Sale-first launches (QSaleLaunch, the same address on every chain; nothing there until Randall's /chain-setup?set=sale tap).
+    // from 0: the indexer starts at the chain head on its first scan; set the deploy block once it is on chain.
+    saleLaunch: { address: '0x707d79c32bea8f9773a81569fbacc64ab0502044', from: 0 },
     feeModel: 'ethereum', feeAccounting: 'execution-only', feeCapWei: '1000000000000', gasFloorWei: null,
     native: 'ETH', rpc: 'https://ethereum-rpc.publicnode.com', logsRpc: 'https://ethereum-rpc.publicnode.com', logStep: 2000, blockTime: 12,
     explorer: 'https://etherscan.io',
@@ -105,6 +114,9 @@ const rows = [
     // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
     // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
     simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 522799540, abi: 'pq' },
+    // Sale-first launches (QSaleLaunch, the same address on every chain; nothing there until Randall's /chain-setup?set=sale tap).
+    // from 0: the indexer starts at the chain head on its first scan; set the deploy block once it is on chain.
+    saleLaunch: { address: '0x707d79c32bea8f9773a81569fbacc64ab0502044', from: 0 },
     feeModel: 'nitro', feeAccounting: 'data-fee-in-estimate-gas', feeCapWei: '10000000000', gasFloorWei: null,
     native: 'ETH', rpc: 'https://arb1.arbitrum.io/rpc', logsRpc: 'https://arb1.arbitrum.io/rpc', logStep: 25000, blockTime: 0.25,
     explorer: 'https://arbiscan.io',
@@ -125,6 +137,9 @@ const rows = [
     // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
     // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
     simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 132660352, abi: 'pq' },
+    // Sale-first launches (QSaleLaunch, the same address on every chain; nothing there until Randall's /chain-setup?set=sale tap).
+    // from 0: the indexer starts at the chain head on its first scan; set the deploy block once it is on chain.
+    saleLaunch: { address: '0x707d79c32bea8f9773a81569fbacc64ab0502044', from: 0 },
     feeModel: 'bsc', feeAccounting: 'bsc-execution', feeCapWei: '10000000000', gasFloorWei: null,
     native: 'BNB', rpc: 'https://bsc-dataseed.bnbchain.org', logsRpc: 'https://bsc-rpc.publicnode.com', logStep: 5000, blockTime: 0.45,
     explorer: 'https://bscscan.com',
@@ -183,6 +198,9 @@ const rows = [
     // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
     // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
     simpleLaunchClean: { address: '0xc7faaf2e1b01e5e2cae4f967a020b49b290ca0cc', from: 3539046, abi: 'pq' },
+    // Sale-first launches (QSaleLaunch, the same address on every chain; nothing there until Randall's /chain-setup?set=sale tap).
+    // from 0: the indexer starts at the chain head on its first scan; set the deploy block once it is on chain.
+    saleLaunch: { address: '0x707d79c32bea8f9773a81569fbacc64ab0502044', from: 0 },
     feeModel: 'nitro', feeAccounting: 'data-fee-in-estimate-gas', feeCapWei: '10000000000', gasFloorWei: null,
     native: 'HYPE', rpc: 'https://rpc.elysium.kinetiq.xyz', logsRpc: 'https://rpc.elysium.kinetiq.xyz', logStep: 2000, blockTime: 0.13, explorer: 'https://elysium.kinetiq.xyz',
     contracts: { manager: '0xe2e105d3f7209a9da11f83ccf3e7398a753823f1', stateView: '0x27ed73ae0652fdcf71d6793412a7525f32be9dfe', quoter: '0x379f556c5a748bd7cc9baf0f7a344094ac1814f5', router: '0xa13f7611115752deb2b13813bdde16a5073e4b45', permit2: '0x000000000022d473030f116ddee9f6b43ac78ba3', extended: false },

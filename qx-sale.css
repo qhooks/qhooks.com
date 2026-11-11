@@ -1,0 +1,39 @@
+/* Sale page (/sale.html) and the "Sale first" card on /create. Phone first: everything stacks at 390px. */
+.qsa .qsa-card, .qsa .qsa-rules { max-width: 720px; margin: 0 auto 16px; }
+.qsa-head h1 { font-size: clamp(1.5rem, 5vw, 2.2rem); margin: 0 0 4px; overflow-wrap: anywhere; }
+.qsa-sym { color: var(--muted, #6b6f68); font-weight: 600; font-size: .7em; }
+.qsa-meta { margin: 0 0 8px; color: var(--muted, #6b6f68); }
+.qsa-state { display: inline-block; margin: 0 0 14px; padding: 4px 10px; border-radius: 999px; background: var(--chip, #ece8dd); font-weight: 600; }
+.qsa-state[data-state="live"] { background: #dff1e3; color: #1d5b2c; }
+.qsa-state[data-state="failed"] { background: #f6e1dc; color: #7a2a1a; }
+.qsa-state[data-state="settled"] { background: #e3ecf8; color: #1d3f6e; }
+.qsa-bar { position: relative; height: 14px; border-radius: 999px; background: var(--chip, #ece8dd); overflow: hidden; margin: 6px 0 14px; }
+.qsa-fill { position: absolute; inset: 0 auto 0 0; background: #2f7d45; border-radius: 999px; }
+.qsa-min { position: absolute; top: 0; bottom: 0; width: 2px; background: #111613; }
+.qsa-nums { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 0 0 16px; }
+@media (min-width: 640px) { .qsa-nums { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.qsa-nums dt { font-size: .8rem; color: var(--muted, #6b6f68); }
+.qsa-nums dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.qsa-you { border-top: 1px solid var(--line, #e2ddd0); padding-top: 10px; margin-bottom: 10px; }
+.qsa-you h2, .qsa-rules h2 { font-size: 1.05rem; margin: 0 0 6px; }
+.qsa-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.qsa-actions label { width: 100%; font-weight: 600; }
+.qsa-actions input { flex: 1 1 140px; min-width: 0; font-size: 1rem; padding: 10px 12px; }
+.qsa-actions .qxc-primary { min-height: 44px; padding: 10px 18px; }
+.qsa-note { min-height: 1.2em; margin: 6px 0; }
+.qsa-note[data-error="true"] { color: #8a2a17; }
+.qsa-fine { font-size: .82rem; color: var(--muted, #6b6f68); overflow-wrap: anywhere; }
+.qsa-fine code { font-size: .78rem; overflow-wrap: anywhere; word-break: break-all; }
+.qsa-link { font-weight: 600; }
+.qsa-rules ul { margin: 0; padding-left: 1.1em; }
+.qsa-rules li { margin: 0 0 6px; }
+/* /create: Sale first. [hidden] must win over any site panel display rule. */
+.qsf[hidden], #qsf-root[hidden] { display: none !important; }
+.qsf-modes { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; }
+.qsf-modes label { display: flex; gap: 6px; align-items: center; padding: 8px 12px; border: 1px solid var(--line, #e2ddd0); border-radius: 10px; cursor: pointer; }
+.qsf-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 640px) { .qsf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.qsf-grid label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.qsf-grid input, .qsf-grid select { font-size: 1rem; padding: 9px 10px; min-width: 0; }
+.qsf-summary { margin: 10px 0; padding: 10px 12px; border-radius: 10px; background: var(--chip, #ece8dd); }
+.qsf-preview { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; }

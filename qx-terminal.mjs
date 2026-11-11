@@ -828,12 +828,28 @@ async function paintColdPrice(record,chainId,mine){
  $('qxt-chart').hidden=false;$('qxt-chart-empty').hidden=false;$('qxt-chart-empty').textContent=COLD_CHART_MESSAGE;
  $('qxt-sync').textContent='Price from the pool · Loading…';
 }
+const SALE_CHAINS={has:id=>!!chainById(id)?.saleLaunch?.address}; // chains.mjs saleLaunch
+// A token still in its sale-first launch: the terminal says so and links to the sale page (no trading until it settles).
+async function saleState(chainId,token){
+  try{
+    const r=await fetch(`/api/v1/sales/token/${chainId}/${token}`,{cache:'no-store'});if(!r.ok)return null;
+    const s=(await r.json()).sale;if(!s||s.state==='settled')return null;
+    const coin=v=>{const n=BigInt(v),w=n/10n**18n,f=(n%10n**18n).toString().padStart(18,'0').slice(0,4).replace(/0+$/,'');return w+(f?'.'+f:'');};
+    const now=Math.floor(Date.now()/1000),left=t=>{const d=Math.max(0,t-now);return d>=3600?Math.floor(d/3600)+'h '+Math.floor(d%3600/60)+'m':Math.floor(d/60)+'m';};
+    const when=s.state==='upcoming'?'starts in '+left(s.start):s.state==='live'?left(s.end)+' left':s.state==='failed'||s.next==='refund'?'missed its minimum: refunds are open':'over, ready to settle';
+    const text=s.symbol+' is in its sale ('+(s.style==='falling'?'falling price':'fixed price')+'): '+coin(s.raised)+' of '+coin(s.hardCap)+' raised, '+when+'. Trading opens when it settles.';
+    setTimeout(()=>{const el=$('qxt-sync');if(!el)return;const a=document.createElement('a');a.href='/sale.html?chain='+chainId+'&id='+s.saleId;a.textContent='Open the sale →';a.className='qxt-sale-link';el.replaceChildren(text+' ',a);},0);
+    return Error(text);
+  }catch{return null;}
+}
 async function select(chainId,controller,{quiet=false}={}) {
   if(String(chainId)==='solana')return selectExternal('solana',String(controller),{quiet});
   chainId=String(chainId);controller=String(controller).toLowerCase();
   return selectionFlow.open({kind:'launch',chainId,controller,quiet},async run=>{
-    const r=await fetch(`/api/markets/${chainId}/${controller}`,{cache:'no-store',signal:run.controller.signal});
-    if(!run.active())return false;if(!r.ok)throw Error('This launch is not listed.');
+    // On chains with sale-first launches, a token still in its sale answers here at once (it has no market yet).
+    const saleP=SALE_CHAINS.has(chainId)?saleState(chainId,controller):Promise.resolve(null);
+    const r=await Promise.race([fetch(`/api/markets/${chainId}/${controller}`,{cache:'no-store',signal:run.controller.signal}),saleP.then(s=>s?Promise.reject(s):new Promise(()=>{}))]);
+    if(!run.active())return false;if(!r.ok){const sale=r.status===404?await saleP:null;if(sale)throw sale;throw Error('This launch is not listed.');}
     const record=await r.json(),pool=record.pool;if(!run.active())return false;
     if(String(pool?.chainId)!==chainId||pool?.controller?.toLowerCase()!==controller)throw Error('Launch metadata does not match this selection. Choose the launch again.');
     state.pool=pool;window.__qhooksPool=pool;document.dispatchEvent(new CustomEvent('qhooks:pool',{detail:pool}));
