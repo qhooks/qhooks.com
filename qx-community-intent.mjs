@@ -28,7 +28,7 @@ export function callLinks(board,post){
  if(!communityCapabilities(board).calls)throw Error('Elysium supports discussion posts here; scored calls are unavailable.');
  const b=communityTarget(board),wallet=String(post?.author||'').toLowerCase();if(!POST.test(post?.id||'')||!EVM.test(wallet))throw Error('The published call did not return its identity.');
  const path=communityPath(b,{call:post.id,caller:wallet}),ref='?ref='+wallet;
- return{path,permalink:'https://qhooks.com/call/'+post.id,board:'https://qhooks.com'+path,firstCall:'https://qhooks.com'+communityPath(b,{intent:true,call:post.id,caller:wallet}),trade:'https://qhooks.com/'+(b.kind==='launch'?'l/'+b.chainId+'/'+b.controller+ref:'/terminal'+ref+'#'+communityKey(b))};
+ return{path,permalink:'https://qhooks.com/call/'+post.id,board:'https://qhooks.com'+path,firstCall:'https://qhooks.com'+communityPath(b,{intent:true,call:post.id,caller:wallet}),trade:'https://qhooks.com/'+(b.kind==='launch'?'l/'+b.chainId+'/'+b.controller+ref:'terminal'+ref+'#'+communityKey(b))};
 }
 const ownerKey=owner=>EVM.test(owner||'')?owner.toLowerCase():'guest';
 export function createCommunityDrafts({storage=()=>localStorage,now=()=>Date.now(),limit=12,ttl=7*86400000}={}){
