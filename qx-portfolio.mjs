@@ -114,7 +114,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   const delta = h('b', {class: m.change24Usd > 0 ? 'qp-positive' : m.change24Usd < 0 ? 'qp-negative' : ''}, signedMoney(m.change24Usd) + ' (' + percent(m.change24) + ')');
   const part = known(m.coveredUsd) && known(m.valueUsd) && m.valueUsd > 0 && m.coveredUsd < m.valueUsd * 0.995 ? ', on ' + Math.round(m.coveredUsd / m.valueUsd * 100) + '% of the value (the rest has no 24h price)' : '';
   $('qp-change').replaceChildren(delta, h('span', {}, ' over 24 hours' + part));
-  $('qp-at').textContent = m.at ? 'Read ' + new Date(m.at).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit', second: '2-digit'}) : 'Reading unavailable';
+  $('qp-at').textContent = m.at ? 'Read ' + new Date(m.at).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit', second: '2-digit'}) : 'Refreshing';
   $('qp-overview').setAttribute('aria-busy', 'false');
   const bar = h('div', {class: 'qp-bar', 'aria-hidden': 'true'});
   const legend = h('ul', {class: 'qp-legend'});
@@ -130,7 +130,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   const notes = [...failed];
   for (const c of m.chains) {
    const code = c.error, name = chainName(c);
-   if (code) notes.push(name + ': ' + ({balances_unavailable: 'balances unavailable right now', prices_unavailable: 'some prices unavailable right now', index_unavailable: 'QHooks positions unavailable right now', metadata_unavailable: 'some token details unavailable right now', token_limit: 'more tokens may be held than this reading includes', metadata_limit: 'some token balances have unknown units'}[code] || 'some data unavailable right now'));
+   if (code) notes.push(name + ': ' + ({balances_unavailable: 'Refreshing balances', prices_unavailable: 'Refreshing prices', index_unavailable: 'Refreshing QHooks positions', metadata_unavailable: 'Refreshing token details', token_limit: 'more tokens may be held than this reading includes', metadata_limit: 'some token balances have unknown units'}[code] || 'Refreshing data'));
    if (c.source === 'index-only' && c.chainId !== 'solana') notes.push(name + ': native balance and indexed QHooks tokens only');
   }
   if (m.rows.some(r => !r.spam && r.valueUsd === null)) notes.push('Unpriced holdings are not included in the total.');
@@ -145,7 +145,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
    const data = await shared.loadEarnings(me, {refresh});
    if (mine !== earningsSequence || disposed) return;
    const active = data.launches.length || data.earn.length || data.vests.length || data.rewards.rows.length || data.built;
-   if (!active) { target.replaceChildren(h('p', {class: 'qa-empty'}, data.partial ? 'Earnings unavailable right now. Refresh to try again.' : 'No QHooks earnings to show yet.')); return; }
+   if (!active) { target.replaceChildren(h('p', {class: 'qa-empty'}, data.partial ? 'Refreshing earnings. Refresh to try again.' : 'No QHooks earnings to show yet.')); return; }
    const sections = [];
    if (data.rewards.rows.length) sections.push(shared.section('qa-rewards', 'Cashback and referrals', null, data.rewards.rows));
    if (data.earn.length) sections.push(shared.section('qa-earn', 'Stakes and raffle entries', null, data.earn));
@@ -154,7 +154,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
    if (data.launches.length) sections.push(shared.section('qa-launches', 'Creator income', null, await shared.launchesSection(me, data.launches, refresh)));
    if (data.partial) sections.push(h('p', {class: 'qa-muted'}, 'Some earnings could not be read. Refresh to try again.'));
    if (mine === earningsSequence && !disposed) target.replaceChildren(...sections);
-  } catch { if (mine === earningsSequence && !disposed) target.replaceChildren(h('p', {class: 'qa-muted'}, 'Earnings unavailable right now. Refresh to try again.')); }
+  } catch { if (mine === earningsSequence && !disposed) target.replaceChildren(h('p', {class: 'qa-muted'}, 'Refreshing earnings. Refresh to try again.')); }
  }
  async function read(family, address, signal) {
   const res = await fetchImpl('/api/portfolio/' + family + '/' + encodeURIComponent(address), {cache: 'no-store', signal});
@@ -179,11 +179,11 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   try {
    const results = await Promise.allSettled(jobs.map(([family, address]) => read(family, address, controller.signal)));
    if (mine !== sequence || disposed) return;
-   const reports = results.filter(r => r.status === 'fulfilled').map(r => r.value), failed = results.flatMap((r, i) => r.status === 'rejected' ? [jobs[i][2] + ': balances unavailable right now'] : []);
+   const reports = results.filter(r => r.status === 'fulfilled').map(r => r.value), failed = results.flatMap((r, i) => r.status === 'rejected' ? [jobs[i][2] + ': Refreshing balances'] : []);
    current = mergePortfolios(reports);
    if (failed.length) { current.partial = true; current.change24 = null; current.change24Usd = null; }
    paintOverview(failed); paintChips(); paintHoldings();
-   $('qp-status').textContent = reports.length ? 'Portfolio updated.' : 'Could not read your portfolio. Refresh to try again.';
+   $('qp-status').textContent = reports.length ? 'Portfolio updated.' : 'Refreshing portfolio. Refresh to try again.';
   } finally { clearTimeout(timer); if (mine === sequence) $('qp-refresh').disabled = false; }
  }
  $('qp-refresh').addEventListener('click', () => { void load(true); void earnings(connectedAddress()); });
