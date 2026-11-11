@@ -13,7 +13,7 @@ export function tradeError(error) {
     home_sign_in: 'Sign in with the wallet you chose for home.',
     home_recipient: 'Choose your own wallet for the transfer and refund.',
     home_asset_refreshing: 'This home asset is refreshing on this chain.',
-    home_invalid_pref: 'Choose a home chain and ETH or USDC.',
+    home_invalid_pref: 'Choose a home chain and one of its listed assets.',
     home_invalid_slippage: 'Choose a valid price tolerance.',
     home_quote_mismatch: 'Refresh the home quote to match this trade.',
     home_quote_expired: 'Refresh the home quote before buying.',

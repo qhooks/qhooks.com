@@ -84,7 +84,7 @@ export function homePicker({document: doc = globalThis.document, getOwner = () =
   const root = el('section'); root.className = 'qhome'; root.setAttribute('aria-label', 'Home currency');
   const line = el('b'), chain = el('select'), asset = el('select'), toggle = el('input'), note = el('p'), recovery = el('p');
   chain.setAttribute('aria-label', 'Home chain'); asset.setAttribute('aria-label', 'Home asset'); toggle.type = 'checkbox'; toggle.setAttribute('aria-label', 'Sells go home');
-  for (const id of HOME_CHAINS) { const o = el('option', chainById(id).name); o.value = String(id); chain.append(o); }
+  for (const id of HOME_CHAINS) { const o = el('option', chainById(id).name + ' · ' + homeAssets(id).map(t => t.symbol).join(' / ')); o.value = String(id); chain.append(o); }
   function fillAssets(selected) {
     const options = homeAssets(chain.value).map(token => {const o = el('option', token.symbol); o.value = token.symbol; return o;});
     asset.replaceChildren(...options);

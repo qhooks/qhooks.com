@@ -3,7 +3,7 @@
 // chain's public RPC (all in the page CSP). Dollar values: stablecoins at $1, ETH and BNB from Chainlink's USD feeds
 // (ETH/USD on Base, BNB/USD on BNB Chain). All reads run in parallel; a chain that doesn't answer is marked, the rest
 // still show. Results are cached per wallet for a minute (memory + sessionStorage) so reopening the menu is instant.
-import { visibleChains, isArcFamily, chainById } from '/chains.mjs';
+import { visibleChains, isArcFamily, chainById } from './chains.mjs';
 
 // Dollar stablecoin per chain: [symbol, address, decimals] (addresses/decimals checked on chain 2026-11-05).
 const STABLE = {
@@ -29,6 +29,11 @@ const rpc = (fetcher, url, method, params, ms = 8000) => once(fetcher, url, meth
 const units = (hex, decimals) => { const v = BigInt(hex === '0x' ? 0 : hex); return Number(v) / 10 ** decimals; };
 async function usdPrice(fetcher, symbol) {
   if (symbol === 'USDC') return 1; // Arc's native coin
+  if (symbol === 'MON') {
+    const r = await fetcher('/api/funding/native-prices?symbols=MON', {cache: 'no-store', signal: AbortSignal.timeout(8000)});
+    const p = r.ok ? (await r.json()).prices?.MON : null;
+    return typeof p === 'number' && Number.isFinite(p) && p > 0 ? p : null;
+  }
   const f = FEEDS[symbol], c = f && chainById(f[0]);
   if (!c) return null;
   const r = await rpc(fetcher, c.rpc, 'eth_call', [{ to: f[1], data: '0xfeaf968c' }, 'latest']); // latestRoundData()
@@ -106,6 +111,15 @@ export async function readBalances(owner, { fetcher = (...a) => fetch(...a), cha
   }));
   const total = rows.reduce((t, r) => t + (r.native.usd || 0) + (r.stable?.usd || 0) + r.tokens.reduce((a, x) => a + (x.usd || 0), 0), 0);
   return { owner: owner.toLowerCase(), at: Date.now(), total, partial: rows.some(r => r.error || (r.native.amount > 0 && r.native.usd == null) || r.tokens.some(x => x.error || (x.amount > 0 && x.usd == null))), rows };
+}
+
+// Name held assets without a dollar price separately from balances that could not be read.
+export function balanceTotalNote(data) {
+  const rows = data?.rows || [], unpriced = [...new Set(rows.flatMap(r => [r.native, r.stable, ...(r.tokens || [])])
+    .filter(a => a?.amount > 0 && a.usd == null).map(a => a.symbol))];
+  const notes = unpriced.length ? [unpriced.join(', ') + ' not in total'] : [];
+  if (rows.some(r => r.error || r.tokens?.some(t => t.error)) || data?.partial && !notes.length) notes.push('Some balances unavailable');
+  return notes.length ? ' · ' + notes.join(' · ') : '';
 }
 
 const mem = new Map();

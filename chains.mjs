@@ -234,6 +234,7 @@ const rows = [
   {
     // The Monad v4 build is offered by one-tap only after its code probe succeeds.
     id: '143', hex: '0x8f', key: 'monad', name: 'Monad', short: 'Monad', icon: 'monad', status: 'live', family: 'monad',
+    wallet: true, bridge: true, homeAssets: ['MON'],
     simpleLaunchMulti: { address: '0x0f73962ed759b0abdb92cbecbc3ef2bf462a20cc', from: 121245205, abi: 'pq', quotes: [[1, 'USDC', '0x754704bc059f8c67012fed69bc8a327a5aafb603', 6, 'stable']] },
     feeModel: 'ethereum', feeAccounting: 'execution-only', feeCapWei: null, gasFloorWei: null,
     native: 'MON', rpc: 'https://rpc.monad.xyz', logsRpc: 'https://rpc.monad.xyz', logStep: 1000, blockTime: 0.4,

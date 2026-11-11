@@ -11,7 +11,7 @@ import {loadLocalHome, homeToken} from './qx-home-core.mjs';
 import { getWalletHub } from '/wallet-hub.mjs';
 import { tradePrefs, setTradePrefs, instantCapable, DEFAULT_CAP_USD } from '/qx-trade-prefs.mjs';
 import { chainById, visibleChains } from '/chains.mjs';
-import { cachedBalances, refreshBalances } from '/qx-balances.mjs';
+import { cachedBalances, refreshBalances, balanceTotalNote } from '/qx-balances.mjs';
 import { walletActions } from '/qx-wallet-actions.mjs';
 
 const homeStyle = document.createElement('link'); homeStyle.rel = 'stylesheet'; homeStyle.href = '/qx-home-currency.css'; document.head.append(homeStyle);
@@ -151,7 +151,7 @@ if (dialog) {
     const shown = rows.filter(r => showAll || !empty(r) || r.chainId === here), hidden = rows.length - rows.filter(r => !empty(r) || r.chainId === here).length;
     const held = rows.filter(r => !empty(r) && !r.error).length;
     total.firstChild.textContent = fmtUsd(data.total) || '$0.00';
-    total.lastChild.textContent = (held ? 'across ' + held + (held === 1 ? ' chain' : ' chains') : 'on every chain') + (data.partial ? ' · some values missing' : '');
+    total.lastChild.textContent = (held ? 'across ' + held + (held === 1 ? ' chain' : ' chains') : 'on every chain') + balanceTotalNote(data);
     list.replaceChildren(...shown.map(r => chainRow(r, r.chainId === here)));
     more.hidden = !hidden; more.textContent = showAll ? 'Hide empty chains' : 'Show all (' + hidden + ' empty)';
   }

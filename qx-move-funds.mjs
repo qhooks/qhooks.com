@@ -1,11 +1,12 @@
 import {homeFetch, withHomeRails} from './qx-home-currency.mjs';
 import {homeSlippage} from './qx-home-core.mjs';
+import {tradeError} from './qx-chain-guard.mjs';
 import { chainById } from './chains.mjs';
 import { quote, summarize, execute, status } from './qx-relay.mjs';
 import { relayWallet, relayRpc, relayFees, relayChainId, gasWithHeadroom } from './qx-relay-wallet.mjs';
 
 export const NATIVE_TOKEN = '0x0000000000000000000000000000000000000000';
-export const MOVE_CHAINS = Object.freeze([8453, 1, 42161, 56, 4663, 99901].map(id => chainById(id))); // + Elysium (HYPE), 2026-11-09
+export const MOVE_CHAINS = Object.freeze([8453, 1, 42161, 56, 4663, 99901, 143].map(id => chainById(id))); // Includes Monad (MON).
 const ADDRESS = /^0x[0-9a-f]{40}$/i;
 const HASH = /^0x[0-9a-f]{64}$/i;
 const DASH = '—';
@@ -31,6 +32,7 @@ const STABLES = {
   56: [['USDC', '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d'], ['USDT', '0x55d398326f99059ff775485246999027b3197955']],
   4663: [['USDG', '0x5fc5360d0400a0fd4f2af552add042d716f1d168']],
   99901: [],
+  143: [],
 };
 export const TOKEN_CANDIDATES = Object.freeze(MOVE_CHAINS.flatMap(chain => [
   { chainId: Number(chain.id), address: NATIVE_TOKEN, symbol: chain.native, decimals: 18, native: true, stable: false },
@@ -86,8 +88,8 @@ export async function nativePrices({ fetchImpl = (...args) => globalThis.fetch(.
   const timed = async (url, init) => { const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 8000);
     try { return await fetchImpl(url, { ...init, signal: controller.signal }); } finally { clearTimeout(timer); } };
   try {
-    const r = await timed('/api/funding/native-prices?symbols=ETH,BNB,HYPE', { credentials: 'omit', cache: 'no-store' });
-    if (r.ok) { const p = (await r.json())?.prices || {}; for (const k of ['ETH', 'BNB', 'HYPE']) { const v = usdNumber(p[k]); if (v != null) out[k] = v; } }
+    const r = await timed('/api/funding/native-prices?symbols=ETH,BNB,HYPE,MON', { credentials: 'omit', cache: 'no-store' });
+    if (r.ok) { const p = (await r.json())?.prices || {}; for (const k of ['ETH', 'BNB', 'HYPE', 'MON']) { const v = usdNumber(p[k]); if (v != null) out[k] = v; } }
   } catch {}
   if (out.ETH != null && out.BNB != null) return out;
   try { // Fallback where a direct call is allowed (tests, Node).
@@ -258,6 +260,7 @@ export function assertSelfQuote(q, owner, route) {
 
 export function moveError(error) {
   const code = String(error?.code ?? '').toLowerCase();
+  if (code.startsWith('home_')) return tradeError(error);
   if (/recipient_mismatch|route_mismatch|app_fee|wallet_changed|wallet_disconnected|wallet_wrong_chain|wallet_chain_missing|wallet_receipt|wallet_reverted|wallet_send_unknown|invalid_wallet_response|invalid_amount|unsupported_token|balances_unavailable|insufficient_balance|same_route|quote_expired/.test(code)) return error.message;
   if (Number(error?.code) === 4001 || code === 'action_rejected') return 'You cancelled in your wallet. Nothing else will be sent.';
   if (/too_small|insufficient_amount|amount_too_low/.test(code)) return 'This amount is too small for the route. Try a larger amount.';
@@ -292,6 +295,7 @@ const loadOneClick = () => import('./qx-instant-bridge.mjs').catch(() => null);
 export function createMoveFunds({ document = globalThis.document, target = globalThis.window,
   rpc = relayRpc, fetchImpl = (...args) => globalThis.fetch(...args), getHub = browserHub,
   walletFactory = relayWallet, loadInstant = loadOneClick, prices,
+  signIn = async () => (await import('./qx-board-session.mjs')).signIn(),
   now = Date.now, setTimer = setTimeout, clearTimer = clearTimeout,
   setRepeat = setInterval, clearRepeat = clearInterval } = {}) {
   let view, hub, opener, debounce, interval, stopWatching;
@@ -347,6 +351,13 @@ export function createMoveFunds({ document = globalThis.document, target = globa
     const move = el('button', { type: 'submit', class: 'qmf-move', disabled: true }, 'Move funds');
     const refresh = el('button', { type: 'button', class: 'qmf-secondary', onclick: () => { void loadBalances().catch(e => note(moveError(e), true)); } }, 'Refresh balances');
     const connect = el('button', { type: 'button', class: 'qmf-secondary', hidden: true, onclick: () => { view.dialog.close(); hub?.open?.(); } }, 'Connect wallet');
+    const signin = el('button', { type: 'button', class: 'qmf-secondary', hidden: true, onclick: async () => {
+      if (s.signingIn) return;
+      s.signingIn = true; signin.disabled = true;
+      try { await signIn(); stillOwner(); s.needsSignIn = false; edit(0); }
+      catch (error) { note(moveError(error), true); }
+      finally { s.signingIn = false; controls(); }
+    } }, 'Sign in to move funds');
     const check = el('button', { type: 'button', class: 'qmf-secondary', hidden: true, onclick: () => { void checkSettlement(); } }, 'Check move status');
     const steps = {};
     const progress = el('ol', { class: 'qmf-progress', hidden: true, 'aria-label': 'Move progress' },
@@ -360,13 +371,13 @@ export function createMoveFunds({ document = globalThis.document, target = globa
         el('div', { class: 'qmf-receive' }, el('span', {}, 'You receive · estimated'), arrives)),
       el('div', { class: 'qmf-recipient' }, el('span', {}, 'To your own wallet'), owner),
       el('section', { class: 'qmf-summary', 'aria-label': 'Quote and fees' }, fee, summary),
-      progress, links, noteNode, move, el('div', { class: 'qmf-actions' }, refresh, connect, check));
+      progress, links, noteNode, move, el('div', { class: 'qmf-actions' }, refresh, connect, signin, check));
     const dialog = el('dialog', { class: 'qmf-dialog', 'aria-labelledby': 'qmf-title', 'aria-describedby': 'qmf-subtitle' },
       el('header', { class: 'qmf-heading' }, el('div', {}, el('p', { class: 'qmf-eyebrow' }, 'Your funds · your wallet'),
         el('h2', { id: 'qmf-title' }, 'Move to another chain')), close),
       el('p', { id: 'qmf-subtitle', class: 'qmf-subtitle' }, 'Choose where your funds go. Relay connects the chains.'), form);
     view = { dialog, fromChain, toChain, fromToken, toToken, amount, balance, reserve, arrives, fee, stats,
-      note: noteNode, owner, move, max, refresh, connect, check, progress, steps, links };
+      note: noteNode, owner, move, max, refresh, connect, signin, check, progress, steps, links };
     dialog.addEventListener('close', () => {
       if (dialog.dataset.qxUnder) return; // stepped under a wallet confirm (qx-confirm-top.mjs): keep the move running
       clearTimer(debounce); clearRepeat(interval); quoteRevision++; revision++;
@@ -383,6 +394,8 @@ export function createMoveFunds({ document = globalThis.document, target = globa
     for (const n of [view.fromChain, view.toChain, view.fromToken, view.toToken, view.amount, view.max]) n.disabled = disabled;
     view.refresh.disabled = s.busy || s.loading || !s.owner;
     view.connect.hidden = !!s.owner;
+    view.signin.hidden = !s.needsSignIn || !s.owner;
+    view.signin.disabled = disabled || !!s.signingIn;
     view.move.disabled = disabled || s.finished || !s.quote || now() - s.quoteAt >= 20_000;
     view.move.textContent = s.busy ? 'Moving funds…' : s.locked ? 'Check your move below' : s.finished ? 'Choose your next move' : 'Move funds';
     view.check.hidden = !s.requestId || s.busy || !s.locked;
@@ -471,7 +484,12 @@ export function createMoveFunds({ document = globalThis.document, target = globa
 
   async function quoteFetch(url, init) {
     const controller = new AbortController(), timer = setTimer(() => controller.abort(), 12_000);
-    try { return s.homeCurrency && init?.method === 'POST' ? await homeFetch(s.owner, url, {...init, signal: controller.signal}, fetchImpl) : await fetchImpl(url, { ...init, signal: controller.signal }); }
+    try {
+      const body = init?.method === 'POST' && init.body ? JSON.parse(init.body) : null;
+      const homeRails = s.homeCurrency || [body?.originChainId, body?.destinationChainId].some(id => Number(id) === 143);
+      return homeRails && body ? await homeFetch(s.owner, url, {...init, signal: controller.signal}, fetchImpl)
+        : await fetchImpl(url, {...init, signal: controller.signal});
+    }
     finally { clearTimer(timer); }
   }
 
@@ -482,7 +500,7 @@ export function createMoveFunds({ document = globalThis.document, target = globa
     try {
       stillOwner();
       const route = routeInput();
-      const params = { ...(s.homeCurrency ? {homeCurrency: true, slippageTolerance: String(s.homeSlippage)} : {}), user: s.owner, recipient: s.owner, refundTo: s.owner, originChainId: route.from.chainId,
+      const params = { slippageTolerance: String(s.homeSlippage ?? 100), ...(s.homeCurrency ? {homeCurrency: true} : {}), user: s.owner, recipient: s.owner, refundTo: s.owner, originChainId: route.from.chainId,
         destinationChainId: route.to.chainId, originCurrency: route.from.address, destinationCurrency: route.to.address,
         amount: route.amount, tradeType: 'EXACT_INPUT' };
       const [q, fees] = await Promise.all([
@@ -501,12 +519,12 @@ export function createMoveFunds({ document = globalThis.document, target = globa
         return;
       }
       if (BigInt(route.amount) > max.units) throw fail('insufficient_balance', 'Keep some native coin for gas. Tap Max to update the amount.');
-      s.quote = q; s.quoteAt = now();
+      s.quote = q; s.quoteAt = now(); s.needsSignIn = false;
       paintQuote(q); showReserve();
       note('Ready. The quote refreshes every 20 seconds.');
     } catch (error) {
       if (ticket !== quoteRevision || !view.dialog.open) return;
-      s.quote = null; paintQuote(null); note(moveError(error), true);
+      s.quote = null; s.needsSignIn = error.code === 'home_sign_in'; paintQuote(null); note(moveError(error), true);
     }
     controls();
   }
@@ -515,7 +533,7 @@ export function createMoveFunds({ document = globalThis.document, target = globa
     if (s.busy) return;
     const ticket = ++revision;
     quoteRevision++; clearTimer(debounce); s.quote = null; s.loading = true; controls();
-    note('Reading balances across five chains…');
+    note('Reading balances across chains…');
     try {
       hub ??= await getHub();
       const current = hub.snapshot().current;
@@ -531,7 +549,7 @@ export function createMoveFunds({ document = globalThis.document, target = globa
       if (options.amount != null) view.amount.value = String(options.amount);
       fillPickers(); paintQuote(null);
       note((report.partial ? 'Some balances could not be read. You can refresh them. ' : '') +
-        (report.unpriced ? 'Some USD prices are unavailable. ' : '') + 'Enter an amount to see your quote.');
+        (report.unpriced ? 'USD prices: Refreshing. ' : '') + 'Enter an amount to see your quote.');
     } catch (error) {
       if (ticket !== revision) return;
       if (error.code === 'wallet_disconnected' || error.code === 'wallet_changed') s.owner = null;
@@ -622,7 +640,9 @@ export function createMoveFunds({ document = globalThis.document, target = globa
         note(index === 0 ? 'Approve in your wallet to continue.' : index === 1 ? 'Confirm the send in your wallet.' : 'Bridging… Relay is checking arrival.');
       } });
       // Moves are like withdrawals: they always keep the wallet's own confirmation screen (never one-click).
-      const result = await (s.homeCurrency ? withHomeRails(s.owner, run, {fetchImpl}) : run());
+      // wallet-hub can temporarily clear its read session during an intentional switch.
+      // relayWallet pins the provider/account and rejects disconnects before every send.
+      const result = await (s.homeCurrency || route.from.chainId === 143 || route.to.chainId === 143 ? withHomeRails(s.owner, run, {fetchImpl, currentOwner: () => hub?.snapshot().current?.owner ?? s.owner}) : run());
       await arrived(result, s.run);
     } catch (error) {
       if (error.txHash) { s.sent = true; addLink(error.chainId ?? s.from?.chainId, error.txHash); }
@@ -672,7 +692,7 @@ export function createMoveFunds({ document = globalThis.document, target = globa
     const opening = ++revision; quoteRevision++;
     s.homeCurrency = options.homeCurrency === true; s.homeSlippage = homeSlippage(options.slippageBps || 100);
     s.from = null; s.to = null; s.quote = null; s.feePerGas = null; s.finished = false;
-    s.usingMax = false; s.requestId = null; s.run = null; s.owner = null;
+    s.usingMax = false; s.requestId = null; s.run = null; s.owner = null; s.needsSignIn = false;
     view.amount.value = ''; view.progress.hidden = true; view.links.hidden = true; paintQuote(null); controls();
     try { hub ??= await getHub(); }
     catch { note('Connect your wallet to move funds.', true); controls(); return view.dialog; }

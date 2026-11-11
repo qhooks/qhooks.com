@@ -1,13 +1,13 @@
 // Shared preference and routing rules for the terminal and Telegram.
 import {chainById} from './chains.mjs';
-export const HOME_CHAINS = Object.freeze([8453, 1, 42161, 56, 4663, 99901]);
+export const HOME_CHAINS = Object.freeze([8453, 1, 42161, 56, 4663, 99901, 143]);
 export const DEFAULT_HOME = Object.freeze({chainId: 8453, asset: 'ETH', sellsGoHome: true});
 export const ZERO = '0x' + '0'.repeat(40);
 export const homeFailure = code => Object.assign(new Error(code), {code});
 export const sameWallet = (a, b) => typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
 export function homeAssets(chainId) {
   const id = Number(chainId); if (!HOME_CHAINS.includes(id)) return [];
-  const c = chainById(id), usdc = c.usdc || (id === 56 ? '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d' : null);
+  const c = chainById(id), usdc = c.homeAssets && !c.homeAssets.includes('USDC') ? null : c.usdc || (id === 56 ? '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d' : null);
   return [
     {chainId: id, address: ZERO, symbol: c.native, decimals: 18, native: true, stable: false},
     ...(usdc ? [{chainId: id, address: usdc, symbol: 'USDC', decimals: id === 56 ? 18 : 6, native: false, stable: true}] : []),
