@@ -1,4 +1,5 @@
 import {swapCandles,mergeSwapCandles} from '/qx-swap-candles.mjs';
+import {shapeCandles} from './qx-chart-shape.mjs';
 import {tokenAvatar,bindTokenAvatar} from '/qx-token-avatar.mjs';
 import {positionChart} from '/qx-position-core.mjs';
 import {mountMarketPosition} from '/qx-market-position.mjs';
@@ -21,7 +22,7 @@ import { CHAIN_NAME, h, connectedAddress, rpc } from '/qx-chain.mjs';
 import { menuChains, chainMap, chainById } from '/chains.mjs';
 import { hasDirectRoute } from '/qx-elysium-direct.mjs';
 import { fetchDexPairs, pickPair, headerPatch } from '/qx-dex-live.mjs';
-import { createChart, CrosshairMode } from '/vendor/lightweight-charts/lightweight-charts.standalone.production.mjs';
+import { createChart, CrosshairMode, TrackingModeExitMode } from '/vendor/lightweight-charts/lightweight-charts.standalone.production.mjs';
 import { mountTicket } from '/qx-terminal-trade.mjs';
 import {createWorkspaceMemory,createWorkspaceSearch,workspaceSearchRows,workspaceAsset,createMarketWorkspace,renderWorkspaceContext,nativeMarketView} from '/qx-terminal-workspace.mjs';
 import {syncBuilder} from '/qx-hey-builder.mjs';
@@ -407,18 +408,41 @@ async function loadFeed() {
 
 // ---- Chart ----
 let chart, candles, volume,chartTools,entryLine;
+let chartOhlc,chartReadoutBars=new Map(),chartLatest=null,chartHoverTime=null,chartReadoutPrice=price,chartReadoutVolume=compact;
 const providerChart=createProviderChartRenderer({nativeElement:$('qxt-chart')}),chartUnits=document.querySelector('[aria-label="Chart units"]');
 function css(name) { return getComputedStyle(document.body).getPropertyValue(name).trim(); }
+function renderChartReadout() {
+  if(!chartOhlc)return;
+  const bar=chartReadoutBars.get(chartHoverTime)||chartLatest;
+  chartOhlc.hidden=!bar;if(!bar)return;
+  const change=bar.open!==0?(bar.close/bar.open-1)*100:null;
+  chartOhlc.replaceChildren(...['open','high','low','close'].map(key=>h('span',{class:'qxt-chart-ohlc-field'},h('span',{class:'qxt-chart-ohlc-label'},key[0].toUpperCase()+' '),chartReadoutPrice(bar[key]))),
+    h('span',{class:'qxt-chart-ohlc-change '+(bar.close>=bar.open?'up':'down')},Number.isFinite(change)?(change>0?'+':'')+change.toFixed(2)+'%':'—'),
+    h('span',{class:'qxt-chart-ohlc-volume'},'Vol '+chartReadoutVolume(bar.volume)));
+  chartOhlc.style.right=(chart.priceScale('right').width()+8)+'px';
+}
+function resetChartReadout(){chartHoverTime=null;renderChartReadout();}
 function ensureChart() {
   if (chart) return;
   const el = $('qxt-chart'), line = css('--qxt-grid'), up = css('--qxt-up'), down = css('--qxt-down');
   chart = createChart(el, { autoSize: true, layout: { background: { color: 'transparent' }, textColor: css('--qx-muted'), fontFamily: css('--qx-sans'), fontSize: 11 },
     grid: { vertLines: { color: line }, horzLines: { color: line } }, rightPriceScale: { borderColor: line, scaleMargins: { top: 0.12, bottom: 0.24 } },
-    timeScale: { borderColor: line, timeVisible: true, secondsVisible: false, rightOffset: 6 }, crosshair: { mode: CrosshairMode.Normal } });
+    timeScale: { borderColor: line, timeVisible: true, secondsVisible: false, rightOffset: 6 }, crosshair: { mode: CrosshairMode.Normal },
+    trackingMode: { exitMode: TrackingModeExitMode.OnTouchEnd } });
   candles = chart.addCandlestickSeries({ ...ownCandleOptions(up,down), priceFormat: { type: 'custom', formatter: price, minMove: 1e-12 } });
   volume = chart.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
   chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
   chart.timeScale().subscribeVisibleTimeRangeChange(scheduleLayerRead);
+  chartOhlc=h('div',{class:'qxt-chart-ohlc',ariaLabel:'Candle values',hidden:true});el.append(chartOhlc);
+  chart.subscribeCrosshairMove(param=>{
+    const point=param.point,scale=chart.timeScale();
+    chartHoverTime=point&&point.x>=0&&point.x<scale.width()&&point.y>=0&&point.y<el.clientHeight-scale.height()&&param.seriesData?.has(candles)?param.time:null;
+    renderChartReadout();
+  });
+  chart.timeScale().subscribeSizeChange(renderChartReadout);
+  el.addEventListener('mouseleave',resetChartReadout);
+  el.addEventListener('touchend',resetChartReadout,{passive:true});
+  el.addEventListener('touchcancel',resetChartReadout,{passive:true});
   el.addEventListener('pointerup',()=>requestAnimationFrame(()=>chartLayers?.place()));
   chartTools=mountChartTools({h,chart,candles,volume,element:el,storage:memoryStorage});
 }
@@ -458,7 +482,7 @@ function renderChart() {
   renderHistoryStatus('candles',d);
   ensureChart();
   const history=renderChartHistory({element:$('qxt-chart'),message:$('qxt-chart-empty'),data:{...d,candles:ownChart.bars},formatPrice:value=>(ownChart.unit&&ownChart.unit!=='USD'?'':'$')+price(value)+(ownChart.unit&&ownChart.unit!=='USD'?' '+ownChart.unit:'')});
-  const capMissing=state.unit==='mcap'&&!(d.summary?.supply>0),bars=capMissing?[]:history.bars;
+  const capMissing=state.unit==='mcap'&&!(d.summary?.supply>0),bars=shapeCandles(capMissing?[]:history.bars);
   const k = state.unit === 'mcap' ? d.summary?.supply || 1 : 1, up = css('--qxt-up-a'), down = css('--qxt-down-a');
   $('qxt-chart-empty').hidden = bars.length > 0;
   if(!history.stale)$('qxt-chart-empty').textContent=capMissing?'Market cap chart needs indexed supply. Price chart and activity remain available.':d.marketCoverage?.candles==='loading'?'Refreshing':'No trades yet';
@@ -466,6 +490,14 @@ function renderChart() {
   candles.applyOptions({priceFormat:{type:'custom',formatter:d.nativeQuote?value=>(ownChart.unit==='USD'?'$':'')+price(value):price,minMove:1e-12}});
   $('qxt-chart').title=d.nativeQuote?.usd?ownChart.unit+' chart uses '+d.nativeQuote.symbol+'/USD observed '+new Date(d.nativeQuote.observedAt).toISOString()+'. Volume is in '+d.nativeQuote.symbol+'.':'';
   volume.setData(bars.map(c => ({ time: c.time, value: c.volume, color: c.close >= c.open ? up : down })));
+  const key = keyOf(state.sel) + d.tf + state.unit;
+  const readoutUnit=ownChart.unit||(d.ext||stable(d.meta.quoteSymbol)?'USD':d.meta.quoteSymbol||''),volumeUnit=d.ext?'USD':d.nativeQuote?.symbol||d.meta.quoteSymbol||'';
+  chartReadoutPrice=value=>(readoutUnit==='USD'?'$':'')+price(value)+(readoutUnit&&readoutUnit!=='USD'?' '+readoutUnit:'');
+  chartReadoutVolume=value=>compact(value)+(volumeUnit?' '+volumeUnit:'');
+  chartReadoutBars=new Map(bars.map(c=>[c.time,{...c,open:c.open*k,high:c.high*k,low:c.low*k,close:c.close*k}]));
+  chartLatest=chartReadoutBars.get(bars.at(-1)?.time)||null;
+  if(key!==lastChartKey){chartHoverTime=null;chart.clearCrosshairPosition();}
+  renderChartReadout();
   chartTools.update({key:d.meta.chainId+':'+d.meta.token+':'+state.unit,label:(d.meta.symbol||'Token')+' · '+(d.meta.chainId==='solana'?'Solana':CHAIN_NAME[d.meta.chainId]||d.meta.chainId)+' · '+(TFS.find(([tf])=>tf===d.tf)?.[1]||d.tf+'s')+' · '+(state.unit==='mcap'?'MCap':'Price')+(ownChart.unit?' '+ownChart.unit:''),data:bars.map(c=>({...c,open:c.open*k,high:c.high*k,low:c.low*k,close:c.close*k,volumeKind:'quote',quoteVolume:c.volume}))});
   const personal=positionChart(myPosition,bars,d.tf,k);
   const overlay=chartLayers.render({selection:selectedContext(),data:d,position:myPosition,chart,series:candles,bars,tf:d.tf,k,tracked:state.tracked});
@@ -477,7 +509,6 @@ function renderChart() {
   $('qxt-chart').dataset.buyMarkers=String(personal.markers.filter(m=>m.text==='Buy').length);
   $('qxt-chart').dataset.averageEntry=entryLine?'dashed':'';
   chart.applyOptions({ timeScale: { secondsVisible: d.tf < 60 } });
-  const key = keyOf(state.sel) + d.tf + state.unit;
   // Young markets get legible bodies and doji strokes; busy charts retain the latest 90 bars.
   if(key!==lastChartKey){lastChartKey=key;chart.timeScale().setVisibleLogicalRange(ownChartRange(bars.length));}
   scheduleLayerRead();
@@ -751,6 +782,7 @@ const canonicalHash=()=>state.sel?(state.sel.ext?'#t='+state.sel.chainId+':'+sta
 function restoreSelectionURL(){history.replaceState(null,'',location.pathname+location.search+canonicalHash());}
 function clearMarketView(message='Choose a token') {
   providerChart.clear();chartUnits.hidden=false;
+  chartReadoutBars.clear();chartLatest=null;resetChartReadout();
   for(const kind of ['candles','trades'])if($('qxt-'+kind+'-freshness'))$('qxt-'+kind+'-freshness').hidden=true;
   chartTools?.clear();priceAlerts.clear();holderPanel.clear();tradeTape.ingest(null,[]);tapeControls.status(tradeTape.status());
   tapeControls.element.dataset.historyStale='false';$('qxt-chart').dataset.historyStale='false';$('qxt-chart-empty').dataset.stale='false';

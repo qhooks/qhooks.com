@@ -121,6 +121,18 @@ body.qx.qxt{font-size:13px;line-height:1.4}
 .qxt-sync{margin-left:auto;font:11.5px var(--qx-mono);color:var(--qx-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .qxt-chart{position:relative;flex:1 1 55%;min-height:240px}
 .qxt-chart .qxt-empty{position:absolute;inset:0;display:grid;place-items:center;z-index:2;pointer-events:none}
+.qxt-chart,.qxp-chart{container-type:inline-size}
+.qxp-chart{position:relative}
+.qxt-chart-ohlc{position:absolute;top:8px;left:8px;right:80px;z-index:3;display:flex;flex-wrap:wrap;gap:0 9px;max-height:36px;overflow:hidden;padding:2px 4px;background:var(--qx-bg);color:var(--qx-ink);font:11px/16px var(--qx-mono);font-variant-numeric:tabular-nums;pointer-events:none}
+.qxt-chart-ohlc[hidden]{display:none}
+.qxt-chart-ohlc>span{min-width:0;white-space:nowrap}
+.qxt-chart-ohlc-label,.qxt-chart-ohlc-volume{color:var(--qx-muted)}
+@container (max-width:600px){
+ .qxt-chart-ohlc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;grid-template-rows:16px 16px;column-gap:7px;font-size:10px}
+ .qxt-chart-ohlc-field{overflow:hidden;text-overflow:ellipsis}
+ .qxt-chart-ohlc-change{grid-column:3;grid-row:1/3}
+ .qxt-chart-ohlc-volume{display:none}
+}
 
 /* Bottom data */
 .qxt-bottom{flex:1 1 45%;min-height:180px;display:flex;flex-direction:column;border-top:1px solid var(--qx-line)}
