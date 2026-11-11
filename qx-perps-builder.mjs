@@ -10,7 +10,7 @@ let country = null, equity = null, sequence = 0, busy = false, lastOwner = null,
 const current = () => hub.snapshot().current, owner = () => current()?.owner;
 function render() {
   const address = owner();
-  $("builder-current").textContent = !config ? "Refreshing" : config.builder ? "Builder fee: on, 0.05%" : "Builder fee: off";
+  $("builder-current").textContent = !config ? "Refreshing" : config.builder ? "Builder fee: on, 0.1%" : "Builder fee: off";
   $("builder-current-address").hidden = !config?.builder;
   $("builder-current-address").textContent = config?.builder ? short(config.builder) : "";
   $("builder-current-address").title = config?.builder || "";
@@ -60,7 +60,7 @@ async function change(action) {
   $("builder-status").textContent = "Confirm the message in your wallet.";
   const result = await changeBuilderFee({address, action, provider, isCurrent: () => owner() === address && current()?.entry?.provider === provider});
   if (owner() !== address || current()?.entry?.provider !== provider) return;
-  config = {builder: result.builder, builderFeeTenthsBp: 50};
+  config = {builder: result.builder, builderFeeTenthsBp: 100};
   safeOwner = true;
   $("builder-status").textContent = result.builder ? "Builder fee turned on." : "Builder fee turned off.";
 }

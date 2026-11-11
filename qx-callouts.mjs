@@ -6,6 +6,7 @@ import {boardSession,authHeaders,signIn} from '/qx-board-session.mjs';
 import {publishCommunityCall} from '/qx-community-intent.mjs';
 import {connectedAddress,onWalletChange,signMessage} from '/qx-chain.mjs';
 import {communityFollowing} from '/qx-community-follow.mjs';
+import {memberIdentity} from './qx-member-identity.mjs';
 
 const ADDRESS=/^0x[0-9a-fA-F]{40}$/;
 const short=w=>w.slice(0,6)+'…'+w.slice(-4);
@@ -122,8 +123,6 @@ function mountBoard(after){
    h('li',{},'Scored on QHooks launches, where every trade is indexed.'))));
  after.after(section);
  const days=[['Today',0],['Yesterday',1],['2 days ago',2],['3 days ago',3]];let active=1;
- const names=new Map();
- async function name(w,el){if(names.has(w)){if(names.get(w))el.textContent=names.get(w);return;}names.set(w,'');try{const r=await fetch('/api/community/profile/'+w);const j=await r.json();const n=String(j?.profile?.name||'').slice(0,40);names.set(w,n);if(n)el.textContent=n;}catch{}}
  async function load(){
   tabs.replaceChildren(...days.map(([label,o],i)=>h('button',{type:'button',role:'tab','aria-selected':String(i===active),class:'qco-tab',onclick:()=>{active=i;load();}},label)));
   body.replaceChildren(h('p',{class:'qco-empty'},'Refreshing…'));
@@ -133,7 +132,7 @@ function mountBoard(after){
    const head=h('p',{class:'qco-day'},'Calls made '+r.day+(r.status==='final'?' · Final':' · Live · settles '+settle+', 00:00 UTC'));
    if(!r.callers.length){body.replaceChildren(head,h('p',{class:'qco-empty'},'No points yet for this day. Points appear once followers buy a called token.'));return;}
    const table=h('table',{class:'qco-table'},h('thead',{},h('tr',{},h('th',{},'#'),h('th',{},'Caller'),h('th',{class:'n'},'Points'),h('th',{class:'n'},'Followers counted'),h('th',{class:'n'},'Calls'))),
-    h('tbody',{},...r.callers.map((c,i)=>{const who=h('a',{href:'/profile#'+c.wallet},short(c.wallet));if(i<20)name(c.wallet,who);
+    h('tbody',{},...r.callers.map((c,i)=>{const who=memberIdentity(c.wallet);
      return h('tr',{},h('td',{},String(i+1)),h('td',{},who,...c.labels.filter(l=>LABEL[l]).map(l=>h('span',{class:'qco-tag'},LABEL[l]))),h('td',{class:'n'},num(c.points)),h('td',{class:'n'},num(c.followersCounted)),h('td',{class:'n'},num(c.calls)));})));
    body.replaceChildren(head,h('div',{class:'qco-table-wrap'},table));
   }catch{body.replaceChildren(h('p',{class:'qco-empty'},'Refreshing…'));setTimeout(load,15000);}

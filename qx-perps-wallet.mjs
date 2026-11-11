@@ -70,7 +70,7 @@ function createPerpsWallet({ hub = getWalletHub(window), storage = { getItem: (k
     } catch {
     }
     if (approved !== cfg.builder) {
-      orderResult(await ownerClient(c).approveBuilderFee({ builder: cfg.builder, maxFeeRate: "0.05%" }));
+      orderResult(await ownerClient(c).approveBuilderFee({ builder: cfg.builder, maxFeeRate: "0.1%" }));
       await guard(c);
       try {
         storage.setItem(feeKeyFor(c.owner), cfg.builder);
@@ -139,7 +139,7 @@ function createPerpsWallet({ hub = getWalletHub(window), storage = { getItem: (k
     async cancel(asset, oid) {
       const c = current();
       await guard(c);
-      if (!read(c.owner)?.approved) await setup({ builder: null, builderFeeTenthsBp: 50 });
+      if (!read(c.owner)?.approved) await setup({ builder: null, builderFeeTenthsBp: 100 });
       await guard(c);
       const record = read(c.owner);
       if (!record?.approved) throw Error("Approve fast trading once to close.");

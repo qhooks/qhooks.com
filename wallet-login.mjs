@@ -4,6 +4,7 @@ import {visibleChains} from './chains.mjs';
 // Embedded-wallet networks: the visible chains (public ones; hidden and test chains only with ?chains=all), 2026-11-09.
 const launchChains=visibleChains().map(c=>Object.freeze({id:c.id,name:c.name,gas:c.native}));
 import './qx-confirm-top.mjs';
+import {readPrivyAppConfig,PRIVY_PUBLIC_APP} from './qx-privy-app-config.mjs';
 
 const DROP_GRACE_MS=1500;
 // Progress steps for diagnosing the email wallet on real devices (no addresses, tokens or emails).
@@ -28,9 +29,8 @@ export function inAppBrowser(target=globalThis){
 }
 // Sign in with X (2026-11-10): offered only while X login is switched on for our Privy app, read from Privy's public app
 // settings, so the button never offers a method Privy would refuse. X works inside in-app browsers too (unlike Google).
-const PRIVY_APP='cmv3q3emi00mi0flc038ym0mt';
 export async function xLoginEnabled(fetchImpl=globalThis.fetch){
- try{const r=await fetchImpl('https://auth.privy.io/api/v1/apps/'+PRIVY_APP,{headers:{'privy-app-id':PRIVY_APP},cache:'no-store'});if(!r.ok)return false;const a=await r.json();return a?.twitter_oauth===true;}catch{return false;}
+ return(await readPrivyAppConfig(fetchImpl,PRIVY_PUBLIC_APP))?.twitter_oauth===true;
 }
 export function loginMethods(inApp,x){return inApp?(x?['email','twitter']:['email']):(x?['email','google','twitter']:['email','google']);}
 export function loginLabel(inApp,x){return inApp?(x?'Continue with email or X':'Continue with email'):(x?'Continue with email, Google or X':'Continue with email or Google');}
@@ -41,6 +41,7 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
  const phoneBridge=embeddedWalletProvider(target,{uuid:PHONE_UUID,name:'WalletConnect · phone wallet',rdns:PHONE_RDNS});let wantPhone=false;let sdk=null,loading=null,state={ready:false,authenticated:false,hasWallet:false},wanted=false,hasProvider=false,providerChain=null,wantedChain=null,dead=false,switchTimer=null,dropTimer=null,walletAddress=null,openTimer=null;
  const status=text=>{$('login-status').textContent=text;};
  const inApp=inAppBrowser(target);let xOn=false;target.QHOOKS_LOGIN_METHODS=loginMethods(inApp,false);
+ const appConfig=readPrivyAppConfig(target.fetch||globalThis.fetch,target.QHOOKS_PRIVY_APP||PRIVY_PUBLIC_APP);
  if(inApp&&!$('in-app')){
   const copy=d.createElement('button');copy.type='button';copy.className='qhc-secondary';copy.textContent='Copy link';
   copy.addEventListener('click',async()=>{try{await target.navigator.clipboard.writeText(target.location.href);copy.textContent='Link copied';}catch{copy.textContent=target.location.href;}});
@@ -55,7 +56,7 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
  }
  const show=()=>{if(!dead&&!$('dialog').open)$('dialog').showModal();};
  function render(){button.disabled=!!loading&&!state.ready;button.textContent=!state.authenticated?loginLabel(inApp,xOn):state.hasWallet?'Use my QHooks wallet':'Create my EVM wallet';$('email-logout').hidden=!state.authenticated;const c=hub.snapshot().current;$('email-network').hidden=c?.entry.rdns!==EMBEDDED_RDNS;if(c?.entry.rdns===EMBEDDED_RDNS&&!wantedChain)$('embedded-chain').value=c.chainId;}
- xLoginEnabled(target.fetch?.bind(target)).then(x=>{if(!x||dead)return;xOn=true;target.QHOOKS_LOGIN_METHODS=loginMethods(inApp,true);const lead=$('in-app-lead');if(lead)lead.textContent=lead.textContent.replace('Sign in with email here','Sign in with email or X here');render();});
+ appConfig.then(config=>{if(config?.twitter_oauth!==true||dead)return;xOn=true;target.QHOOKS_LOGIN_METHODS=loginMethods(inApp,true);const lead=$('in-app-lead');if(lead)lead.textContent=lead.textContent.replace('Sign in with email here','Sign in with email or X here');render();});
  async function connect(){
   if(!wanted||dead||!hasProvider||wantedChain&&providerChain!==wantedChain)return;
   wanted=false;target.clearTimeout(switchTimer);wantedChain=null;status('Connecting your QHooks wallet…');
@@ -83,6 +84,10 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
   })().catch(error=>{if(!dead){sdk?.dispose();sdk=null;d.getElementById('qhooks-privy-root')?.remove();state={ready:false,authenticated:false,hasWallet:false};hasProvider=false;providerChain=null;bridge.set(null);}throw error;}).finally(()=>{loading=null;if(!dead)render();});
   return loading;
  }
+ // Profiles can prepare the existing SDK for wallet sign-in without opening login or selecting another wallet.
+ const ensurePrivyControls=async()=>{if(dead)throw Error('Page closed');await(loading||initialize());if(dead)throw Error('Page closed');return target.qhooksPrivySignerControls||null;};
+ target.qhooksEnsurePrivyControls=ensurePrivyControls;
+ target.dispatchEvent?.(new CustomEvent('qhooks:privy-loader-ready'));
  async function login(){
   if(dead)return;try{await initialize();wanted=true;wantedChain=null;
    if(!state.authenticated){intent(target,'save');$('dialog').close();sdk.login(loginMethods(inApp,xOn));}
@@ -100,7 +105,7 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
   const fund=d.createElement('button');fund.type='button';fund.id='qhc-fund';fund.className='qhc-secondary';fund.textContent='Buy crypto with a card';fund.hidden=true;
   fund.addEventListener('click',async()=>{try{await initialize();$('dialog').close();await sdk.fund(hub.snapshot().current?.chainId||'8453');}catch(e){status(e?.message||'Card purchase is unavailable right now.');show();}});
   network.append(fund);
-  target.fetch?.('https://auth.privy.io/api/v1/apps/'+(target.QHOOKS_PRIVY_APP||'cmv3q3emi00mi0flc038ym0mt'),{headers:{'privy-app-id':target.QHOOKS_PRIVY_APP||'cmv3q3emi00mi0flc038ym0mt'}}).then(r=>r.json()).then(c=>{if(!dead)fund.hidden=c?.fiat_on_ramp_enabled!==true;}).catch(()=>{});
+  appConfig.then(c=>{if(!dead)fund.hidden=c?.fiat_on_ramp_enabled!==true;});
  }
  const mobile=d.getElementById('qhc-mobile-login');
  if(mobile&&!d.getElementById('qhc-phone-login')){
@@ -123,7 +128,7 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
  const unsubscribe=hub.subscribe(render),params=new URLSearchParams(target.location.search),returned=params.has('privy_oauth_state')||params.has('privy_oauth_provider');
  if(returned)wanted=intent(target,'consume');
  if(returned||[EMBEDDED_RDNS,PHONE_RDNS].includes(hub.preference()?.rdns))void initialize().then(()=>connect()).catch(error=>{wanted=false;status(error.message);show();});
- function dispose(){if(dead)return;dead=true;wanted=false;target.clearTimeout(switchTimer);target.clearTimeout(dropTimer);target.clearTimeout(openTimer);unsubscribe();bridge.dispose();phoneBridge.dispose();sdk?.dispose();target.removeEventListener('pagehide',dispose);}
+ function dispose(){if(dead)return;dead=true;wanted=false;target.clearTimeout(switchTimer);target.clearTimeout(dropTimer);target.clearTimeout(openTimer);unsubscribe();bridge.dispose();phoneBridge.dispose();sdk?.dispose();if(target.qhooksEnsurePrivyControls===ensurePrivyControls)delete target.qhooksEnsurePrivyControls;target.removeEventListener('pagehide',dispose);}
  target.addEventListener('pagehide',dispose);return Object.freeze({dispose});
 }
 if(typeof document!=='undefined')bindWalletLogin();

@@ -26,7 +26,7 @@ function renderControls() {
   $("close-all").disabled = busy || !connected || !config || !positions.length || accountOwner !== owner();
   $("builder-fee").hidden = !config?.builder;
   $("review-order").disabled = busy || !m || !config || !connected || !hasAgent || !allowed;
-  $("setup-status").textContent = ready ? "Fast trading is on for " + short(owner()) + "." : config?.builder ? "Setup asks for two wallet signatures: a trading agent and a 0.05% builder fee cap." : "Setup asks for one wallet signature to approve a trading agent.";
+  $("setup-status").textContent = ready ? "Fast trading is on for " + short(owner()) + "." : config?.builder ? "Setup asks for two wallet signatures: a trading agent and a 0.1% builder fee cap." : "Setup asks for one wallet signature to approve a trading agent.";
   $("refresh-account").disabled = busy || !connected;
   for (const button of document.querySelectorAll("[data-account-action]")) button.disabled = busy || accountOwner !== owner();
 }
@@ -239,7 +239,7 @@ async function closePositions(rows) {
   await freshMarkets(rows.map((p) => p.coin));
   const action = buildCloseAll(rows, markets, config, Number($("slippage").value));
   const setupNotice = closingSetupNotice();
-  const description = rows.map((p) => p.coin + ": close " + num(Math.abs(Number(p.szi))) + " " + (Number(p.szi) > 0 ? "Long" : "Short")).join("\n") + "\nReduce-only market orders. Slippage " + $("slippage").value + "%." + (config.builder ? " QHooks fee 0.05%." : "") + setupNotice;
+  const description = rows.map((p) => p.coin + ": close " + num(Math.abs(Number(p.szi))) + " " + (Number(p.szi) > 0 ? "Long" : "Short")).join("\n") + "\nReduce-only market orders. Slippage " + $("slippage").value + "%." + (config.builder ? " QHooks fee 0.1%." : "") + setupNotice;
   if (!await confirm.ask(rows.length > 1 ? "Close all positions?" : "Close position?", description)) return;
   if (owner() !== address) throw Error("Wallet changed. Review again.");
   note(setupNotice ? "Approve fast trading once to close." : "Sending closing orders\u2026");
@@ -263,7 +263,7 @@ async function setTpsl(p) {
   if (!await confirm.ask("Set TP/SL", content)) return;
   config = await loadPerpsConfig();
   const action = buildPositionTpsl(p, m, { tp: tp.value, sl: sl.value }, config);
-  if (!await confirm.ask("Confirm position exits", action.orders.map((o) => o.t.trigger.tpsl.toUpperCase() + " " + o.t.trigger.triggerPx).join("\n") + "\nThese add exits. Cancel any older exits you no longer need." + (config.builder ? "\nQHooks fee 0.05%." : "") + closingSetupNotice())) return;
+  if (!await confirm.ask("Confirm position exits", action.orders.map((o) => o.t.trigger.tpsl.toUpperCase() + " " + o.t.trigger.triggerPx).join("\n") + "\nThese add exits. Cancel any older exits you no longer need." + (config.builder ? "\nQHooks fee 0.1%." : "") + closingSetupNotice())) return;
   if (owner() !== address) throw Error("Wallet changed. Review again.");
   await wallet.order(action, { config, closing: true });
   note("Position exits submitted.");
@@ -307,7 +307,7 @@ $("order-form").addEventListener("submit", (e) => {
     await freshMarkets();
     const m = market(), leverage = { asset: m.asset, isCross: $("margin-mode").value === "cross", leverage: Number($("leverage").value) }, action = buildEntry({ market: m, buy, kind: $("order-kind").value, amount: $("amount").value, unit: $("size-unit").value, limit: $("limit-price").value, slippage: $("slippage").value, tp: $("tp").value, sl: $("sl").value, reduceOnly: $("reduce-only").checked }, config);
     const entry = action.orders[0];
-    if (!await confirm.ask("Review " + (buy ? "Long" : "Short") + " " + m.name, (entry.r ? "Reduce only \xB7 " : "") + entry.s + " " + m.name + " \xB7 " + $("order-kind").value + "\nLimit / price bound " + entry.p + " USDC\n" + leverage.leverage + "\xD7 " + (leverage.isCross ? "Cross" : "Isolated") + (config.builder ? "\nQHooks fee 0.05%" : "") + "\n" + action.orders.slice(1).map((o) => o.t.trigger.tpsl.toUpperCase() + " " + o.t.trigger.triggerPx).join("\n") + "\n" + RISK)) return;
+    if (!await confirm.ask("Review " + (buy ? "Long" : "Short") + " " + m.name, (entry.r ? "Reduce only \xB7 " : "") + entry.s + " " + m.name + " \xB7 " + $("order-kind").value + "\nLimit / price bound " + entry.p + " USDC\n" + leverage.leverage + "\xD7 " + (leverage.isCross ? "Cross" : "Isolated") + (config.builder ? "\nQHooks fee 0.1%" : "") + "\n" + action.orders.slice(1).map((o) => o.t.trigger.tpsl.toUpperCase() + " " + o.t.trigger.triggerPx).join("\n") + "\n" + RISK)) return;
     if (owner() !== address || !canTrade(country)) throw Error("Wallet or region changed. Review again.");
     if (!wallet.ready(config)) await wallet.setup(config);
     if (owner() !== address || !canTrade(country)) throw Error("Wallet or region changed. Review again.");
@@ -319,7 +319,7 @@ $("order-form").addEventListener("submit", (e) => {
 $("setup-agent").addEventListener("click", () => run(async () => {
   if (!canTrade(country)) return;
   config = await loadPerpsConfig();
-  if (!await confirm.ask("Turn on fast trading?", "Approve QHooks as a trading agent. The key stays in this browser. Agent keys cannot withdraw." + (config.builder ? "\nAlso approve a 0.05% builder fee cap with your wallet." : ""))) return;
+  if (!await confirm.ask("Turn on fast trading?", "Approve QHooks as a trading agent. The key stays in this browser. Agent keys cannot withdraw." + (config.builder ? "\nAlso approve a 0.1% builder fee cap with your wallet." : ""))) return;
   await wallet.setup(config);
   note("Fast trading is on.");
 }));

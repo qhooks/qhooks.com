@@ -2,6 +2,8 @@ import {clampInto} from '/qx-more-text.mjs';
 import {COMMUNITY_CHAINS,communityTarget,communityKey,communityPath,callLinks} from './qx-community-intent.mjs';
 import {communityFollowing,followingQuery,mountCommunityFollowButton} from './qx-community-follow.mjs';
 import {firstCallPrompt,qualifiedCallers} from './qx-community-empty.mjs';
+import {createMemberIdentityRenderer} from './qx-member-identity.mjs';
+import {createMemberProfileClient} from './qx-member-profile.mjs';
 const ENDPOINT='/api/community/activity',SEEN='qhooks:community-seen:v1',FOLLOW_EVENT='qhooks:community-following';
 const cursorParts=value=>{const match=/^(\d{1,16})\.(p[0-9a-v]{12})$/.exec(value||'');return match?{at:Number(match[1]),id:match[2]}:null;};
 // A launch's token also has a token board (t=chain:token); calls can sit on either, so a launch panel reads both.
@@ -30,6 +32,7 @@ export function mountCommunityActivity(target,{board=null,caller=null,compact=fa
  // the token board, where earlier calls on the token were filed. The panel reads both.
  if(board)board={...board,...communityTarget(board)};const tokenBoard=board?.kind==='launch'&&board.token?{kind:'token',chainId:board.chainId,address:String(board.token).toLowerCase(),name:board.name,symbol:board.symbol}:null;
  const h=(tag,attrs={},...kids)=>{const node=doc.createElement(tag);for(const[key,value]of Object.entries(attrs)){if(value==null)continue;if(key==='class')node.className=value;else node.setAttribute(key,value);}node.append(...kids.flat().filter(value=>value!=null));return node;};
+ const identities=createMemberIdentityRenderer({client:createMemberProfileClient({fetcher}),document:doc});
  let view=!compact&&initialView==='following'?'following':'recent',chain='all',body=null,pending=null,generation=0,controller=null,timer=null,disposed=false,copied='',ranked=null,followDisposers=[];
  const main=h('section',{class:'qcaf'+(compact?' qcaf-compact':''),'aria-label':compact?'Token conversation':'Community calls and following'}),toolbar=h('div',{class:'qcaf-toolbar'}),status=h('p',{class:'qcaf-status',role:'status','aria-live':'polite'}),feed=h('div',{class:'qcaf-feed'}),authors=h('aside',{class:'qcaf-callers'}),saved=h('div',{class:'qcaf-saved'}),more=h('button',{type:'button',class:'qcf-button'},'Older calls'),check=h('button',{type:'button',class:'qcf-button'},'Check now'),bar=h('div',{class:'qcaf-new',role:'status'}),show=h('button',{type:'button',class:'qcf-button'},'Show new calls');bar.hidden=true;bar.append(show);
  const heading=h(compact?'h3':'h2',{},compact?'Conversation':'Calls from the community');toolbar.append(heading);
@@ -56,7 +59,7 @@ export function mountCommunityActivity(target,{board=null,caller=null,compact=fa
   const prior=seen.read(key()),newCount=body.calls.filter(call=>newerThan(call,prior)).length;
   if(prior&&newCount)status.textContent=newCount+' new '+(newCount===1?'call':'calls')+' in this view since you last opened it on this device.';
   for(const call of body.calls){let links;try{links=callLinks(call.board,call);}catch{continue;}const chainName=COMMUNITY_CHAINS.find(([id])=>id===call.board.chainId)?.[1]||call.board.chainId;
-   const copy=h('button',{type:'button',class:'qcf-button'},'Copy call link'),follow=h('span',{}),text=clampInto(h('p',{class:'qcaf-thesis'}),call.text||''),record=h('article',{class:'qcaf-call'},h('div',{class:'qcaf-meta'},h('a',{href:links.path},labelFor(call.board)+' · '+chainName),h('time',{datetime:new Date(call.createdAt).toISOString()},new Date(call.createdAt).toLocaleString())),h('a',{class:'qcaf-author',href:'/profile#'+call.author},short(call.author)),text);
+   const copy=h('button',{type:'button',class:'qcf-button'},'Copy call link'),follow=h('span',{}),text=clampInto(h('p',{class:'qcaf-thesis'}),call.text||''),record=h('article',{class:'qcaf-call'},h('div',{class:'qcaf-meta'},h('a',{href:links.path},labelFor(call.board)+' · '+chainName),h('time',{datetime:new Date(call.createdAt).toISOString()},new Date(call.createdAt).toLocaleString())),identities.mount(call.author,{className:'qcaf-author'}).element,text);
    if(call.folded){text.hidden=true;const reveal=h('button',{type:'button',class:'qcf-button','aria-expanded':'false'},call.folded==='reports'?'Reported call · show':'New wallet · show thesis');reveal.addEventListener('click',()=>{text.hidden=!text.hidden;reveal.setAttribute('aria-expanded',String(!text.hidden));});record.append(reveal);}
    if(Number.isFinite(call.call?.price))record.append(h('p',{class:'qcaf-entry'},'Recorded entry: '+Number(call.call.price).toLocaleString(undefined,{maximumSignificantDigits:6})+' '+(call.call.quoteSymbol||'')+' · open the call for updated checkpoints'));
    if(call.call?.labels?.includes('creator_call'))record.append(h('span',{class:'qcaf-label'},'Creator’s call'));
@@ -65,7 +68,7 @@ export function mountCommunityActivity(target,{board=null,caller=null,compact=fa
    record.append(h('div',{class:'qcaf-actions'},h('a',{href:links.path},'Read call →'),h('a',{href:links.trade},'Trade this token →'),copy,follow));feed.append(record);followControl(follow,{kind:'board',board:call.board,label:labelFor(call.board)});
   }
   if(!compact){authors.append(h('h3',{},'Recent callers'),h('p',{class:'qcaf-note'},'Visible calls include people outside the qualified ranking. Counts below cover this view, not their whole history.'));
-   for(const author of body.callers){const follow=h('span',{}),rank=ranked===null?'Ranking status unavailable':ranked.has(author.wallet)?'In the current qualified ranking':'Outside the current ranking',item=h('div',{class:'qcaf-caller'},h('a',{href:'/profile#'+author.wallet},short(author.wallet)),h('p',{},author.callsInPage+' '+(author.callsInPage===1?'call':'calls')+' in this view · '+rank),follow);authors.append(item);followControl(follow,{kind:'caller',wallet:author.wallet});}
+   for(const author of body.callers){const follow=h('span',{}),rank=ranked===null?'Ranking status unavailable':ranked.has(author.wallet)?'In the current qualified ranking':'Outside the current ranking',item=h('div',{class:'qcaf-caller'},identities.mount(author.wallet).element,h('p',{},author.callsInPage+' '+(author.callsInPage===1?'call':'calls')+' in this view · '+rank),follow);authors.append(item);followControl(follow,{kind:'caller',wallet:author.wallet});}
   }
   more.hidden=!body.nextCursor||body.calls.length>=80;seen.save(key(),body.latestCursor);
  }
@@ -85,6 +88,6 @@ export function mountCommunityActivity(target,{board=null,caller=null,compact=fa
  let rankingRequested=false;
  function loadRanking(){if(compact||doc.hidden||disposed||rankingRequested)return;rankingRequested=true;fetcher('/api/community/v2/callers',{cache:'no-store'}).then(async response=>{if(!response.ok)throw Error('ranking');const data=await response.json();if(!Array.isArray(data.callers)||data.coverage?.completeRecordSet!==true)throw Error('ranking');ranked=new Set(qualifiedCallers(data).map(row=>row.wallet));if(body&&!disposed&&!doc.hidden)renderCalls();}).catch(()=>{rankingRequested=false;});}
 
- Promise.resolve().then(()=>refresh());return{refresh,checkNew,selectView,dispose(){disposed=true;generation++;controller?.abort();timers.clearTimeout(timer);doc.removeEventListener?.('visibilitychange',visibility);events?.removeEventListener?.(FOLLOW_EVENT,followingChanged);events?.removeEventListener?.('storage',followingChanged);cleanControls();topicControl?.dispose();},get state(){return{view,body,pending};}};
+ Promise.resolve().then(()=>refresh());return{refresh,checkNew,selectView,dispose(){disposed=true;generation++;controller?.abort();timers.clearTimeout(timer);doc.removeEventListener?.('visibilitychange',visibility);events?.removeEventListener?.(FOLLOW_EVENT,followingChanged);events?.removeEventListener?.('storage',followingChanged);cleanControls();topicControl?.dispose();identities.dispose();},get state(){return{view,body,pending};}};
 }
 export function mountTokenConversation(target,board,options={}){return mountCommunityActivity(target,{...options,board,compact:true});}

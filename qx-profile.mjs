@@ -6,14 +6,15 @@ import {solanaProfileSessions} from './qx-profile-session.mjs';
 // and where to trade them), opt-in QHooks holdings, badges and recent community-board posts. Public reads use /api/account/<w>/launches (the Markets directory, the same source My QHooks
 // uses) plus public RPC reads of each launch's blocks contract; holdings from the terminal index (/api/terminal/wallet/<w>);
 // posts and post badges from the boards (/api/community/wallet/<w>). Profile edits use explicit wallet sign-in; browsing never signs.
-// Verified X handles and copy warnings come from the trust layer (/qx-trust.mjs, /api/trust/*). Until that is live the
-// import fails and the profile simply shows no badges.
+// Optional account chips come from the current member profile's verified public read.
+// Existing trust-layer badges and copy warnings keep their separate read path.
 import { chainMap } from '/chains.mjs';
 import {getWalletHub} from './wallet-hub.mjs';
 import {memberHoldingsObservation} from './qx-member-profile-core.mjs';
 import {scoreHeadline,scoreCoverageText,checkpointView} from './qx-caller-score-ui.mjs';
 import * as profileSessions from './qx-board-session.mjs';
 import {createMemberProfileClient,mountMemberProfileEditor,callerMethodElement} from './qx-member-profile.mjs';
+import {appendMemberAccountChips,appendUnverifiedMemberLinks} from './qx-member-accounts.mjs';
 import { ethCall, words, toAddress, erc20, CHAIN_NAME, h } from '/qx-chain.mjs';
 import { BLOCK_FIELDS } from '/full-launch/packages/multichain-launch/launch-blocks.mjs';
 import { stakeVaultAddress } from '/full-launch/packages/multichain-launch/stake-vault.mjs';
@@ -35,10 +36,11 @@ let seq = 0,requestedEditor=null,requestedSolEditor=null,viewedProfileKey=null;
 const profileControls=[];
 function clearProfileControls(){for(const control of profileControls.splice(0))control.dispose();}
 const memberClient=createMemberProfileClient(),hub=getWalletHub(window);
-const memberEditor=mountMemberProfileEditor($('qp-member-editor'),{hub,sessions:profileSessions,client:memberClient,onPublished:()=>load()});
+function linkedAccountsPublished(value){if(value?.wallet!==viewedProfileKey)return;const target=$('qp-member-identity');for(const group of target.querySelectorAll('.qma-chips'))group.remove();appendMemberAccountChips(target,value.accounts,{document});}
+const memberEditor=mountMemberProfileEditor($('qp-member-editor'),{hub,sessions:profileSessions,client:memberClient,onPublished:()=>load(),onAccountsPublished:linkedAccountsPublished});
 const solHub=$('qp-solana-editor')?createSolanaProfileWallet(window):null;
 const solSessions=solHub?solanaProfileSessions(solHub):null;
-const solEditor=solHub?mountMemberProfileEditor($('qp-solana-editor'),{hub:solHub,sessions:solSessions,client:memberClient,idPrefix:'qmps',onPublished:()=>load()}):null;
+const solEditor=solHub?mountMemberProfileEditor($('qp-solana-editor'),{hub:solHub,sessions:solSessions,client:memberClient,idPrefix:'qmps',onPublished:()=>load(),onAccountsPublished:linkedAccountsPublished}):null;
 async function prepareSolProfileEditor(wallet,revision){
   if(!solEditor)return;await solEditor.setWallet(wallet);
   if(revision!==seq||requestedSolEditor!==wallet||solHub.snapshot().current?.owner!==wallet||memberWallet(location.hash.slice(1),{allowBareSolana:true})?.key!==wallet)return;
@@ -158,6 +160,8 @@ async function load() {
   if(mine!==seq)return;
   if(member?.profile.name){$('qp-title').textContent=member.profile.name;document.title=member.profile.name+' | Profile | QHooks';}
   if(member?.profile.bio)$('qp-member-identity').append(h('p',{class:'qmp-bio'},member.profile.bio));
+  appendMemberAccountChips($('qp-member-identity'),member?.accounts,{document});
+  appendUnverifiedMemberLinks($('qp-member-identity'),member?.profile.links,{document});
   if(member?.profile.image)$('qp-avatar').append(h('img',{src:member.profile.image,alt:'',width:'88',height:'88'}));
   const callerActions=h('div',{});$('qp-member-identity').append(callerActions);const callerControl=mountProfileCallerActions(callerActions,{wallet:who,label:member?.profile.name||short(who),hub,document});profileControls.push(callerControl);
   const caller=await callerRead;if(mine!==seq)return;callerControl.update(caller,social?.callStats);
@@ -268,6 +272,8 @@ async function loadSolanaProfile(identity,mine){
   if(mine!==seq)return;
   if(member?.profile.name){$('qp-title').textContent=member.profile.name;document.title=member.profile.name+' | Solana profile | QHooks';}
   if(member?.profile.bio)$('qp-member-identity').append(h('p',{class:'qmp-bio'},member.profile.bio));
+  appendMemberAccountChips($('qp-member-identity'),member?.accounts,{document});
+  appendUnverifiedMemberLinks($('qp-member-identity'),member?.profile.links,{document});
   if(member?.profile.image)$('qp-avatar').append(h('img',{src:member.profile.image,alt:'',width:'88',height:'88'}));
   const note=h('section',{class:'qa-section'},h('h2',{},'Join the community'),h('p',{},'Explore token discussions and caller records. Posting, signed calls and sending thanks currently require an EVM wallet.'),h('div',{class:'qa-actions'},h('a',{class:'qa-btn',href:'/community#boards'},'Explore discussions →'),h('a',{class:'qa-btn',href:'/community#callers'},'Discover callers →')));
   if(error){const retry=h('button',{type:'button',class:'qa-btn'},'Retry profile');retry.addEventListener('click',()=>load());note.prepend(h('p',{role:'status'},'This Solana profile could not be read. '+error.message),retry);}

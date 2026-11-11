@@ -8,5 +8,5 @@ export async function loadPerpsConfig(fetchImpl = (...args) => globalThis.fetch(
       return normalizeConfig(await response.json());
     } catch {}
   }
-  return {builder: null, builderFeeTenthsBp: 50};
+  return {builder: null, builderFeeTenthsBp: 100};
 }

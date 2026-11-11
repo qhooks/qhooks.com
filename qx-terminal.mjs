@@ -1,4 +1,5 @@
 import {mountRecapturePanel} from '/qx-recapture-panel.mjs';
+import {memberIdentity} from './qx-member-identity.mjs';
 import {mountArbGapPanel} from '/qx-arb-gap-panel.mjs';
 import {mountRelaunchBadge} from '/qx-relaunch-badge.mjs';
 import {createProviderChartRenderer,directProviderChart} from '/qx-provider-chart.mjs';
@@ -568,7 +569,7 @@ function untrack(addr) { delete state.tracked[addr]; saveTracked(); }
 function who(chainId, addr, extra = null, systemLabel = null) {
   if (!addr) return h('td', {}, '—');
   const label = systemLabel||labelFor(addr), tracked = !!state.tracked[addr], person = !label || tracked;
-  return h('td', {}, link(chainId, '/address/' + addr, short(addr)), label ? (tracked ? h('button', { type: 'button', class: 'qxt-tag tracked qxt-tag-open', title: 'Open wallet card', onclick: () => openWallet(chainId, addr) }, label) : h('span', { class: 'qxt-tag' }, label)) : null, extra,
+  return h('td', {}, link(chainId, '/address/' + addr, short(addr)),memberIdentity(String(chainId)==='solana'?'solana:'+addr:addr,{supplement:true,className:'qmi-inline'}), label ? (tracked ? h('button', { type: 'button', class: 'qxt-tag tracked qxt-tag-open', title: 'Open wallet card', onclick: () => openWallet(chainId, addr) }, label) : h('span', { class: 'qxt-tag' }, label)) : null, extra,
     person && !tracked && addr !== state.me ? h('button', { type: 'button', class: 'qxt-track', title: 'Track this wallet', onclick: () => track(addr) }, '+ Track') : null);
 }
 const tradeTape=createTradeTape();

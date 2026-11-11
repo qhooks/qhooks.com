@@ -1,5 +1,7 @@
 import {memberWallet,memberWalletKey} from './qx-member-wallet.mjs';
 import {normalizeMemberProfile,memberProfilePath,CALLER_METHOD} from './qx-member-profile-core.mjs';
+import {normalizeMemberAccounts} from './qx-member-accounts.mjs';
+import {mountMemberLinkedAccounts} from './qx-member-linked-editor.mjs';
 export const memberProfileError=value=>({sign_in:'Sign in with this wallet again.',not_the_wallet:'Connect the wallet that owns this profile.',profile_changed:'This profile changed in another tab. Reload it before saving again.',profile_unavailable:'Profiles are unavailable right now. Your edits are still here.',wrong_origin:'Open QHooks directly to edit your profile.'})[value?.error]||value?.message||'The profile could not be saved. Your edits are still here.';
 export function createMemberProfileClient({fetcher=(...args)=>globalThis.fetch(...args)}={}){
  async function request(wallet,options={}){
@@ -8,13 +10,21 @@ export function createMemberProfileClient({fetcher=(...args)=>globalThis.fetch(.
   if(body?.version!==1||body.wallet!==memberWalletKey(wallet)||!body.profile||typeof body.profile.shareHoldings!=='boolean'||body.updatedAt!==null&&(!Number.isSafeInteger(body.updatedAt)||body.updatedAt<=0))throw Error('The profile response did not match this wallet.');
   const image=body.profile.image||'';if(image){const url=new URL(image,'https://qhooks.com');if(url.pathname!==path+'/image'||url.search||url.hash||!['https:','http:'].includes(url.protocol))throw Error('The profile picture response was invalid.');}
   // Never trust a remote picture URL: the request origin serves its controlled image.
-  const profile=normalizeMemberProfile({...body.profile,image:''});return{...body,profile:{...profile,image:image?path+'/image?v='+body.updatedAt:''}};
+  const profile=normalizeMemberProfile({...body.profile,image:''});return{...body,accounts:normalizeMemberAccounts(body.accounts||[]),profile:{...profile,image:image?path+'/image?v='+body.updatedAt:''}};
+ }
+ async function accounts(wallet,{method='GET',value,auth,connection}={}){
+  connection?.assertCurrent();if(connection?.owner!==memberWalletKey(wallet)||!auth?.authorization)throw Error('Sign in with the wallet that owns this profile.');
+  await connection.check();connection.assertCurrent();const response=await fetcher(memberProfilePath(wallet)+'/accounts',{method,cache:'no-store',credentials:'omit',redirect:'error',headers:{...auth,...(value?{'content-type':'application/json'}:{})},...(value?{body:JSON.stringify(value)}:{})});
+  const result=await response.json().catch(()=>null);connection.assertCurrent();if(!response.ok)throw Error(({invalid_identity_token:'Account verification expired. Try linking again.',identity_keys_unavailable:'Account verification is unavailable right now. Try again shortly.',wallet_not_on_privy_user:'Connect this wallet to your QHooks account before linking an account.',account_not_linked:'This account is no longer linked. Reload your profile.'})[result?.error]||memberProfileError(result));
+  if(result?.version!==1||result.wallet!==memberWalletKey(wallet)||!Array.isArray(result.accounts)||result.accounts.length>100)throw Error('The linked accounts response did not match this wallet.');
+  const clean=result.accounts.map(account=>{const safe=normalizeMemberAccounts([{...account,visible:true}])[0];if(!safe||typeof account.id!=='string'||!account.id||account.id.length>200||/[\u0000-\u0020\u007f]/.test(account.id)||typeof account.visible!=='boolean')throw Error('The linked accounts response was invalid.');return{...safe,id:account.id,visible:account.visible};});
+  return{...result,accounts:clean};
  }
  return{read:wallet=>request(wallet),async save(wallet,value,{updatedAt=null,auth,connection}={}){
-  const clean=normalizeMemberProfile({...value,image:value.image||''});if(!Object.hasOwn(value,'image'))delete clean.image;
+  const clean=normalizeMemberProfile({...value,image:value.image||''});if(!Object.hasOwn(value,'image'))delete clean.image;if(!Object.hasOwn(value,'links'))delete clean.links;
   connection?.assertCurrent();if(connection?.owner!==memberWalletKey(wallet)||!auth?.authorization)throw Error('Sign in with the wallet that owns this profile.');
   await connection.check();connection.assertCurrent();const result=await request(wallet,{method:'PUT',headers:{'content-type':'application/json','if-match':String(updatedAt??0),...auth},body:JSON.stringify(clean)});connection.assertCurrent();return result;
- }};
+ },readAccounts:(wallet,options)=>accounts(wallet,options),syncAccounts:(wallet,value,options={})=>accounts(wallet,{...options,method:options.method==='DELETE'?'DELETE':'POST',value}),accountVisibility:(wallet,value,options={})=>accounts(wallet,{...options,method:'PATCH',value})};
 }
 export function callerMethodElement(doc=globalThis.document){
  const details=doc.createElement('details');details.className='qmp-method';const summary=doc.createElement('summary');summary.textContent='How caller records are counted';details.append(summary);
@@ -30,7 +40,7 @@ export async function memberImageFile(file,{document:doc=globalThis.document,dec
   return normalizeMemberProfile({image:canvas.toDataURL('image/webp',.8)}).image;
  }finally{image.close();}
 }
-export function mountMemberProfileEditor(target,{hub,sessions,client=createMemberProfileClient(),document:doc=globalThis.document,onPublished=()=>{},imageFile=memberImageFile,idPrefix='qmp'}={}){
+export function mountMemberProfileEditor(target,{hub,sessions,client=createMemberProfileClient(),document:doc=globalThis.document,onPublished=()=>{},onAccountsPublished=()=>{},imageFile=memberImageFile,idPrefix='qmp',linkedAccounts={}}={}){
  if(!/^[a-z][a-z0-9-]{0,24}$/.test(idPrefix))throw TypeError('Use a valid editor identifier.');
  const fieldId=name=>idPrefix+'-'+name;
  const h=(tag,attrs={},...kids)=>{const node=doc.createElement(tag);for(const[key,value]of Object.entries(attrs)){if(key==='class')node.className=value;else node.setAttribute(key,value);}node.append(...kids);return node;};
@@ -38,19 +48,28 @@ export function mountMemberProfileEditor(target,{hub,sessions,client=createMembe
  let wallet=null,record=null,generation=0,disposed=false,picture,dirty=false,imageRevision=0,imagePending=false,saving=false,previewSource='';
  const details=h('details',{class:'qmp-editor'}),summary=h('summary',{},'Edit profile & privacy'),content=h('div',{class:'qmp-editor-body'}),status=h('p',{role:'status','aria-live':'polite'}),form=h('form',{'aria-label':'Edit your public profile'}),fields=h('fieldset'),name=h('input',{id:fieldId('name'),maxlength:'32',autocomplete:'nickname'}),bio=h('textarea',{id:fieldId('bio'),rows:'3',maxlength:'280'}),file=h('input',{id:fieldId('picture'),type:'file',accept:'image/png,image/jpeg,image/webp'}),preview=h('img',{class:'qmp-preview',alt:'Profile picture preview'}),remove=h('button',{type:'button',class:'qa-btn'},'Remove picture'),sharing=h('input',{id:fieldId('holdings'),type:'checkbox','aria-describedby':fieldId('holdings-help')+' '+fieldId('holdings-state')}),privacy=h('p',{id:fieldId('holdings-state'),class:'qmp-privacy-state','aria-live':'polite'}),save=h('button',{type:'submit',class:'qa-btn qa-btn-primary'},'Save public profile'),reload=h('button',{type:'button',class:'qa-btn'},'Reload saved profile');
  for(const[label,id,node]of[['Display name',fieldId('name'),name],['Bio',fieldId('bio'),bio],['Profile picture',fieldId('picture'),file]])fields.append(h('label',{for:id},label,node));
+ const links=Array.from({length:4},(_,index)=>h('input',{id:fieldId('link-'+(index+1)),type:'url',maxlength:'200',placeholder:'https://',autocomplete:'url','aria-label':'Unverified profile link '+(index+1)})),linkFields=h('fieldset',{class:'qmp-plain-links'},h('legend',{},'Links'),h('p',{class:'qmp-help'},'Optional HTTPS links. These remain labelled Unverified.'));
+ links.forEach((input,index)=>linkFields.append(h('label',{for:fieldId('link-'+(index+1))},'Link '+(index+1)+' · Unverified',input)));
+ const draftLinks=()=>links.map(input=>input.value.trim()).filter(Boolean).map(url=>({url}));
  const sharingLabel=h('label',{for:fieldId('holdings'),class:'qmp-sharing'},sharing,'Show my current QHooks holdings on this profile'),sharingHelp=h('p',{id:fieldId('holdings-help'),class:'qmp-help'},'Off by default. This shares current indexed EVM holdings on QHooks, not your full wallet, trade history or profit and loss. Blockchain activity remains public.');
- fields.append(h('div',{class:'qmp-picture-tools'},preview,remove),sharingLabel,sharingHelp,privacy,h('div',{class:'qmp-editor-actions'},save));
+ fields.append(h('div',{class:'qmp-picture-tools'},preview,remove),linkFields,sharingLabel,sharingHelp,privacy,h('div',{class:'qmp-editor-actions'},save));
  const intro=h('p',{},'Add a name, picture and a short bio. Your wallet stays visible so people can check who made each call.');
  form.append(fields,h('div',{class:'qmp-editor-actions qmp-reload'},reload));content.append(intro,form,status);details.append(summary,content);target.replaceChildren(details);
  const auth=sessions.createBoardSession({getConnection:current});
+ const draftKey=who=>'qhooks:member-draft:v1:'+who,storage=linkedAccounts.storage||(()=>globalThis.sessionStorage);
+ function clearDraft(){try{storage()?.removeItem(draftKey(wallet));}catch{}}
+ function rememberDraft(who){if(imagePending)throw Error('Wait for your profile picture to finish before linking.');if(!record||who!==wallet||owner()!==who)return;const draft={name:name.value,bio:bio.value,links:links.map(input=>input.value),shareHoldings:memberWallet(who)?.family==='solana'?false:sharing.checked,...(picture!==undefined?{image:picture}:{}),updatedAt:record.updatedAt};try{storage()?.setItem(draftKey(who),JSON.stringify(draft));}catch{}}
+ function restoreDraft(who){try{const draft=JSON.parse(storage()?.getItem(draftKey(who))||'null');if(!draft||draft.updatedAt!==null&&(!Number.isSafeInteger(draft.updatedAt)||draft.updatedAt<=0)||typeof draft.name!=='string'||draft.name.length>1024||typeof draft.bio!=='string'||draft.bio.length>4096||typeof draft.shareHoldings!=='boolean'||!Array.isArray(draft.links)||draft.links.length>4||draft.links.some(value=>typeof value!=='string'||value.length>1000))return false;const image=Object.hasOwn(draft,'image')?normalizeMemberProfile({image:draft.image}).image:undefined;name.value=draft.name;bio.value=draft.bio;sharing.checked=draft.shareHoldings;links.forEach((input,index)=>{input.value=draft.links[index]||'';});picture=image;record={...record,updatedAt:draft.updatedAt};dirty=true;return true;}catch{return false;}}
+ const linked=mountMemberLinkedAccounts(content,{hub,auth,client,document:doc,onPublished:onAccountsPublished,...linkedAccounts,beforeLink:rememberDraft});
+ details.addEventListener('toggle',()=>{if(details.open)void linked.refresh();});
  function showPicture(source){previewSource=source||'';preview.hidden=!source;if(source)preview.src=source;else preview.removeAttribute('src');render();}
  function invalidateImage(){imageRevision++;imagePending=false;}
  function renderPrivacy(){privacy.textContent=!record?'Reading saved holdings visibility…':'Saved visibility: holdings '+(record.profile.shareHoldings?'shared.':'private.')+(sharing.checked!==record.profile.shareHoldings?' Your draft will make them '+(sharing.checked?'public':'private')+' only after you save.':'');}
  function render(){if(disposed)return;const native=memberWallet(wallet)?.family==='solana';sharingLabel.hidden=sharingHelp.hidden=privacy.hidden=native;sharing.disabled=native;intro.textContent=native?'Add a name, picture and a short bio to your Solana profile. Your full wallet address stays visible. This profile does not share holdings, trade history or profit and loss.':'Add a name, picture and a short bio. Your wallet stays visible so people can check who made each call.';details.hidden=!wallet||owner()!==wallet;fields.disabled=!record||saving;save.disabled=!record||saving||imagePending;reload.disabled=saving;remove.disabled=!previewSource&&!imagePending;save.textContent=auth.boardSession()?'Save public profile':'Sign in to edit';renderPrivacy();}
  async function read(){const mine=++generation;invalidateImage();saving=false;record=null;render();status.textContent='Reading your saved profile…';
-  try{const next=await client.read(wallet);if(disposed||mine!==generation||owner()!==wallet)return;record=next;name.value=next.profile.name;bio.value=next.profile.bio;sharing.checked=next.profile.shareHoldings;picture=undefined;file.value='';dirty=false;showPicture(next.profile.image);status.textContent=memberWallet(wallet)?.family==='solana'?'Name, picture and bio become public only when you save. Solana holdings and trade history are not shared.':'Name, picture and bio are public when you save. Holdings are shared only if you turn them on.';}catch(error){if(mine===generation&&!disposed)status.textContent=error.message;}finally{render();}
+  try{const next=await client.read(wallet);if(disposed||mine!==generation||owner()!==wallet)return;record=next;name.value=next.profile.name;bio.value=next.profile.bio;sharing.checked=next.profile.shareHoldings;links.forEach((input,index)=>{input.value=next.profile.links?.[index]?.url||'';});picture=undefined;file.value='';dirty=false;const restored=restoreDraft(wallet);showPicture(picture!==undefined?picture:next.profile.image);status.textContent=memberWallet(wallet)?.family==='solana'?'Name, picture and bio become public only when you save. Solana holdings and trade history are not shared.':'Name, picture and bio are public when you save. Holdings are shared only if you turn them on.';if(restored)status.textContent+=' Your unsaved profile draft was restored.'+(record.updatedAt!==next.updatedAt?' The saved profile changed; reload it before saving again.':'');}catch(error){if(mine===generation&&!disposed)status.textContent=error.message;}finally{render();}
  }
- async function setWallet(value){if(wallet===value&&record)return;wallet=value;generation++;invalidateImage();saving=false;record=null;picture=undefined;name.value=bio.value=file.value='';sharing.checked=false;showPicture('');render();if(wallet&&owner()===wallet)await read();}
+ async function setWallet(value){if(wallet===value&&record)return;wallet=value;generation++;invalidateImage();saving=false;record=null;picture=undefined;name.value=bio.value=file.value='';links.forEach(input=>{input.value='';});sharing.checked=false;showPicture('');render();void linked.setWallet(value).catch(()=>{});if(wallet&&owner()===wallet)await read();}
  const stop=hub.subscribe(()=>{if(owner()!==wallet){generation++;invalidateImage();saving=false;record=null;fields.disabled=true;details.hidden=true;status.textContent='Wallet changed. Open your own profile to edit.';}else render();});
  form.addEventListener('input',()=>{dirty=true;});
  sharing.addEventListener('change',()=>{dirty=true;renderPrivacy();});
@@ -58,12 +77,12 @@ export function mountMemberProfileEditor(target,{hub,sessions,client=createMembe
   try{const result=await imageFile(selected);if(!active())return;picture=result;dirty=true;showPicture(result);status.textContent='Picture ready. Save to publish it.';}catch(error){if(active())status.textContent=error.message;}finally{if(active()){imagePending=false;render();}}
  });
  remove.addEventListener('click',()=>{if(saving||!record||owner()!==wallet||disposed)return;invalidateImage();picture='';dirty=true;file.value='';showPicture('');status.textContent='Picture removed from this draft. Save to update your profile.';});
- reload.addEventListener('click',()=>void read());
+ reload.addEventListener('click',()=>{clearDraft();void read();});
  form.addEventListener('submit',async event=>{event.preventDefault();if(!record||owner()!==wallet||imagePending||saving||disposed)return;const mine=generation,who=wallet;saving=true;render();
   try{const connection=auth.capture();await connection.check();if(!auth.boardSession()){status.textContent='Sign in with a free message. This saves no profile and moves no funds.';await auth.signIn(connection);if(mine!==generation)return;status.textContent='Signed in. Review your profile, then save when you are ready.';render();return;}
-   const draft={name:name.value,bio:bio.value,shareHoldings:memberWallet(who)?.family==='solana'?false:sharing.checked,...(picture!==undefined?{image:picture}:{})};status.textContent='Saving your public profile…';const next=await client.save(who,draft,{updatedAt:record.updatedAt,auth:auth.authHeaders(),connection});
-   if(disposed||mine!==generation||owner()!==who)return;record=next;picture=undefined;dirty=false;showPicture(next.profile.image);status.textContent='Public profile saved.';onPublished(next);
+   const draft={name:name.value,bio:bio.value,links:draftLinks(),shareHoldings:memberWallet(who)?.family==='solana'?false:sharing.checked,...(picture!==undefined?{image:picture}:{})};status.textContent='Saving your public profile…';const next=await client.save(who,draft,{updatedAt:record.updatedAt,auth:auth.authHeaders(),connection});
+   if(disposed||mine!==generation||owner()!==who)return;record=next;picture=undefined;dirty=false;clearDraft();showPicture(next.profile.image);status.textContent='Public profile saved.';onPublished(next);
   }catch(error){if(!disposed&&mine===generation)status.textContent=error.message;}finally{if(mine===generation){saving=false;render();}}
  });
- return{setWallet,open(){if(disposed||!wallet||owner()!==wallet)return false;details.open=true;summary.focus();details.scrollIntoView({block:'start'});return true;},dispose(){disposed=true;generation++;invalidateImage();stop();},get dirty(){return dirty;}};
+ return{setWallet,open(){if(disposed||!wallet||owner()!==wallet)return false;details.open=true;summary.focus();details.scrollIntoView({block:'start'});return true;},dispose(){disposed=true;generation++;invalidateImage();stop();linked.dispose();},get dirty(){return dirty;}};
 }

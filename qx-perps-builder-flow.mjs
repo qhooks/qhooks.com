@@ -35,7 +35,7 @@ export async function changeBuilderFee({address, action, provider, isCurrent = (
   await guard();
   const challenge = await api('/api/perps/builder/challenge?address=' + encodeURIComponent(address) + '&action=' + action, {}, fetchImpl);
   const lines = typeof challenge.message === 'string' ? challenge.message.split('\n') : [];
-  if (!/^[0-9a-f]{32}$/.test(challenge.nonce) || lines.length !== 6 || lines[0] !== 'QHooks perps builder fee' || lines[1] !== 'Action: Turn ' + action || lines[2].toLowerCase() !== 'address: ' + address.toLowerCase() || lines[3] !== 'Fee: 0.05% per fill' || lines[4] !== 'Nonce: ' + challenge.nonce || !lines[5].startsWith('Issued: ')) throw Error(errors.refreshing);
+  if (!/^[0-9a-f]{32}$/.test(challenge.nonce) || lines.length !== 6 || lines[0] !== 'QHooks perps builder fee' || lines[1] !== 'Action: Turn ' + action || lines[2].toLowerCase() !== 'address: ' + address.toLowerCase() || lines[3] !== 'Fee: 0.1% per fill' || lines[4] !== 'Nonce: ' + challenge.nonce || !lines[5].startsWith('Issued: ')) throw Error(errors.refreshing);
   await guard();
   const message = '0x' + Array.from(new TextEncoder().encode(challenge.message), x => x.toString(16).padStart(2, '0')).join('');
   const signature = await provider.request({method: 'personal_sign', params: [message, address]});

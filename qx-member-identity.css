@@ -12,3 +12,9 @@
 .qmi-wallet{font:400 11px/1.3 var(--qx-mono);color:var(--qx-muted);white-space:nowrap}
 a.qmi:hover .qmi-name,a.qmi:hover .qmi-wallet{color:var(--qx-brass)}
 a.qmi:focus-visible{outline:2px solid var(--qx-brass);outline-offset:4px;border-radius:8px}
+.qma-chips{display:flex;flex-wrap:wrap;align-items:center;gap:5px;min-width:0;max-width:100%;margin-top:3px}
+.qma-chip{display:inline-flex;align-items:center;min-width:0;max-width:100%;box-sizing:border-box;padding:3px 7px;border:1px solid var(--qx-line,#38483d);border-radius:20px;color:var(--qx-brass,#d9bc7c);font:500 10px/1.3 var(--qx-sans,system-ui,sans-serif);font-style:normal;text-decoration:none;overflow-wrap:anywhere}
+.qma-chip:focus-visible{outline:2px solid var(--qx-brass,#d9bc7c);outline-offset:3px}
+.qmi[hidden],.qmi-avatar[hidden],.qmi-wallet[hidden]{display:none}
+.qmi-inline{margin-left:6px}.qmi-inline .qmi-name{font-size:11px}.qmi-inline .qmi-words{flex-direction:row;align-items:center;flex-wrap:wrap;gap:5px}
+.qma-plain-links{max-width:100%;font-size:12px;line-height:1.5;color:var(--qx-muted,#aeb9b0)}.qma-plain-links p{margin:.4rem 0;overflow-wrap:anywhere}.qma-plain-links a{color:var(--qx-brass,#d9bc7c)}.qp .qma-chip{min-height:44px;padding:8px 12px;font-size:12px}.qp .qma-chips{margin-top:.7rem}

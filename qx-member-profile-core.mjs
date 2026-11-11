@@ -3,6 +3,15 @@ import {memberWallet} from './qx-member-wallet.mjs';
 import {memberPicture} from './qx-member-picture.mjs';
 export const MEMBER_PROFILE_LIMITS=Object.freeze({name:32,bio:280,image:220000,body:225000});
 const fail=message=>{throw new TypeError(message);};
+export function normalizeMemberLinks(value=[]){
+ if(!Array.isArray(value)||value.length>4)return fail('Add up to four profile links.');
+ return value.map(link=>{
+  if(!link||typeof link.url!=='string'||link.url.length>200||/[\s\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069\u200e\u200f\u200b-\u200d\u2060\ufeff]/.test(link.url))return fail('Use a full HTTPS profile link.');
+  let url;try{url=new URL(link.url);}catch{return fail('Use a full HTTPS profile link.');}
+  if(url.protocol!=='https:'||!url.hostname||url.username||url.password||url.href.length>200)return fail('Use a full HTTPS profile link without credentials.');
+  return{kind:url.hostname==='github.com'?'github':link.kind==='website'?'website':'other',url:url.href,verified:false};
+ });
+}
 function text(value,label,max){
  if(value==null)return'';if(typeof value!=='string')return fail('Enter a valid '+label+'.');
  const clean=value.normalize('NFC').trim();
@@ -12,7 +21,7 @@ function text(value,label,max){
 export function normalizeMemberProfile(value={}){
  if(!value||typeof value!=='object'||Array.isArray(value))return fail('The profile could not be read.');
  if(value.shareHoldings!=null&&typeof value.shareHoldings!=='boolean')return fail('Choose whether to share your holdings.');
- return{version:1,name:text(value.name,'display name',MEMBER_PROFILE_LIMITS.name),bio:text(value.bio,'bio',MEMBER_PROFILE_LIMITS.bio),image:memberPicture(value.image),shareHoldings:value.shareHoldings===true};
+ return{version:1,name:text(value.name,'display name',MEMBER_PROFILE_LIMITS.name),bio:text(value.bio,'bio',MEMBER_PROFILE_LIMITS.bio),image:memberPicture(value.image),shareHoldings:value.shareHoldings===true,links:normalizeMemberLinks(value.links)};
 }
 export const memberProfilePath=wallet=>{const identity=memberWallet(wallet);if(!identity)return fail('Use a full EVM wallet address or a Solana profile identity.');return identity.path;};
 export const CALLER_METHOD=Object.freeze({version:2,minimum:5,hitHours:24,qualityHours:[24,168],notes:[

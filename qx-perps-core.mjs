@@ -7,8 +7,8 @@ function canTrade(country) {
 }
 function normalizeConfig(raw) {
   if (!raw || raw.builder !== null && (!ADDRESS.test(raw.builder) || /^0x0{40}$/i.test(raw.builder))) throw Error("Check the perps configuration.");
-  if (Number(raw.builderFeeTenthsBp) !== 50) throw Error("Check the perps fee configuration.");
-  return { builder: raw.builder?.toLowerCase() ?? null, builderFeeTenthsBp: 50 };
+  if (Number(raw.builderFeeTenthsBp) !== 100) throw Error("Check the perps fee configuration.");
+  return { builder: raw.builder?.toLowerCase() ?? null, builderFeeTenthsBp: 100 };
 }
 function withBuilder(action, config) {
   const c = normalizeConfig(config);

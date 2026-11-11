@@ -1,0 +1,72 @@
+import {memberWallet,memberWalletKey} from './qx-member-wallet.mjs';
+import {readPrivyAppConfig,privyLinkedMethods} from './qx-privy-app-config.mjs';
+const KINDS=[['x','X'],['telegram','Telegram'],['discord','Discord'],['farcaster','Farcaster']];
+const PENDING='qhooks:member-link:v1';
+const failure=error=>/last.*(?:account|method)|at least one/i.test(error?.message||'')?'Keep at least one sign-in method on your account.':error?.message||'Linked accounts could not be updated. Try again.';
+
+// Independent of profile drafts: these actions never replace name, bio or picture fields.
+export function mountMemberLinkedAccounts(target,{hub,auth,client,document:doc=globalThis.document,getBridge=()=>globalThis.qhooksPrivySignerControls,getLoader=()=>globalThis.qhooksEnsurePrivyControls,readAppConfig=()=>readPrivyAppConfig(),eventTarget=globalThis.window,storage=()=>globalThis.sessionStorage,onPublished=()=>{},beforeLink=()=>{},telegramReady}={}){
+ const h=(tag,attrs={},...children)=>{const node=doc.createElement(tag);for(const[key,value]of Object.entries(attrs))if(key==='class')node.className=value;else node.setAttribute(key,value);node.append(...children);return node;};
+ const section=h('section',{class:'qmp-linked','aria-label':'Linked accounts'}),heading=h('h3',{},'Linked accounts'),help=h('p',{class:'qmp-help'},'Optional. Your profile is complete with or without linked accounts. You choose which verified accounts appear.'),rows=h('div',{class:'qmp-linked-rows'}),status=h('p',{role:'status','aria-live':'polite',class:'qmp-linked-status'});
+ section.append(heading,help,rows,status);target.append(section);
+ let wallet=null,accounts=[],generation=0,busy=false,disposed=false,loaded=false,bridge=null,unsubscribe=()=>{},resumeKey='',bridgeLoading=null,configLoading=null,methods=privyLinkedMethods(null,{telegramReady});
+ const owner=()=>memberWalletKey(hub.snapshot().current?.owner);
+ function pending(value){try{if(value===null)storage()?.removeItem(PENDING);else if(value)storage()?.setItem(PENDING,JSON.stringify(value));else{const found=JSON.parse(storage()?.getItem(PENDING)||'null');return found&&typeof found.wallet==='string'&&KINDS.some(([kind])=>kind===found.kind)&&Number.isFinite(found.at)&&Date.now()-found.at<30*60000&&found.at<=Date.now()+60000?found:null;}}catch{}return null;}
+ const available=kind=>typeof bridge?.linkAccount==='function'&&(!kind||methods[kind]===true);
+ const onUser=()=>{const state=bridge?.state;return state?.authenticated&&state.wallets?.some(value=>memberWalletKey(value)===wallet||memberWallet(wallet)?.family==='solana'&&value===memberWallet(wallet).address);};
+ function current(mine,who,connection){connection?.assertCurrent();if(disposed||generation!==mine||wallet!==who||owner()!==who)throw Error('Your wallet changed. Open your own profile to continue.');}
+ function render(){
+  if(disposed)return;section.hidden=!wallet||owner()!==wallet;
+  const button=(kind,action,text,handler)=>{const node=h('button',{type:'button',class:'qa-btn','data-account-kind':kind,'data-account-action':action},text);node.disabled=busy;node.addEventListener('click',()=>run(handler,{kind}));return node;};
+  rows.replaceChildren(...KINDS.map(([kind,label])=>{
+   const found=accounts.filter(account=>account.kind===kind),controls=h('div',{class:'qmp-linked-controls'});
+   if(!available(kind))controls.append(h('span',{class:'qmp-linked-soon'},'Opens soon'));
+   else if(found.length)for(const account of found){const item=h('div',{class:'qmp-linked-item'}),handle=h('span',{class:'qmp-linked-handle'},(kind==='discord'?'':'@')+account.handle);item.append(handle,
+    button(kind,'visibility',account.visible?'Hide':'Show',async context=>{const result=await client.accountVisibility(context.who,{kind,id:account.id,visible:!account.visible},context.options);context.check();install(result);status.textContent=account.visible?'Account hidden from your profile.':'Account shown on your profile.';}),
+    button(kind,'unlink','Unlink',async context=>{await ensurePrivy(context);const linked=bridge.state?.linked;if(!Array.isArray(linked)||linked.some(item=>item.kind===kind&&item.id===account.id))await bridge.unlinkAccount(kind,account.id);context.check();await sync(context,'DELETE');status.textContent=label+' unlinked.';}));controls.append(item);}
+   else controls.append(h('span',{class:'qmp-linked-optional'},'Optional'),button(kind,'link','Link',async context=>{if(accounts.some(account=>account.kind===kind)){status.textContent='This account is already linked. Choose Show, Hide or Unlink.';return;}await ensurePrivy(context);beforeLink(context.who);context.check();pending({wallet:context.who,kind,at:Date.now()});if(!bridge.state?.linked?.some(item=>item.kind===kind)){status.textContent='Continue with '+label+' to link your account.';await bridge.linkAccount(kind);context.check();}await sync(context);status.textContent=label+' linked.';}));
+   return h('div',{class:'qmp-linked-row','data-account-row':kind},h('strong',{},label),controls);
+  }));
+ }
+ function install(result){accounts=result.accounts;loaded=true;render();onPublished(result);}
+ async function read(context){const result=await client.readAccounts(context.who,context.options);context.check();accounts=result.accounts;loaded=true;render();}
+ function context(kind){const mine=generation,who=wallet,connection=auth.capture();if(connection.owner!==who)throw Error('Connect the wallet that owns this profile.');return{who,options:{auth:auth.authHeaders(),connection},check:()=>{current(mine,who,connection);if(kind&&!available(kind))throw Error('Opens soon');},connection};}
+ async function ensurePrivy(ctx){
+  ctx.check();if(!available()||typeof bridge.identityToken!=='function')throw Error('Opens soon');
+  if(!onUser()){
+   const identity=memberWallet(ctx.who);if(identity?.family!=='evm'||typeof bridge.loginWithWallet!=='function')throw Error('Connect this wallet to your QHooks account before linking an account.');
+   status.textContent='Sign once to connect this wallet to your QHooks account. Free, no transaction.';
+   await bridge.loginWithWallet({address:identity.address,signMessage:async text=>{ctx.check();const signature=await ctx.connection.sign(text);ctx.check();return signature;}});ctx.check();
+   if(!onUser())throw Error('Connect this wallet to your QHooks account before linking an account.');
+  }
+ }
+ async function sync(ctx,method='POST'){
+  const identityToken=await bridge.identityToken();ctx.check();const result=await client.syncAccounts(ctx.who,{identityToken},{...ctx.options,method});ctx.check();install(result);pending(null);return result;
+ }
+ async function run(action,{resume=false,kind}={}){
+  if(disposed||busy||!wallet||owner()!==wallet||!available(kind))return;const mine=generation;busy=true;render();
+  try{const ctx=context(kind);await ctx.connection.check();ctx.check();
+   if(!auth.boardSession()){
+    if(resume)return;status.textContent='Sign in with a free message. This links no account and moves no funds.';await auth.signIn(ctx.connection);ctx.check();ctx.options.auth=auth.authHeaders();await read(ctx);status.textContent='Signed in. Choose an account action when you are ready.';return;
+   }
+   ctx.options.auth=auth.authHeaders();if(!loaded)await read(ctx);ctx.check();await action(ctx);
+  }catch(error){if(!disposed&&generation===mine)status.textContent=failure(error);}finally{if(generation===mine){busy=false;render();maybeResume();}}
+ }
+ function maybeResume(){const found=pending();if(disposed||busy||!found||!available(found.kind)||!auth.boardSession()||!onUser()||found.wallet!==wallet)return;const key=found.wallet+':'+found.kind+':'+found.at;if(resumeKey===key)return;resumeKey=key;void run(async ctx=>{await sync(ctx);status.textContent='Linked accounts are up to date.';},{resume:true,kind:found.kind});}
+ function refreshBridge(){const next=getBridge();if(next!==bridge){unsubscribe();unsubscribe=()=>{};bridge=next||null;if(typeof bridge?.subscribe==='function'){const stop=bridge.subscribe(()=>{render();maybeResume();});if(typeof stop==='function')unsubscribe=stop;}}render();maybeResume();}
+ async function prepareBridge(mine,who){
+  if(disposed||mine!==generation||who!==wallet||owner()!==who)return false;refreshBridge();if(available())return true;const loader=getLoader();if(typeof loader!=='function')return false;
+  if(bridgeLoading?.mine===mine&&bridgeLoading.who===who)return bridgeLoading.promise;
+  const operation={mine,who};bridgeLoading=operation;operation.promise=(async()=>{try{await loader();if(disposed||mine!==generation||who!==wallet||owner()!==who)return false;refreshBridge();return available();}catch{return false;}finally{if(bridgeLoading===operation)bridgeLoading=null;}})();return operation.promise;
+ }
+ async function loadMethods(mine,who){
+  if(configLoading?.mine===mine&&configLoading.who===who)return configLoading.promise;
+  const operation={mine,who};configLoading=operation;operation.promise=(async()=>{let config=null;try{config=await readAppConfig();}catch{}if(!disposed&&mine===generation&&who===wallet&&owner()===who){methods=privyLinkedMethods(config,{telegramReady});render();maybeResume();}})().finally(()=>{if(configLoading===operation)configLoading=null;});return operation.promise;
+ }
+ async function loadAccounts(mine,who){if(disposed||mine!==generation||who!==wallet||owner()!==who||!KINDS.some(([kind])=>available(kind))||!auth.boardSession()||loaded||busy)return;busy=true;render();try{const ctx=context();await ctx.connection.check();await read(ctx);}catch(error){if(mine===generation&&!disposed)status.textContent=failure(error);}finally{if(mine===generation){busy=false;render();maybeResume();}}}
+ async function refresh(){const mine=generation,who=wallet;if(!who||owner()!==who||disposed)return;await prepareBridge(mine,who);if(disposed||mine!==generation||who!==wallet||owner()!==who||!available())return;await loadMethods(mine,who);await loadAccounts(mine,who);}
+ const ready=()=>{if(wallet&&owner()===wallet&&!disposed)void refresh();};eventTarget?.addEventListener?.('qhooks:privy-loader-ready',ready);eventTarget?.addEventListener?.('qhooks:privy-profile-ready',ready);eventTarget?.addEventListener?.('qhooks:privy-signer-ready',ready);
+ const stop=hub.subscribe(()=>{if(owner()!==wallet){generation++;busy=false;accounts=[];loaded=false;status.textContent='';}render();});
+ refreshBridge();
+ return{element:section,async setWallet(value){wallet=memberWalletKey(value);generation++;busy=false;accounts=[];loaded=false;resumeKey='';status.textContent='';render();await refresh();},refresh,dispose(){disposed=true;generation++;unsubscribe();stop();eventTarget?.removeEventListener?.('qhooks:privy-loader-ready',ready);eventTarget?.removeEventListener?.('qhooks:privy-profile-ready',ready);eventTarget?.removeEventListener?.('qhooks:privy-signer-ready',ready);}};
+}

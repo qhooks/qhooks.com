@@ -2,6 +2,7 @@ import {memberWallet,memberWalletKey} from './qx-member-wallet.mjs';
 // Compact public identity for author/caller rows. This reads profiles only; wallet identity stays visible.
 import {createMemberProfileClient} from './qx-member-profile.mjs';
 import {normalizeMemberProfile,memberProfilePath} from './qx-member-profile-core.mjs';
+import {normalizeMemberAccounts,appendMemberAccountChips} from './qx-member-accounts.mjs';
 
 const address=memberWalletKey;
 const short=value=>value.length>16?value.slice(0,6)+'…'+value.slice(-4):value;
@@ -14,7 +15,7 @@ function publicIdentity(value,wallet){
   if(value?.version!==1||value.wallet!==wallet||!value.profile||value.updatedAt!==null&&(!Number.isSafeInteger(value.updatedAt)||value.updatedAt<=0))return null;
   const profile=normalizeMemberProfile({...value.profile,image:''});
   const image=Number.isSafeInteger(value.updatedAt)&&value.updatedAt>0&&value.profile.image===memberProfilePath(wallet)+'/image?v='+value.updatedAt?value.profile.image:'';
-  return{name:profile.name,image};
+  return{name:profile.name,image,accounts:normalizeMemberAccounts(value.accounts)};
 }
 
 /** One reader per page: at most 4 concurrent and 128 cached/queued wallets by default, with no polling.
@@ -46,7 +47,7 @@ export function createMemberIdentityRenderer({client=createMemberProfileClient()
     entry.readers.add(isCurrent);queueMicrotask(pump);
     return entry.promise.finally(()=>entry.readers.delete(isCurrent));
   }
-  function mount(value,{linked=true,mark=null,className='',getWallet=()=>value}={}){
+  function mount(value,{linked=true,mark=null,className='',getWallet=()=>value,supplement=false}={}){
     if(dead)throw Error('This identity renderer is disposed.');
     if(typeof getWallet!=='function')throw TypeError('A current wallet getter is required.');
     styles(doc);
@@ -57,10 +58,13 @@ export function createMemberIdentityRenderer({client=createMemberProfileClient()
     avatar.className='qmi-avatar';avatar.setAttribute('aria-hidden','true');
     if(!mark){fallback.className='qmi-default';fallback.textContent=shown.slice(-2).toUpperCase();}
     avatar.append(fallback);words.className='qmi-words';name.className='qmi-name';name.hidden=true;code.className='qmi-wallet';code.textContent=short(display)+(identity?.family==='solana'?' · Solana':'');code.title=display;words.append(name,code);element.append(avatar,words);
+    if(supplement){avatar.hidden=true;code.hidden=true;element.hidden=true;}
     const isCurrent=()=>{try{return!dead&&!disposed&&element.isConnected&&element.getAttribute('data-wallet')===shown&&address(getWallet())===wallet;}catch{return false;}};
     const ready=wallet?read(wallet,isCurrent).then(profile=>{
       if(!profile||!isCurrent())return;
       if(profile.name){name.textContent=profile.name;name.hidden=false;element.setAttribute('aria-label',profile.name+' · '+display+(identity?.family==='solana'?' · Solana':''));}
+      appendMemberAccountChips(words,profile.accounts,{document:doc,compact:true,linked:false});
+      if(supplement)element.hidden=!profile.name&&!profile.accounts.some(row=>row.kind==='x'||row.kind==='farcaster');
       if(profile.image){
         const image=doc.createElement('img');image.className='qmi-photo';image.alt='';image.width=image.height=28;image.loading='lazy';image.decoding='async';image.referrerPolicy='no-referrer';
         image.addEventListener('load',()=>{if(isCurrent()){image.hidden=false;image.setAttribute('data-ready','true');fallback.hidden=true;}});

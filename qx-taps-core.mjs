@@ -173,7 +173,10 @@ export function checkManual(row, storage) {
 export async function checkJsonFlag(row, fetchJson) {
   const j = await fetchJson(row.url);
   if (j == null || typeof j !== 'object') throw Error('read');
-  return {status: at(j, row.field) === (row.equals ?? true) ? 'done' : 'pending'};
+  // Optional gate (2026-11-11, main thread): the row waits, with no button, until a second flag on the same answer holds
+  // (Solana: claimerReady once the fee-claimer switch ships; the config is permanent once created).
+  const waiting = !!row.gate && at(j, row.gate.field) !== (row.gate.equals ?? true);
+  return {status: at(j, row.field) === (row.equals ?? true) ? 'done' : 'pending', waiting};
 }
 export const ETHEREUM_FIRST = ['order-executor', 'x-receiver'];
 export const ETHEREUM_SETUP_HREF = '/chain-setup?chain=1&go=1&factory=1&first=order-executor,x-receiver';
@@ -259,6 +262,7 @@ export function groupSteps(steps) {
       : describe(row.sentence || row.name, row.chains);
     if (row.kind === 'perpsBuilder' && row.status === 'pending') row.note = row.waiting ? 'Waiting on the fee update to 0.1%. The button appears once it is live.' : 'Needs a 100 USDC deposit on Hyperliquid for the builder wallet.';
     if (row.kind === 'perpsBuilder' && row.waiting) row.button = null;
+    if (row.kind === 'jsonFlag' && row.status === 'pending' && row.waiting) { row.button = null; row.note = row.gateText || 'Waiting on an update. The button appears once it is live.'; }
     if (row.kind === 'privyFlags' && row.status === 'pending' && row.missing?.length) row.note = (row.missingText || 'Still off:') + ' ' + row.missing.join(', ') + '.';
     if (row.status === 'unknown') row.text += ' Refreshing…';
   }
@@ -284,7 +288,7 @@ export async function evaluateCatalogue(catalogue, io, {onUpdate} = {}) {
   const privyConfig = () => (privyRead ||= readPrivyConfig(io.request || (() => Promise.reject(Error('No read client for Privy')))));
   const prepare = async row => {
     const items = [], chainIds = row.chains?.map(c => String(typeof c === 'object' ? c.id : c)) || [String(row.chainId || '4663')];
-    const base = id => ({missingText: row.missingText || null, catalogueId: row.id, id: row.id + ':' + id, kind: row.kind, group: row.group, name: row.title, sentence: row.sentence, href: row.href, linkLabel: row.linkLabel || null, rowKey: row.id, recurring: !!row.recurring, chainId: String(id), chain: chainInfo(id, networks[id]), status: 'unknown', reading: true, counted: true});
+    const base = id => ({gateText: row.gate?.text || null, missingText: row.missingText || null, catalogueId: row.id, id: row.id + ':' + id, kind: row.kind, group: row.group, name: row.title, sentence: row.sentence, href: row.href, linkLabel: row.linkLabel || null, rowKey: row.id, recurring: !!row.recurring, chainId: String(id), chain: chainInfo(id, networks[id]), status: 'unknown', reading: true, counted: true});
     const add = (step, check) => items.push({step, check});
     try {
       for (const source of row.sources || (row.source ? [row.source] : [])) {

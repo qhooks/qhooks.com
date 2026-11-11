@@ -1,6 +1,7 @@
 // Smart money board (2026-11-10, redesign): every chain, any token, from /api/wallets/smart (sampled pools). A dense sortable
 // table on desktop and tight cards on phones; a live "Smart money buys" feed; Follow and Copy trades on every row; the wallet
 // drawer's cross-chain section (PnL line, holdings, best and worst, recent trades). Read-only: nothing here moves money.
+import {memberIdentity} from './qx-member-identity.mjs';
 const CHAINS = [['all', 'All'], ['4663', 'Robinhood'], ['8453', 'Base'], ['56', 'BNB'], ['42161', 'Arbitrum'], ['99901', 'Elysium'], ['1', 'Ethereum'],['solana','Solana']];
 const SHORT = { '4663': 'RH', '8453': 'Base', '56': 'BNB', '42161': 'Arb', '99901': 'Ely', '1': 'ETH',solana:'SOL' };
 const TFS = [['6h', '6H'], ['24h', '24H'], ['7d', '7D']];
@@ -93,7 +94,7 @@ export function createSmartBoard({ nameOf = short, isFollowing = () => false, to
   }
   function who(r) {
     return el('div', { class: 'qsm-who' }, identicon(r.wallet, 32),
-      el('div', { class: 'qsm-who-t' }, el('div', { class: 'qsm-name' }, el('b', {}, nameOf(r.wallet)), copyBtn(r.wallet)), el('div', { class: 'qsm-tags' }, tagChips(r))));
+      el('div', { class: 'qsm-who-t' }, el('div', { class: 'qsm-name' }, el('b', {}, nameOf(r.wallet)), copyBtn(r.wallet)),memberIdentity(r.wallet,{supplement:true,linked:false,className:'qmi-inline'}), el('div', { class: 'qsm-tags' }, tagChips(r))));
   }
   function tableView(list) {
     const head = el('tr', {}, ...COLS.map(([k, label, f]) => {
@@ -151,7 +152,7 @@ export function createSmartBoard({ nameOf = short, isFollowing = () => false, to
     feedBox.replaceChildren(el('div', { class: 'qsm-feed-h' }, el('span', { class: 'qsm-live', 'aria-hidden': 'true' }), el('h2', {}, 'Smart money buys'), el('small', { class: 'qsm-feed-note' }, 'updates every 15 minutes')),
       S.feed == null ? el('p', { class: 'qsm-empty' }, 'Refreshing…') : !items.length ? el('p', { class: 'qsm-empty' }, 'No buys by ranked wallets in the last day yet.')
         : el('ul', {}, ...items.map(b => el('li', {}, el('a', { href: terminalHref(b.chainId, b.token), class: 'qsm-buy' },
-          tokenIcon(b, 26), el('span', { class: 'qsm-buy-t' }, el('b', {}, b.symbol || short(b.token)), el('small', {}, '#' + b.rank + ' ' + nameOf(b.wallet) + ' · ' + (SHORT[b.chainId] || ''))),
+          tokenIcon(b, 26), el('span', { class: 'qsm-buy-t' }, el('b', {}, b.symbol || short(b.token)), el('small', {}, '#' + b.rank + ' ' + nameOf(b.wallet) + ' · ' + (SHORT[b.chainId] || '')),memberIdentity(b.wallet,{supplement:true,linked:false,className:'qmi-inline'})),
           el('span', { class: 'qsm-buy-v' }, el('b', {}, money(b.usd)), el('small', {}, ago(b.ts))))))));
   }
   async function loadFeed() {

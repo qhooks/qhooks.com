@@ -20,5 +20,5 @@ export function solReviewLines(){const f=solLaunchReview();const pct=n=>Number(n
  ['Split','You '+pct(f.creatorPercent)+' · QHooks '+pct(f.partnerPercent)+' · Meteora '+pct(f.meteoraPercent)+' of each trade.'],
  ['Graduation','At '+C.migrationQuoteThreshold+' SOL the coin moves to a Meteora DAMM v2 pool at the curve’s last price.'],
  ['Liquidity','Locked forever. Nobody can withdraw it.'],
- ['Rewards','Before graduation, traders get '+C.cashbackPercentage+'% of the QHooks share back; referrers get '+C.referralPercentage+'%.'],
+ ['Rewards','Traders get '+C.cashbackPercentage+'% of the QHooks share back; referrers get '+C.referralPercentage+'%.'],
  ];}
