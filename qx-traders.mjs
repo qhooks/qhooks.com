@@ -55,6 +55,9 @@ export function createTraderSolanaSession({getConnection,capture,fetcher=(...arg
 export function mountTraders(target,{client=createTradersClient(),auth,hub,solHub,profile=false,competition=false,document:doc=globalThis.document,events=globalThis.window,timers=globalThis,now=Date.now,pollMs=15000}={}){
  const h=(tag,attrs={},...kids)=>{const node=doc.createElement(tag);for(const[name,value]of Object.entries(attrs)){if(value==null)continue;if(name==='class')node.className=value;else node.setAttribute(name,String(value));}for(const child of kids.flat())if(child!=null)node.append(child.nodeType?child:String(child));return node;};
  const button=(text,click,attrs={})=>{const node=h('button',{type:'button',class:'qa-btn',...attrs},text);node.addEventListener('click',click);return node;};
+ const profileReads=new Map();
+ // Share only in-flight reads: manual Refresh still always asks the server.
+ function readProfile(wallet){if(profileReads.has(wallet))return profileReads.get(wallet);const pending=Promise.resolve().then(()=>client.profile(wallet)).finally(()=>{if(profileReads.get(wallet)===pending)profileReads.delete(wallet);});profileReads.set(wallet,pending);return pending;}
  let disposed=false,tab='feed',filter='all',windowKey='7d',generation=0,refreshTimer,countdownTimer,profileWallet=null,round=null,following=new Set(),busy=false;
  const title=h('h2',{id:profile?'qp-trading-title':'qx-traders-title'},profile?'Trading profile':'Trading records');
  const status=h('p',{class:'qa-empty qt-status',role:'status','aria-live':'polite'}),body=h('div',{class:'qt-panel',role:'tabpanel'}),controls=h('div',{class:'qt-account'}),tabs=h('div',{class:'qt-tabs',role:'tablist','aria-label':profile?'Trading profile views':'Trading views'}),filters=h('div',{class:'qt-filters'}),refresh=button('Refresh',()=>void load());
@@ -63,7 +66,8 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
  const selectedOwner=()=>key(auth?.owner?.());
  const session=()=>auth?.boardSession?.();
  async function signedIn(){const owner=selectedOwner(),family=auth?.family?.();if(!owner){auth?.connect?.();throw Error('Connect a wallet, then try again.');}if(!session())await auth.signIn();if(selectedOwner()!==owner||auth?.family?.()!==family)throw Error('Your wallet changed. Review this setting again.');if(!session())throw Error('Sign in with this wallet to continue.');return owner;}
- async function follows(){if(!session()){following=new Set();return;}try{const result=await client.follows();following=new Set((result.follows||[]).map(row=>key(row.wallet)).filter(Boolean));}catch{following=new Set();}}
+ async function follows(){const expected=session(),owner=selectedOwner(),current=()=>selectedOwner()===owner&&key(session()?.wallet)===key(expected?.wallet)&&session()?.token===expected?.token;if(!expected){following=new Set();return;}try{const result=await client.follows();if(!disposed&&current())following=new Set((result.follows||[]).map(row=>key(row.wallet)).filter(Boolean));}catch{if(current())following=new Set();}}
+ function refreshFollowControls(){if(disposed)return;for(const node of body.querySelectorAll?.('[data-follow-wallet]')||[]){const on=following.has(node.getAttribute('data-follow-wallet'));node.textContent=on?'Following':'Follow trader';node.setAttribute('aria-pressed',String(on));}}
  async function toggleFollow(wallet,node){
   node.disabled=true;
   try{await signedIn();await client.follow(wallet,!following.has(wallet));await follows();node.textContent=following.has(wallet)?'Following':'Follow trader';node.setAttribute('aria-pressed',String(following.has(wallet)));status.textContent='Following list saved.';}
@@ -71,7 +75,7 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
  }
  function traderName(row,{follow=true}={}){
   const wallet=key(row.wallet),name=h('div',{class:'qt-trader'},h('a',{href:'/profile#'+encodeURIComponent(wallet||row.wallet||'')},row.name||short(wallet)),h('code',{title:wallet||''},wallet?short(wallet):'Wallet unavailable'));
-  if(follow&&wallet&&wallet!==selectedOwner()){const control=button(following.has(wallet)?'Following':'Follow trader',()=>void toggleFollow(wallet,control),{'aria-pressed':following.has(wallet)});name.append(control);}return name;
+  if(follow&&wallet&&wallet!==selectedOwner()){const control=button(following.has(wallet)?'Following':'Follow trader',()=>void toggleFollow(wallet,control),{'aria-pressed':following.has(wallet),'data-follow-wallet':wallet});name.append(control);}return name;
  }
  function fact(label,value,cls=''){return h('div',{},h('dt',{},label),h('dd',{class:cls},value));}
  function feedRows(rows){
@@ -109,7 +113,7 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
   if(!owner||!mine)return;
   const checkbox=h('input',{type:'checkbox',id:(profile?'qp':'qx')+'-public-trades'}),save=button('Save sharing',async()=>{save.disabled=true;try{await signedIn();if(selectedOwner()!==owner)throw Error('Your wallet changed. Review this setting again.');await client.saveProfile(checkbox.checked);status.textContent=checkbox.checked?'Your terminal trades are public.':'Your terminal trades are private.';void load();}catch(error){status.textContent=error.message;}finally{save.disabled=false;}});
   controls.append(h('label',{class:'qt-opt-in',for:checkbox.id},checkbox,'Show my terminal trades and PnL publicly'),h('p',{class:'qt-help'},'Off by default. Sharing includes terminal buys and sells on every chain, your trade size, entry market cap and any buy thesis. Turning it off hides your trading record and removes you from rankings.'),save);
-  checkbox.disabled=true;save.disabled=true;const expected=owner;client.profile(owner).then(value=>{if(!disposed&&selectedOwner()===expected&&checkbox.isConnected){checkbox.checked=value.publicTrades===true;checkbox.disabled=false;save.disabled=false;}}).catch(error=>{if(checkbox.isConnected){checkbox.disabled=true;save.disabled=true;status.textContent=error.message;}});
+  checkbox.disabled=true;save.disabled=true;const expected=owner;readProfile(owner).then(value=>{if(!disposed&&selectedOwner()===expected&&checkbox.isConnected){checkbox.checked=value.publicTrades===true;checkbox.disabled=false;save.disabled=false;}}).catch(error=>{if(checkbox.isConnected){checkbox.disabled=true;save.disabled=true;status.textContent=error.message;}});
   if(!profile)void alerts(controls,owner);
  }
  async function alerts(host,owner){
@@ -156,20 +160,22 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
  }
  function schedule(){timers.clearTimeout(refreshTimer);if(!disposed&&!doc.hidden)refreshTimer=timers.setTimeout(()=>void load(),pollMs);}
  async function load(){
-  if(disposed||doc.hidden)return;const mine=++generation;busy=true;refresh.disabled=true;status.textContent='Refreshing…';body.setAttribute('aria-busy','true');
+  if(disposed||doc.hidden)return;const mine=++generation;busy=true;refresh.disabled=true;refresh.textContent='Refreshing…';status.textContent='Refreshing…';body.setAttribute('aria-busy','true');
   let pendingProjection=false,computedAt=null;
   try{
    if(profile){const candidate=key(decodeURIComponent(events.location?.hash?.slice(1)||''));if(candidate!==profileWallet){profileWallet=candidate;body.replaceChildren();accountControls();}if(!candidate){body.replaceChildren(h('p',{class:'qa-empty'},'Look up a wallet to read its shared terminal trades.'));status.textContent='';return;}
-    const value=await client.profile(candidate);pendingProjection=!!value.refreshing;computedAt=value.refreshedAt||value.computedAt;if(mine!==generation||disposed)return;if(!value.publicTrades){body.replaceChildren(h('p',{class:'qa-empty'},'This wallet does not share its terminal trading record.'));status.textContent='';return;}
-    await follows();const feed=await client.feed({filter,wallet:candidate});if(mine!==generation||disposed)return;const pnl=value.pnl,summary=pnl?h('dl',{class:'qt-metrics qt-profile-pnl'},fact('PnL USD',traderUsd(pnl.pnlUsd),tone(pnl.pnlUsd)),fact('PnL %',percent(pnl.pnlPct)),fact('Trades',pnl.trades??value.trades??'—'),fact('Win rate',pnl.winRate==null?'—':percent(Number(pnl.winRate)*100))):null;body.replaceChildren(...[summary,feedRows(feed.trades||[])].filter(Boolean));
+    void follows().then(refreshFollowControls);
+    const value=await readProfile(candidate);pendingProjection=!!value.refreshing;computedAt=value.refreshedAt||value.computedAt;if(mine!==generation||disposed)return;if(!value.publicTrades){body.replaceChildren(h('p',{class:'qa-empty'},'This wallet does not share its terminal trading record.'));status.textContent='';return;}
+    // The profile response already carries its current public trades. Following is optional metadata.
+    const feed=filter==='all'&&Array.isArray(value.trades)?{trades:value.trades.map(row=>({...row,name:row.name||value.name||''}))}:await client.feed({filter,wallet:candidate});if(mine!==generation||disposed)return;const pnl=value.pnl,summary=pnl?h('dl',{class:'qt-metrics qt-profile-pnl'},fact('PnL USD',traderUsd(pnl.pnlUsd),tone(pnl.pnlUsd)),fact('PnL %',percent(pnl.pnlPct)),fact('Trades',pnl.trades??value.trades??'—'),fact('Win rate',pnl.winRate==null?'—':percent(Number(pnl.winRate)*100))):null;body.replaceChildren(...[summary,feedRows(feed.trades||[])].filter(Boolean));
    }else if(tab==='feed'){await follows();const value=await client.feed({filter});if(mine!==generation||disposed)return;body.replaceChildren(feedRows(value.trades||[]));}
    else if(tab==='leaderboard'){const value=await client.leaderboard(windowKey);pendingProjection=!!value.refreshing;computedAt=value.refreshedAt||value.computedAt;if(mine!==generation||disposed)return;body.replaceChildren(h('p',{class:'qt-ranking-note'},'Ranked by real PnL, not followers.'),h('p',{class:'qt-help'},'Realized + unrealized PnL in USD. Trading fees included; network fees and rewards excluded. At least 5 trades in the selected window. A dash means a USD price is unavailable.'),value.refreshing&&!value.rows?.length?h('p',{class:'qa-empty'},'Refreshing leaderboard…'):standings(value.rows||[]));}
    else{const value=await client.competition();pendingProjection=!!value.refreshing;computedAt=value.refreshedAt||value.computedAt;if(mine!==generation||disposed)return;renderCompetition(value);}
    status.textContent=pendingProjection?'Refreshing trading records…'+(computedAt?' Last completed '+new Date(computedAt).toLocaleTimeString()+'.':''):'Updated '+new Date(computedAt||now()).toLocaleTimeString();
   }catch(error){if(mine===generation)status.textContent=error.message+' Your current view stays here. Use Refresh to retry.';}
-  finally{if(mine===generation){busy=false;refresh.disabled=false;body.setAttribute('aria-busy','false');schedule();}}
+  finally{if(mine===generation){busy=false;refresh.disabled=false;refresh.textContent='Refresh';body.setAttribute('aria-busy','false');schedule();}}
  }
- const onVisibility=()=>{if(doc.hidden){generation++;timers.clearTimeout(refreshTimer);busy=false;refresh.disabled=false;body.setAttribute('aria-busy','false');}else void load();};
+ const onVisibility=()=>{if(doc.hidden){generation++;timers.clearTimeout(refreshTimer);busy=false;refresh.disabled=false;refresh.textContent='Refresh';body.setAttribute('aria-busy','false');}else void load();};
  const onHash=()=>{if(profile)void load();else if(['#competition','#leaderboard','#trading-feed'].includes(events.location?.hash)){selectTab(events.location.hash==='#competition'?(competition?'competition':'leaderboard'):events.location.hash==='#leaderboard'?'leaderboard':'feed');target.scrollIntoView?.({block:'start'});}};
  let initialized=false;const onWallet=()=>{if(!initialized)return;generation++;accountControls();void load();};
  doc.addEventListener('visibilitychange',onVisibility);events?.addEventListener?.('hashchange',onHash);events?.addEventListener?.('storage',onWallet);const offHub=hub?.subscribe?.(onWallet),offSol=solHub?.subscribe?.(()=>{if(auth?.family?.()==='solana')onWallet();});
@@ -185,7 +191,7 @@ async function boot(){
   const auth={family:()=>family,selectFamily:value=>{family=value;},owner:()=>family==='solana'?solHub.snapshot().current?.owner:hub.snapshot().current?.owner,boardSession:()=>family==='solana'?sol.boardSession():evm.boardSession(),authHeaders:()=>family==='solana'?sol.authHeaders():evm.authHeaders(),signIn:()=>family==='solana'?sol.signIn():evm.signIn(),connect:()=>family==='solana'?target.querySelector('select')?.focus():hub.open()};
   const client=createTradersClient({headers:auth.authHeaders});
   // The competition tab and links appear only when the Worker turns it on (QHOOKS_TRADER_COMPETITION).
-  const competition=await client.config().then(c=>!!c?.competition).catch(()=>false);
+  const competition=target.id==='qp-trading'?false:await client.config().then(c=>!!c?.competition).catch(()=>false);
   // The competition link is not in the HTML at all (a [hidden] attribute loses to .qx-link's display rule); add it only when it's on.
   if(competition){const feed=document.querySelector('.cx-actions a[href="#trading-feed"]');if(feed&&!document.querySelector('.cx-actions a[href="#competition"]')){const a=document.createElement('a');a.className='qx-link';a.href='#competition';a.textContent='Trading competition →';feed.after(a);}}
   const mounted=mountTraders(target,{client,auth,hub,solHub,profile:target.id==='qp-trading',competition});addEventListener('pagehide',()=>{mounted.dispose();solHub.dispose();},{once:true});

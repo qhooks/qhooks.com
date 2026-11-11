@@ -13,6 +13,7 @@ import {getWalletHub} from './wallet-hub.mjs';
 import {memberHoldingsObservation} from './qx-member-profile-core.mjs';
 import {scoreHeadline,scoreCoverageText,checkpointView} from './qx-caller-score-ui.mjs';
 import * as profileSessions from './qx-board-session.mjs';
+import {readPendingMemberLink} from './qx-member-linked-editor.mjs';
 import {createMemberProfileClient,mountMemberProfileEditor,callerMethodElement} from './qx-member-profile.mjs';
 import {appendMemberAccountChips,appendUnverifiedMemberLinks} from './qx-member-accounts.mjs';
 import { ethCall, words, toAddress, erc20, CHAIN_NAME, h } from '/qx-chain.mjs';
@@ -32,15 +33,31 @@ const CONFIG = '0x79502c55', PHASE_SEL = '0xb1c9fe6e';
 const PHASE = ['Not started', 'Launch pool', 'Graduated', 'Closed'];
 const EXPLORER = chainMap(c => c.explorer);
 const ADDR = /^0x[0-9a-fA-F]{40}$/;
-let seq = 0,requestedEditor=null,requestedSolEditor=null,viewedProfileKey=null;
+let seq = 0,requestedEditor=null,requestedSolEditor=null,viewedProfileKey=null,shownMember=null,linkedRevision=0;
 const profileControls=[];
 function clearProfileControls(){for(const control of profileControls.splice(0))control.dispose();}
 const memberClient=createMemberProfileClient(),hub=getWalletHub(window);
-function linkedAccountsPublished(value){if(value?.wallet!==viewedProfileKey)return;const target=$('qp-member-identity');for(const group of target.querySelectorAll('.qma-chips'))group.remove();appendMemberAccountChips(target,value.accounts,{document});}
-const memberEditor=mountMemberProfileEditor($('qp-member-editor'),{hub,sessions:profileSessions,client:memberClient,onPublished:()=>load(),onAccountsPublished:linkedAccountsPublished});
+// Both owner and public headers use only the saved public response, never editor fields.
+function showMemberHeader(value){
+  if(value?.wallet!==viewedProfileKey||!value.profile)return;
+  if(shownMember?.wallet===value.wallet&&(shownMember.updatedAt||0)>(value.updatedAt||0))value=shownMember;
+  shownMember=value;
+  const identity=memberWallet(value.wallet),name=value.profile.name||short(identity.address),title=$('qp-title');
+  title.replaceChildren(h('span',{class:'qmp-profile-name'},name));
+  appendMemberAccountChips(title,value.accounts?.filter(row=>row.kind==='x'),{document});
+  document.title=name+' | '+(identity.family==='solana'?'Solana profile':'Profile')+' | QHooks';
+  const target=$('qp-member-identity'),details=h('div',{class:'qmp-profile-details'});
+  if(value.profile.bio)details.append(h('p',{class:'qmp-bio'},value.profile.bio));
+  appendMemberAccountChips(details,value.accounts?.filter(row=>row.kind!=='x'),{document});
+  appendUnverifiedMemberLinks(details,value.profile.links,{document});
+  const old=target.querySelector('.qmp-profile-details');if(old)old.replaceWith(details);else target.prepend(details);
+  $('qp-avatar').replaceChildren(...(value.profile.image?[h('img',{src:value.profile.image,alt:'',width:'88',height:'88'})]:[]));
+}
+function linkedAccountsPublished(value){if(value?.wallet!==viewedProfileKey)return;linkedRevision++;showMemberHeader({...shownMember,wallet:value.wallet,profile:shownMember?.profile||{name:'',bio:'',image:'',links:[]},accounts:value.accounts});}
+const memberEditor=mountMemberProfileEditor($('qp-member-editor'),{hub,sessions:profileSessions,client:memberClient,onPublished:value=>load(value),onAccountsPublished:linkedAccountsPublished});
 const solHub=$('qp-solana-editor')?createSolanaProfileWallet(window):null;
 const solSessions=solHub?solanaProfileSessions(solHub):null;
-const solEditor=solHub?mountMemberProfileEditor($('qp-solana-editor'),{hub:solHub,sessions:solSessions,client:memberClient,idPrefix:'qmps',onPublished:()=>load(),onAccountsPublished:linkedAccountsPublished}):null;
+const solEditor=solHub?mountMemberProfileEditor($('qp-solana-editor'),{hub:solHub,sessions:solSessions,client:memberClient,idPrefix:'qmps',onPublished:value=>load(value),onAccountsPublished:linkedAccountsPublished}):null;
 async function prepareSolProfileEditor(wallet,revision){
   if(!solEditor)return;await solEditor.setWallet(wallet);
   if(revision!==seq||requestedSolEditor!==wallet||solHub.snapshot().current?.owner!==wallet||memberWallet(location.hash.slice(1),{allowBareSolana:true})?.key!==wallet)return;
@@ -72,7 +89,7 @@ async function prepareProfileEditor(wallet,revision){
   requestedEditor=null;memberEditor.open();
 }
 $('qp-my-profile').addEventListener('click',()=>{const owner=hub.snapshot().current?.owner?.toLowerCase();if(!owner){$('qp-hint').textContent='Connect your EVM wallet, then choose Edit my profile & privacy. Nothing is saved by connecting.';hub.open();return;}requestedEditor=owner;if(location.hash.slice(1).toLowerCase()===owner)void prepareProfileEditor(owner,seq);else location.hash=owner;});
-hub.subscribe(s=>{const owner=s.current?.owner?.toLowerCase();if(requestedEditor&&owner!==requestedEditor)requestedEditor=null;$('qp-my-profile').textContent=owner?'Edit my EVM profile & privacy →':'Create my EVM profile →';const target=location.hash.slice(1).toLowerCase();if(ADDR.test(target))void prepareProfileEditor(target,seq);});
+hub.subscribe(s=>{const owner=s.current?.owner?.toLowerCase();if(requestedEditor&&owner!==requestedEditor)requestedEditor=null;$('qp-my-profile').textContent=owner?'Edit my EVM profile & privacy →':'Create my EVM profile →';if(owner&&!location.hash.slice(1)&&readPendingMemberLink(owner)){requestedEditor=owner;location.hash=owner;}const target=location.hash.slice(1).toLowerCase();if(ADDR.test(target))void prepareProfileEditor(target,seq);});
 
 const short = a => a.slice(0, 6) + '…' + a.slice(-4);
 const day = s => { const d = new Date((s > 1e12 ? s : s * 1000)); return isNaN(d) ? '—' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); };
@@ -126,7 +143,7 @@ async function launchCard(L, T) {
 }
 
 function showLookup(message) {
-  viewedProfileKey=null;requestedSolEditor=null;void solEditor?.setWallet(null);$('qp-hint').textContent='Look up an EVM or Solana wallet. Name, picture and bio become public only on an explicit save.';
+  viewedProfileKey=null;shownMember=null;requestedSolEditor=null;void solEditor?.setWallet(null);$('qp-hint').textContent='Look up an EVM or Solana wallet. Name, picture and bio become public only on an explicit save.';
   $('qp-title').replaceChildren('Profiles on ', h('span', { class: 'qx-serif' }, 'QHooks.'));
   $('qp-addr').hidden = true; $('qp-explorers').hidden = true; $('qp-verified').replaceChildren(); $('qp-avatar').removeAttribute('style'); $('qp-avatar').classList.remove('is-set');
   $('qp-tiles').replaceChildren(); $('qp-member-identity').replaceChildren(); $('qp-avatar').replaceChildren(); void memberEditor.setWallet(null);
@@ -135,7 +152,7 @@ function showLookup(message) {
   document.title = 'Profiles | QHooks';
 }
 
-async function load() {
+async function load(published) {
   const w = decodeURIComponent(location.hash.slice(1)).trim(), mine = ++seq;
   if(requestedEditor&&w.toLowerCase()!==requestedEditor)requestedEditor=null;
   clearProfileControls();
@@ -143,7 +160,7 @@ async function load() {
   const identity=memberWallet(w,{allowBareSolana:true});
   if(requestedSolEditor&&requestedSolEditor!==identity?.key)requestedSolEditor=null;
   if (!identity) return showLookup('Enter a full EVM or Solana wallet address.');
-  const who = identity.key;viewedProfileKey=who;
+  const who = identity.key;if(viewedProfileKey!==who)shownMember=null;viewedProfileKey=who;if(published?.wallet===who)shownMember=published;
   if(identity.family==='solana'){requestedEditor=null;void memberEditor.setWallet(null);return loadSolanaProfile(identity,mine);}
   requestedSolEditor=null;void solEditor?.setWallet(null);
   $('qp-hint').textContent='Read public calls and launches. Holdings appear only when the wallet owner chooses to share them.';
@@ -153,16 +170,15 @@ async function load() {
   $('qp-avatar').replaceChildren(); $('qp-member-identity').replaceChildren(); void prepareProfileEditor(who,mine);
   paintAvatar($('qp-avatar'), who); $('qp-avatar').classList.add('is-set');
   document.title = short(who) + ' | Profile | QHooks';
+  if(shownMember?.wallet===who)showMemberHeader(shownMember);
   $('qp-root').replaceChildren(h('p', { class: 'qa-loading' }, 'Reading this wallet’s launches…'));
   const get = u => fetch(u, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null);
   const callerRead=get('/api/community/v2/caller/'+who);
-  const [acct, , member, social] = await Promise.all([get('/api/account/' + who + '/launches'), loadModules().catch(() => null), memberClient.read(who).catch(()=>null), get('/api/community/v2/wallet/' + who)]);
+  // Profile identity paints as soon as its own read finishes; optional reads cannot hide it.
+  const accountsRevision=linkedRevision;
+  const memberRead=memberClient.read(who).then(value=>{if(mine===seq)showMemberHeader(accountsRevision!==linkedRevision&&shownMember?.wallet===who?{...value,accounts:shownMember.accounts}:value);return shownMember?.wallet===who?shownMember:value;}).catch(()=>shownMember?.wallet===who?shownMember:null);
+  const [acct, , member, social] = await Promise.all([get('/api/account/' + who + '/launches'), loadModules().catch(() => null), memberRead, get('/api/community/v2/wallet/' + who)]);
   if(mine!==seq)return;
-  if(member?.profile.name){$('qp-title').textContent=member.profile.name;document.title=member.profile.name+' | Profile | QHooks';}
-  if(member?.profile.bio)$('qp-member-identity').append(h('p',{class:'qmp-bio'},member.profile.bio));
-  appendMemberAccountChips($('qp-member-identity'),member?.accounts,{document});
-  appendUnverifiedMemberLinks($('qp-member-identity'),member?.profile.links,{document});
-  if(member?.profile.image)$('qp-avatar').append(h('img',{src:member.profile.image,alt:'',width:'88',height:'88'}));
   const callerActions=h('div',{});$('qp-member-identity').append(callerActions);const callerControl=mountProfileCallerActions(callerActions,{wallet:who,label:member?.profile.name||short(who),hub,document});profileControls.push(callerControl);
   const caller=await callerRead;if(mine!==seq)return;callerControl.update(caller,social?.callStats);
   let held=member?.profile.shareHoldings?memberHoldingsObservation(await get('/api/terminal/wallet/'+who),who):null;
@@ -264,17 +280,13 @@ function callsSection(caller, fallbackStats) {
 }
 async function loadSolanaProfile(identity,mine){
   const {key,address}=identity;$('qp-input').value=address;$('qp-title').textContent=short(address);$('qp-full').textContent=address;$('qp-addr').hidden=false;$('qp-verified').replaceChildren();$('qp-avatar').replaceChildren();$('qp-member-identity').replaceChildren();$('qp-tiles').replaceChildren();
-  paintAvatar($('qp-avatar'),key);$('qp-avatar').classList.add('is-set');document.title=short(address)+' | Solana profile | QHooks';
+  paintAvatar($('qp-avatar'),key);$('qp-avatar').classList.add('is-set');document.title=short(address)+' | Solana profile | QHooks';if(shownMember?.wallet===key)showMemberHeader(shownMember);
   $('qp-explorers').replaceChildren('Wallet on ',h('a',{href:'https://solscan.io/account/'+address,target:'_blank',rel:'noopener noreferrer'},'Solana (Solscan) ↗'));$('qp-explorers').hidden=false;
   $('qp-root').replaceChildren(h('p',{class:'qa-loading'},'Reading this Solana profile…'));void prepareSolProfileEditor(key,mine);
   $('qp-hint').textContent='Solana profile. Name, picture and bio are public when saved. Holdings and trade history are not shared.';
-  let member=null,error=null;try{member=await memberClient.read(key);}catch(value){error=value;}
+  const accountsRevision=linkedRevision;let member=null,error=null;try{member=await memberClient.read(key);if(accountsRevision!==linkedRevision&&shownMember?.wallet===key)member={...member,accounts:shownMember.accounts};}catch(value){error=value;}
   if(mine!==seq)return;
-  if(member?.profile.name){$('qp-title').textContent=member.profile.name;document.title=member.profile.name+' | Solana profile | QHooks';}
-  if(member?.profile.bio)$('qp-member-identity').append(h('p',{class:'qmp-bio'},member.profile.bio));
-  appendMemberAccountChips($('qp-member-identity'),member?.accounts,{document});
-  appendUnverifiedMemberLinks($('qp-member-identity'),member?.profile.links,{document});
-  if(member?.profile.image)$('qp-avatar').append(h('img',{src:member.profile.image,alt:'',width:'88',height:'88'}));
+  if(member)showMemberHeader(member);
   const note=h('section',{class:'qa-section'},h('h2',{},'Join the community'),h('p',{},'Explore token discussions and caller records. Posting, signed calls and sending thanks currently require an EVM wallet.'),h('div',{class:'qa-actions'},h('a',{class:'qa-btn',href:'/community#boards'},'Explore discussions →'),h('a',{class:'qa-btn',href:'/community#callers'},'Discover callers →')));
   if(error){const retry=h('button',{type:'button',class:'qa-btn'},'Retry profile');retry.addEventListener('click',()=>load());note.prepend(h('p',{role:'status'},'This Solana profile could not be read. '+error.message),retry);}
   else if(!member?.profile.name&&!member?.profile.bio&&!member?.profile.image)note.prepend(h('p',{class:'qa-empty'},'This wallet has not added a public name, picture or bio yet.'));
