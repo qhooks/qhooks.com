@@ -5,7 +5,7 @@ import {chainById} from './chains.mjs';
 const FEEDS={ETH:['8453','0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70'],BNB:['56','0x0567f2323251f0aab15c8dfb1967e4e8a7d42aee']};
 export async function readCreateNativeUSD(symbol,{fetcher=globalThis.fetch,now=Date.now,timers=globalThis}={}){
  // HYPE (Elysium) has no Chainlink feed here: the site's own price route (server/native-prices.mjs, CoinGecko, cached).
- if(symbol==='HYPE'||symbol==='SOL')return readSitePrice(symbol,{fetcher,timers});
+ if(symbol==='HYPE'||symbol==='SOL'||symbol==='MON')return readSitePrice(symbol,{fetcher,timers});
  const feed=FEEDS[symbol];if(!feed)return null;
  const controller=new AbortController(),timer=timers.setTimeout(()=>controller.abort(),8000);
  try{

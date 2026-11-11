@@ -1,10 +1,11 @@
+import {LIVE} from './chains.mjs';
 // A small, same-origin pool reader for token views and Discover profiles.
 const ADDRESS = /^0x[\da-f]{40}$/i;
 const ZERO = '0x' + '0'.repeat(40);
 const mounted = new WeakMap();
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const compact = value => String(value).slice(0,6) + '…' + String(value).slice(-4);
-const chains = {8453:'Base',4663:'Robinhood Chain',1:'Ethereum',42161:'Arbitrum One',56:'BNB Chain'};
+const chains = Object.fromEntries(LIVE.map(c=>[c.id,c.name]));
 const marks = {'swap-amounts':'Swap amounts','swap-rules':'Swap','swap-callbacks':'Swap','add-liquidity':'Add liquidity','remove-liquidity':'Remove liquidity','liquidity-amounts':'Liquidity amounts','initialize':'Initialize','donate':'Donate'};
 
 export function tokenHooksKey(input = {}) {

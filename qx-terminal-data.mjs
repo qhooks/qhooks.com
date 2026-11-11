@@ -52,7 +52,7 @@ export async function loadExternalHeader({chainId,address,tf,signal,fetcher=glob
   candles:[],trades:[],holders:[],traders:[],synced:{behind:0,at:0,block:0},
   marketCoverage:{candles:'loading',trades:'loading'},historyFreshness:{candles:{loading:true},trades:{loading:true}}};
 }
-const GECKO_NET={'8453':'base','1':'eth','42161':'arbitrum','56':'bsc','4663':'robinhood','99901':'elysium',solana:'solana'};
+const GECKO_NET={'8453':'base','1':'eth','42161':'arbitrum','56':'bsc','4663':'robinhood','99901':'elysium','143':'monad',solana:'solana'};
 /// Recent swaps for one pool from GeckoTerminal, in the server's /x/trades shape. Null when unavailable.
 export async function browserTrades({chainId,pool,signal,fetcher=globalThis.fetch}){
  const net=GECKO_NET[String(chainId)];if(!net||!pool)return null;

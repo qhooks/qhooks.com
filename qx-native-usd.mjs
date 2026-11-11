@@ -47,14 +47,14 @@ export async function fillNativeUsd(data, read = ethUsd) {
   return data;
 }
 
-// Any native quote (2026-11-10, quoteusd): USD per WETH/ETH, WBNB/BNB or WHYPE/HYPE from the site's own native price route
+// Any native quote (2026-11-10, quoteusd): USD per WETH/ETH, WBNB/BNB, WHYPE/HYPE or WMON/MON from the site's own native price route
 // (Hyperliquid allMids behind it), USD stables 1:1. Cached a minute; null when unknown.
 let natives = null;
 export async function quoteUsd(symbol, fetcher = (...a) => fetch(...a)) {
   const sym = String(symbol || '').toUpperCase();
   if (/^(USD|USDC|USDT|USDG|DAI)$/.test(sym)) return 1;
-  const m = /^W?(ETH|BNB|HYPE)$/.exec(sym); if (!m) return null;
-  if (!natives || Date.now() - natives.at > TTL) natives = {at: Date.now(), p: fetcher('/api/funding/native-prices?symbols=ETH,BNB,HYPE', {cache: 'no-store', signal: AbortSignal.timeout(TIMEOUT)})
+  const m = /^W?(ETH|BNB|HYPE|MON)$/.exec(sym); if (!m) return null;
+  if (!natives || Date.now() - natives.at > TTL) natives = {at: Date.now(), p: fetcher('/api/funding/native-prices?symbols=ETH,BNB,HYPE,MON', {cache: 'no-store', signal: AbortSignal.timeout(TIMEOUT)})
     .then(r => r.ok ? r.json() : null).then(b => b?.prices || {}).catch(() => ({}))};
   const v = Number((await natives.p)[m[1]]);
   if (v > 0) return v;

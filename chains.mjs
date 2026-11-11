@@ -232,6 +232,19 @@ const rows = [
     data: { gecko: null, dex: null, alchemy: 'elysium-mainnet', zeroEx: false }
   },
   {
+    // The Monad v4 build is offered by one-tap only after its code probe succeeds.
+    id: '143', hex: '0x8f', key: 'monad', name: 'Monad', short: 'Monad', icon: 'monad', status: 'live', family: 'monad',
+    simpleLaunchMulti: { address: '0x0f73962ed759b0abdb92cbecbc3ef2bf462a20cc', from: 121245205, abi: 'pq', quotes: [[1, 'USDC', '0x754704bc059f8c67012fed69bc8a327a5aafb603', 6, 'stable']] },
+    feeModel: 'ethereum', feeAccounting: 'execution-only', feeCapWei: null, gasFloorWei: null,
+    native: 'MON', rpc: 'https://rpc.monad.xyz', logsRpc: 'https://rpc.monad.xyz', logStep: 1000, blockTime: 0.4,
+    explorer: 'https://monadvision.com',
+    contracts: { manager: '0x188d586ddcf52439676ca21a244753fa19f9ea8e', stateView: '0x77395f3b2e73ae90843717371294fa97cc419d64', quoter: '0xa222dd357a9076d1091ed6aa2e16c9742dd26891', positionManager: '0x5b7ec4a94ff9bedb700fb82ab09d5846972f4016', router: '0xa6ce4f10d83dbddac17e68e1837ca9ce6a1b596e', permit2: '0x000000000022d473030f116ddee9f6b43ac78ba3', extended: false },
+    quote: { address: '0x3bd359c1119da7da1d913d1c4d2b7c461115433a', symbol: 'WMON', decimals: 18, wrapNative: true },
+    wrappedNative: '0x3bd359c1119da7da1d913d1c4d2b7c461115433a', usdc: '0x754704bc059f8c67012fed69bc8a327a5aafb603',
+    router: false, lab: false,
+    data: { gecko: 'monad', dex: 'monad', alchemy: 'monad-mainnet', zeroEx: false }
+  },
+  {
     // Uniswap's own OP-stack L2. Assessed, not built (Randall decides): CHAINS.md#unichain.
     id: '130', hex: '0x82', key: 'unichain', name: 'Unichain', short: 'Unichain', icon: null, status: 'planned', family: 'op-stack',
     feeModel: 'op-stack', feeAccounting: 'separate-data-and-operator-fees', feeCapWei: null, gasFloorWei: null,

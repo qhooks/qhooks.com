@@ -293,8 +293,18 @@ const walletRequest=conn=>(method,params)=>conn.entry.provider.request({method,p
 // Checks whether this chain's clean-token launch contract has code (cached; see qx-quick-launch-core primeCleanFactory).
 const getCodeOn=id=>a=>fetch(chainById(id).rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_getCode',params:[a,'latest']})}).then(r=>r.json()).then(j=>j.result);
 const primeClean=(id,o)=>primeCleanFactory(id,getCodeOn(id),o),primePairs=(id,o)=>primePairsFactory(id,getCodeOn(id),o),primeMulti=(id,o)=>primeMultiFactory(id,getCodeOn(id),o);
+// Multi-only chains have no cards until code exists, so probe them before they can enter the picker.
+async function probeQuickChains(){
+ const requested=urlChain();
+ await Promise.all(visibleChains().filter(c=>multiFactory(c.id)&&!quickFactory(c.id)).map(async c=>{
+  const result=await primeMulti(c.id).catch(()=>null);if(!result?.changed||busy)return;
+  if(requested===c.id&&urlChain()===requested){quickChain=c.id;pick=null;extraPools=[];poolPrices=null;pairIdx=0;}
+  renderIdeas();
+  if(requested===c.id&&urlChain()===requested){const hash=/^#quick(?:-([a-z-]+))?$/.exec(location.hash||'');if(hash)openQuick(hash[1]||'fair',{scroll:true});}
+ }));
+}
 async function refreshCost(){
- if(!pick)return null;
+ if(!pick||!quickFactory(chainId))return null;
  renderPools();if(poolsBlocked()){cost=null;renderQuick();return null;}
  // The launch contract must be settled before the price of the exact transaction is read.
  await primeClean(chainId,{background:true}).catch(()=>{});const run=++costRun,style=pick.style,snipe=pick.snipe,steps=startCapOn()?startSteps:0,pqKey=pqOnChain()?pqKeyHex():null,pair=curPair(),quoteIndex=pair?pair.index:0;
@@ -337,7 +347,7 @@ async function receipt(provider,hash){
  throw Error('The network took too long to confirm. Your transaction may still land; check it with the link below.');
 }
 async function launch(){
- if(busy||!pick)return;if(!CREATE_EXECUTION_ENABLED){note(CREATE_EXECUTION_HOLD,true);return;}
+ if(busy||!pick||!quickFactory(chainId))return;if(!CREATE_EXECUTION_ENABLED){note(CREATE_EXECUTION_HOLD,true);return;}
  let conn=hub.snapshot().current;if(!conn){hub.open();return;}
  let f;try{f=fields();validateQuick(f);}catch(e){note(e.message,true);return;}
  try{await assertTickerFree({symbol:f.symbol,chainId,creator:conn.owner});}catch(e){if(e instanceof TickerTaken){showTaken(e.result);renderQuick();return;}throw e;}
@@ -371,7 +381,7 @@ async function launch(){
 
 function mount(){
  if(!$('ideas'))return;
- {const u=urlChain();if(u&&(ideaCards(u).length||multiFactory(u)))quickChain=u;}
+ {const u=urlChain();if(u&&ideaCards(u).length)quickChain=u;}
  renderIdeas();
  chainSelect?.addEventListener('change',()=>{renderIdeas();if(pick)openQuick(pick.id);checkTickerSoon();});
  $('use-robinhood')?.addEventListener('click',()=>setQuickChain('4663'));
@@ -391,5 +401,6 @@ function mount(){
   if(prefill.ticker!==undefined)$('symbol').value=prefill.ticker;
   openQuick(prefill.style,{scroll:true});checkTickerSoon();costSoon();
  }else{const h=/^#quick(?:-([a-z-]+))?$/.exec(location.hash);if(h)openQuick(h[1]||'fair',{scroll:true});}
+ void probeQuickChains();
 }
 mount();

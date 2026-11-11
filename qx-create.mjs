@@ -6,6 +6,7 @@ import {appendArbRecaptureLine,createCostView,walletStepLabel,showRequiredQuantu
 import {readCreateNativeUSD} from './qx-create-prices.mjs';
 import {visibleChains,chainById} from './chains.mjs';
 import {launchChains as guidedChains} from './chain-catalog.mjs';
+import {quickFactory} from './qx-quick-launch-core.mjs';
 import {getWalletHub} from './wallet-hub-fresh.mjs';
 import {EMBEDDED_RDNS} from './embedded-wallet-provider.mjs';
 import {withLaunchSession} from './qx-instant-bridge.mjs';
@@ -23,7 +24,7 @@ import {createLaunchReviewGate} from './qx-create-review.mjs';
 import {mountCreateChainPackage,prepareCreateChainHandoff,adoptCreateProfile} from './qx-create-chain-package.mjs';
 import {liquidityAffordability,liquidityDraftState,readLiquidityBalances} from './qx-create-liquidity.mjs';
 const $=id=>document.getElementById('qc-'+id),DRAFT='qhooks:create:draft:v1',ACTIVE='qhooks:create:active:v1';
-const hub=getWalletHub(window),chains=visibleChains();
+const hub=getWalletHub(window),chains=visibleChains().filter(c=>quickFactory(c.id)||guidedChains.some(g=>g.id===c.id));
 const chainPackage=mountCreateChainPackage({container:$('chain-package')});
 const el=(tag,attrs={},...kids)=>{const n=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')n.className=v;else if(k in n)n[k]=v;else n.setAttribute(k,v);}n.append(...kids.filter(x=>x!==null&&x!==undefined));return n;};
 let solCreate=null,startControl=null;

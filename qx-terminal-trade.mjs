@@ -1,6 +1,7 @@
 import {sellPortion} from './qx-position-core.mjs';
 import {poolQuoteInfo} from './qx-best-pool.mjs';
 import {chainById} from './chains.mjs';
+import {externalTradingNote} from './qx-external-trading.mjs';
 import {quoteUsd as readQuoteUsd} from '/qx-native-usd.mjs';
 import {homePicker, homeConfig, loadHomePref, instantHomeEnabled, withHomeRails} from './qx-home-currency.mjs';
 import {loadLocalHome, homeTicketDefault, homeName, homeToken, homeSlippage, homeReturnNeeded} from './qx-home-core.mjs';
@@ -135,7 +136,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     link.addEventListener('click', async () => { try { await navigator.clipboard.writeText(referralLink(me)); link.textContent = 'Link copied'; } catch { link.textContent = referralLink(me); } });
     cash.append(h('p',{},h('a',{href:'/me#qa-rewards'},'Claim cashback'), ' · ',link));
   }
-  const showSignIn = () => { const out = !st?.sol && !connectedAddress(); if (out) addFunds.hidden = true; signIn.hidden = !out; go.hidden = out; signIn.textContent = side === 'sell' ? 'Sign in to sell' : 'Sign in to buy'; };
+  const showSignIn = () => { const out = !st?.noRoute && !st?.sol && !connectedAddress(); if (out) addFunds.hidden = true; signIn.hidden = !out; go.hidden = out; signIn.textContent = side === 'sell' ? 'Sign in to sell' : 'Sign in to buy'; };
   const sideBtns = ['buy', 'sell'].map(s => h('button', { type: 'button', 'data-side': s, ariaPressed: String(s === side) }, s === 'buy' ? 'Buy' : 'Sell'));
   const sellToCash = h('button', { type: 'button', 'data-side': 'cash', hidden: !xchainEnabled }, 'Sell to cash');
   const paySel = h('select', { ariaLabel: 'Pay with' });
@@ -282,6 +283,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
 
   async function layout() {
     if (!st||busy||recovery) return;
+    if (st.noRoute) { out.textContent=st.noRoute; go.disabled=true; go.hidden=false; signIn.hidden=true; addFunds.hidden=true; cash.replaceChildren(); return; }
     const activeState=st,intent=selection,mine=++layoutRevision;
     syncProfile();
     sideBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.side === side)));
@@ -501,12 +503,14 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     clearArmed();
     clearTimeout(timer); current = null; go.disabled = true; qseq++;
     funding.clear(); quoteDetails.replaceChildren(); recovery = null; followup.replaceChildren();
+    if (st?.noRoute) { quoteLoading=false; renderQuoteFreshness(); quoteTools.hidden=true; out.textContent=st.noRoute; return; }
     quoteLoading=hasQuoteAmount();renderQuoteFreshness();
     out.textContent = amount.value ? (st?.ext ? 'Finding the best route…' : 'Quoting through the pool…') : 'Enter an amount or pick a preset.';
     timer = setTimeout(quote, 300);
   }
   async function quote() {
     if (!st) return;
+    if (st.noRoute) { out.textContent=st.noRoute; current=null; go.disabled=true; return; }
     syncProfile();
     if (!st.sol && (homeSelected || homeReturnNeeded(st.chainId, homePref, homeEnabled))) tol = String(homeSlippage(tol));
     const mine = ++qseq,read={revision:mine,state:st,selection,owner:quoteOwner(),sol:!!st.sol,toleranceBps:Number(tol)}; let a;
@@ -783,6 +787,12 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         paySel.replaceChildren(h('option', { value: 'native' }, 'SOL'), h('option', { value: 'quote' }, 'USDC'));
         pay = 'native'; paySel.value = pay;
         await syncHome(true); renderRisk(); await layout(); return isSelection(intent);
+      }
+      const noRoute=externalTradingNote(t.chainId);
+      if (noRoute) {
+        st={ext:true,noRoute,chainId:String(t.chainId),token:t.address,symbol:t.symbol||'token',decimals:Number(t.decimals??18),quote:null,quoteSymbol:null,quoteDecimals:18,safety:t.safety||null};
+        pay='native';paySel.replaceChildren(h('option',{value:'native'},NATIVE[t.chainId]));paySel.value=pay;
+        await layout();return isSelection(intent);
       }
       const meta = t.decimals == null ? await erc20(t.chainId, t.address).catch(() => ({ decimals: 18 })) : { decimals: t.decimals };
       if(!isSelection(intent))return false;

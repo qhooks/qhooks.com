@@ -1,15 +1,17 @@
 // Public launch boot boundary only. Resolve or reject the URL chain before the
 // page can discover a provider or load any launch, wallet or crypto runtime.
 import {visibleChains, LIVE} from './chains.mjs';
+import {networkProfiles} from './full-launch/packages/multichain/profiles.mjs';
 // Launchable chains come from the registry: live ones, plus hidden/testnet ones (Arc until a launch there is
 // proven, Elysium Testnet) only when the hidden-chain flag is on (?chains=all).
-const chainIds = Object.freeze(visibleChains().map(c => c.id));
+const launchRows = () => visibleChains().filter(c => c.lab || c.simpleLaunch || c.simpleLaunchNext?.address || c.simpleLaunchClean?.address || c.status === 'testnet' && networkProfiles.some(p => p.id === c.id));
+const chainIds = Object.freeze(launchRows().map(c => c.id));
 
 // Hidden chains are not in the static HTML: add their network option and Studio chain button at boot.
 function addHiddenChains(d, select) {
   const live = new Set(LIVE.map(c => c.id));
   const row = d.querySelector('.qtd-chain-row'), model = row?.querySelector('[data-qtd-chain]');
-  for (const c of visibleChains()) {
+  for (const c of launchRows()) {
     if (live.has(c.id) || [...select.options].some(o => o.value === c.id)) continue;
     const o = d.createElement('option'); o.value = c.id; o.textContent = `${c.name} · ${c.native} gas`; select.append(o);
     if (model && !row.querySelector(`[data-qtd-chain="${c.id}"]`)) {

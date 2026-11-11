@@ -9,7 +9,8 @@ const rows = [
  // Elysium mainnet (2026-11-09; Kinetiq docs). Hidden in public/chains.mjs until go-public.
  ['99901','0x1863d','elysium','Elysium','nitro','data-fee-in-estimate-gas','https://rpc.elysium.kinetiq.xyz','https://elysium.kinetiq.xyz','HYPE'],
  // Elysium testnet: hidden test profile (public/chains.mjs status 'testnet'); resolves on the fork harness only.
- ['99801','0x185d9','elysium-testnet','Elysium Testnet','nitro','data-fee-in-estimate-gas','https://testnet-rpc.elysium.kinetiq.xyz','https://explorer-elysium-testnet.t.conduit.xyz','HYPE']
+ ['99801','0x185d9','elysium-testnet','Elysium Testnet','nitro','data-fee-in-estimate-gas','https://testnet-rpc.elysium.kinetiq.xyz','https://explorer-elysium-testnet.t.conduit.xyz','HYPE'],
+ ['143','0x8f','monad','Monad','ethereum','execution-only','https://rpc.monad.xyz','https://monadvision.com','MON']
 ];
 export const networkProfiles=Object.freeze(rows.map(([id,hexId,slug,name,feeModel,feeAccounting,publicRpc,explorer,nativeSymbol])=>Object.freeze({
  id,hexId,slug,name,feeModel,feeAccounting,publicRpc,explorer,nativeSymbol,nativeDecimals:18,

@@ -10,6 +10,7 @@ const STABLE = {
   '8453': ['USDC', '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', 6], '1': ['USDC', '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', 6],
   '42161': ['USDC', '0xaf88d065e77c8cc2239327c5edb3a432268e5831', 6], '56': ['USDC', '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', 18],
   '4663': ['USDG', '0x5fc5360d0400a0fd4f2af552add042d716f1d168', 6],
+  '143': ['USDC', chainById('143').usdc, 6],
 };
 // Chainlink USD feeds (description() checked: "ETH / USD", "BNB / USD"; 8 decimals).
 const FEEDS = { ETH: ['8453', '0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70'], BNB: ['56', '0x0567f2323251f0aab15c8dfb1967e4e8a7d42aee'] };
@@ -36,7 +37,7 @@ async function usdPrice(fetcher, symbol) {
   return Number(answer) / 1e8;
 }
 
-const WRAPPED = { ETH: 'WETH', BNB: 'WBNB' };
+const WRAPPED = { ETH: 'WETH', BNB: 'WBNB', MON: 'WMON' };
 const raw = hex => BigInt(!hex || hex === '0x' ? 0 : hex).toString();
 /// QHooks launch tokens the wallet holds (terminal index positions → token address from the market, balance on chain).
 async function launchTokens(owner, fetcher, chains) {

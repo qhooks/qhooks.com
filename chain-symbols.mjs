@@ -1,6 +1,7 @@
 // Decorative chain marks for reviewed, public chain-selection surfaces only.
 // This module never reads a wallet, sends RPC, or changes control values/text.
 export const CHAIN_SYMBOLS=Object.freeze([
+ Object.freeze({id:'143',name:'Monad',aliases:Object.freeze(['Monad']),icon:'/chain-symbol-icons/monad.svg',kind:'original'}),
  Object.freeze({id:'8453',name:'Base',aliases:Object.freeze(['Base']),icon:'/chain-symbol-icons/base.svg',kind:'official'}),
  Object.freeze({id:'4663',name:'Robinhood Chain',aliases:Object.freeze(['Robinhood Chain','Robinhood']),icon:'/chain-symbol-icons/robinhood.svg',kind:'official'}),
  Object.freeze({id:'1',name:'Ethereum',aliases:Object.freeze(['Ethereum']),icon:'/chain-symbol-icons/ethereum.svg',kind:'official'}),

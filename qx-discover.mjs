@@ -1,11 +1,16 @@
 import {discoveryCoverage} from './qx-discover-coverage.mjs';
+import {LIVE} from './chains.mjs';
 import {inspectorProfileMatches,mountInspectorRepoProof} from './qx-discover-repoproof.mjs';
 // Shared Discover formatting, deterministic layout and same-origin page controllers.
 import {projectSummary, projectLabURL} from './qx-discover-projects.mjs';
 import {mountHookChanges, mountRecentChanges, renderTapeStatusCards, upgradeableLabel} from './qx-discover-monitor.mjs';
 export const API = '/api/v1/hooks';
 export const PERMISSIONS = Object.freeze(['beforeInitialize', 'afterInitialize', 'beforeAddLiquidity', 'afterAddLiquidity', 'beforeRemoveLiquidity', 'afterRemoveLiquidity', 'beforeSwap', 'afterSwap', 'beforeDonate', 'afterDonate', 'beforeSwapReturnDelta', 'afterSwapReturnDelta', 'afterAddLiquidityReturnDelta', 'afterRemoveLiquidityReturnDelta']);
-export const CHAIN_NAMES = Object.freeze({8453:'Base',4663:'Robinhood Chain',1:'Ethereum',42161:'Arbitrum One',56:'BNB Chain'});
+export const CHAIN_NAMES = Object.freeze(Object.fromEntries(LIVE.map(c=>[c.id,c.name])));
+export function addDiscoveryChains(select, option=(name,id)=>new Option(name,id)) {
+  if(!select)return;
+  for(const [id,name] of Object.entries(CHAIN_NAMES))if(![...select.options].some(o=>o.value===id))select.add(option(name,id));
+}
 export const GROUPS = Object.freeze(['Swap amounts', 'Swap callbacks', 'Liquidity', 'Pool lifecycle', 'No permission bits']);
 const COLORS = ['var(--qx-sage)','var(--qx-brass)','#9d9e96','#8ca5b1','#b3a0b8','#9d9e96'];
 const chainColor = id => ({8453:0,4663:1,1:2,42161:3,56:4}[Number(id)] ?? 5);
@@ -358,6 +363,7 @@ export async function requestJSON(path, options = {}, fetcher = globalThis.fetch
 function boot() {
   const main=document.querySelector('[data-discover]'); if (!main) return;
   const $=id=>document.getElementById(id), status=text=>{if($('qd-status')) $('qd-status').textContent=text;};
+  for(const select of main.querySelectorAll('select[name="chain"],select[name="chainId"]'))addDiscoveryChains(select);
   let watch=[];try {watch=normalizeWatchlist(JSON.parse(localStorage.getItem(WATCH_KEY) || '[]'));}catch{}
   const watched=id=>watch.includes(id);
   const saveWatch=(id)=>{const next=toggleWatchlist(watch,id);try{localStorage.setItem(WATCH_KEY,JSON.stringify(next));watch=next;}catch{throw new Error('Browser storage is unavailable. This hook could not be saved.');} document.querySelectorAll('[data-star]').forEach(b=>{const yes=watched(b.dataset.star);b.setAttribute('aria-pressed',String(yes));b.textContent=b.classList.contains('qd-star')?(yes?'★':'☆'):(yes?'★ Watching':'☆ Watch');});renderWatch();};

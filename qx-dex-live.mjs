@@ -1,7 +1,7 @@
 // Live market numbers read by the visitor's own browser from DexScreener's public API (CORS *),
 // so the shared server egress rate limit never freezes a visible page. Read-only; no wallet calls.
 // The server copy stays the first paint and the fallback.
-export const DEX_CHAINS = Object.freeze({ '8453': 'base', '1': 'ethereum', '42161': 'arbitrum', '56': 'bsc', '4663': 'robinhood', '99901': 'elysium', solana: 'solana' });
+export const DEX_CHAINS = Object.freeze({ '8453': 'base', '1': 'ethereum', '42161': 'arbitrum', '56': 'bsc', '4663': 'robinhood', '143': 'monad', '99901': 'elysium', solana: 'solana' });
 const API = 'https://api.dexscreener.com/tokens/v1/';
 const num = v => { const n = Number(v); return Number.isFinite(n) ? n : null; };
 const frac = v => { const n = num(v); return n === null ? null : n / 100; };

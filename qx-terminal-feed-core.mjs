@@ -12,6 +12,7 @@ export const DASH = '—';
 export const CHAINS = [
   ['all', 'All', null], ['solana', 'Solana', 'solana'], ['4663', 'Robinhood', 'robinhood'], ['56', 'BNB', 'bnb'],
   ['99901', 'Elysium', 'elysium'], ['1', 'Ethereum', 'ethereum'], ['8453', 'Base', 'base'], ['42161', 'Arbitrum', 'arbitrum'],
+  ['143', 'Monad', 'monad'],
 ];
 export const TABS = DISCOVERY_TABS;
 export function feedSourceLabel(source){

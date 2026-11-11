@@ -5,6 +5,7 @@
 // Order: server rows first, then GeckoTerminal pools, then DexScreener boosts/profiles/search. The last good list per
 // view is kept on the device so a refresh never paints a blank list.
 export const NETWORKS = Object.freeze({
+  '143': { gecko: 'monad', dex: 'monad', search: ['monad', 'WMON'] },
   '8453': { gecko: 'base', dex: 'base', search: ['base', 'WETH base'] },
   '1': { gecko: 'eth', dex: 'ethereum', search: ['ethereum', 'WETH'] },
   '42161': { gecko: 'arbitrum', dex: 'arbitrum', search: ['arbitrum', 'ARB'] },
@@ -16,7 +17,7 @@ export const NETWORKS = Object.freeze({
 const DEX_TO_ID = Object.fromEntries(Object.entries(NETWORKS).map(([id, n]) => [n.dex, id]));
 const GECKO_TO_ID = Object.fromEntries(Object.entries(NETWORKS).map(([id, n]) => [n.gecko, id]));
 // "All" reads these when the server has nothing: the chains QHooks trades on, EVM first.
-export const ALL_ORDER = ['8453', '4663', '56', '42161', '1', '99901'];
+export const ALL_ORDER = ['8453', '4663', '56', '42161', '1', '99901', '143'];
 const GECKO = 'https://api.geckoterminal.com/api/v2';
 const DEX = 'https://api.dexscreener.com';
 export const MIN_ROWS = 12;

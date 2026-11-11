@@ -2,7 +2,7 @@
 // so the browser blocks the response. Load this module before a page's own scripts: a POST to the Robinhood or Elysium
 // public RPC that fails in the browser is retried once through qhooks.com/api/rpc/<chain> (read methods only), and later
 // reads on the page go straight there. Wallet transactions are unaffected: they go through the wallet, not fetch.
-const HOSTS = {'rpc.mainnet.chain.robinhood.com': '4663', 'rpc.elysium.kinetiq.xyz': '99901'};
+const HOSTS = {'rpc.mainnet.chain.robinhood.com': '4663', 'rpc.elysium.kinetiq.xyz': '99901', 'rpc.monad.xyz': '143'};
 if (typeof window !== 'undefined' && !window.__qxRpcFallback) {
   window.__qxRpcFallback = true;
   // Robinhood's public RPC answers "*,*" often enough that a first direct try logs a console error: go through the proxy

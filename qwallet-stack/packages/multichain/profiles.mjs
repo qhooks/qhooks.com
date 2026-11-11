@@ -5,7 +5,8 @@ const rows = [
  ['1','0x1','ethereum','Ethereum','ethereum','execution-only','https://ethereum-rpc.publicnode.com','https://etherscan.io','ETH'],
  ['42161','0xa4b1','arbitrum','Arbitrum One','nitro','data-fee-in-estimate-gas','https://arb1.arbitrum.io/rpc','https://arbiscan.io','ETH'],
  ['56','0x38','bnb','BNB Chain','bsc','bsc-execution','https://bsc-dataseed.bnbchain.org','https://bscscan.com','BNB'],
- ['5042','0x13b2','arc','Arc','arc-stablecoin','execution-only-native-usdc','https://rpc.mainnet.arc.io','https://explorer.arc.io','USDC']
+ ['5042','0x13b2','arc','Arc','arc-stablecoin','execution-only-native-usdc','https://rpc.mainnet.arc.io','https://explorer.arc.io','USDC'],
+ ['143','0x8f','monad','Monad','ethereum','execution-only','https://rpc.monad.xyz','https://monadvision.com','MON']
 ];
 export const networkProfiles=Object.freeze(rows.map(([id,hexId,slug,name,feeModel,feeAccounting,publicRpc,explorer,nativeSymbol])=>Object.freeze({
  id,hexId,slug,name,feeModel,feeAccounting,publicRpc,explorer,nativeSymbol,nativeDecimals:18,
