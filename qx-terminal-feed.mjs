@@ -5,6 +5,8 @@ import {fetchDexPairs,pickPair,rowPatch,applyRowPatch,DEX_CHAINS} from './qx-dex
 import {renderFeedFeedback} from './qx-terminal-feed-presentation.mjs';
 import {browserFeed,browserSearch,readCachedFeed,writeCachedFeed} from './qx-browser-market.mjs';
 import {applyTokenQuery} from './qx-tg-prefill.mjs';
+import {classifyQuery, createWalletLookup, renderWalletPanel} from './qx-wallet-lookup.mjs';
+import {ethCall} from './qx-chain.mjs';
 globalThis.__qxTokenQuery = globalThis.__qxTokenQuery || applyTokenQuery();
 import {
   CHAINS, TABS, SORT_KEYS, DASH, rowViewModel, sortRows, launchRow, searchRow,
@@ -23,7 +25,8 @@ let storage;
 try { storage = window.localStorage; } catch {}
 const prefs = preferences(storage);
 const state = { ...prefs, tab: prefs.tab === 'launches' ? 'trending' : prefs.tab, markets: [], data: null,
-  loading: false, error: null, query: '', hits: [], searching: false, searchError: null };
+  loading: false, error: null, query: '', hits: [], searching: false, searchError: null, wallet: null };
+const lookupWallet = createWalletLookup();
 let savedWindow;try{savedWindow=storage?.getItem('qxt:discover:window');}catch{}state.window=WINDOWS.some(([k])=>k===savedWindow)?savedWindow:'h6'; /* first open: 6h (Randall, 2026-11-09) */state.filters=validateDiscoveryFilters();
 if(WINDOWS.some(([key])=>key===state.sort.key)){state.window=state.sort.key;state.sort={...state.sort,key:'move'};savePreference(storage,'window',state.window);savePreference(storage,'sort',state.sort);}
 const savedViews=createMarketViews(storage);
@@ -68,7 +71,7 @@ applyFilters.addEventListener('click',()=>{try{state.filters=captureFilters();fi
 resetFilters.addEventListener('click',()=>{state.filters=validateDiscoveryFilters();for(const input of Object.values(filterFields))input.value='';filterMessage.textContent='Filters cleared.';renderRows();});
 saveView.addEventListener('click',()=>{try{state.filters=captureFilters();savedViews.save({name:viewName.value,chain:state.chain,tab:state.tab,window:state.window,filters:state.filters});renderViews();viewSelect.value=viewName.value.trim();filterMessage.textContent='View saved on this device.';renderRows();}catch(error){filterMessage.textContent=error.message;}});
 removeView.addEventListener('click',()=>{try{if(!viewSelect.value)return;savedViews.remove(viewSelect.value);renderViews();filterMessage.textContent='View deleted.';}catch(error){filterMessage.textContent=error.message;}});
-viewSelect.addEventListener('change',()=>{const v=savedViews.list().find(v=>v.name===viewSelect.value);if(!v)return;state.tab=v.tab;state.window=v.window;state.chain=CHAINS.some(([k])=>k===v.chain)?v.chain:'all';state.filters=v.filters;state.data=null;for(const [k,input]of Object.entries(filterFields))input.value=v.filters[k]||'';for(const b of chainGroup.children)b.setAttribute('aria-pressed',String(b.dataset.chain===state.chain));viewName.value=v.name;renderTabs();updateWindow();refresh();});
+viewSelect.addEventListener('change',()=>{const v=savedViews.list().find(v=>v.name===viewSelect.value);if(!v)return;if(state.wallet)clearSearch();state.tab=v.tab;state.window=v.window;state.chain=CHAINS.some(([k])=>k===v.chain)?v.chain:'all';state.filters=v.filters;state.data=null;for(const [k,input]of Object.entries(filterFields))input.value=v.filters[k]||'';for(const b of chainGroup.children)b.setAttribute('aria-pressed',String(b.dataset.chain===state.chain));viewName.value=v.name;renderTabs();updateWindow();refresh();});
 const panel = el('div', { role: 'tabpanel', id: 'qxfd-panel', class: 'qxfd-panel' });
 const noticeText = el('span');
 const retry = button('Retry', { class: 'qxfd-retry' });
@@ -90,15 +93,19 @@ const tbody = el('tbody');
 table.append(el('thead', {}, header), tbody);
 scroll.append(table);
 const empty = el('div', { class: 'qxfd-empty', hidden: '' });
+const walletPanel = el('div', {class: 'qxfd-wallet-slot', hidden: ''});
 const count = el('span');
 const source = el('span');
 const heading = el('h1', {}, 'Tokens');
-panel.append(notice, scroll, empty);
-root.append(
-  el('div', { class: 'qxfd-heading' }, heading, status),
-  el('div', { class: 'qxfd-toolbar' }, tabs, quickSlot),
+panel.append(notice, scroll, empty, walletPanel);
+// While a wallet is shown, the list controls (tabs, chains, sort, windows) step aside so the wallet starts at the top.
+const walletBack = button('← Tokens', { class: 'qxfd-wallet-back', hidden: '' });
+const listControls = [el('div', { class: 'qxfd-toolbar' }, tabs, quickSlot),
   el('div', { class: 'qxfd-filterbar' }, chainGroup, el('div',{class:'qxfd-sort-tools'},sortHint,sortSelect)),
-  el('div',{class:'qxfd-viewbar'},windows,filterDetails),
+  el('div',{class:'qxfd-viewbar'},windows,filterDetails)];
+root.append(
+  el('div', { class: 'qxfd-heading' }, walletBack, heading, status),
+  ...listControls,
   panel,
   el('div', { class: 'qxfd-footer' }, count, source,
     el('span', { class: 'qxfd-hint' }, '↑ ↓ Navigate · Enter Open · / Search · Esc Tokens')),
@@ -269,6 +276,19 @@ function pinFounding() {
   if (tbody.firstChild !== foundingTr) tbody.insertBefore(foundingTr, tbody.firstChild);
 }
 function renderRows() {
+  const wallet = state.wallet;
+  walletPanel.hidden = !wallet;
+  scroll.hidden = !!wallet;
+  walletBack.hidden = !wallet;
+  for (const bar of listControls) bar.hidden = !!wallet;
+  root.querySelector('.qxfd-footer').hidden = !!wallet;
+  if (wallet) {
+    empty.hidden = true; notice.hidden = true;
+    text(heading, 'Wallet'); text(status, wallet.loading ? 'Loading…' : '');
+    status.dataset.delayed = 'false';
+    panel.setAttribute('aria-busy', String(!!wallet.loading));
+    return;
+  }
   const rows = visibleRows(),activeFilters=Object.values(state.filters).filter(x=>x!=='').length;filterDetails.querySelector('summary').textContent=activeFilters?'Filters · '+activeFilters:'Filters';
   const previousFocus = document.activeElement;
   const previousIndex = [...nodes.keys()].indexOf(focusedKey);
@@ -295,9 +315,6 @@ function renderRows() {
   text(count, initialLoading ? 'Loading tokens…' : `${rows.length} token${rows.length === 1 ? '' : 's'} · ${rows.filter(r=>r.numeric.move!==null).length} with ${WINDOWS.find(([k])=>k===state.window)?.[1]} history`);
   panel.setAttribute('aria-busy', String(state.loading || state.searching));
   renderFeedFeedback({state,heading,status,notice,noticeText,empty,retry,emptyText});
-  // A pasted address that is not a token is most likely a wallet: offer its public profile (/profile#<address>).
-  const walletQuery = !rows.length && !state.searching && !state.searchError && (/^0x[0-9a-fA-F]{40}$/.test(state.query) || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(state.query)) ? state.query : '';
-  if (walletQuery) { empty.textContent = 'No token at this address.'; empty.append(el('a', { class: 'qxfd-wallet-hit', href: '/profile#' + walletQuery }, 'View wallet ' + walletQuery.slice(0, 6) + '…' + walletQuery.slice(-4) + ' →')); }
   text(source, state.tab === 'launches' ? '' : [state.data?.source,state.data?.coverage?.description].filter(Boolean).join(' · '));
   scroll.scrollTop = y;
   if (window.scrollY !== pageY) window.scrollTo({ top: pageY, behavior: 'instant' });
@@ -313,7 +330,7 @@ function withLive(rows) {
 }
 let liveRowsBusy = false;
 async function refreshLiveRows() {
-  if (liveRowsBusy || document.hidden || root.hidden || (state.tab !== 'launches' && !state.data?.rows?.length)) return;
+  if (liveRowsBusy || document.hidden || root.hidden || state.wallet || (state.tab !== 'launches' && !state.data?.rows?.length)) return;
   liveRowsBusy = true;
   try {
     const shown = visibleRows().map(v => v?.row || v).filter(r => (!r.launch || r.priceUsd == null) && DEX_CHAINS[r.chainId] && r.token?.address).slice(0, 60), byChain = new Map();
@@ -327,7 +344,14 @@ async function refreshLiveRows() {
     if (changed) renderRows();
   } finally { liveRowsBusy = false; }
 }
-setInterval(() => { void refreshLiveRows(); }, 30000);
+function repeatTokenTask(task, delay) {
+  const tick = async () => {
+    try { if (!document.hidden && !root.hidden && !state.wallet) await task(); }
+    finally { setTimeout(tick, delay); }
+  };
+  setTimeout(tick, delay);
+}
+repeatTokenTask(refreshLiveRows, 30000);
 const loader = createFeedLoader({ fetcher: (...args) => fetch(...args), timeout: 25000, serverTimeout: 12000, browserDelay: 1500, storage, browser: opts => browserFeed(opts), cacheRead: readCachedFeed, cacheWrite: writeCachedFeed, changed: update => {
   if (update?.data?.rows) update = { ...update, data: { ...update.data, rows: withLive(update.data.rows) } };
   Object.assign(state, update); renderRows();
@@ -335,7 +359,7 @@ const loader = createFeedLoader({ fetcher: (...args) => fetch(...args), timeout:
 } });
 function refresh() {
   // Only while the token list is on screen: a token page must not keep reading list providers in the background.
-  if (document.hidden || root.hidden) return;
+  if (document.hidden || root.hidden || state.wallet) return;
   if (state.tab === 'launches') { state.loading = false; state.data = null; state.error = null; renderRows(); }
   else loader.load(state.tab, state.chain,state.window);updateWindow();
 }
@@ -343,6 +367,7 @@ function setTab(tab) {
   if (!availableTabs().some(([id]) => id === tab)) return;
   wantedLaunch = false;
   if (state.tab === tab) return;
+  if (state.wallet) clearSearch();
   loader.cancel();
   state.tab = tab; state.data = null; state.error = null;
   savePreference(storage, 'tab', tab);
@@ -365,40 +390,90 @@ tabs.addEventListener('keydown', event => {
 chainGroup.addEventListener('click', event => {
   const chain = event.target.closest('[data-chain]')?.dataset.chain;
   if (!chain || chain === state.chain) return;
+  const hadWallet = !!state.wallet;
+  if (hadWallet) clearSearch();
   state.chain = chain; state.data = null; state.error = null;
   savePreference(storage, 'chain', chain);
   for (const b of chainGroup.children) b.setAttribute('aria-pressed', String(b.dataset.chain === chain));
   scroll.scrollTop = 0;
-  refresh(); scheduleSearch();
+  refresh(); if (!hadWallet) scheduleSearch();
 });
 retry.addEventListener('click', () => { refresh(); if (state.query.length >= 2) runSearch(); });
 
 // Keep the original search field. Discover owns its input only while visible; the token desk keeps
 // its existing search handler. Results use the terminal's existing read-only search endpoint.
-// A complete pasted contract opens that token (2026-11-10: an Elysium token outside the feed read "No tokens match").
-// With one chain chosen it opens at once; on All it opens when the search finds it on exactly one chain.
+// A complete pasted contract opens when its selected chain answers symbol(), or search identifies one chain.
 const PASTED_EVM = /^0x[0-9a-fA-F]{40}$/;
 function openPasted(chainId, address) {
   const hash = '#t=' + chainId + ':' + (chainId === 'solana' ? address : address.toLowerCase());
   if (location.hash === hash) return;
   location.hash = hash;
 }
-function scheduleSearch() {
+function scheduleSearch({restoreFeed = true} = {}) {
   clearTimeout(searchTimer); searchController?.abort(); searchGeneration++;
+  const wasWallet = !!state.wallet;
+  state.wallet = null; walletPanel.replaceChildren();
   state.query = search.value.trim(); state.hits = []; state.searchError = null;
-  if (PASTED_EVM.test(state.query) && state.chain !== 'all' && state.chain !== 'solana') { const a = state.query; search.value = ''; state.query = ''; state.searching = false; renderRows(); openPasted(state.chain, a); return; }
   state.searching = state.query.length >= 2;
   renderRows();
+  if (wasWallet && !state.query && restoreFeed) refresh();
   if (state.searching && !document.hidden) searchTimer = setTimeout(runSearch, 350);
 }
-async function runSearch() {
+walletBack.addEventListener('click', () => { search.value = ''; scheduleSearch(); });
+function clearSearch() {
+  search.value = ''; scheduleSearch({restoreFeed: false});
+}
+function showWallet(wallet) {
+  state.wallet = wallet;
+  renderWalletPanel(walletPanel, wallet.view, {
+    loading: wallet.loading, error: wallet.error, storage,
+    onRetry: () => runSearch({walletOnly: true}),
+    onOpen: ({chainId, controller}) => openSelection({chainId, controller}),
+  });
+  renderRows();
+}
+async function loadWallet(address, controller, mine) {
+  loader.cancel();
+  showWallet({address, loading: true});
+  const timer = setTimeout(() => controller.abort(), 12000);
+  try {
+    const view = await lookupWallet(address, {signal: controller.signal});
+    if (mine === searchGeneration) showWallet({address, view});
+  } catch {
+    if (mine === searchGeneration) showWallet({address, error: true});
+  } finally { clearTimeout(timer); }
+}
+async function isToken(chain, address, signal) {
+  let timer;
+  const abort = () => finish('');
+  let finish;
+  const stop = new Promise(resolve => {
+    finish = resolve;
+    timer = setTimeout(() => resolve(''), 3000);
+    signal.addEventListener('abort', abort, {once: true});
+  });
+  try {
+    const result = await Promise.race([ethCall(chain, address, '0x95d89b41').catch(() => ''), stop]);
+    return typeof result === 'string' && /^0x[0-9a-f]+$/i.test(result) && /[1-9a-f]/i.test(result.slice(2));
+  } finally { clearTimeout(timer); signal.removeEventListener('abort', abort); }
+}
+async function runSearch({walletOnly = false} = {}) {
   if (state.query.length < 2 || document.hidden) return;
   searchController?.abort();
   const controller = new AbortController(), mine = ++searchGeneration;
   searchController = controller;
+  const query = state.query, chain = state.chain, kind = classifyQuery(query);
   state.searching = true; renderRows();
   const ceiling = setTimeout(() => controller.abort(), 12000);
   try {
+    if (walletOnly || (kind === 'evm' && chain !== 'all' && chain !== 'solana')) {
+      const token = !walletOnly && await isToken(chain, query, controller.signal);
+      if (mine !== searchGeneration) return;
+      clearTimeout(ceiling);
+      if (token) { clearSearch(); openPasted(chain, query); }
+      else await loadWallet(query, controller, mine);
+      return;
+    }
     // Server search first; when it fails or finds nothing, the browser searches the providers itself.
     let results = [];
     try {
@@ -415,9 +490,17 @@ async function runSearch() {
       if (chains.length === 1) { const a = state.query; search.value = ''; state.query = ''; state.hits = []; openPasted(chains[0], a); }
     }
     state.searchError = null;
+    if (kind !== 'text' && state.query && !visibleRows().length) {
+      clearTimeout(ceiling);
+      await loadWallet(query, controller, mine);
+    }
   } catch (error) {
     if (mine !== searchGeneration) return;
-    state.searchError = error.name === 'AbortError' ? 'Token search timed out. Try again.' : plainMarketError();
+    if (kind !== 'text') {
+      clearTimeout(ceiling);
+      if (controller.signal.aborted) showWallet({address: query, error: true});
+      else await loadWallet(query, controller, mine);
+    } else state.searchError = error.name === 'AbortError' ? 'Token search timed out. Try again.' : plainMarketError();
   } finally {
     clearTimeout(ceiling);
     if (mine === searchGeneration) { state.searching = false; renderRows(); }
@@ -452,22 +535,25 @@ document.addEventListener('qxt:token', showToken);
 document.addEventListener('qxt:discover', () => showTokens({ restore: false }));
 window.addEventListener('hashchange', () => hasTokenHash(location.hash) ? showToken() : showTokens());
 
-async function openRow(node, buy = false) {
+async function openSelection({chainId, address, controller, stock = false, key}, buy = false, control) {
   if (!api || opening) {
     if (!api) { notice.hidden = false; text(noticeText, 'The trading terminal is still loading. Retry in a moment.'); }
     return;
   }
-  const vm = node.vm;
-  if (buy && vm.quick.stock) return;
-  focusedKey = vm.key;
-  opening = true; node.buy.disabled = true;
+  if (buy && stock) return;
+  if (key) focusedKey = key;
+  opening = true; if (control) control.disabled = true;
   try {
-    if (buy) await api.quickBuyExternal(vm.chainId, vm.address);
-    else if (vm.row.launch) await api.select(vm.chainId, vm.row.launch.controller);
-    else await api.selectExternal(vm.chainId, vm.address);
+    if (buy) await api.quickBuyExternal(chainId, address);
+    else if (controller) await api.select(chainId, controller);
+    else await api.selectExternal(chainId, address);
   } catch (error) {
     document.getElementById('qxt-sync').textContent = error.message || 'Could not open this token. Try again.';
-  } finally { opening = false; node.buy.disabled = false; }
+  } finally { opening = false; if (control) control.disabled = false; }
+}
+function openRow(node, buy = false) {
+  const vm = node.vm;
+  return openSelection({chainId: vm.chainId, address: vm.address, controller: vm.row.launch?.controller, stock: vm.quick.stock, key: vm.key}, buy, node.buy);
 }
 tbody.addEventListener('click', event => {
   if (event.target.closest('.qxfd-safety, .qxfd-blocked')) return;
@@ -481,6 +567,7 @@ tbody.addEventListener('focusin', event => {
   for (const [key, node] of nodes) node.open.tabIndex = key === focusedKey ? 0 : -1;
 });
 function focusRow(delta) {
+  if (state.wallet) { walletPanel.querySelector('[aria-selected="true"]')?.focus(); return; }
   const list = [...tbody.querySelectorAll('tr[data-key]')];
   if (!list.length) return;
   const current = list.findIndex(tr => tr.contains(document.activeElement));
@@ -531,9 +618,9 @@ if (hasTokenHash(location.hash)) showToken();
 else showTokens({ restore: false, clearHash: false });
 connectTerminal(); refresh(); void loadLaunches();
 if (globalThis.__qxTokenQuery?.search && !hasTokenHash(location.hash)) { search.value = globalThis.__qxTokenQuery.search; scheduleSearch(); }
-setInterval(() => { if (!document.hidden) { refresh(); void loadLaunches(); if (state.query.length >= 2) runSearch(); } }, 30000);
+repeatTokenTask(() => { refresh(); void loadLaunches(); if (state.query.length >= 2 && classifyQuery(state.query) === 'text') void runSearch(); }, 30000);
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { loader.cancel(); searchController?.abort(); clearTimeout(searchTimer); searchGeneration++; }
-  else { refresh(); if (state.query.length >= 2) runSearch(); }
+  if (document.hidden) { loader.cancel(); searchController?.abort(); clearTimeout(searchTimer); searchGeneration++; if (state.wallet?.loading) showWallet({address: state.wallet.address, error: true}); }
+  else { refresh(); if (state.query.length >= 2 && !state.wallet) runSearch(); }
 });
-loadFounding(); setInterval(loadFounding, 300000);
+loadFounding(); repeatTokenTask(loadFounding, 300000);
