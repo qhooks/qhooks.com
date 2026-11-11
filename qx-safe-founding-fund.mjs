@@ -7,7 +7,7 @@
 // build the same transaction. Nothing is sent unless an eth_call of the exact transaction succeeds from the owner.
 import {getWalletHub} from '/wallet-hub-fresh.mjs';
 import {chainById} from '/chains.mjs';
-import {FOUNDING, grantBatch, dayCut} from '/founding-config.mjs';
+import {FOUNDING, beneficiary, grantBatch, dayCut} from '/founding-config.mjs';
 import {grantsTx, topUpTx, decodeGrant, grantedSet, SEL} from '/founding-fund.mjs';
 import {safeHashCall, safeExecData} from '/qdrops-core.mjs';
 const hub = getWalletHub(window), CHAIN = FOUNDING.pay.chain, SAFE = FOUNDING.grant.grantor;
@@ -32,10 +32,10 @@ async function readGrants() {
   const grants = await Promise.all(ids.map(id => call(g.qgrants, '0x' + SEL.get + W(id)).then(decodeGrant)));
   const granted = grantedSet(grants), cut = dayCut(c.now);
   // Entry rule at payout: only creators holding 100,000 QHOOKS right now (others wait for a later batch).
-  const due = (c.api.launches || []).filter(l => l.qualifiedAt && l.qualifiedAt < cut && !granted.has(l.creator));
+  const due = (c.api.launches || []).filter(l => l.qualifiedAt && l.qualifiedAt < cut && !granted.has(beneficiary(l)));
   const holding = new Set(), waiting = [];
-  await Promise.all(due.map(async l => { try { const r = await fetch('/api/founding/eligibility?wallet=' + l.creator, {cache: 'no-store'}), d = await r.json(); if (d.eligible) holding.add(l.creator); else waiting.push(l); } catch { waiting.push(l); } }));
-  const {rows, left} = grantBatch((c.api.launches || []).filter(l => holding.has(l.creator)), granted, cut);
+  await Promise.all(due.map(async l => { try { const r = await fetch('/api/founding/eligibility?wallet=' + beneficiary(l), {cache: 'no-store'}), d = await r.json(); if (d.eligible) holding.add(beneficiary(l)); else waiting.push(l); } catch { waiting.push(l); } }));
+  const {rows, left} = grantBatch((c.api.launches || []).filter(l => holding.has(beneficiary(l))), granted, cut);
   const bal = BigInt(await call(g.token, '0x' + SEL.balanceOf + pad(SAFE)));
   const tx = rows.length ? grantsTx(rows) : null;
   return {...c, kind: 'grants', rows, left, granted: granted.size, bal, tx, short: tx && bal < tx.total, waiting};

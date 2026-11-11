@@ -1,6 +1,6 @@
 // Founding Launchers campaign (approved by Randall 2026-11-10: "Down for everything except #5 and #7").
 // Shared by the server (server/founding.mjs, the QDrops scorer), the /founding page and the Safe page. Pure: no DOM,
-// no network.
+// no implicit network; wallet-message requests use explicitly supplied sessions.
 //
 // Who: the first 50 QHooks launches (one-tap or Studio, any chain) made at or after `start`, one per creator wallet,
 // QHooks' own wallets and test launches excluded.
@@ -65,40 +65,44 @@ export const FOUNDING = {
   routers: {'99901': '0xff208831ed6f0c4e3e3224effa45fae7906dc6c2'},
   // Qualifying chains (Randall 2026-11-10). A chain with `gate` opens by itself once one of those launch contracts has
   // code there (Ethereum: the clean launch contract, deploying before 5 PM CT); until then the page says "opening soon".
+  solana: {table: 'qhooks_sol_launches_v1', configTable: 'qhooks_sol_launch_config_v1', cols: {mint: 'mint', chainId: 'chain_id', creator: 'creator', privyUser: 'privy_user', evmWallet: 'evm_wallet', launchedAt: 'ts', slot: 'slot', tx: 'tx', pool: 'pool', config: 'config', quoteMint: 'quote_mint', name: 'name', symbol: 'symbol', graduatedAt: 'graduated_at'}, excludeCreators: [], excludeWallets: []},
   chains: [{id: '4663', name: 'Robinhood Chain'}, {id: '8453', name: 'Base'}, {id: '56', name: 'BNB Chain'}, {id: '42161', name: 'Arbitrum'}, {id: '99901', name: 'Elysium'},
-    {id: '1', name: 'Ethereum', gate: ['0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', '0xfb5a559886fccba6400cc52905ba3aa4658ba0cc']}],
+    {id: '1', name: 'Ethereum', gate: ['0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', '0xfb5a559886fccba6400cc52905ba3aa4658ba0cc']},
+    {id: 'solana', name: 'Solana', gate: 'solana'}],
 };
 
 const lower = s => String(s || '').toLowerCase();
-const tokenKey = l => String(l.chainId) + ':' + lower(l.token);
+export const foundingKey = l => String(l.chainId) + ':' + (l.chainId === 'solana' ? String(l.token) : lower(l.token));
+const tokenKey = foundingKey;
+export const beneficiary = l => l.chainId === 'solana' ? l.payTo : l.creator;
 export const isOwnWallet = (a, cfg = FOUNDING) => cfg.exclude.includes(lower(a));
 
 /// The founding list from every QHooks launch: [{chainId, token, creator, launchedAt (s), kind, ...}] → the first
 /// `spots` launches at or after start, one per creator (their earliest), ties broken by chain then token. Each gets
 /// its slot number and its reward end times.
-export function pickFounding(launches, cfg = FOUNDING) {
+export function pickFounding(launches, cfg = FOUNDING, nowS = Math.floor(Date.now() / 1000)) {
   if (!cfg.start) return [];
-  const skipTok = new Set(cfg.excludeTokens.map(lower));
-  // Entry rule: only launches whose creator held the minimum take a spot. Slots are given in launch order, so the list
-  // stops at the first launch not checked yet (checks run oldest first, within minutes).
-  let pool = launches;
-  if (cfg.entry) {
-    const sorted = [...launches].filter(l => Number(l.launchedAt) >= cfg.start).sort((a, b) => Number(a.launchedAt) - Number(b.launchedAt));
-    const firstOpen = sorted.findIndex(l => l.entry == null);
-    pool = (firstOpen < 0 ? sorted : sorted.slice(0, firstOpen)).filter(l => l.entry === true);
-  }
-  const chainIds = new Set((cfg.chains || []).map(c => c.id));
-  const ok = pool.filter(l => (!chainIds.size || chainIds.has(String(l.chainId))) && Number(l.launchedAt) >= cfg.start && /^0x[0-9a-f]{40}$/.test(lower(l.creator)) && !isOwnWallet(l.creator, cfg)
-    && !skipTok.has(lower(l.token)) && !skipTok.has(tokenKey(l)));
-  ok.sort((a, b) => Number(a.launchedAt) - Number(b.launchedAt) || String(a.chainId).localeCompare(String(b.chainId)) || lower(a.token).localeCompare(lower(b.token)));
-  const seen = new Set(), out = [];
-  for (const l of ok) {
-    const c = lower(l.creator); if (seen.has(c)) continue;
-    seen.add(c);
-    const t = Number(l.launchedAt);
-    out.push({...l, chainId: String(l.chainId), token: lower(l.token), creator: c, launchedAt: t, slot: out.length + 1,
-      creatorShareUntil: t + cfg.creatorShare.days * DAY, boostUntil: t + cfg.boost.days * DAY, grantBy: t + cfg.grant.withinDays * DAY});
-    if (out.length >= cfg.spots) break;
+  const skipTok = new Set(cfg.excludeTokens.map(t=>String(t).startsWith('solana:')||!String(t).includes(':')&&!/^0x/i.test(t)?String(t):lower(t))), chainIds = new Set((cfg.chains || []).map(c => c.id));
+  const sorted = [...launches].filter(l => Number(l.launchedAt) >= cfg.start && (!chainIds.size || chainIds.has(String(l.chainId))))
+    .sort((a,b) => Number(a.launchedAt)-Number(b.launchedAt) || String(a.chainId).localeCompare(String(b.chainId)) || (a.chainId==='solana'?String(a.token):lower(a.token)).localeCompare(b.chainId==='solana'?String(b.token):lower(b.token)));
+  const seen = new Set(), paid = new Set(), out = [];
+  for (const l of sorted) {
+    const sol = l.chainId === 'solana', token = sol ? String(l.token) : lower(l.token), creator = sol ? String(l.creator) : lower(l.creator);
+    if (cfg.entry && l.entry == null && (!sol || l.entryState !== 'waiting')) break; // unchecked is retried; a known waiting link can be listed around
+    const waiting = sol && l.entry !== true && Number(l.waitUntil) > nowS;
+    if (cfg.entry && l.entry !== true && !waiting) continue;
+    if (sol ? !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(creator) || (cfg.solana?.excludeCreators || []).includes(creator)
+      : !/^0x[0-9a-f]{40}$/.test(creator) || isOwnWallet(creator,cfg)) continue;
+    const payTo = sol ? l.payTo : creator;
+    if (payTo && isOwnWallet(payTo,cfg) || sol && l.entry === true && !/^0x[0-9a-f]{40}$/.test(payTo || '')) continue;
+    if (skipTok.has(token) || skipTok.has(tokenKey({...l,token}))) continue;
+    const identity = sol ? 'privy:' + (l.privyUser || creator) : creator;
+    if (seen.has(identity) || payTo && paid.has(payTo)) continue;
+    seen.add(identity); if(payTo) paid.add(payTo);
+    const t=Number(l.launchedAt);
+    out.push({...l,chainId:String(l.chainId),token,creator,...(sol?{payTo,waitingForLink:waiting}:{}),launchedAt:t,slot:out.length+1,
+      creatorShareUntil:t+cfg.creatorShare.days*DAY,boostUntil:t+cfg.boost.days*DAY,grantBy:t+cfg.grant.withinDays*DAY});
+    if(out.length>=cfg.spots)break;
   }
   return out;
 }
@@ -106,6 +110,7 @@ export function pickFounding(launches, cfg = FOUNDING) {
 /// What one router trade of a founding token earns, in its fee currency (bigint base units).
 /// trade: {trader, fee, referred, ts}. launch: a pickFounding row.
 export function tradeRewards(trade, launch, cfg = FOUNDING) {
+  if (launch.chainId === 'solana') return []; // launchpad exposes no attributable partner fee per swap yet
   const fee = BigInt(trade.fee), ts = Number(trade.ts), out = [];
   if (fee <= 0n || ts < launch.launchedAt) return out;
   const trader = lower(trade.trader);
@@ -138,10 +143,30 @@ export function grantBatch(launches, granted, cut, cfg = FOUNDING) {
   let left = BigInt(g.budget) - BigInt(have.size) * BigInt(g.amount);
   const rows = [];
   for (const l of [...launches].sort((a, b) => a.slot - b.slot)) {
-    if (!l.qualifiedAt || l.qualifiedAt >= cut || have.has(l.creator) || isOwnWallet(l.creator, cfg)) continue;
+    const to = beneficiary(l);
+    if (!to || !l.qualifiedAt || l.qualifiedAt >= cut || have.has(to) || isOwnWallet(to, cfg)) continue;
     if (left < BigInt(g.amount)) break;
-    rows.push({beneficiary: l.creator, amount: g.amount, start: 0, cliff: 0, span: g.vestDays * DAY, steps: 0, slot: l.slot, token: l.token, chainId: l.chainId});
-    left -= BigInt(g.amount); have.add(l.creator);
+    rows.push({beneficiary: to, amount: g.amount, start: 0, cliff: 0, span: g.vestDays * DAY, steps: 0, slot: l.slot, token: l.token, chainId: l.chainId});
+    left -= BigInt(g.amount); have.add(to);
   }
   return {rows, left};
+}
+
+// Shared exact message for personal_sign and Solana signMessage. ASCII only; no trailing newline.
+export function foundingLinkMessage({mint,creator,evm,issued}) {
+  if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint||'') || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(creator||'') || !/^0x[0-9a-f]{40}$/.test(evm||'') || !Number.isSafeInteger(issued) || issued<0)throw Error('invalid_link_fields');
+  return `QHooks Founding Launchers wallet link\nSolana launch: ${mint}\nSolana creator: ${creator}\nEVM wallet: ${evm}\nIssued: ${issued}`;
+}
+
+// Message-only client flow; wallet sessions are supplied by the existing EVM hub and Solana profile wallet.
+export async function signFoundingLink({mint,creator,issued,evmSession,solSession,currentEvm=()=>evmSession,onStep=()=>{}}) {
+  const evm=String(evmSession?.owner||'').toLowerCase(),provider=evmSession?.entry?.provider;
+  const message=foundingLinkMessage({mint,creator,evm,issued});
+  if(solSession?.owner!=='solana:'+creator)throw Error('Choose the Solana wallet you launched with.');
+  const check=async()=>{const accounts=await provider.request({method:'eth_accounts'});if(currentEvm()!==evmSession||String(accounts?.[0]).toLowerCase()!==evm)throw Error('Your EVM wallet changed. Connect it again.');await solSession.check();};
+  await check();onStep('evm');
+  const hex='0x'+Array.from(new TextEncoder().encode(message),b=>b.toString(16).padStart(2,'0')).join('');
+  const evmSig=await provider.request({method:'personal_sign',params:[hex,evm]});
+  await check();onStep('solana');const solSig=await solSession.sign(message);await check();
+  return {mint,evm,issued,evmSig,solSig};
 }

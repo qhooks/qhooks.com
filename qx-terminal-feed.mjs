@@ -117,7 +117,7 @@ async function loadLaunches() {
   } catch {}
 }
 const launchMarkets = () => allLaunches || state.markets;
-const availableTabs = () => launchMarkets().some(m => m.live) ? [['launches', 'QHooks launches'], ...TABS] : TABS;
+const availableTabs = () => (launchMarkets().some(m => m.live) || founding.launches.length) ? [['launches', 'QHooks launches'], ...TABS] : TABS;
 function renderTabs() {
   const active = document.activeElement?.dataset.tab;
   tabs.replaceChildren(...availableTabs().map(([id, label]) => button(label, {
@@ -208,7 +208,7 @@ function makeRow(vm) {
 function updateRow(node, vm) {
   const old = node.vm;
   node.vm = vm;
-  text(node.letter, vm.letter); text(node.symbol, vm.symbol); text(node.name, vm.name + (founding.slots.has(String(vm.address).toLowerCase()) ? ' · Founding #' + founding.slots.get(String(vm.address).toLowerCase()) : '')); text(node.rowAge, vm.lifecycle.stage==='bonding'?'Bond '+Math.round(vm.lifecycle.progress*100)+'%':vm.lifecycle.stage==='migrated'?'Migrated · '+vm.age:vm.age);node.rowAge.dataset.stage=vm.lifecycle.stage;
+  text(node.letter, vm.letter); text(node.symbol, vm.symbol); text(node.name, vm.name + (founding.slots.has(vm.chainId+':'+(vm.chainId==='solana'?String(vm.address):String(vm.address).toLowerCase())) ? ' · Founding #' + founding.slots.get(vm.chainId+':'+(vm.chainId==='solana'?String(vm.address):String(vm.address).toLowerCase())) : '')); text(node.rowAge, vm.lifecycle.stage==='bonding'?'Bond '+Math.round(vm.lifecycle.progress*100)+'%':vm.lifecycle.stage==='migrated'?'Migrated · '+vm.age:vm.age);node.rowAge.dataset.stage=vm.lifecycle.stage;
   node.name.title = vm.name;
   node.open.setAttribute('aria-label', `Open ${vm.symbol}, ${vm.name || vm.address}, on ${vm.chainName}`);
   node.chain.hidden = !vm.chainIcon;
@@ -259,15 +259,17 @@ function skeleton() {
 }
 
 // Founding Launchers (2026-11-10): a pinned row to /founding on the QHooks launches tab, and "Founding #N" by name.
-const founding = {status: null, left: 0, slots: new Map()}, foundingTr = el('tr', {class: 'qxfd-founding'});
+const founding = {status: null, left: 0, slots: new Map(), launches: []}, foundingTr = el('tr', {class: 'qxfd-founding'});
 async function loadFounding() {
   try { const r = await fetch('/api/founding', {cache: 'no-store'}), d = r.ok ? await r.json() : null; if (!d) return;
-    founding.status = d.status; founding.left = d.spotsLeft; founding.slots = new Map((d.launches || []).map(l => [String(l.token).toLowerCase(), l.slot])); renderRows(); } catch {}
+    founding.status = d.status; founding.left = d.spotsLeft; founding.launches=(d.launches||[]).filter(l=>l.chainId==='solana'); founding.slots = new Map((d.launches || []).map(l => [l.chainId+':'+(l.chainId==='solana'?String(l.token):String(l.token).toLowerCase()), l.slot])); renderTabs(); renderRows(); } catch {}
 }
 function pinFounding() {
   if (state.tab !== 'launches' || (founding.status !== 'open' && founding.status !== 'full')) { foundingTr.remove(); return; }
   foundingTr.replaceChildren(el('td', {colspan: String(columns.length)}, el('a', {href: '/founding'}, el('b', {}, 'Founding Launchers'), ' · ',
     founding.status === 'full' ? 'All 50 spots taken · see the founding launches' : founding.left + ' of 50 spots left · launch now and earn on your volume for 90 days')));
+  const cell=foundingTr.firstChild;
+  for(const l of founding.launches.filter(l=>state.chain==='all'||state.chain==='solana'))cell.append(el('a',{class:'qxfd-founding-sol',href:'#t=solana:'+l.token},'Founding #'+l.slot+' · Solana · '+(l.symbol||l.token.slice(0,6)+'…'+l.token.slice(-4))));
   if (tbody.firstChild !== foundingTr) tbody.insertBefore(foundingTr, tbody.firstChild);
 }
 function renderRows() {

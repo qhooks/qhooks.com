@@ -288,20 +288,20 @@ function feedRows() {
   return pinOfficial(rows, q);
 }
 // Founding Launchers (2026-11-10): a pinned row to /founding while spots are open, and a "Founding #N" badge.
-const founding = {status: null, left: 0, rows: new Map()};
+const founding = {status: null, left: 0, rows: new Map(), launches: []};
 async function loadFounding() {
   try { const r = await fetch('/api/founding', {cache: 'no-store'}), d = r.ok ? await r.json() : null; if (!d) return;
-    founding.status = d.status; founding.left = d.spotsLeft; founding.rows = new Map((d.launches || []).map(l => [l.chainId + ':' + l.token, l.slot])); renderFeed(); } catch {}
+    founding.status = d.status; founding.left = d.spotsLeft; founding.launches=(d.launches||[]).filter(l=>l.chainId==='solana'); founding.rows = new Map((d.launches || []).map(l => [l.chainId + ':' + l.token, l.slot])); renderFeed(); } catch {}
 }
 function foundingPin() {
   if (founding.status !== 'open' && founding.status !== 'full') return [];
-  return [h('li', {class: 'qxt-founding'}, h('a', {class: 'qxt-row', href: '/founding'}, h('span', {class: 'qxt-r1'}, h('b', {}, 'Founding Launchers'), h('span', {class: 'qxt-badge warm'}, founding.status === 'full' ? 'All 50 taken' : founding.left + ' of 50 spots left')),
+  return [...founding.launches.filter(l=>state.chain==='all'||state.chain==='solana').map(l=>h('li',{class:'qxt-founding'},h('a',{class:'qxt-row',href:'#t=solana:'+l.token},h('span',{class:'qxt-r1'},h('b',{},l.symbol||short(l.token)),h('span',{class:'qxt-badge warm'},'Founding #'+l.slot)),h('span',{class:'qxt-r3 qxt-rail-contract'},'Solana · ',h('code',{},short(l.token)))))),h('li', {class: 'qxt-founding'}, h('a', {class: 'qxt-row', href: '/founding'}, h('span', {class: 'qxt-r1'}, h('b', {}, 'Founding Launchers'), h('span', {class: 'qxt-badge warm'}, founding.status === 'full' ? 'All 50 taken' : founding.left + ' of 50 spots left')),
     h('span', {class: 'qxt-r2 qxt-quiet'}, founding.status === 'full' ? 'See the founding launches' : 'Launch now: earn on your volume for 90 days')))];
 }
 function badges(m) {
   const t = now(), out = [], tr = state.trust[keyOf(m)], om = rowMark(m.chainId, m.token, m.name, m.symbol);
   if (om) out.push(om);
-  const fslot = founding.rows.get(String(m.chainId) + ':' + String(m.token || m.controller || '').toLowerCase());
+  const fslot = founding.rows.get(String(m.chainId) + ':' + (m.chainId==='solana'?String(m.token||m.controller||''):String(m.token || m.controller || '').toLowerCase()));
   if (fslot) out.push(h('span', { class: 'qxt-badge warm', title: 'Founding Launcher' }, 'Founding #' + fslot));
   if (tr?.copyOf) out.push(copyLabel(tr.copyOf, { compact: true }));
   else if (tr?.verified) out.push(badge(tr.verified, { compact: true }));
@@ -374,7 +374,7 @@ function renderFeed() {
   list.replaceChildren(...items);return;
  }
  const rows=feedRows(),xPart=xs.length?[h('li',{class:'qxt-sect'},'Outside tokens'),...xs.map((x,i)=>xItem(x,rows.length+i))]:q.length>=2?[searchNotice()]:[];
- if(!rows.length){list.replaceChildren(h('li',{class:'qxt-workspace-empty'},h('b',{},'No matching QHooks launches'),h('p',{},'Outside tokens remain available in Tokens, Recent and Watchlist.'),h('button',{type:'button',class:'qxt-context-action',onclick:()=>document.dispatchEvent(new CustomEvent('qxt:discover'))},'Browse tokens')),...xPart);return;}
+ if(!rows.length){list.replaceChildren(...foundingPin(),h('li',{class:'qxt-workspace-empty'},h('b',{},'No matching QHooks launches'),h('p',{},'Outside tokens remain available in Tokens, Recent and Watchlist.'),h('button',{type:'button',class:'qxt-context-action',onclick:()=>document.dispatchEvent(new CustomEvent('qxt:discover'))},'Browse tokens')),...xPart);return;}
  list.replaceChildren(...foundingPin(),...rows.map((m,i)=>{
   const s=m.summary,u=unitOf(m),sel=state.sel&&keyOf(state.sel)===keyOf(m);
   // Card amounts (2026-11-10, quoteusd): dollars, the quote amount on hover; "Refreshing" while unknown, never "0 WETH".

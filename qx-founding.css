@@ -8,3 +8,7 @@
 .qfd .qfd-form label{flex-basis:100%;font-size:.9rem}
 .qfd .qfd-form input{flex:1 1 16rem;min-width:0;padding:.55rem .7rem;border:1px solid var(--line,rgba(127,127,127,.35));border-radius:.5rem;background:transparent;color:inherit;font:inherit}
 .qfd [hidden]{display:none!important}
+
+#qfd-result{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;overflow-wrap:anywhere}#qfd-result span{flex-basis:100%}#qfd-result button{min-height:44px;max-width:100%;white-space:normal}
+
+#qfd-sol-wallet{max-width:100%;min-height:44px;font:inherit;background:var(--bg,#111613);color:inherit;border:1px solid var(--line,#777);border-radius:.5rem;padding:.45rem}
