@@ -1,0 +1,4 @@
+Bundled license information:
+
+@walletconnect/utils/dist/index.js:
+  /*! noble-ciphers - MIT License (c) 2023 Paul Miller (paulmillr.com) */

@@ -4,12 +4,15 @@
 const wallets = new Set(), listeners = new Set();
 let current = null; // { wallet, account }
 let restoring = false;
+let selection = 0;
 const KEY = 'qhooks:sol-wallet';
 const usable = w => w.chains?.some(c => c.startsWith('solana:')) && w.features?.['standard:connect'] && w.features?.['solana:signTransaction'];
 const notify = () => listeners.forEach(f => { try { f(); } catch {} });
 function register(...ws) { for (const w of ws) if (usable(w)) wallets.add(w); notify(); restore(); return () => { ws.forEach(w => wallets.delete(w)); notify(); }; }
-window.addEventListener('wallet-standard:register-wallet', e => { try { e.detail?.({ register }); } catch {} });
-try { window.dispatchEvent(new CustomEvent('wallet-standard:app-ready', { detail: { register } })); } catch {}
+if (typeof window !== 'undefined') {
+  window.addEventListener('wallet-standard:register-wallet', e => { try { e.detail?.({ register }); } catch {} });
+  try { window.dispatchEvent(new CustomEvent('wallet-standard:app-ready', { detail: { register } })); } catch {}
+}
 
 export const solWallets = () => [...wallets].map(w => ({ name: w.name, icon: w.icon }));
 export const solAddress = () => current?.account?.address || null;
@@ -19,20 +22,30 @@ async function restore() {
   if (current || restoring) return;
   let name = null; try { name = localStorage.getItem(KEY); } catch {}
   const w = name && [...wallets].find(x => x.name === name); if (!w) return;
-  restoring = true;
-  try { const r = await w.features['standard:connect'].connect({ silent: true }); if (r?.accounts?.[0]) { current = { wallet: w, account: r.accounts[0] }; notify(); } } catch {}
+  restoring = true; const version = selection;
+  try { const r = await w.features['standard:connect'].connect({ silent: true }); if (version === selection && r?.accounts?.[0]) { current = { wallet: w, account: r.accounts[0] }; notify(); } } catch {}
   restoring = false;
 }
 
-export async function connectSol(name) {
-  const w = [...wallets].find(x => x.name === name) || [...wallets][0];
+export async function connectSol(name, {silent = false, address = null} = {}) {
+  // A sign-in handoff must use the named wallet and exact account; ordinary manual connections keep their defaults.
+  const w = [...wallets].find(x => x.name === name) || (!address && [...wallets][0]);
   if (!w) throw new Error('No Solana wallet found. Install Phantom, Solflare or Backpack.');
-  const r = await w.features['standard:connect'].connect();
-  const account = r?.accounts?.[0]; if (!account) throw new Error('The wallet did not share an account');
+  const version = ++selection;
+  const stillSelected = () => { if (version !== selection) throw new Error('The wallet connection changed. Choose your Solana wallet again.'); };
+  if (silent && current?.wallet === w && (!address || current.account.address === address)) return current.account.address;
+  const pick = r => address ? r?.accounts?.find(a => a.address === address) : r?.accounts?.[0];
+  let account;
+  if (silent) { try { account = pick(await w.features['standard:connect'].connect({silent: true})); } catch {} }
+  stillSelected();
+  if (!account) account = pick(await w.features['standard:connect'].connect());
+  stillSelected();
+  if (!account) throw new Error(address ? 'Choose the Solana account you signed in with.' : 'The wallet did not share an account');
   current = { wallet: w, account }; try { localStorage.setItem(KEY, w.name); } catch {}
   notify(); return account.address;
 }
 export async function disconnectSol() {
+  selection++;
   try { await current?.wallet.features['standard:disconnect']?.disconnect(); } catch {}
   current = null; try { localStorage.removeItem(KEY); } catch {} notify();
 }

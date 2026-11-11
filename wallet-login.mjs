@@ -5,6 +5,8 @@ import {visibleChains} from './chains.mjs';
 const launchChains=visibleChains().map(c=>Object.freeze({id:c.id,name:c.name,gas:c.native}));
 import './qx-confirm-top.mjs';
 import {readPrivyAppConfig,PRIVY_PUBLIC_APP} from './qx-privy-app-config.mjs';
+import {solWallets,onSolChange} from './qx-solana.mjs';
+import {createSolanaPrivyHandoff} from './qx-solana-privy.mjs';
 
 const DROP_GRACE_MS=1500;
 // Progress steps for diagnosing the email wallet on real devices (no addresses, tokens or emails).
@@ -32,6 +34,15 @@ export function inAppBrowser(target=globalThis){
 export async function xLoginEnabled(fetchImpl=globalThis.fetch){
  return(await readPrivyAppConfig(fetchImpl,PRIVY_PUBLIC_APP))?.twitter_oauth===true;
 }
+export const solanaLoginVisible=config=>config?.solana_wallet_auth===true;
+export async function solanaLoginEnabled(fetchImpl=globalThis.fetch){
+ return solanaLoginVisible(await readPrivyAppConfig(fetchImpl,PRIVY_PUBLIC_APP));
+}
+export function solanaWalletLinks(url,origin=new URL(url).origin){
+ const page=encodeURIComponent(url),ref=encodeURIComponent(origin);
+ return [['Phantom','https://phantom.app/ul/browse/'],['Solflare','https://solflare.com/ul/v1/browse/'],['Backpack','https://backpack.app/ul/v1/browse/']]
+  .map(([name,base])=>({name,label:'Open in '+name,href:base+page+'?ref='+ref}));
+}
 export function loginMethods(inApp,x){return inApp?(x?['email','twitter']:['email']):(x?['email','google','twitter']:['email','google']);}
 export function loginLabel(inApp,x){return inApp?(x?'Continue with email or X':'Continue with email'):(x?'Continue with email, Google or X':'Continue with email or Google');}
 export function bindWalletLogin({target=window,document:d=document,hub=getWalletHub(target),load=()=>import('/privy/entry.js')}={}){
@@ -42,6 +53,23 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
  const status=text=>{$('login-status').textContent=text;};
  const inApp=inAppBrowser(target);let xOn=false;target.QHOOKS_LOGIN_METHODS=loginMethods(inApp,false);
  const appConfig=readPrivyAppConfig(target.fetch||globalThis.fetch,target.QHOOKS_PRIVY_APP||PRIVY_PUBLIC_APP);
+ const solanaHandoff=createSolanaPrivyHandoff({onError:error=>{status(error?.message||'Could not connect your Solana wallet. Choose it again.');show();}});
+ const coarse=!!target.matchMedia?.('(pointer:coarse)').matches;
+ let solOn=false,solScanDone=!coarse,solScanTimer=null,solLoading=false;
+ const solButton=d.createElement('button');solButton.type='button';solButton.id='qhc-solana-login';solButton.className='qhc-choice';solButton.textContent='Solana wallet';solButton.hidden=true;solButton.style.marginTop='.6rem';
+ const solApps=d.createElement('div');solApps.id='qhc-solana-apps';solApps.className='qhc-apps';solApps.hidden=true;
+ const renderSolana=()=>{if(dead)return;const links=coarse&&solScanDone&&solWallets().length===0;solButton.hidden=!solOn||!solScanDone||links;solButton.disabled=solLoading||!!loading&&!state.ready;solApps.hidden=!solOn||!links;};
+ const stopSolChange=onSolChange(renderSolana);
+ const emailNext=button.nextElementSibling,solAnchor=emailNext?.tagName==='P'?emailNext:button;
+ solAnchor.after(solButton);solButton.after(solApps);
+ // Give Wallet Standard registration 600 ms on a phone before offering wallet-app browsers.
+ if(coarse)solScanTimer=target.setTimeout(()=>{solScanDone=true;renderSolana();},600);
+ solButton.addEventListener('click',async()=>{
+  if(dead||!solOn||solLoading)return;solLoading=true;renderSolana();
+  try{await initialize();if(dead)return;wanted=false;wantedChain=null;$('dialog').close();await sdk.loginSolana();}
+  catch(error){status(error?.message||'Could not open Solana sign-in. Please try again.');show();}
+  finally{solLoading=false;renderSolana();}
+ });
  if(inApp&&!$('in-app')){
   const copy=d.createElement('button');copy.type='button';copy.className='qhc-secondary';copy.textContent='Copy link';
   copy.addEventListener('click',async()=>{try{await target.navigator.clipboard.writeText(target.location.href);copy.textContent='Link copied';}catch{copy.textContent=target.location.href;}});
@@ -55,8 +83,18 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
   if(mobile||choices){const more=d.createElement('details');more.id='qhc-more-wallets';more.className='qhc-more-wallets';const sum=d.createElement('summary');sum.textContent='I have a wallet app';more.append(sum);(mobile||choices).before(more);if(mobile)more.append(mobile);if(choices)more.append(choices);}
  }
  const show=()=>{if(!dead&&!$('dialog').open)$('dialog').showModal();};
- function render(){button.disabled=!!loading&&!state.ready;button.textContent=!state.authenticated?loginLabel(inApp,xOn):state.hasWallet?'Use my QHooks wallet':'Create my EVM wallet';$('email-logout').hidden=!state.authenticated;const c=hub.snapshot().current;$('email-network').hidden=c?.entry.rdns!==EMBEDDED_RDNS;if(c?.entry.rdns===EMBEDDED_RDNS&&!wantedChain)$('embedded-chain').value=c.chainId;}
- appConfig.then(config=>{if(config?.twitter_oauth!==true||dead)return;xOn=true;target.QHOOKS_LOGIN_METHODS=loginMethods(inApp,true);const lead=$('in-app-lead');if(lead)lead.textContent=lead.textContent.replace('Sign in with email here','Sign in with email or X here');render();});
+ function render(){button.disabled=!!loading&&!state.ready;button.textContent=!state.authenticated?loginLabel(inApp,xOn):state.hasWallet?'Use my QHooks wallet':'Create my EVM wallet';$('email-logout').hidden=!state.authenticated;const c=hub.snapshot().current;$('email-network').hidden=c?.entry.rdns!==EMBEDDED_RDNS;if(c?.entry.rdns===EMBEDDED_RDNS&&!wantedChain)$('embedded-chain').value=c.chainId;renderSolana();}
+ appConfig.then(config=>{
+  if(dead)return;solOn=solanaLoginVisible(config);
+  if(solOn)for(const item of solanaWalletLinks(target.location.href,target.location.origin)){
+   const link=d.createElement('a');link.className='qhc-choice';link.href=item.href;link.rel='noopener';link.textContent=item.label;
+   // Terminal selection can change the hash after load; use the page at the moment the person opens the wallet app.
+   link.addEventListener('click',()=>{link.href=solanaWalletLinks(target.location.href,target.location.origin).find(next=>next.name===item.name).href;});
+   solApps.append(link);
+  }
+  xOn=config?.twitter_oauth===true;target.QHOOKS_LOGIN_METHODS=loginMethods(inApp,xOn);
+  const lead=$('in-app-lead');if(lead&&xOn)lead.textContent=lead.textContent.replace('Sign in with email here','Sign in with email or X here');render();
+ });
  async function connect(){
   if(!wanted||dead||!hasProvider||wantedChain&&providerChain!==wantedChain)return;
   wanted=false;target.clearTimeout(switchTimer);wantedChain=null;status('Connecting your QHooks wallet…');
@@ -70,7 +108,7 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
    const container=d.createElement('div');container.id='qhooks-privy-root';d.body.append(container);
    let readyResolve;const ready=new Promise(resolve=>{readyResolve=resolve;});
    const remembered=hub.preference(),chainId=(remembered?.rdns===EMBEDDED_RDNS?remembered.chainId:null)||new URLSearchParams(target.location.search).get('chain')||remembered?.chainId||'8453';
-   trace('mount','chain '+chainId);sdk=mountPrivy({container,chainId,onState:next=>{if(dead)return;trace('state',(next.ready?'ready':'loading')+' auth:'+next.authenticated+' wallet:'+next.hasWallet);const firstReady=!state.ready&&next.ready;state=next;render();if(next.ready){readyResolve();if(firstReady)status('');}},onWallet:wallet=>{if(dead)return;trace('wallet',wallet?'provider '+(wallet.chainId||''):'none');
+   trace('mount','chain '+chainId);sdk=mountPrivy({container,chainId,onState:next=>{if(dead)return;trace('state',(next.ready?'ready':'loading')+' auth:'+next.authenticated+' wallet:'+next.hasWallet);const firstReady=!state.ready&&next.ready;state=next;render();if(next.ready){readyResolve();if(firstReady)status('');}void solanaHandoff.update(next);},onWallet:wallet=>{if(dead)return;trace('wallet',wallet?'provider '+(wallet.chainId||''):'none');
     // The SDK drops and re-issues its provider when the wallet changes network. Hold the session briefly so a
     // network switch from any page keeps the same connection instead of signing the wallet out.
     if(!wallet){if(hasProvider&&!dropTimer)dropTimer=target.setTimeout(()=>{dropTimer=null;hasProvider=false;providerChain=null;walletAddress=null;bridge.set(null);render();},DROP_GRACE_MS);return;}
@@ -95,7 +133,7 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
    else{trace('open','has provider:'+hasProvider);status('Opening your QHooks wallet…');await connect();
     // Say where it stopped instead of leaving "Opening…" forever.
     if(wanted&&!hasProvider){target.clearTimeout(openTimer);openTimer=target.setTimeout(()=>{if(dead||!wanted||hasProvider)return;status('Your QHooks wallet has not opened yet: signed in '+(state.authenticated?'yes':'no')+', wallet '+(state.hasWallet?'yes':'no')+', wallet connection not received from Privy. Try again, or sign out and sign back in.');show();},12000);}}
-  }catch(error){wanted=false;intent(target,'clear');status(error?.message||'Sign-in unavailable. You can still connect an existing wallet.');show();}render();
+  }catch(error){wanted=false;intent(target,'clear');status(error?.message||'Could not open sign-in. You can still connect an existing wallet.');show();}render();
  }
  async function logout(){wanted=false;wantedChain=null;target.clearTimeout(switchTimer);target.clearTimeout(dropTimer);dropTimer=null;intent(target,'clear');hasProvider=false;providerChain=null;walletAddress=null;bridge.revoke();if(hub.snapshot().current?.entry.rdns===EMBEDDED_RDNS)hub.disconnect();try{await sdk?.logout();status('Signed out of your QHooks wallet.');}catch{status('Sign-out could not finish. Please retry.');}render();}
  button.addEventListener('click',login);
@@ -103,7 +141,7 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
  const network=d.getElementById('qhc-email-network');
  if(network&&!d.getElementById('qhc-fund')){
   const fund=d.createElement('button');fund.type='button';fund.id='qhc-fund';fund.className='qhc-secondary';fund.textContent='Buy crypto with a card';fund.hidden=true;
-  fund.addEventListener('click',async()=>{try{await initialize();$('dialog').close();await sdk.fund(hub.snapshot().current?.chainId||'8453');}catch(e){status(e?.message||'Card purchase is unavailable right now.');show();}});
+  fund.addEventListener('click',async()=>{try{await initialize();$('dialog').close();await sdk.fund(hub.snapshot().current?.chainId||'8453');}catch(e){status(e?.message||'Card purchase could not open. Please try again.');show();}});
   network.append(fund);
   appConfig.then(c=>{if(!dead)fund.hidden=c?.fiat_on_ramp_enabled!==true;});
  }
@@ -114,7 +152,7 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
    try{wantPhone=true;status('Loading WalletConnect…');await initialize();status('');
     if(phoneBridge.provider&&hub.snapshot().wallets.some(w=>w.uuid===PHONE_UUID)){wantPhone=false;await hub.connect(PHONE_UUID);$('dialog').close();return;}
     $('dialog').close();await sdk.connectPhone();}
-   catch(error){wantPhone=false;status(error?.message||'WalletConnect is unavailable right now.');show();}
+   catch(error){wantPhone=false;status(error?.message||'WalletConnect could not open. Please try again.');show();}
   });
   mobile.after(phoneButton);
  }$('email-logout').addEventListener('click',logout);
@@ -128,7 +166,7 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
  const unsubscribe=hub.subscribe(render),params=new URLSearchParams(target.location.search),returned=params.has('privy_oauth_state')||params.has('privy_oauth_provider');
  if(returned)wanted=intent(target,'consume');
  if(returned||[EMBEDDED_RDNS,PHONE_RDNS].includes(hub.preference()?.rdns))void initialize().then(()=>connect()).catch(error=>{wanted=false;status(error.message);show();});
- function dispose(){if(dead)return;dead=true;wanted=false;target.clearTimeout(switchTimer);target.clearTimeout(dropTimer);target.clearTimeout(openTimer);unsubscribe();bridge.dispose();phoneBridge.dispose();sdk?.dispose();if(target.qhooksEnsurePrivyControls===ensurePrivyControls)delete target.qhooksEnsurePrivyControls;target.removeEventListener('pagehide',dispose);}
+ function dispose(){if(dead)return;dead=true;wanted=false;target.clearTimeout(switchTimer);target.clearTimeout(dropTimer);target.clearTimeout(openTimer);target.clearTimeout(solScanTimer);stopSolChange();solanaHandoff.dispose();unsubscribe();bridge.dispose();phoneBridge.dispose();sdk?.dispose();if(target.qhooksEnsurePrivyControls===ensurePrivyControls)delete target.qhooksEnsurePrivyControls;target.removeEventListener('pagehide',dispose);}
  target.addEventListener('pagehide',dispose);return Object.freeze({dispose});
 }
 if(typeof document!=='undefined')bindWalletLogin();
