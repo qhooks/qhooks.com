@@ -18,3 +18,10 @@
 :is(.qxt, [data-tg="1"]) :is(.qxt-card, .qxt-trade, .qxt-trade-body, .qx-oneclick, .qxt-risk), .qpo-sheet-in, .qpo-form { min-width:0;max-width:100%; }
 
 :is(.qxt, .qpo-page, [data-tg="1"]) :is([role="status"], [role="alert"], [class*="-status"], [class*="-error"], [class*="-notice"], [class*="-note"], [class*="-warn"])[hidden] {display:none!important}
+
+/* Recovery panels contain actions. They must grow with their wrapped text and controls. */
+:is(.qxt, .qpo-page, [data-tg="1"]) :is(.qxc-recovery, .qhome-buy-recovery)[role="status"] {
+  display:grid!important;grid-template-columns:minmax(0,1fr);gap:10px;
+  height:auto!important;max-height:none!important;overflow:visible!important;
+  -webkit-line-clamp:unset!important;line-clamp:unset!important;
+}

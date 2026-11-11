@@ -3,6 +3,7 @@ import {homeFetch, assertHomeOn, rememberHomeTransfer, withHomeRails} from './qx
 import {requestFunding, runCrossChainBuy, readAssetBalance} from './qx-xchain.mjs';
 import {execute, summarize} from './qx-relay.mjs';
 import {assertSelfQuote, formatAmount} from './qx-move-funds.mjs';
+import {rememberHomeBuy, pendingHomeBuy, finishHomeBuy} from './qx-home-buy-step.mjs';
 export function homeCostLine(quote, {lpBps = null} = {}) {
   const s = summarize(quote), fee = s.feeTotalUsd;
   const input = quote.details?.currencyIn, amount = input?.amountFormatted || (input?.amount && Number.isInteger(input?.currency?.decimals) ? formatAmount(input.amount, input.currency.decimals) : 'Refreshing');
@@ -26,14 +27,22 @@ export async function quoteHomeBuy({owner, pref, chainId, asset, amountNeeded, e
   if (path === 'instant' && (Number(q.details?.currencyIn?.currency?.chainId) !== pref.chainId || !sameWallet(q.details?.currencyIn?.currency?.address, from.address) || Number(q.details?.currencyOut?.currency?.chainId) !== Number(chainId) || !sameWallet(q.details?.currencyOut?.currency?.address, '0x' + '0'.repeat(40)) || BigInt(q.details?.currencyOut?.amount || 0) !== BigInt(amountNeeded))) throw homeFailure('home_quote_mismatch');
   return {...q, home: {path, owner, pref, slippageBps: Number(slippageTolerance), quotedAt: Date.now()}};
 }
-export async function executeHomeBuy({quote, wallet, swap, onStep, currentOwner = () => wallet.address}, {fetchImpl = globalThis.fetch, runX1 = runCrossChainBuy, executeRelay = execute, readBalance} = {}) {
+export async function executeHomeBuy({quote, wallet, swap, market, onStep, currentOwner = () => wallet.address}, {fetchImpl = globalThis.fetch, runX1 = runCrossChainBuy, executeRelay = execute, readBalance, estimateCosts, store} = {}) {
   const context = quote.home; if (!context || !sameWallet(context.owner, wallet.address)) throw homeFailure('home_sign_in');
   if (Date.now() - context.quotedAt > 30000) throw homeFailure('home_quote_expired');
   return withHomeRails(context.owner, async () => {
     let settlement;
     const relay = async (q,w,o) => {const result = await executeRelay(q,w,{...o,fetchImpl}); settlement = result; return result;};
     try {
-      const result = context.path === 'instant' ? await relay(quote, wallet, {fetchImpl, onUpdate: onStep}) : await runX1({quote, wallet, swap: async a => { await assertHomeOn(fetchImpl); return swap(a); }, readBalance, execute: relay, onStep});
+      const result = context.path === 'instant' ? await relay(quote, wallet, {fetchImpl, onUpdate: onStep}) : await runX1({quote, wallet, swap: async (a, arrival) => {
+        const pending = rememberHomeBuy(context.owner, {chainId: arrival.chainId, asset: arrival.asset,
+          amount: String(arrival.arrived), amountNeeded: String(quote.funding.amountNeeded), market,
+          origin: quote.funding.from, spender: market?.spender, setup: market?.setup || 0,
+          reserveMultiplier: context.pref.sellsGoHome ? 2 : 1, retryable: true}, store);
+        return finishHomeBuy({pending, wallet, swap, onStep, currentOwner}, {fetchImpl, readBalance, estimateCosts, store});
+      }, readBalance, execute: relay, onStep});
+      if (result.completed && result.result?.spent) {result.spent = result.result.spent; result.result = result.result.receipt;}
+      if (result.landed && !result.completed) result.pendingBuy = pendingHomeBuy(context.owner, store);
       if (result.landed && !result.completed) rememberHomeTransfer(context.owner, {...result, amountText: formatAmount(result.amount, result.asset.decimals), symbol: result.asset.symbol, address: result.asset.address});
       return result;
     } catch (e) { if (e.requestId || settlement?.requestId) rememberHomeTransfer(context.owner, {requestId: e.requestId || settlement.requestId, status: 'pending', needsSwap: context.path === 'x1', chainId: quote.funding?.to.chainId, asset: quote.funding?.to.asset}); throw e; }

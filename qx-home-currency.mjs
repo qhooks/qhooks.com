@@ -91,13 +91,17 @@ export function homePicker({document: doc = globalThis.document, getOwner = () =
     asset.value = options.some(o => o.value === selected) ? selected : options[0]?.value || '';
   }
   const choices = el('div'); choices.className = 'qhome-pickers'; choices.append(chain, asset);
+  const hint = el('div'); hint.className = 'qhome-ethereum-hint'; hint.hidden = true;
+  const useBase = el('button', 'Use Base'); useBase.type = 'button';
+  hint.append(el('p', 'Ethereum home pays L1 gas on every cross-chain buy. Base is cheaper.'), useBase);
   const label = el('label'); label.append(toggle, doc.createTextNode(' Sells go home'));
-  note.setAttribute('role', 'status'); root.append(line, choices, label, note, recovery);
+  note.setAttribute('role', 'status'); root.append(line, choices, hint, label, note, recovery);
   let owner = null, pref = {...DEFAULT_HOME}, revision = 0, busy = false, pollTimer;
   function paint() {
     const usd = getUsd(pref), money = Number.isFinite(usd) ? '$' + usd.toFixed(2) : 'Refreshing';
     line.textContent = 'Home: ' + homeName(pref) + ' · ' + money;
     chain.value = String(pref.chainId); fillAssets(pref.asset); toggle.checked = pref.sellsGoHome;
+    hint.hidden = pref.chainId !== 1;
     const result = owner && homeTransfer(owner, store); recovery.replaceChildren();
     if (result) {
       recovery.append(doc.createTextNode(homePanelLine(result)));
@@ -120,12 +124,13 @@ export function homePicker({document: doc = globalThis.document, getOwner = () =
   }
   async function change() {
     if (busy) return; busy = true; revision++; const who = getOwner();
-    for (const n of [chain, asset, toggle]) n.disabled = true;
+    for (const n of [chain, asset, toggle, useBase]) n.disabled = true;
     try { const saved = await saveHomePref(who, {chainId: Number(chain.value), asset: asset.value, sellsGoHome: toggle.checked}, {fetchImpl, store}); if (sameWallet(who, getOwner()) || !who && !getOwner()) { pref = saved; note.textContent = 'Home saved.'; } }
     catch (e) { note.textContent = tradeError(e); }
-    finally { busy = false; for (const n of [chain, asset, toggle]) n.disabled = false; if (who !== getOwner()) void refresh(); else paint(); }
+    finally { busy = false; for (const n of [chain, asset, toggle, useBase]) n.disabled = false; if (who !== getOwner()) void refresh(); else paint(); }
   }
   chain.addEventListener('change', () => {fillAssets(asset.value); return change();});
   for (const n of [asset, toggle]) n.addEventListener('change', change);
+  useBase.addEventListener('click', () => {if (busy) return; chain.value = '8453'; fillAssets('ETH'); return change();});
   return {element: root, refresh, repaint: paint};
 }

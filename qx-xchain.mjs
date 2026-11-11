@@ -185,7 +185,7 @@ export async function runCrossChainBuy({ quote, wallet, readBalance = readAssetB
   const amount = min(arrived, positive(amountNeeded));
   emit(onStep, { step: 'swap', amount, message: '2/2 · Using the amount that arrived…' });
   try {
-    const result = await swap(amount);
+    const result = await swap(amount, {arrived, before, owner, chainId, asset});
     emit(onStep, { step: 'complete', amount });
     return { landed: true, completed: true, chainId, asset, amount: arrived, spent: amount, result };
   } catch (cause) {

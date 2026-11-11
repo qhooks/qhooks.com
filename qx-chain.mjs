@@ -153,13 +153,14 @@ export async function send(chainId,tx,onStatus=()=>{},assertContext=()=>{}){
     const assert=()=>{assertContext();if(connectedAddress()!==from)throw Error('Your wallet changed. Review this action again.');};assert();
     const p=await providerFor(from);assert();
     const hash=await guardedSend(p,chainId,{...tx,from},{rpc,assert,onStatus:text=>onStatus(silentActive()&&text==='Confirm in your wallet…'?'Sending…':text)});
+    if (!/^0x[0-9a-f]{64}$/i.test(hash || '')) throw Object.assign(new Error('Check the pending trade in your wallet.'), {mayHaveSubmitted: true, chainId});
     onStatus('Waiting for the transaction…');
     for (let i = 0; i < 180; i++) {
       const r = await rpc(chainId, 'eth_getTransactionReceipt', [hash]).catch(() => null);
       if (r) { if (r.status !== '0x1') throw new Error('The transaction reverted'); return r; }
       await new Promise(res => setTimeout(res, 2000));
     }
-    throw new Error('Still pending. Check your wallet activity');
+    throw Object.assign(new Error('Still pending. Check your wallet activity'), {mayHaveSubmitted: true, txHash: hash, chainId});
   } catch(error) { throw asTradeError(error); }
 }
 /// EIP-5792: sends `calls` as one atomic batch when the connected wallet reports atomic batching on `chainId`

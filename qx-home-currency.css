@@ -1,1 +1,8 @@
 .qhome{display:grid;gap:10px;padding:12px 0;font-style:normal;min-width:0}.qhome b,.qhome p{overflow-wrap:anywhere;margin:0}.qhome-pickers{display:grid;grid-template-columns:minmax(0,1fr) minmax(70px,.5fr);gap:8px}.qhome select{width:100%;min-width:0;min-height:42px;border:1px solid #52606e;border-radius:8px;background:#111b26;color:#f0f4f8;padding:6px}.qhome label{display:flex;align-items:center;min-height:40px}.qhome input{width:20px;height:20px}.qhome button{min-height:40px}.qhome-cost{display:block;font-style:normal;overflow-wrap:anywhere;max-width:100%}
+.qhome-ethereum-hint{display:grid;gap:8px;font-size:12px;line-height:1.5;min-width:0}.qhome-ethereum-hint[hidden]{display:none}.qhome-ethereum-hint button{justify-self:start;min-height:44px}
+.qxt-followup,.qhome-buy-recovery{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.qhome-buy-recovery{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;box-sizing:border-box;height:auto;max-height:none;overflow:visible}
+.qhome-buy-recovery>p{margin:0;white-space:normal;overflow-wrap:anywhere}
+.qhome-buy-recovery>button{box-sizing:border-box;max-width:100%;white-space:normal;min-height:44px}
+.qhome-buy-recovery>.qhome-finish{width:100%;min-height:52px;padding:12px 16px;border:1px solid var(--qx-line-2,#52606e);border-radius:10px;background:var(--qxt-action-buy,#24664b);color:var(--qxt-action-ink,#fff);font:600 16px/1.4 var(--qx-sans,system-ui,sans-serif)}
+.qhome-finish:focus-visible{outline:2px solid var(--qx-brass,#d2ad72);outline-offset:3px}

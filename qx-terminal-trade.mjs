@@ -8,6 +8,7 @@ import {loadLocalHome, homeTicketDefault, homeName, homeToken, homeSlippage, hom
 import {encodeBuyFor} from './qx-pro-xbuy.mjs';
 import { tradeError } from './qx-chain-guard.mjs';
 import { executeTicketSwap } from './qx-ticket-execution.mjs';
+import {pendingHomeBuy, dismissHomeBuy, homeBuyRecoveryView, finishHomeBuy} from './qx-home-buy-step.mjs';
 import {prepareTradeThesis,recordTerminalTrade} from './qx-trade-record.mjs';
 import {renderSolanaRewards,enrollSolanaReferrer,recordSolanaRewards} from './qx-solana-rewards.mjs';
 import {mountTradingSettings} from './qx-trading-settings.mjs';
@@ -28,7 +29,7 @@ import { impactFromQuotes, impactLines, formatPriceImpact, impactGate, confirmCo
 import { getWalletHub } from '/wallet-hub.mjs';
 import { relayWallet } from './qx-relay-wallet.mjs';
 import { createFundingRow, fundingAsset, destinationCosts, runCrossChainBuy, retryLanded, recoveryView,
-  cashAsset, cashHome, cashSettings, moveProceeds, chainName, readAssetBalance, loadFundingStyle, xchainEnabled } from './qx-xchain-gate.mjs';
+  cashAsset, cashHome, cashSettings, moveProceeds, offerMoveBack, chainName, readAssetBalance, loadFundingStyle, xchainEnabled } from './qx-xchain-gate.mjs';
 
 // Holder cashback (live since the Safe set the flywheel on 2026-11-08): on Robinhood Chain the fee router pays 40%
 // instead of 30% to wallets the flywheel counts as QHOOKS holders (1,000,000+). Read on chain, cached per wallet.
@@ -158,7 +159,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
 
   const cash = h('div', { class: 'qxt-cash' });
   const risk = h('div', { class: 'qxt-risk', hidden: true });
-  const followup = h('div');
+  const followup = h('div', {class: 'qxt-followup'});
   const funding = createFundingRow({ h, getPlan: q => tradePlan(current, q), onChange: ({ quote, ready }) => {
     clearArmed(); if (current) current.funding = quote;
     go.disabled = busy || !!(current?.homeRequired && !current.home) || !quoteMatches(current) || !ready || (st?.safety?.verdict === 'danger' && !risk.querySelector('input')?.checked);
@@ -647,6 +648,34 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const floor = c.minOut * a / c.a, minOut = got * (10000n - BigInt(c.toleranceBps)) / 10000n;
     return poolSubmit({ ...c, a, got, route, minOut: minOut > floor ? minOut : floor });
   }
+  function showHomeRecovery(pending) {
+    recovery = {pendingBuy: pending, retryable: pending.retryable};
+    status.textContent = '';
+    followup.replaceChildren(homeBuyRecoveryView(h, pending, {
+      finish: () => submit(),
+      dismiss: () => {if (busy) return; dismissHomeBuy(pending.owner); recovery = null; followup.replaceChildren(); lock(false); void layout();},
+      moveBack: () => {if (busy || pending.retryable === false) return; void offerMoveBack({...pending, amount: BigInt(pending.amount)}).catch(e => {status.textContent = tradeError(e);});},
+    }));
+  }
+  function restorePendingBuy() {
+    if (busy || recovery) return false;
+    const owner = connectedAddress();
+    // The ticket is also embedded by lightweight hosts that omit optional Home recovery adapters.
+    if (!owner || typeof pendingHomeBuy !== 'function') return false;
+    const pending = pendingHomeBuy(owner), market = pending?.market;
+    if (!market?.state || market.state.sol || String(market.state.chainId) !== String(pending.chainId)) return false;
+    const state = market.state;
+    beginSelection({kind: 'external', chainId: state.chainId, address: state.token});
+    st = state; side = 'buy'; pay = market.pay; homeSelected = true; homeEnabled = true;
+    homePref = loadLocalHome(owner);
+    paySel.replaceChildren(h('option', {value: 'home'}, 'Home (' + homeName(homePref) + ')')); paySel.value = 'home';
+    amount.value = formatUnits(BigInt(pending.amountNeeded), payDecimals(), payDecimals()).replace(/,/g, ''); unit.textContent = pending.asset.symbol;
+    current = bindQuote({side, pay, a: BigInt(pending.amountNeeded), minOut: BigInt(market.minOut || 0), route: {pool: {quote: market.quoteToken}}, homeRequired: false}, qseq, owner, market.slippageBps);
+    current.homeRequired = false;
+    out.textContent = 'Finish your buy of ' + st.symbol + '.';
+    showHomeRecovery(pending); lock(false);
+    return true;
+  }
   function queueRecord(c,receipt,extra={}) {
     const tx=receipt?.transactionHash||receipt?.signature;
     if(tx)void recordTerminalTrade({chainId:c.chainId,token:c.token,side:c.side,owner:c.owner,thesis:c.thesis||'',tx,...extra}).catch(()=>{});
@@ -658,7 +687,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     busy = value; funding.setBusy(value);
     tradingSettings.lock(value||!!recovery);
     for (const el of [amount, thesis, paySel, tolSel, balance, sellToCash, ...sideBtns, ...presets.querySelectorAll('button'), ...cash.querySelectorAll('button')]) el.disabled = value||!!recovery;
-    for(const el of followup.querySelectorAll('button'))el.disabled=value;
+    for(const el of followup.querySelectorAll('button'))el.disabled=value || recovery?.retryable === false && el.textContent !== 'Dismiss';
     go.disabled = value||!!recovery;
     renderQuoteFreshness();
   }
@@ -688,13 +717,21 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     let landed = false, proceeds = null;
     try {
       await withOneClick(plan, async () => {
-        if (recovery) { await retryLanded(recovery, { owner: connectedAddress(), swap: swapArrived }); recovery = null; return; }
+        if (recovery?.pendingBuy) {
+          const wallet = await relayWallet();
+          try {await finishHomeBuy({pending: recovery.pendingBuy, wallet, swap: swapArrived, currentOwner: connectedAddress}, {readBalance: readAssetBalance, estimateCosts: destinationCosts}); recovery = null; followup.replaceChildren();}
+          finally {wallet.dispose();}
+          return;
+        }
+        if (recovery) { await retryLanded(recovery, { owner: connectedAddress(), swap: swapArrived }); recovery = null; followup.replaceChildren(); return; }
         if (c.home) {
           const wallet = await relayWallet();
           try {
             const {executeHomeBuy} = await import('./qx-home-engine.mjs');
-            const result = await executeHomeBuy({quote: c.home, wallet, swap: swapArrived, onStep: step => {if (step.message) status.textContent = step.message;}});
-            if (result.landed && !result.completed) {recovery = result; landed = true; followup.replaceChildren(recoveryView(h, {...result, error: {message: tradeError(result.error)}}, () => submit()));}
+            const result = await executeHomeBuy({quote: c.home, wallet, swap: swapArrived, currentOwner: connectedAddress,
+              market: {state: st, pay: c.pay, quoteToken: c.route?.pool?.quote, minOut: String(c.minOut), slippageBps: c.toleranceBps, spender: await extraAddress('feeRouter', st.chainId), setup: await isLive(st.chainId, 'feeRouter') ? 0 : 1},
+              onStep: step => {if (step.message) status.textContent = step.message;}});
+            if (result.landed && !result.completed) {landed = true; if (result.pendingBuy) showHomeRecovery(result.pendingBuy); else {recovery = result; followup.replaceChildren(recoveryView(h, {...result, error: {message: tradeError(result.error)}}, () => submit()));}}
             else if (c.home.home.path === 'instant') {status.textContent = 'Bought into your wallet.'; amount.value = ''; document.dispatchEvent(new CustomEvent('qhooks:traded'));}
           } finally {wallet.dispose();}
           return;
@@ -721,8 +758,8 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
           }
         } }
       });
-    } catch (e) { status.textContent = tradeError(e); landed = !!recovery; }
-    finally { lock(false); if (landed) { go.disabled = true; if (recovery?.retryable === false) for (const el of followup.querySelectorAll('button')) el.disabled = true; } else await layout(); }
+    } catch (e) { if (recovery?.pendingBuy) showHomeRecovery(pendingHomeBuy(c.owner) || recovery.pendingBuy); status.textContent = tradeError(e); landed = !!recovery; }
+    finally { lock(false); if (landed) { go.disabled = true; if (recovery?.retryable === false) for (const el of followup.querySelectorAll('button')) if (!recovery.pendingBuy || el.textContent !== 'Dismiss') el.disabled = true; } else await layout(); }
     if (xchainEnabled && proceeds && (cashHome() && cashHome() !== Number(proceeds.chainId) || proceeds.asset.symbol !== cashAsset(proceeds.chainId).symbol)) {
       const home = cashHome(), button = h('button', { type: 'button', class: 'qxt-mini' }, home ? 'Move to ' + chainName(home) : 'Move proceeds to cash');
       button.addEventListener('click', () => { void moveProceeds({ ...proceeds, home }).catch(e => { status.textContent = tradeError(e); }); });
@@ -738,7 +775,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   amount.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) submit(); } });
   balance.addEventListener('click', async () => { if(busy||recovery||!st)return;const intent=selection,activeState=st,mine=++qseq;clearTimeout(timer);current=null;go.disabled=true;sellPrefillOwner=null;clearArmed();quoteLoading=false;renderQuoteFreshness(); const b = await balances(); if(!isSelection(intent)||st!==activeState||mine!==qseq)return;if (b) { amount.value = formatUnits(spendable(b), payDecimals(), payDecimals()).replace(/,/g, ''); refresh(); } });
   go.addEventListener('click', submit);
-  onWalletChange(() => { clearArmed(); if (!busy&&!recovery&&!st?.sol) {if(sellPrefillOwner&&sellPrefillOwner.toLowerCase()!==connectedAddress()?.toLowerCase()){amount.value='';sellPrefillOwner=null;}void syncHome(true).then(() => {refresh();layout();});} });
+  onWalletChange(() => { clearArmed(); if (!busy && recovery?.pendingBuy && recovery.pendingBuy.owner.toLowerCase() !== connectedAddress()?.toLowerCase()) {recovery = null; current = null; followup.replaceChildren(); lock(false);} if (!busy&&!recovery&&!st?.sol) {if (restorePendingBuy()) return; if(sellPrefillOwner&&sellPrefillOwner.toLowerCase()!==connectedAddress()?.toLowerCase()){amount.value='';sellPrefillOwner=null;}void syncHome(true).then(() => {refresh();layout();});} });
 
   sellToCash.addEventListener('click', async () => {
     if (!st || busy||recovery) return;
@@ -751,6 +788,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
 
   function setSide(s) { if (busy||recovery || !['buy','sell'].includes(s) || side === s && !sellCash&&!pendingSellPrefill) return; clearArmed(); sellCash = false; side = s;homeSelected = s === 'buy' && homeTicketDefault(st?.chainId, homePref, homeEnabled) === 'home';if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} amount.value = '';sellPrefillOwner=null;pendingSellPrefill=false; refresh(); layout(); }
 
+  restorePendingBuy();
   return {
     beginSelection,isSelection,failSelection,canSelect:()=>!busy&&!recovery,
     async setPool(pool, meta, intent) {

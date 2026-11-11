@@ -43,7 +43,7 @@ export const gasWithHeadroom = gas => (quantity(gas, 'gas estimate') * 13n + 9n)
 
 /** Await relayWallet() once per move; dispose() after settlement to remove identity listeners. */
 export async function relayWallet({ hub, target = globalThis.window, rpc = relayRpc,
-  pollMs = 2000, timeoutMs = 360_000, sleep = pause, now = Date.now, onSubmitted, onSigned } = {}) {
+  pollMs = 2000, timeoutMs = 360_000, switchTimeoutMs = 30000, sleep = pause, now = Date.now, onSubmitted, onSigned } = {}) {
   if (!hub) {
     if (!target) throw fail('wallet_disconnected', 'Connect your wallet');
     const { getWalletHub } = await import('./wallet-hub.mjs');
@@ -79,7 +79,7 @@ export async function relayWallet({ hub, target = globalThis.window, rpc = relay
     const chainId = relayChainId(value);
     await checkOwner();
     switched = true;
-    await guardWalletChain(provider,chainId,{target});
+    await guardWalletChain(provider,chainId,{target,timeoutMs:switchTimeoutMs});
     await checkOwner();
     return chainId;
   }
