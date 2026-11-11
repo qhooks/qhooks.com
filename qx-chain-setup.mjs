@@ -53,8 +53,10 @@ async function check(chainId,s){
  if(s.safe){
   const th=await rpc(chainId,'eth_call',[{to:s.address,data:'0xe75235b8'},'latest']);
   const ow=words(await rpc(chainId,'eth_call',[{to:s.address,data:'0xa0e67e2b'},'latest'])).slice(2).map(w=>'0x'+w.slice(24));
-  const want=s.safe.owners.map(o=>o.toLowerCase());
-  if(BigInt(th)!==BigInt(s.safe.threshold)||ow.length!==want.length||!want.every(o=>ow.includes(o)))return 'wrong';
+  // Multi-chain manifests give the Safe's address in s.safe and the owners/threshold once at the top level.
+  const safe=s.safe&&typeof s.safe==='object'?s.safe:{owners:M.owners||[],threshold:M.threshold};
+  const want=safe.owners.map(o=>o.toLowerCase());
+  if(!want.length||BigInt(th)!==BigInt(safe.threshold)||ow.length!==want.length||!want.every(o=>ow.includes(o)))return 'wrong';
  }
  return 'ok';
 }
