@@ -109,6 +109,8 @@ function nameOf(wallet) {
 
 function render() {
   if (!root) return;
+  root.dataset.presenceChain=S.board.chain || 'all';
+  root.dataset.presenceFollowed=String(S.tab==='following');
   const me = connectedAddress();
   const tabs = el('div', { class: 'qpw-tabs', role: 'tablist' },
     ...[['board', 'Smart money'], ['following', 'Following']].map(([id, label]) => el('button', { type: 'button', role: 'tab', 'aria-selected': String(S.tab === id), class: 'qpw-tab', onclick: () => { S.tab = id; render(); } }, label)));
