@@ -112,13 +112,13 @@ form.addEventListener('submit', async e => {
           const proof=await signFoundingLink({mint:d.mint,creator:d.creator,issued:Math.floor(Date.now()/1000),evmSession:conn,solSession:sol,currentEvm:()=>hub.snapshot().current,onStep:step=>{note.textContent=step==='evm'?'Sign the message with your EVM wallet.':'Sign the same message with your Solana launch wallet.';}});
           const response=await fetch('/api/founding/link',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(proof)}),linked=await response.json();
           if(linked.eligible){unsubscribe();result.textContent='Eligible. Rewards will go to '+short(linked.payTo)+'.';load();}
-          else {button.textContent='Sign wallet link again';note.textContent=linked.reason==='no_spot'?'This reward wallet or creator already has a founding spot, or the spots are full.':response.ok?'This EVM wallet needs 100,000 QHOOKS.':linked.error==='link_cutoff_passed'?'The wallet link cutoff has passed.':linked.error==='pay_to_immutable'?'This launch already has a reward wallet.':'Refreshing… try again in a moment.';}
+          else {button.textContent='Sign wallet link again';note.textContent=linked.reason==='no_spot'?'This reward wallet or creator already has a founding spot, or the spots are full.':response.ok?'This EVM wallet could not be linked.':linked.error==='link_cutoff_passed'?'The wallet link cutoff has passed.':linked.error==='pay_to_immutable'?'This launch already has a reward wallet.':'Refreshing… try again in a moment.';}
         }catch(error){note.textContent=error.message||'Refreshing…';}finally{button.disabled=false;}});
       } else result.textContent=d.eligible?'Eligible. Rewards go to '+short(d.payTo)+'.':!d.open?'Solana: opening soon':d.mint?'The wallet link cutoff has passed.':'No qualifying launch found for this wallet or mint.';
       return;
     }
     const f = v => Math.floor(Number(BigInt(v) / 10n ** 18n)).toLocaleString('en-US');
-    result.textContent = (d.eligible ? 'Eligible. ' : 'Not yet: ' + f(d.short) + ' QHOOKS short. ') + 'This wallet holds ' + f(d.total) + ' QHOOKS (wallet ' + f(d.wallet_qhooks) + ', staked ' + f(d.staked) + ', timed locks ' + f(d.locked) + '). It must hold 100,000 when you launch.';
+    result.textContent = 'No QHOOKS holding is needed. Launch a token from this wallet and it takes a spot while spots are open (one per creator wallet).';
   } catch { result.textContent = 'Refreshing… try again in a moment.'; }
 });
 fill();

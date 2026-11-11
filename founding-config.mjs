@@ -30,7 +30,9 @@ export const FOUNDING = {
   // Entry (Randall's team 2026-11-10: "all have to hold qhooks to enter"): the creator wallet holds at least 100,000
   // QHOOKS on Robinhood Chain (wallet + staked in the vault + timed locks) at the launch's time, or the launch doesn't
   // take a spot. Payouts also need it at payout time (that week is skipped, not forfeited).
-  entry: {min: (100000n * 10n ** 18n).toString(), chain: '4663', vault: '0x6248098bfa019b9035a21722a86bdee3f6e9b934',
+  // 2026-11-11 Randall: "Let's eliminate the qhooks held restrictions for the competition". min 0 = any creator
+  // takes a spot (one per creator wallet, 50 spots); applies to every launch since start. Rewards still need traction.
+  entry: {min: '0', chain: '4663', vault: '0x6248098bfa019b9035a21722a86bdee3f6e9b934',
     stakeLock: '0x807390f11e52e8508636bac3c54b47b17a66dae3', stakeLockFrom: 110600000, from: 108872832},
   // Bounty ("first coin to 150k gets 1k usd"): first founding token to hold a $150,000 market cap for 24 hours straight
   // wins $1,000 in WETH on Robinhood Chain. Tracking ships with the payout tree; until then the page shows it open.
@@ -106,9 +108,11 @@ export function pickFounding(launches, cfg = FOUNDING, nowS = Math.floor(Date.no
     .map(l => { const c = targets.get(foundingKey(l)); return c ? {...l, orderAt: c.fromLaunchedAt, carriedFrom: {token: c.fromToken, launchedAt: c.fromLaunchedAt, id: c.id}} : l; })
     .sort((a,b) => compareLaunch({...a, launchedAt: a.orderAt ?? a.launchedAt, token: a.carriedFrom?.token ?? a.token}, {...b, launchedAt: b.orderAt ?? b.launchedAt, token: b.carriedFrom?.token ?? b.token}));
   const seen = new Set(), paid = new Set(), out = [];
-  for (const l of sorted) {
+  for (let l of sorted) {
     const sol = l.chainId === 'solana', token = sol ? String(l.token) : lower(l.token), creator = sol ? String(l.creator) : lower(l.creator);
     if (!sol && reserved.has(creator) && reserved.get(creator) !== foundingKey(l)) continue;
+    const open = cfg.entry && BigInt(cfg.entry.min || 0) === 0n; // no holding rule: a launch marked below the old minimum counts
+    if (open && !sol && l.entry === false) l = {...l, entry: true};
     if (cfg.entry && l.entry == null && (!sol || l.entryState !== 'waiting')) break; // unchecked is retried; a known waiting link can be listed around
     const waiting = sol && l.entry !== true && Number(l.waitUntil) > nowS;
     if (cfg.entry && l.entry !== true && !waiting) continue;
