@@ -5,7 +5,7 @@ import {SOL_LAUNCH_CONFIG as C} from './qx-sol-launch-config.mjs';
 import {solAddress,signSol} from './qx-solana.mjs';
 const b64=b=>{let s='';for(const v of b)s+=String.fromCharCode(v);return btoa(s);};
 export async function solApi(path,body){const r=await fetch('/api/sol-launch/'+path,{...(body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{}),cache:'no-store'}),v=await r.json();if(!r.ok)throw Error(v.error||'Solana request failed.');return v;}
-export async function solRuntime(){const s=await import('/vendor/dbc.mjs'),connection=new s.Connection(new URL('/api/sol-launch/rpc',location.origin).href,'confirmed');if(await connection.getGenesisHash()!=='5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp')throw Error('Use Solana mainnet.');return {...s,connection,client:new s.DynamicBondingCurveClient(connection,'confirmed')};}
+export async function solRuntime(){const s=await import('/vendor/dbc.mjs'),connection=new s.Connection(new URL('/api/sol-launch/rpc',location.origin).href,'confirmed');return {...s,connection,client:new s.DynamicBondingCurveClient(connection,'confirmed')};}
 export async function prepareSolTransaction(runtime,transaction,signers=[],owner=solAddress()){
  if(!owner||owner!==solAddress())throw Error('Connect the wallet for this transaction.');
  const {connection,PublicKey}=runtime,last=await connection.getLatestBlockhash('confirmed');transaction.feePayer=new PublicKey(owner);transaction.recentBlockhash=last.blockhash;if(signers.length)transaction.partialSign(...signers);

@@ -7,7 +7,7 @@ const TOKEN_PROGRAM='TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 export function requireReferralWallet(owner){requireSolTreasury();if(owner!==QHOOKS_SOL_TREASURY)throw Error('Connect the QHooks treasury wallet.');}
 export async function solReferralRuntime(){
  const s=await import('/vendor/referral.mjs'),connection=new s.Connection(new URL('/api/sol-launch/rpc',location.origin).href,'confirmed');
- if(await connection.getGenesisHash()!=='5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp')throw Error('Use Solana mainnet.');
+ 
  return {...s,connection};
 }
 export function referralSetupAddresses(PublicKey){const referral=referralAccountAddress(PublicKey);return {referral,tokens:referralTokenAddresses(PublicKey,referral)};}
