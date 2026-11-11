@@ -1,6 +1,6 @@
 import {solLaunchError} from './qx-sol-launch-errors.mjs';
 import {recordSolLaunch} from './qx-sol-launch-record.mjs';
-import {SOL_LAUNCH_CONFIG as C} from './qx-sol-launch-config.mjs';
+import {SOL_LAUNCH_CONFIG as C,solLaunchConfigReady} from './qx-sol-launch-config.mjs';
 import {solReviewLines,normalizeSolMetadata,solAmount,solText} from './qx-sol-launch-values.mjs';
 import {mountTokenProfileEditor,editableTokenProfileDraft,onTokenProfileDraft} from './qx-token-profile.mjs';
 import {solAddress,solWallets,connectSol,onSolChange} from './qx-solana.mjs';
@@ -29,7 +29,7 @@ export function mountSolCreate({chainSelect,onExit=()=>{}}){
  const notify=(text,error=false)=>{message.textContent=text;message.dataset.error=String(error);};
  function fields(){return normalizeSolMetadata({mint:mint?.publicKey.toBase58()||C.quoteMint,name:name.value,symbol:symbol.value,...editableTokenProfileDraft('solana')});}
  function go(next){if(busy)return;try{if(next>1)fields();if(next>2)solAmount(buy.value);step=next;render();document.getElementById('qsc-title-'+step).focus({preventScroll:true});root.scrollIntoView({block:'start'});}catch(e){notify(solLaunchError(e),true);}}
- async function loadConfig(){try{config=await solApi('config');notify(config.ready?'':'Solana launches open shortly.');}catch{config={ready:false};notify('Solana launches open shortly.');}render();}
+ async function loadConfig(){try{config=await solApi('config');config={...config,ready:solLaunchConfigReady(config)};notify(config.ready?'':'Solana launches open shortly.');}catch{config={ready:false};notify('Solana launches open shortly.');}render();}
  function render(){
   if(!active)return;root.hidden=false;for(const n of originals())n.hidden=true;
   for(let i=0;i<3;i++)screens[i].hidden=i!==step-1;

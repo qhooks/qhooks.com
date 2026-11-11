@@ -1,9 +1,10 @@
+import {QHOOKS_SOL_TREASURY,solTreasuryReady} from './qx-sol-treasury.mjs';
 // One public policy for every QHooks Solana coin. Amounts in SOL unless labelled otherwise.
 export const SOL_LAUNCH_CONFIG = Object.freeze({
  sdkVersion: '2.0.0', // Exact installed DBC SDK version; see vendor/dbc/package-lock.json.
  programId: 'dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN', // SDK constants.ts DBC program.
  dammV2ProgramId: 'cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG', // SDK constants.ts DAMM v2 program.
- treasury: 'CEACkaNKdHVupnaiEMLGppw8RthjCdoMj8kdxJeg3MfV', // Fee claimer and leftover receiver.
+ treasury: QHOOKS_SOL_TREASURY, // Fee claimer and leftover receiver.
  quoteMint: 'So11111111111111111111111111111111111111112', // Wrapped native SOL.
  tokenType: 0, // TokenType.SPLToken; no Token-2022 extensions.
  tokenDecimals: 6, // Fixed base token precision.
@@ -55,3 +56,5 @@ export function solLaunchReview() {
  const c=SOL_LAUNCH_CONFIG,fee=Number(solScheduledFeeNumerator(60))/1e7;
  return {steadyFeePercent:fee,meteoraPercent:fee*c.protocolFeePercentage/100,creatorPercent:fee*(100-c.protocolFeePercentage)*c.creatorTradingFeePercentage/10000,partnerPercent:fee*(100-c.protocolFeePercentage)*(100-c.creatorTradingFeePercentage)/10000};
 }
+
+export const solLaunchConfigReady = config => solTreasuryReady() && config?.ready===true;

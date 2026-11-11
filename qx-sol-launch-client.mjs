@@ -1,3 +1,4 @@
+import {requireSolTreasury} from './qx-sol-treasury.mjs';
 import {waitSolFinalized} from './qx-sol-launch-confirm.mjs';
 // SDK and transaction primitives load only after a Solana action.
 import {SOL_LAUNCH_CONFIG as C} from './qx-sol-launch-config.mjs';
@@ -21,6 +22,7 @@ export async function sendPreparedSol(runtime,prepared){
  return {signature,confirm:()=>waitSolFinalized(runtime.connection,signature,{lastValidBlockHeight:prepared.last.lastValidBlockHeight})};
 }
 export async function buildSolLaunch(runtime,{config,mint,owner,name,symbol,uri,buy,lamports}){
+ requireSolTreasury();
  const {PublicKey,BN,client,SystemProgram,buildSolLaunchParameters}=runtime,creator=new PublicKey(owner),key=new PublicKey(config);
  let minimum=new BN(0);if(buy>0n){const quote=client.pool.getQuoteFromInputAmount({config:buildSolLaunchParameters(),amountIn:new BN(buy.toString()),swapBaseForQuote:false,slippageBps:100,hasReferral:false,eligibleForFirstSwapWithMinFee:false});minimum=quote.minimumAmountOut;}
  const tx=await client.creator.createPoolWithFirstBuy({createPoolParam:{name,symbol,uri,payer:creator,poolCreator:creator,config:key,baseMint:mint.publicKey},...(buy>0n?{firstBuyParam:{buyer:creator,buyAmount:new BN(buy.toString()),minimumAmountOut:minimum,referralTokenAccount:null}}:{})});
@@ -28,6 +30,7 @@ export async function buildSolLaunch(runtime,{config,mint,owner,name,symbol,uri,
  return tx;
 }
 export async function claimSolFees(mint,{partner=false,onStatus=()=>{}}={}){
+ if(partner)requireSolTreasury();
  const owner=solAddress();if(!owner)throw Error('Connect a Solana wallet first.');if(partner&&owner!==C.treasury)throw Error('Connect the QHooks treasury wallet.');
  const [r,status,cfg]=await Promise.all([solRuntime(),solApi('token/'+mint),solApi('config')]);if(!cfg.ready||status.config!==cfg.config||!status.qhooksLaunch)throw Error('Not a verified QHooks launch.');
  const pool=new r.PublicKey(status.pool),actual=await r.client.state.getPool(pool);if(actual?.poolState?.config.toBase58()!==cfg.config)throw Error('Pool config mismatch.');
