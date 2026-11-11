@@ -2,6 +2,8 @@ import {swapCandles,mergeSwapCandles} from '/qx-swap-candles.mjs';
 import {tokenAvatar,bindTokenAvatar} from '/qx-token-avatar.mjs';
 import {positionChart} from '/qx-position-core.mjs';
 import {mountMarketPosition} from '/qx-market-position.mjs';
+import {mountChartLayers} from '/qx-chart-layers.mjs';
+import {tradeRecordHeaders} from '/qx-trade-record.mjs';
 import {mountRecapturePanel} from '/qx-recapture-panel.mjs';
 import {memberIdentity} from './qx-member-identity.mjs';
 import {mountArbGapPanel} from '/qx-arb-gap-panel.mjs';
@@ -58,7 +60,7 @@ const $ = id => document.getElementById(id);
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem('qhooks:terminal:' + k); localStorage.setItem('qhooks:terminal:' + k, v); } catch {} return null; };
 const now = () => Math.floor(Date.now() / 1000);
 const marketListeners = new Set();
-let myPosition=null,marketPosition=null;
+let myPosition=null,marketPosition=null,chartLayers=null,layerReadTimer=null;
 
 const state = { chain: store('chain') || 'all', feed: store('feed') || 'recent', tf: Number(store('tf')) || 60, unit: 'price', filter: 'all', pane: 'trades',
   markets: [], sel: null, pool: null, data: null, cursor: -1, watch: new Set(JSON.parse(store('watch') || '[]')), quick: { ...QUICK, ...JSON.parse(store('quick') || '{}') }, me: null,
@@ -416,6 +418,8 @@ function ensureChart() {
   candles = chart.addCandlestickSeries({ ...ownCandleOptions(up,down), priceFormat: { type: 'custom', formatter: price, minMove: 1e-12 } });
   volume = chart.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
   chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+  chart.timeScale().subscribeVisibleTimeRangeChange(scheduleLayerRead);
+  el.addEventListener('pointerup',()=>requestAnimationFrame(()=>chartLayers?.place()));
   chartTools=mountChartTools({h,chart,candles,volume,element:el,storage:memoryStorage});
 }
 // Day/night (2026-11-10): the chart reads its colours from the theme's CSS variables; re-read them when the theme flips,
@@ -464,12 +468,10 @@ function renderChart() {
   volume.setData(bars.map(c => ({ time: c.time, value: c.volume, color: c.close >= c.open ? up : down })));
   chartTools.update({key:d.meta.chainId+':'+d.meta.token+':'+state.unit,label:(d.meta.symbol||'Token')+' · '+(d.meta.chainId==='solana'?'Solana':CHAIN_NAME[d.meta.chainId]||d.meta.chainId)+' · '+(TFS.find(([tf])=>tf===d.tf)?.[1]||d.tf+'s')+' · '+(state.unit==='mcap'?'MCap':'Price')+(ownChart.unit?' '+ownChart.unit:''),data:bars.map(c=>({...c,open:c.open*k,high:c.high*k,low:c.low*k,close:c.close*k,volumeKind:'quote',quoteVolume:c.volume}))});
   const personal=positionChart(myPosition,bars,d.tf,k);
-  const owner=d.meta.chainId==='solana'?solAddress():state.me;
-  const watched=(d.trades||[]).filter(t=>t.trader!==owner&&(t.trader===d.meta.owner||state.tracked[t.trader])).map(t=>({time:Math.floor(t.ts/d.tf)*d.tf,position:t.buy?'belowBar':'aboveBar',color:t.trader===d.meta.owner?css('--qx-ink'):css('--qx-sage'),shape:t.buy?'arrowUp':'arrowDown',size:0.6,text:t.trader===d.meta.owner?'Dev':state.tracked[t.trader]})).filter(m=>bars.some(b=>b.time===m.time));
-  const markers=[...personal.markers,...watched].filter((m,i,all)=>all.findIndex(o=>o.time===m.time&&o.position===m.position&&o.color===m.color)===i).sort((a,b)=>a.time-b.time);
-  candles.setMarkers(markers);
+  const overlay=chartLayers.render({selection:selectedContext(),data:d,position:myPosition,chart,series:candles,bars,tf:d.tf,k,tracked:state.tracked});
+  candles.setMarkers(overlay.markers);
   if(entryLine){candles.removePriceLine(entryLine);entryLine=null;}
-  if(personal.entry!=null&&(d.ext||ownChart.unit==='USD'||stable(d.meta.quoteSymbol)))entryLine=candles.createPriceLine({price:personal.entry,color:'#38b87c',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'Avg entry $'+price(myPosition.averageEntryUsd)});
+  if(overlay.youEnabled&&personal.entry!=null&&(d.ext||ownChart.unit==='USD'||stable(d.meta.quoteSymbol)))entryLine=candles.createPriceLine({price:personal.entry,color:'#38b87c',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'Avg entry $'+price(myPosition.averageEntryUsd)});
   // Semantic render receipt used by the offline browser acceptance runner.
   $('qxt-chart').dataset.candleCount=String(bars.length);
   $('qxt-chart').dataset.buyMarkers=String(personal.markers.filter(m=>m.text==='Buy').length);
@@ -478,6 +480,17 @@ function renderChart() {
   const key = keyOf(state.sel) + d.tf + state.unit;
   // Young markets get legible bodies and doji strokes; busy charts retain the latest 90 bars.
   if(key!==lastChartKey){lastChartKey=key;chart.timeScale().setVisibleLogicalRange(ownChartRange(bars.length));}
+  scheduleLayerRead();
+}
+
+function scheduleLayerRead(){
+  clearTimeout(layerReadTimer);layerReadTimer=setTimeout(()=>{
+    chartLayers?.place();const selection=selectedContext(),d=marketDisplay();if(!selection?.token||!d?.candles?.length)return;
+    const range=chart?.timeScale().getVisibleRange(),first=range?.from??d.candles[0].time,last=range?.to??d.candles.at(-1).time;
+    if(typeof first!=='number'||typeof last!=='number')return;
+    const to=Math.ceil((last+d.tf)*1000),from=Math.max(0,Math.floor(first*1000),to-366*86400000);
+    void chartLayers.refresh({selection,from,to});
+  },150);
 }
 
 // ---- Header ----
@@ -750,6 +763,7 @@ function clearMarketView(message='Choose a token') {
   // Keep the chart area visible while the first market read is in flight.
   $('qxt-chart').hidden=!(state.loading&&state.sel&&!state.sel.ext);
   marketPosition?.clear();
+  chartLayers?.clear();
   try{if(entryLine){candles?.removePriceLine(entryLine);entryLine=null;}candles?.setData([]);volume?.setData([]);candles?.setMarkers([]);}catch{}
   $('qxt-chart-empty').hidden=false;$('qxt-chart-empty').textContent=state.loading?(state.sel&&!state.sel.ext?COLD_CHART_MESSAGE:'Loading this token’s chart…'):'Choose a token to see its chart.';
   renderPane();renderWorkspace();
@@ -1060,6 +1074,7 @@ ticket = mountTicket($('qxt-ticket'), { onTraded: async ({ side, moved, status,e
   if (!ext&&side === 'buy') try { if (await afterBuy(moved, status,{chainId,token,owner})) { status('TP/SL set on the ' + compact(Number(moved) / 1e18) + ' bought.'); toast('TP/SL placed on your buy.'); } } catch (e) { toast('TP/SL was not placed: ' + (e.message || 'error')); }
 } });
 marketPosition=mountMarketPosition({h,after:$('qxt-ticket'),getSelection:selectedContext,getOwner:()=>selectedContext()?.chainId==='solana'?solAddress():state.me,ticket,onChange:p=>{myPosition=p;if(state.data)renderChart();}});
+chartLayers=mountChartLayers({h,chartElement:$('qxt-chart'),getOwner:chain=>chain==='solana'?solAddress():state.me,headersFor:tradeRecordHeaders,onChange:()=>{if(state.data)renderChart();}});
 marketWorkspace=createMarketWorkspace({getSelection:selectedContext,isBusy:()=>!ticket.canSelect(),onChange:renderWorkspace,onRetry:refreshSelectedMarket,onBlocked:()=>{$('qxt-sync').textContent='Current trade retained. Finish it or resolve the funded recovery before refreshing.';}});
 positionsPanel=createPositionsPanel({h,pane:$('qxt-pane'),getOwner:()=>state.me,getSolOwner:solAddress,getSelection:selectedContext,isVisible:()=>state.pane==='positions',
  onConnect:family=>{if(family!=='solana'){hub.open();return;}$('qxt-trade').scrollIntoView({block:'start'});$('qxt-ticket').querySelector('.qxt-solw')?.focus({preventScroll:true});$('qxt-sync').textContent='Connect a Solana wallet in the trade ticket to read this holding.';},

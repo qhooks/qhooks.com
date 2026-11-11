@@ -99,6 +99,8 @@ export function closeTerminalOverlayOnEscape(event,document=globalThis.document)
  if(event.key!=='Escape'||event.defaultPrevented)return false;
  if(document.fullscreenElement){event.preventDefault();event.stopImmediatePropagation();void document.exitFullscreen().catch(()=>{});return true;}
  if(document.querySelector('dialog[open]'))return false;
+ const activity=document.querySelector('.qxt-layer-list:not([hidden])');
+ if(activity){event.preventDefault();event.stopImmediatePropagation();activity.querySelector('button')?.click();return true;}
  let details=null;
  for(let node=event.target;node;node=node.parentElement||node.parentNode)if(node.tagName==='DETAILS'&&node.open){details=node;break;}
  details||=document.querySelector('.qxt-settings[open], .qxfd-filter-details[open], .qxt-chart-tools details[open], .qxt-tape-tools details[open]');
