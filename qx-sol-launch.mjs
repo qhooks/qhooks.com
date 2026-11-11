@@ -58,7 +58,7 @@ export function mountSolCreate({chainSelect,onExit=()=>{}}){
   }catch(e){prepared=null;cost=null;notify(solLaunchError(e),true);}finally{busy=false;render();}
  }
  async function confirm(){if(!prepared||busy||pending)return;busy=true;render();try{
-  // Refresh blockhash, partial mint signature and simulation immediately before wallet approval.
+  // Refresh the unsigned message and simulation immediately before wallet approval.
   const owner=prepared.owner;prepared=await prepareSolTransaction(runtime,prepared.transaction,[mint],owner);notify('Confirm the token launch in your Solana wallet.');
   const sent=await sendPreparedSol(runtime,prepared);pending={signature:sent.signature,mint:details.mint,creator:owner};try{localStorage.setItem('qhooks:sol-launch:pending',JSON.stringify(pending));}catch{}
   notify('Waiting for final confirmation…');await sent.confirm();await record();

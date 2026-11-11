@@ -2,6 +2,7 @@
 const safe=new Set([
  'Waiting for the new QHooks treasury wallet.','Solana launches open shortly.','Connect your Solana wallet.','Connect a Solana wallet first.','Connect the QHooks treasury wallet.','Connect this coin’s creator wallet.','Connect the wallet for this transaction.',
  'The wallet changed. Review again.','Wallet changed. Review again.','Use Solana mainnet.',
+ 'Review this transaction again before signing.','This wallet cannot sign this transaction. Use another Solana wallet.',
  'Use a name of 1–32 UTF-8 bytes, without angle brackets.','Use 1–10 letters or digits for the ticker.','Add a token image.','Enter SOL with up to 9 decimal places.',
  'Keep the description to 1,000 characters.','Choose a smaller profile picture.','Choose a PNG, JPEG or WebP image.','The image could not be read.','The image format does not match its file.','The token profile could not be read.',
  'Use your X profile link or @handle.','Use a t.me Telegram link.','Use a discord.gg or discord.com invite.',
@@ -19,7 +20,7 @@ export function solLaunchError(error,fallback='Could not prepare your launch. Pl
  if(/Expected an object|StructError|failed to fetch|fetch failed|network|429|503|timed? out/i.test(message)||error?.name==='StructError')return 'Could not read Solana data. Please try again.';
  if(/Pool config not found|Quote mint not found|config_mismatch|config_unavailable/.test(message))return 'Launch setup is unavailable. Please try again shortly.';
  if(message==='confirmation_pending')return 'Your launch is still confirming. Check again shortly.';
- if(message==='config_already_set')return 'The launch config is already set. Refresh this page.';
+ if(message==='config_already_set')return 'The launch config is already set. Solana launches are open.';
  if(message==='sol_price_unavailable')return 'SOL price is unavailable. Please try again shortly.';
  if(message==='treasury_not_ready')return 'Waiting for the new QHooks treasury wallet.';
  if(message==='launches_open_shortly')return 'Waiting for the new QHooks treasury wallet.','Solana launches open shortly.';

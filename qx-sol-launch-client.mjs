@@ -2,23 +2,41 @@ import {requireSolTreasury} from './qx-sol-treasury.mjs';
 import {waitSolFinalized} from './qx-sol-launch-confirm.mjs';
 // SDK and transaction primitives load only after a Solana action.
 import {SOL_LAUNCH_CONFIG as C} from './qx-sol-launch-config.mjs';
-import {solAddress,signSol} from './qx-solana.mjs';
+import {solAddress,sendSol} from './qx-solana.mjs';
 const b64=b=>{let s='';for(const v of b)s+=String.fromCharCode(v);return btoa(s);};
+const approvals=new WeakMap(); // In-memory co-signers only; never put keypairs in saved recovery state.
+async function simulateSol(serialized){
+ const r=await fetch('/api/sol-launch/rpc',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'simulateTransaction',params:[serialized,{encoding:'base64',sigVerify:false,commitment:'confirmed'}]})}),j=await r.json();
+ if(!r.ok||j.error||!j.result?.value||j.result.value.err)throw Error('Simulation failed. Nothing was sent. Check your SOL balance and retry.');
+ return j.result.value;
+}
 export async function solApi(path,body){const r=await fetch('/api/sol-launch/'+path,{...(body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{}),cache:'no-store'}),v=await r.json();if(!r.ok)throw Error(v.error||'Solana request failed.');return v;}
 export async function solRuntime(){const s=await import('/vendor/dbc.mjs'),connection=new s.Connection(new URL('/api/sol-launch/rpc',location.origin).href,'confirmed');return {...s,connection,client:new s.DynamicBondingCurveClient(connection,'confirmed')};}
 export async function prepareSolTransaction(runtime,transaction,signers=[],owner=solAddress()){
  if(!owner||owner!==solAddress())throw Error('Connect the wallet for this transaction.');
- const {connection,PublicKey}=runtime,last=await connection.getLatestBlockhash('confirmed');transaction.feePayer=new PublicKey(owner);transaction.recentBlockhash=last.blockhash;if(signers.length)transaction.partialSign(...signers);
+ const {connection,PublicKey}=runtime,last=await connection.getLatestBlockhash('confirmed');transaction.feePayer=new PublicKey(owner);transaction.recentBlockhash=last.blockhash;
+ // Phantom must sign first. Clear stale signatures when refreshing a review;
+ // required signer accounts already come from the instruction account metadata.
+ transaction.signatures=[];
  const serialized=b64(transaction.serialize({requireAllSignatures:false,verifySignatures:false}));
- const r=await fetch('/api/sol-launch/rpc',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'simulateTransaction',params:[serialized,{encoding:'base64',sigVerify:false,commitment:'confirmed'}]})}),j=await r.json();
- if(!r.ok||j.error||!j.result?.value||j.result.value.err)throw Error('Simulation failed. Nothing was sent. Check your SOL balance and retry.');
+ const simulation=await simulateSol(serialized);
  const fee=await connection.getFeeForMessage(transaction.compileMessage(),'confirmed');if(fee.value==null)throw Error('Network cost unavailable. Refresh review.');
- return {transaction,serialized,last,networkLamports:fee.value,owner,units:j.result.value.unitsConsumed||null};
+ const prepared={transaction,serialized,last,networkLamports:fee.value,owner,units:simulation.unitsConsumed||null};
+ approvals.set(prepared,{serialized,owner,signers:[...signers]});return prepared;
 }
 export async function sendPreparedSol(runtime,prepared){
+ const approval=approvals.get(prepared);if(!approval||approval.serialized!==prepared.serialized||approval.owner!==prepared.owner)throw Error('Review this transaction again before signing.');
  if(solAddress()!==prepared.owner)throw Error('The wallet changed. Review again.');
- const signed=await signSol(prepared.serialized);if(solAddress()!==prepared.owner)throw Error('The wallet changed. Review again.');
- const signature=await runtime.connection.sendRawTransaction(Uint8Array.from(atob(signed),c=>c.charCodeAt(0)),{skipPreflight:false,maxRetries:2});
+ const coSign=approval.signers.length?async bytes=>{
+  // Deserialize the wallet's result, including its fee/Lighthouse instructions and
+  // wallet signature. Never rebuild the original message after wallet approval.
+  const signed=runtime.Transaction.from(bytes);
+  // Check the wallet-returned message too before adding any local signatures.
+  await simulateSol(b64(signed.serialize({requireAllSignatures:false,verifySignatures:false})));
+  signed.partialSign(...approval.signers);
+  return signed.serialize();
+ }:undefined;
+ const signature=await sendSol(approval.serialized,{owner:approval.owner,coSign,send:bytes=>runtime.connection.sendRawTransaction(bytes,{skipPreflight:false,preflightCommitment:'confirmed',maxRetries:2})});
  return {signature,confirm:()=>waitSolFinalized(runtime.connection,signature,{lastValidBlockHeight:prepared.last.lastValidBlockHeight})};
 }
 export async function buildSolLaunch(runtime,{config,mint,owner,name,symbol,uri,buy,lamports}){

@@ -5,3 +5,5 @@
 .qsc-setup #qss-open a,.qsc-setup #qss-wallets button,.qsc-setup #qss-create:not(:disabled){display:inline-flex;align-items:center;min-height:44px;padding:.6rem 1.1rem;border-radius:999px;border:0;background:#1d1c1a;color:#fff;font-weight:600;text-decoration:none;cursor:pointer}
 .qsc-setup #qss-wallets{display:flex;flex-wrap:wrap;gap:.5rem;margin:.75rem 0}
 .qsc-setup .qxc-number{overflow-wrap:anywhere}.qsc-setup .qsc-wallets{display:flex;flex-wrap:wrap;gap:.5rem;margin:.75rem 0}.qsc-setup .qsc-open a{display:inline-flex;margin:.25rem .5rem .25rem 0;text-decoration:none}.qsc-setup .qsc-wallets button,.qsc-setup .qsc-open a{min-height:44px;align-items:center;padding:.6rem 1.1rem;border-radius:999px;border:0;background:#1d1c1a;color:#fff;font-weight:600}.qsc-setup .qxc-panel{min-width:0}.qsc-setup select{max-width:100%}
+
+.qsc-done{border-color:#2f6b3a}.qsc-done h2{margin:0 0 .5rem}.qsc-done-link{display:inline-flex;align-items:center;min-height:44px;padding:.6rem 1.1rem;border-radius:999px;background:#1d1c1a;color:#fff!important;font-weight:600;text-decoration:none}.qsc-done .qsc-done-link:visited{color:#fff!important}

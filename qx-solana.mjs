@@ -1,12 +1,13 @@
 // Solana wallets for the terminal, through the Wallet Standard (Phantom, Solflare, Backpack and others register
 // themselves; no wallet library needed). Only what trading needs: list, connect (silently when remembered), the address,
 // and signing a Jupiter transaction.
+import {base58Encode} from './qx-solana-identity.mjs';
 const wallets = new Set(), listeners = new Set();
 let current = null; // { wallet, account }
 let restoring = false;
 let selection = 0;
 const KEY = 'qhooks:sol-wallet';
-const usable = w => w.chains?.some(c => c.startsWith('solana:')) && w.features?.['standard:connect'] && w.features?.['solana:signTransaction'];
+const usable = w => w.chains?.some(c => c.startsWith('solana:')) && w.features?.['standard:connect'] && (w.features?.['solana:signTransaction'] || w.features?.['solana:signAndSendTransaction']);
 const notify = () => listeners.forEach(f => { try { f(); } catch {} });
 function register(...ws) { for (const w of ws) if (usable(w)) wallets.add(w); notify(); restore(); return () => { ws.forEach(w => wallets.delete(w)); notify(); }; }
 if (typeof window !== 'undefined') {
@@ -52,12 +53,47 @@ export async function disconnectSol() {
 
 const fromB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 const toB64 = b => { let s = ''; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(s); };
+const supports = (session, name) => session?.wallet.features[name] && (!session.account.features || session.account.features.includes(name)) && (!session.account.chains || session.account.chains.includes('solana:mainnet'));
+function walletError(error) {
+  if (error?.code === 4001 || /user (?:rejected|denied)|request rejected|cancelled|canceled/i.test(error?.message || '')) return Object.assign(new Error('Wallet approval cancelled.'), {code:4001});
+  return error;
+}
+async function signWithWallet(session, transaction) {
+  if (!supports(session, 'solana:signTransaction')) throw new Error('This wallet cannot sign this transaction. Use another Solana wallet.');
+  try {
+    const [out] = await session.wallet.features['solana:signTransaction'].signTransaction({account:session.account, transaction, chain:'solana:mainnet'});
+    if (!(out?.signedTransaction instanceof Uint8Array) || !out.signedTransaction.length) throw new Error('The wallet did not sign');
+    return out.signedTransaction;
+  } catch (error) { throw walletError(error); }
+}
 /// Signs a base64 transaction (Jupiter's order) with the connected wallet and returns it signed, base64.
 export async function signSol(base64) {
   if (!current) throw new Error('Connect a Solana wallet first');
-  const [out] = await current.wallet.features['solana:signTransaction'].signTransaction({ account: current.account, transaction: fromB64(base64), chain: 'solana:mainnet' });
-  if (!out?.signedTransaction) throw new Error('The wallet did not sign');
-  return toB64(out.signedTransaction);
+  return toB64(await signWithWallet(current, fromB64(base64)));
+}
+
+// Shared submission path. A co-signer requires wallet-first signing on the returned
+// transaction; sign-and-send cannot collect another signature after broadcasting.
+export async function sendSol(base64, {owner=solAddress(), coSign, send}={}) {
+  const session=current;
+  if (!session || session.account.address!==owner) throw new Error('The wallet changed. Review again.');
+  const transaction=fromB64(base64);
+  if (!coSign && supports(session, 'solana:signAndSendTransaction')) {
+    let out;
+    try {
+      [out]=await session.wallet.features['solana:signAndSendTransaction'].signAndSendTransaction({account:session.account, transaction, chain:'solana:mainnet', options:{skipPreflight:false, preflightCommitment:'confirmed', maxRetries:2}});
+    } catch (error) { throw walletError(error); }
+    if (!(out?.signature instanceof Uint8Array) || out.signature.length!==64) throw new Error('The wallet did not return a transaction signature.');
+    // Submission already happened: return the signature even if the user changed
+    // wallets while approving, so the caller can save it and recover confirmation.
+    return base58Encode(out.signature);
+  }
+  let signed=await signWithWallet(session, transaction);
+  const checkWallet=()=>{if(current!==session || solAddress()!==owner)throw new Error('The wallet changed. Review again.');};
+  checkWallet();
+  if (coSign) signed=await coSign(signed);
+  checkWallet();
+  return send(signed);
 }
 
 /// A fresh, scoped rewards signature. It never signs a transfer or authorizes trading.
