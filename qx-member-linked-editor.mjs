@@ -63,7 +63,7 @@ export function mountMemberLinkedAccounts(target,{hub,auth,client,document:doc=g
     if(resume)return;status.textContent='Sign in with a free message. This links no account and moves no funds.';await auth.signIn(ctx.connection);ctx.check();ctx.options.auth=auth.authHeaders();await read(ctx);status.textContent='Signed in. Choose an account action when you are ready.';if(!continueAfterSignIn)return;
    }
    ctx.options.auth=auth.authHeaders();if(!loaded)await read(ctx);ctx.check();await action(ctx);
-  }catch(error){if(!disposed&&generation===mine){status.textContent=failure(error);logger?.warn?.('[QHooks linked accounts] '+reason(error));}}finally{if(generation===mine){busy=false;render();maybeResume();}}
+  }catch(error){if(!disposed&&generation===mine){status.replaceChildren(failure(error),' ',h('code',{class:'qmp-linked-code'},reason(error)));logger?.warn?.('[QHooks linked accounts] '+reason(error));}}finally{if(generation===mine){busy=false;render();maybeResume();}}
  }
  function maybeResume(){
   const found=pending();if(disposed||busy||!found||found.wallet!==wallet||owner()!==wallet)return;

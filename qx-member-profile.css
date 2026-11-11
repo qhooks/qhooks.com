@@ -30,3 +30,5 @@ html[data-theme=light] .qmp-privacy-state{background:#fff;color:#17231b}
 
 /* A verified X identity belongs beside the saved name and wraps on a phone. */
 .qp h1{display:flex;flex-wrap:wrap;align-items:center;gap:.2em .3em}.qp h1 .qma-chips{margin:0;max-width:100%}.qp h1 .qma-chip{font:500 14px/1.35 var(--qx-sans);letter-spacing:normal;min-height:44px;box-sizing:border-box;overflow-wrap:anywhere}.qx-inner main.qp h1 .qx-serif{font-style:normal}.qmp-profile-name{min-width:0;overflow-wrap:anywhere}
+/* Server reason code beside a linked-accounts error, so a screenshot names the exact cause. */
+.qmp-linked-code{margin-left:6px;padding:1px 6px;border-radius:6px;font:500 11.5px var(--qx-mono);color:var(--qx-muted);background:color-mix(in srgb,var(--qx-ink) 6%,transparent);overflow-wrap:anywhere}
