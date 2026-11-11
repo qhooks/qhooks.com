@@ -42,12 +42,13 @@ export function admitProviderChart(projection,selection){
  const surface=matchingSurface(p.chart_surface,s);if(!surface)return null;
  return Object.freeze({kind:'provider_embed',provider:'dexscreener',key:key(s),selection:Object.freeze(s),surface:Object.freeze(surface),observedAt,marketObservedAt:stamp(p.market_state?.observed_at)<=observedAt+60000?stamp(p.market_state?.observed_at):null,stale:stale(p),source:'QHooks data',attribution:'Chart by DexScreener'});
 }
-export function directProviderChart(selection,now=Date.now()){
+export function directProviderChart(selection,now=Date.now(),reason=null){
  const s=selected(selection);if(!s)return null;
  let surface;try{surface=dexscreenerChartSurface(args(s));}catch{return null;}
- return Object.freeze({kind:'provider_embed',provider:'dexscreener',key:key(s),selection:Object.freeze(s),surface:Object.freeze(surface),observedAt:now,marketObservedAt:null,stale:false,source:'direct',attribution:'Chart by DexScreener'});
+ return Object.freeze({kind:'provider_embed',provider:'dexscreener',key:key(s),selection:Object.freeze(s),surface:Object.freeze(surface),observedAt:now,marketObservedAt:null,stale:false,source:'direct',reason,attribution:'Chart by DexScreener'});
 }
 export function providerChartStatus(view,now=Date.now()){
+ if(view?.reason==='refreshing')return'Live chart · Refreshing';
  if(view?.source==='direct')return'Live chart for this pool · QHooks has no candles for it yet';
  const at=view?.observedAt;if(!Number.isSafeInteger(at)||at<=0)return'Live chart';
  const clock=value=>{const date=new Date(value).toISOString(),day=new Date(now).toISOString().slice(0,10)===date.slice(0,10)?'':date.slice(0,10)+' ';return day+date.slice(11,19)+' UTC';};

@@ -22,6 +22,7 @@ import { CHAIN_NAME, h, connectedAddress, rpc } from '/qx-chain.mjs';
 import { menuChains, chainMap, chainById } from '/chains.mjs';
 import { hasDirectRoute } from '/qx-elysium-direct.mjs';
 import { fetchDexPairs, pickPair, headerPatch } from '/qx-dex-live.mjs';
+import {ownIndexBehind,ownProviderSelection,applyProviderPrice,cachedPair,refreshPair} from '/qx-index-live.mjs';
 import { createChart, CrosshairMode, TrackingModeExitMode } from '/vendor/lightweight-charts/lightweight-charts.standalone.production.mjs';
 import { mountTicket } from '/qx-terminal-trade.mjs';
 import {createWorkspaceMemory,createWorkspaceSearch,workspaceSearchRows,workspaceAsset,createMarketWorkspace,renderWorkspaceContext,nativeMarketView} from '/qx-terminal-workspace.mjs';
@@ -477,6 +478,9 @@ function renderChart() {
   // Outside tokens: when our candles are missing or behind, show the live provider chart instead of a stale one.
   const candlesBehind=!!d.ext&&!!d.candles?.length&&historyState('candles',d.historyFreshness?.candles).stale;
   // Our candles first: no provider embed while the history read is still running (2026-11-10, chart switch).
+  // QHooks launches whose index is catching up: the live provider chart until it is within 300 blocks again.
+  const ownLive=!d.ext&&d.providerLive?ownProviderSelection(d):null;
+  if(ownLive&&providerChart.render(directProviderChart(ownLive,Date.now(),'refreshing'),ownLive)){chartUnits.hidden=true;const status=$('qxt-candles-freshness');if(status)status.hidden=true;return;}
   if((!d.candles?.length||candlesBehind)&&d.marketCoverage?.candles!=='loading'&&providerChart.render(d.chartSurface||directProviderChart(embedSelection),embedSelection)){chartUnits.hidden=true;const status=$('qxt-candles-freshness');if(status)status.hidden=true;return;}
   providerChart.clear();chartUnits.hidden=false;
   renderHistoryStatus('candles',d);
@@ -605,7 +609,7 @@ function renderHead() {
     ...cell('MCap', usdFirst(s.mcapUsd, s.mcap, q)), ...cell('Vol 24h', usdFirst(s.volume24Usd, s.volume24, q)), ...cell('Buys / sells · 24h', Number.isFinite(s.buys24)&&Number.isFinite(s.sells24)?s.buys24+' / '+s.sells24:'—'),
     ...cell('Holder wallets', s.holders ?? '—'), ...cell('Top 10', pct(s.top10, false)), ...cell('Burned', s.supply!=null&&s.burned!=null&&s.supply+s.burned>0 ? pct(s.burned / (s.supply + s.burned), false) : '—'),
     ...cell('Team locked', s.supply!=null&&s.burned!=null&&s.locked!=null&&s.supply+s.burned>0 ? pct(s.locked / (s.supply + s.burned), false) : '—'));
-  $('qxt-sync').textContent = '';
+  $('qxt-sync').textContent = d.providerLive?'Refreshing · live price by DexScreener':'';
 }
 
 // ---- Bottom panes ----
@@ -818,6 +822,9 @@ async function loadMarket({signal,strict=false}={}) {
     if(!r.ok)throw Error(r.status===404?'This launch is not listed yet.':'Refreshing market data…');
     const data=await fillNativeUsd(await r.json());if(mine!==mseq)return false;applyCachedPoolPrice(data);
     const selected=selectedContext();if(String(data?.meta?.chainId)!==chainId||data.meta?.controller?.toLowerCase()!==controller||(selected?.token&&data.meta?.token?.toLowerCase()!==selected.token.toLowerCase()))throw Error('Market data does not match the selected launch. Refresh to retry.');
+    // Index catching up (> 300 blocks, or no sync for 3 min): live DexScreener price, read at most every 20 s.
+    if(ownIndexBehind(data)){data.providerLive=true;const hit=cachedPair(data);if(hit)applyProviderPrice(data,hit);
+     void refreshPair(data).then(pair=>{if(!pair||mine!==mseq||state.data!==data||!applyProviderPrice(data,pair))return;ticket.setPriceUsd(data.summary.priceUsd,selectionFlow.current()?.intent);paintMarket();});}
     state.data=data;state.loading=false;state.loadError=null;
     ticket.setPriceUsd(data.summary?.priceUsd??(data.meta?.quoteSymbol==='USD'||/^(USDC|USDT)$/i.test(data.meta?.quoteSymbol||'')?data.summary?.price:null),selectionFlow.current()?.intent);
     paintMarket();void fillPoolPrice(data,mine);
