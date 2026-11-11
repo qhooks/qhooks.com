@@ -1,0 +1,20 @@
+/* Keep wallet/network notices within the phone ticket, including embedded views. */
+:is(.qxt, .qpo-page, [data-tg="1"]) :is([role="status"], [role="alert"], [class*="-status"]:not(.qxt-status-dot), [class*="-error"], [class*="-notice"], [class*="-note"], [class*="-warn"], .qpo-note, .qpo-out, .qxt-out:not(:has(*))) {
+  box-sizing:border-box;
+  overflow-wrap:anywhere!important;
+  word-break:break-word!important;
+  max-width:100%!important;
+  min-width:0!important;
+  white-space:normal!important;
+  line-height:1.4!important;
+  max-height:4.2em!important;
+  overflow:hidden!important;
+  display:-webkit-box!important;
+  -webkit-box-orient:vertical!important;
+  -webkit-line-clamp:3!important;
+  line-clamp:3!important;
+  font-style:normal!important;
+}
+:is(.qxt, [data-tg="1"]) :is(.qxt-card, .qxt-trade, .qxt-trade-body, .qx-oneclick, .qxt-risk), .qpo-sheet-in, .qpo-form { min-width:0;max-width:100%; }
+
+:is(.qxt, .qpo-page, [data-tg="1"]) :is([role="status"], [role="alert"], [class*="-status"], [class*="-error"], [class*="-notice"], [class*="-note"], [class*="-warn"])[hidden] {display:none!important}

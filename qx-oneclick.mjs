@@ -1,3 +1,4 @@
+import { tradeError } from './qx-chain-guard.mjs';
 // One-click trading, client side (Randall 2026-11-10: "Need auto signing site wide and tg").
 // One toggle in the trade ticket. Turning it on is one Privy "add signer" confirm (plus a one-time sign-in signature on
 // the web if the wallet has no QHooks session yet). After that, ticket trades on QHooks markets go through
@@ -102,7 +103,7 @@ export function mountOneClickToggle(host, { doc = document } = {}) {
     if (busy) return; busy = true; input.disabled = true; const want = input.checked;
     status.textContent = want ? 'Confirm in your wallet…' : 'Turning off…';
     try { want ? await enableOneClick() : await disableOneClick(); await render(true); }
-    catch (e) { input.checked = !want; status.textContent = e.message; }
+    catch (e) { input.checked = !want; status.textContent = tradeError(e); }
     finally { busy = false; input.disabled = false; }
   });
   save.addEventListener('click', async () => { try { await setOneClickLimits(per.value, day.value); await render(true); } catch (e) { status.textContent = e.code === 'invalid_limits' ? 'Use whole dollars, and a day at least as large as one trade.' : 'Could not save limits.'; } });

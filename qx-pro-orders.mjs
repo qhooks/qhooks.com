@@ -1,3 +1,4 @@
+import { tradeError } from './qx-chain-guard.mjs';
 // Limit orders (pro terminal phase C, 2026-11-10). You sign one order; the QHooks keeper fills it when the price is met,
 // through QFeeRouter (1% fee, 30% cashback back to you, referral to your referrer). Your tokens stay in your wallet until
 // the fill: Permit2 lets the order executor take exactly the signed amount, once, at no worse than your price.
@@ -54,7 +55,7 @@ const priceText = v => !Number.isFinite(v) ? '—' : v >= 1 ? v.toLocaleString('
 const plain = v => { if (!Number.isFinite(v) || v <= 0) return ''; const s = v.toPrecision(6); return s.includes('e') ? v.toFixed(18).replace(/0+$/, '') : String(Number(s)); };
 const says = { executor_not_deployed: 'Orders are not set up on this chain yet.', needs_approval_or_balance: 'Your wallet needs the balance and the one-time approval first.', invalid_signature: 'The signature did not match. Try again.',
   too_many_orders: 'You have 50 open orders. Withdraw some first.', slow_down: 'Too many orders this hour. Try again shortly.', order_rejected: 'This order would not go through on chain. Check the amount and price.', invalid_deadline: 'Choose how long the order stays open.', sign_in: 'Sign in to withdraw orders.', not_cancellable: 'That order is no longer open.', try_again: 'The network is slow right now. Your order was not placed; try again.' };
-const say = e => says[e?.message] || (e?.code === 4001 ? 'Cancelled in your wallet.' : e?.message || 'Something went wrong. Try again.');
+const say = e => says[e?.message] || tradeError(e);
 
 // Instant (X2) stays behind a flag until Randall's small live test passes: ?instant=1 or localStorage qhooks:pro:instant=1.
 const INSTANT = (() => { try { return new URLSearchParams(location.search).has('instant') || localStorage.getItem('qhooks:pro:instant') === '1'; } catch { return false; } })();
@@ -115,9 +116,9 @@ export async function placeExit({ amount, tp, sl, floorPct, days }) {
 
 /// Places a limit order. With `funding` (a Relay quote from the funding row), the pay asset is first delivered to your own
 /// wallet on this chain (pro terminal X1: bridge at placement), then the order is signed for exactly what arrived.
-export async function placeOrder({ side, amount, price, days, funding = null }) {
+export async function placeOrder({ side, amount, price, days, funding = null }, { market = st?.market, onStatus = s => { statusEl.textContent = s; } } = {}) {
   const me = connectedAddress(); if (!me) throw Error('Connect your wallet first');
-  const m = st.market, tokenIn = side === 'buy' ? m.quote : m.token, tokenOut = side === 'buy' ? m.token : m.quote, inDec = side === 'buy' ? m.qdec : m.tdec;
+  const m = market, tokenIn = side === 'buy' ? m.quote : m.token, tokenOut = side === 'buy' ? m.token : m.quote, inDec = side === 'buy' ? m.qdec : m.tdec;
   const rate = rateFor(side, price, m.tdec, m.qdec).toString(); // validate the price before anything moves
   const ref = savedReferrer(), blocksPool = (BigInt(m.key.hooks) & 16383n) === 10956n;
   const hops = [{ key: m.key, zeroForOne: tokenIn === m.key.currency0.toLowerCase(), hookData: ref && blocksPool ? '0x' + ref.slice(2).padStart(64, '0') : '0x' }];
@@ -128,10 +129,10 @@ export async function placeOrder({ side, amount, price, days, funding = null }) 
       triggerBelow: false, feeOnInput: side === 'buy', keeperFeeBps: KEEPER_BPS, referrer: ref || ZERO, nonce: randomNonce(), deadline };
     // A bounded allowance: this order plus your other open orders in the same token, never "unlimited".
     const open = openAmount(await myOrders(me), m.chainId, tokenIn);
-    await ensureAllowance(m.chainId, tokenIn, PERMIT2, open + amountIn, s => statusEl.textContent = s);
-    statusEl.textContent = 'Sign the order in your wallet. It costs nothing and moves nothing until it fills.';
+    await ensureAllowance(m.chainId, tokenIn, PERMIT2, open + amountIn, onStatus);
+    onStatus('Sign the order in your wallet. It costs nothing and moves nothing until it fills.');
     const signature = await signTypedData(m.chainId, typedOrder(m.chainId, o));
-    statusEl.textContent = 'Checking the order…';
+    onStatus('Checking the order…');
     return post('/api/orders', { chainId: m.chainId, order: o, signature, hops });
   };
   if (side === 'buy' && funding?.quote) {
@@ -139,7 +140,7 @@ export async function placeOrder({ side, amount, price, days, funding = null }) 
     const q = funding.quote, wallet = await relayWallet();
     let res;
     try { res = await runFundedOrder({ quote: q, wallet, setup: async () => {}, place: async arrived => { const r = await submit(arrived); orderOrigin(me, m.chainId, r.hash, q.funding.from); return r; },
-      onStep: e => { if (e.message) statusEl.textContent = e.message; } }); }
+      onStep: e => { if (e.message) statusEl.textContent = say(e); } }); }
     finally { wallet.dispose?.(); }
     if (!res.completed) { st.recovery = { result: res, submit, origin: q.funding.from }; throw Object.assign(Error(res.error?.message || 'Your funds arrived, but the order was not placed yet.'), { recovery: true }); }
     return res.result;
@@ -191,7 +192,7 @@ function render() {
       go.disabled = true;
       await funding.update({ owner, chainId: Number(m.chainId), asset, amountNeeded: amt, balance,
         review: () => destinationCosts({ owner, chainId: Number(m.chainId), asset, amountNeeded: amt, spender: PERMIT2, gasUnits: 150000n }) });
-    } catch (e) { if (mine === fundingRev) statusEl.textContent = e.message; }
+    } catch (e) { if (mine === fundingRev) statusEl.textContent = say(e); }
   };
   if (funding) amount.addEventListener('input', () => { clearTimeout(fundingTimer); fundingTimer = setTimeout(refreshFunding, 350); });
   st.refreshFunding = funding ? refreshFunding : null;

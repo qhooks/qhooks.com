@@ -1,3 +1,5 @@
+import { placeTriggerExit } from './qx-trigger-execution.mjs';
+import { tradeError } from './qx-chain-guard.mjs';
 import {createExitPreferences} from '/qx-exit-preferences.mjs';
 import {bindNativeExit} from '/qx-native-exit-guard.mjs';
 // Terminal: take-profit and stop-loss on a launch, through the ownerless QTriggerOrders contract (one
@@ -34,8 +36,6 @@ async function sqrtPrice(c) {
 }
 // Token price in the quote currency at a given sqrt price.
 const priceAt = (s,c) => { const p = (Number(s) / Q96) ** 2 * 10 ** (c.tokenIs0 ? c.decimals - c.quoteDecimals : c.quoteDecimals - c.decimals); return c.tokenIs0 ? p : 1 / p; };
-// The sqrt price at which the token is worth `f` times what it is worth at `s`.
-const scaled = (s, f,c) => { const r = BigInt(Math.round(Math.sqrt(f) * 1e9)); return c.tokenIs0 ? s * r / 1_000_000_000n : s * 1_000_000_000n / r; };
 const fmtP = p => p >= 1 ? p.toLocaleString('en-US', { maximumFractionDigits: 4 }) : p.toPrecision(4);
 
 async function act(btn,status,ctx,fn){
@@ -46,7 +46,7 @@ async function act(btn,status,ctx,fn){
   ctx.assert();ownerGuard();activeAction=ctx;
   await fn(t=>{if(ctx.current())status.textContent=t;});ctx.assert();ownerGuard();
   activeAction=null;await render();
- }catch(error){if(activeAction===ctx)activeAction=null;if(ctx.current()){status.textContent=error.message||'That did not go through';btn.disabled=false;}}
+ }catch(error){if(activeAction===ctx)activeAction=null;if(ctx.current()){status.textContent=tradeError(error);btn.disabled=false;}}
 }
 
 async function readOrder(id,ctx) {
@@ -76,17 +76,7 @@ async function run(o,s,ctx){
 async function place(amount, tpPct, slPct, floorBps, tipBps, s, trade=null,ctx=null) {
   const c=ctx?.state||st,guard=bindNativeExit({state:c,getState:()=>st,owner:ctx?.owner??connectedAddress(),getOwner:connectedAddress,trade});
   const assert=()=>{ctx?.assert();guard();};assert();
-  const p0 = await sqrtPrice(c);assert();
-  const q = await quoteSingle(c.chainId, c.key, c.tokenIs0, amount);assert();
-  const f = x => BigInt(Math.round(x * 1e6)), keep = 10000n - BigInt(floorBps);
-  const tp = tpPct ? scaled(p0, 1 + tpPct / 100,c) : 0n, sl = slPct ? scaled(p0, 1 - slPct / 100,c) : 0n;
-  // Minimums follow today's sell quote (charges included) scaled to each trigger, less the floor.
-  const tpMin = tpPct ? q * f(1 + tpPct / 100) / 1_000_000n * keep / 10000n : 0n, slMin = slPct ? q * f(1 - slPct / 100) / 1_000_000n * keep / 10000n : 0n;
-  const now = BigInt((await rpc(c.chainId, 'eth_getBlockByNumber', ['latest', false])).timestamp);assert();
-  await ensureAllowance(c.chainId, c.token, c.address, amount,s,assert);assert();
-  s('Confirm the order in your wallet…');
-  await send(c.chainId, { to: c.address, data: calldata(SEL.place, ['address', KEY_T, 'bool', 'uint128', 'uint160', 'uint128', 'uint160', 'uint128', 'uint40', 'uint16'],
-    [MANAGER[c.chainId], keyTuple(c.key), c.tokenIs0, amount, tp, tpMin, sl, slMin, now + 30n * 86400n, tipBps])},s,assert);assert();
+  return placeTriggerExit(c,{amount,tpPct,slPct,floorBps,tipBps,onStatus:s,assert});
 }
 
 async function render() {

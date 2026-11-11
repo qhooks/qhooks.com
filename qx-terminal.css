@@ -1,3 +1,4 @@
+@import url("/qx-ticket-notices.css");
 /* Trading terminal: dense three-column desk on the QHooks palette (graphite green, brass, sage). */
 .qxt,body.qxt{--qxt-up:#5fae8a;--qxt-down:#d06a5b;--qxt-up-a:rgba(95,174,138,.35);--qxt-down-a:rgba(208,106,91,.35);--qxt-grid:rgba(241,238,227,.05);
  --qxt-h:52px;font-size:13px;line-height:1.4;height:100vh;overflow:hidden}

@@ -140,7 +140,7 @@ const rows = [
     // Sale-first launches (QSaleLaunch, the same address on every chain; nothing there until Randall's /chain-setup?set=sale tap).
     // from 0: the indexer starts at the chain head on its first scan; set the deploy block once it is on chain.
     saleLaunch: { address: '0x707d79c32bea8f9773a81569fbacc64ab0502044', from: 0 },
-    feeModel: 'bsc', feeAccounting: 'bsc-execution', feeCapWei: '10000000000', gasFloorWei: null,
+    minPriorityFeeWei: '50000000', feeModel: 'bsc', feeAccounting: 'bsc-execution', feeCapWei: '10000000000', gasFloorWei: null,
     native: 'BNB', rpc: 'https://bsc-dataseed.bnbchain.org', logsRpc: 'https://bsc-rpc.publicnode.com', logStep: 5000, blockTime: 0.45,
     explorer: 'https://bscscan.com',
     contracts: { manager: '0x28e2ea090877bf75740558f6bfb36a5ffee9e9df', stateView: '0xd13dd3d6e93f276fafc9db9e6bb47c1180aee0c4', quoter: '0x9f75dd27d6664c475b90e105573e550ff69437b0', router: '0x91bf3bfaef8d771a74e1a8fe460b3ee646b2e588', permit2: '0x000000000022d473030f116ddee9f6b43ac78ba3', extended: false },

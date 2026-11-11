@@ -1,3 +1,4 @@
+import { guardWalletChain, marketFees, guardedSend, asTradeError } from './qx-chain-guard.mjs';
 // Relay's wallet contract, backed only by the wallet selected in wallet-hub.
 import { chainById } from './chains.mjs';
 
@@ -34,16 +35,8 @@ export async function relayRpc(chainId, method, params) {
 }
 
 // Same fee policy as qx-chain.send: 2 × latest base fee + tip, with 30% gas headroom.
-export async function relayFees(chainId, { rpc = relayRpc, tip } = {}) {
-  const [block, priority] = await Promise.all([
-    rpc(chainId, 'eth_getBlockByNumber', ['latest', false]),
-    (tip ? tip() : rpc(chainId, 'eth_maxPriorityFeePerGas', [])).catch(() => '0x0'),
-  ]);
-  if (block?.baseFeePerGas != null) {
-    const base = quantity(block.baseFeePerGas, 'base fee'), p = quantity(priority ?? '0x0', 'priority fee');
-    return { maxFeePerGas: hex(base * 2n + p), maxPriorityFeePerGas: hex(p) };
-  }
-  return { gasPrice: hex(quantity(await rpc(chainId, 'eth_gasPrice', []), 'gas price')) };
+export async function relayFees(chainId, { rpc = relayRpc } = {}) {
+  return marketFees(chainId,rpc);
 }
 
 export const gasWithHeadroom = gas => (quantity(gas, 'gas estimate') * 13n + 9n) / 10n;
@@ -83,21 +76,11 @@ export async function relayWallet({ hub, target = globalThis.window, rpc = relay
   }
 
   async function switchChain(value) {
-    const chainId = relayChainId(value), wanted = hex(BigInt(chainId));
+    const chainId = relayChainId(value);
     await checkOwner();
-    if (Number(await provider.request({ method: 'eth_chainId' })) !== chainId) {
-      switched = true;
-      if (target?.CustomEvent) target.dispatchEvent(new target.CustomEvent('qhooks:chain-switch', { detail: { chainId: String(chainId) } }));
-      try { await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: wanted }] }); }
-      catch (error) {
-        if (Number(error?.code) === 4902) throw fail('wallet_chain_missing', `Add ${chainById(chainId).name} to your wallet, then try again.`);
-        throw error;
-      }
-    }
+    switched = true;
+    await guardWalletChain(provider,chainId,{target});
     await checkOwner();
-    if (Number(await provider.request({ method: 'eth_chainId' })) !== chainId) {
-      throw fail('wallet_wrong_chain', 'Your wallet is on a different network. Try switching again.');
-    }
     return chainId;
   }
 
@@ -107,18 +90,11 @@ export async function relayWallet({ hub, target = globalThis.window, rpc = relay
         (tx?.from != null && !same(tx.from, address))) throw fail('invalid_transaction', 'The transaction does not match your wallet.');
     const value = hex(quantity(tx.value ?? 0, 'value'));
     await switchChain(chainId);
-    const request = { from: address, to: tx.to, data: tx.data ?? '0x', value };
-    const [fees, estimate] = await Promise.all([
-      relayFees(chainId, { rpc, tip: () => provider.request({ method: 'eth_maxPriorityFeePerGas' }) }),
-      rpc(chainId, 'eth_estimateGas', [request]),
-    ]);
-    const gas = gasWithHeadroom(estimate);
-    if (gas === 0n) throw fail('invalid_transaction', 'The network could not estimate this transaction.');
-    await checkOwner();
-    if (Number(await provider.request({ method: 'eth_chainId' })) !== chainId) throw fail('wallet_wrong_chain', 'Your wallet network changed. Get a new quote.');
-    let hash;
-    try { hash = await provider.request({ method: 'eth_sendTransaction', params: [{ ...request, ...fees, gas: hex(gas) }] }); }
+    let hash, submitted=false;
+    const sendProvider={request:args=>{if(args.method==='eth_sendTransaction')submitted=true;return provider.request(args);}};
+    try { hash=await guardedSend(sendProvider,chainId,{from:address,to:tx.to,data:tx.data,value},{rpc,target,beforeSend:checkOwner,assert:()=>{const selected=hub.snapshot().current;if(invalid||(selected&&(!same(selected.owner,address)||selected.entry?.provider!==provider)))throw fail('wallet_changed','Your wallet changed. Review again.');}}); }
     catch (cause) {
+      if(!submitted)throw asTradeError(cause);
       if (Number(cause?.code) === 4001) throw cause; // An explicit user rejection did not authorize a send.
       throw fail('wallet_send_unknown', 'Your wallet did not confirm whether the transaction was sent. Check its activity and the move status before trying again.',
         { cause, chainId, mayHaveSubmitted: true });

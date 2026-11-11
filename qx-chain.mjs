@@ -1,3 +1,4 @@
+import { guardWalletChain, assertWalletChain, guardedSend, asTradeError } from './qx-chain-guard.mjs';
 // Shared chain plumbing for the Trade page's extra panels (Buy with ETH, limit orders, team locks):
 // public-RPC reads, a small ABI codec, the pool's live key, and wallet sends with chain switching.
 import { chainMap } from '/chains.mjs';
@@ -143,71 +144,62 @@ async function providerFor(address) {
 /// Switches the wallet to `chainId` when it is elsewhere. Wallets report a network change as a new connection,
 /// so the page is told first (qhooks:chain-switch) and can rejoin the same wallet afterwards.
 async function onChain(p,chainId,onStatus=()=>{},assertContext=()=>{}){
-  const hexChain = '0x' + Number(chainId).toString(16);
-  const activeChain=await p.request({method:'eth_chainId'});assertContext();
-  if(activeChain.toLowerCase()===hexChain)return;
-  onStatus((silentActive() ? 'Switching to ' : 'Switching your wallet to ') + CHAIN_NAME[chainId] + '…');
-  window.dispatchEvent(new CustomEvent('qhooks:chain-switch', { detail: { chainId: String(chainId) } }));
-  assertContext();await p.request({method:'wallet_switchEthereumChain',params:[{chainId:hexChain}]});assertContext();
+  return guardWalletChain(p,chainId,{onStatus,assert:assertContext});
 }
 /// Sends one transaction from the connected wallet on the pool's chain and waits for its receipt.
 export async function send(chainId,tx,onStatus=()=>{},assertContext=()=>{}){
-  assertContext();const from=connectedAddress();if(!from)throw Error('Connect your wallet first');
-  const assert=()=>{assertContext();if(connectedAddress()!==from)throw Error('Your wallet changed. Review this action again.');};assert();
-  const p=await providerFor(from);assert();
-  await onChain(p,chainId,onStatus,assert);assert();
-  // Explicit EIP-1559 fees (twice the base fee plus the wallet's tip) so no wallet pairs a tip above its own cap.
-  const fees = {};
   try {
-    const [block, tip] = await Promise.all([rpc(chainId, 'eth_getBlockByNumber', ['latest', false]), p.request({ method: 'eth_maxPriorityFeePerGas' }).catch(() => '0x0')]);
-    if (block?.baseFeePerGas) { const t = BigInt(tip || 0); fees.maxPriorityFeePerGas = '0x' + t.toString(16); fees.maxFeePerGas = '0x' + (BigInt(block.baseFeePerGas) * 2n + t).toString(16); }
-  } catch {}
-  assert();
-  // Hooks whose cost depends on the block (decaying fees, clocks, per-block caps) can outrun a wallet's own
-  // estimate, so the gas limit carries 30% headroom over a fresh estimate. Unused gas is not charged.
-  const value = '0x' + BigInt(tx.value || 0).toString(16);
-  try { const est = BigInt(await rpc(chainId, 'eth_estimateGas', [{ from, to: tx.to, data: tx.data, value }])); fees.gas = '0x' + (est * 13n / 10n).toString(16); } catch {}
-  assert();onStatus(silentActive() ? 'Sending…' : 'Confirm in your wallet…');
-  assert();const hash = await p.request({ method: 'eth_sendTransaction', params: [{ from, to: tx.to, data: tx.data, value, ...fees }] });
-  onStatus('Waiting for the transaction…');
-  for (let i = 0; i < 180; i++) {
-    const r = await rpc(chainId, 'eth_getTransactionReceipt', [hash]).catch(() => null);
-    if (r) { if (r.status !== '0x1') throw new Error('The transaction reverted'); return r; }
-    await new Promise(res => setTimeout(res, 2000));
-  }
-  throw new Error('Still pending. Check your wallet activity');
+    assertContext();const from=connectedAddress();if(!from)throw Error('Connect your wallet first');
+    const assert=()=>{assertContext();if(connectedAddress()!==from)throw Error('Your wallet changed. Review this action again.');};assert();
+    const p=await providerFor(from);assert();
+    const hash=await guardedSend(p,chainId,{...tx,from},{rpc,assert,onStatus:text=>onStatus(silentActive()&&text==='Confirm in your wallet…'?'Sending…':text)});
+    onStatus('Waiting for the transaction…');
+    for (let i = 0; i < 180; i++) {
+      const r = await rpc(chainId, 'eth_getTransactionReceipt', [hash]).catch(() => null);
+      if (r) { if (r.status !== '0x1') throw new Error('The transaction reverted'); return r; }
+      await new Promise(res => setTimeout(res, 2000));
+    }
+    throw new Error('Still pending. Check your wallet activity');
+  } catch(error) { throw asTradeError(error); }
 }
 /// EIP-5792: sends `calls` as one atomic batch when the connected wallet reports atomic batching on `chainId`
 /// (wallet_getCapabilities). Returns null, having sent nothing, when it does not; the caller then sends one by one.
 export async function sendCallsAtomic(chainId,calls,onStatus=()=>{},assertContext=()=>{}){
-  assertContext();const from=connectedAddress();if(!from)throw Error('Connect your wallet first');
-  const assert=()=>{assertContext();if(connectedAddress()!==from)throw Error('Your wallet changed. Review this action again.');};
-  const p=await providerFor(from);assert();
-  const hexChain='0x'+Number(chainId).toString(16);
-  let caps=null;try{caps=await p.request({method:'wallet_getCapabilities',params:[from,[hexChain]]});}catch{return null;}
-  const c=caps?.[hexChain]||caps?.[String(Number(chainId))]||null;
-  const atomic=c?.atomic?.status==='supported'||c?.atomic?.status==='ready'||c?.atomicBatch?.supported===true;
-  if(!atomic)return null;
-  await onChain(p,chainId,onStatus,assert);assert();
-  onStatus(silentActive()?'Sending…':'Confirm in your wallet (one approval for all steps)…');
-  const res=await p.request({method:'wallet_sendCalls',params:[{version:'2.0.0',chainId:hexChain,from,atomicRequired:true,calls:calls.map(x=>({to:x.to,data:x.data,value:'0x'+BigInt(x.value||0).toString(16)}))}]});
-  const id=typeof res==='string'?res:res?.id;if(!id)throw Error('The wallet did not return a batch id');
-  onStatus('Waiting for the transaction…');
-  for(let i=0;i<180;i++){
-    const st=await p.request({method:'wallet_getCallsStatus',params:[id]}).catch(()=>null);
-    const code=typeof st?.status==='number'?st.status:({CONFIRMED:200,PENDING:100}[st?.status]??0);
-    if(code>=200&&code<300){const rs=st.receipts||[];if(rs.some(r=>r.status&&r.status!=='0x1'))throw Error('The transaction reverted');return rs;}
-    if(code>=400)throw Error('The transaction reverted');
-    await new Promise(r=>setTimeout(r,2000));
-  }
-  throw Error('Still pending. Check your wallet activity');
+  try {
+    assertContext();const from=connectedAddress();if(!from)throw Error('Connect your wallet first');
+    const assert=()=>{assertContext();if(connectedAddress()!==from)throw Error('Your wallet changed. Review this action again.');};
+    const p=await providerFor(from);assert();
+    const hexChain='0x'+Number(chainId).toString(16);
+    let caps=null;try{caps=await p.request({method:'wallet_getCapabilities',params:[from,[hexChain]]});}catch{return null;}
+    const c=caps?.[hexChain]||caps?.[String(Number(chainId))]||null;
+    const atomic=c?.atomic?.status==='supported'||c?.atomic?.status==='ready'||c?.atomicBatch?.supported===true;
+    if(!atomic)return null;
+    await onChain(p,chainId,onStatus,assert);assert();
+    onStatus(silentActive()?'Sending…':'Confirm in your wallet (one approval for all steps)…');
+    await assertWalletChain(p,chainId,assert);assert();
+    const res=await p.request({method:'wallet_sendCalls',params:[{version:'2.0.0',chainId:hexChain,from,atomicRequired:true,calls:calls.map(x=>({to:x.to,data:x.data,value:'0x'+BigInt(x.value||0).toString(16)}))}]});
+    const id=typeof res==='string'?res:res?.id;if(!id)throw Error('The wallet did not return a batch id');
+    onStatus('Waiting for the transaction…');
+    for(let i=0;i<180;i++){
+      const st=await p.request({method:'wallet_getCallsStatus',params:[id]}).catch(()=>null);
+      const code=typeof st?.status==='number'?st.status:({CONFIRMED:200,PENDING:100}[st?.status]??0);
+      if(code>=200&&code<300){const rs=st.receipts||[];if(rs.some(r=>r.status&&r.status!=='0x1'))throw Error('The transaction reverted');return rs;}
+      if(code>=400)throw Error('The transaction reverted');
+      await new Promise(r=>setTimeout(r,2000));
+    }
+    throw Error('Still pending. Check your wallet activity');
+  } catch(error) { throw asTradeError(error); }
 }
 /// Signs EIP-712 typed data with the connected wallet on `chainId` (switching the wallet's chain first).
 export async function signTypedData(chainId, typed) {
-  const from = connectedAddress(); if (!from) throw new Error('Connect your wallet first');
-  const p = await providerFor(from), hexChain = '0x' + Number(chainId).toString(16);
-  await onChain(p, chainId);
-  return p.request({ method: 'eth_signTypedData_v4', params: [from, JSON.stringify(typed)] });
+  try {
+    const from = connectedAddress(); if (!from) throw new Error('Connect your wallet first');
+    const p = await providerFor(from);
+    if(typed?.domain?.chainId!=null&&BigInt(typed.domain.chainId)!==BigInt(chainId))throw Error('The signature does not match this network.');
+    await onChain(p, chainId);
+    await assertWalletChain(p,chainId);
+    return await p.request({ method: 'eth_signTypedData_v4', params: [from, JSON.stringify(typed)] });
+  } catch(error) { throw asTradeError(error); }
 }
 /// Signs a plain-text message (EIP-191 personal_sign) with the connected wallet: no transaction, no fee, no network switch.
 const messageHex=text=>'0x'+Array.from(new TextEncoder().encode(text),b=>b.toString(16).padStart(2,'0')).join('');
@@ -228,12 +220,14 @@ export async function signMessage(text,{getConnection}={}) {
 }
 /// Approves `spender` for exactly `amount` when the current allowance is lower.
 export async function ensureAllowance(chainId,token,spender,amount,onStatus,assertContext=()=>{}){
-  assertContext();const owner=connectedAddress();if(!owner)throw Error('Connect your wallet first');
-  const assert=()=>{assertContext();if(connectedAddress()!==owner)throw Error('Your wallet changed. Review this action again.');};assert();
-  const current = BigInt(await ethCall(chainId, token, calldata('0xdd62ed3e', ['address', 'address'], [owner, spender])));
-  assert();if(current>=amount)return;
-  onStatus?.(silentActive() ? 'Approving…' : 'Approve the token in your wallet…');
-  await send(chainId, { to: token, data: calldata('0x095ea7b3', ['address', 'uint256'], [spender, amount]) },onStatus,assert);assert();
+  try {
+    assertContext();const owner=connectedAddress();if(!owner)throw Error('Connect your wallet first');
+    const assert=()=>{assertContext();if(connectedAddress()!==owner)throw Error('Your wallet changed. Review this action again.');};assert();
+    const current = BigInt(await ethCall(chainId, token, calldata('0xdd62ed3e', ['address', 'address'], [owner, spender])));
+    assert();if(current>=amount)return;
+    onStatus?.(silentActive() ? 'Approving…' : 'Approve the token in your wallet…');
+    await send(chainId, { to: token, data: calldata('0x095ea7b3', ['address', 'uint256'], [spender, amount]) },onStatus,assert);assert();
+  } catch(error) { throw asTradeError(error); }
 }
 
 // ---- Small DOM helper shared by the panels ----

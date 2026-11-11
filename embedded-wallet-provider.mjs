@@ -1,3 +1,4 @@
+import { assertWalletChain } from './qx-chain-guard.mjs';
 // A revocable, stable EIP-1193 view. No secrets or authentication tokens cross it.
 export const EMBEDDED_RDNS='io.qhooks.privy';
 export const EMBEDDED_UUID='a5a1c026-7eb1-4317-89a9-340dca71c881';
@@ -25,7 +26,10 @@ export function embeddedWalletProvider(target,identity={uuid:EMBEDDED_UUID,name:
  const error=()=>Object.assign(new Error('Sign in to your QHooks wallet again.'),{code:4900});
  const emit=(event,value)=>{for(const fn of [...(listeners.get(event)||[])])try{fn(value);}catch{/* One view cannot prevent invalidation of other views. */}};
  const provider=Object.freeze({
-  async request(args){if(disposed||!current)throw error();const captured=current,version=revision,signedIn=session,result=await captured.request(args);
+  async request(args){if(disposed||!current)throw error();
+   const expected=args?.method==='eth_sendTransaction'?args.params?.[0]?.chainId:args?.method==='eth_signTypedData_v4'?JSON.parse(args.params?.[1]||'{}').domain?.chainId:null;
+   if(expected!=null){const checkingSession=session;await assertWalletChain(provider,expected);if(disposed||!current||session!==checkingSession)throw error();}
+   const captured=current,version=revision,signedIn=session,result=await captured.request(args);
    // A signature or transaction the wallet already approved stands while the same sign-in lasts, even if the SDK
    // re-issued its provider for a network change meanwhile; reporting it as failed would invite a second send.
    if(disposed||signedIn!==session||!ACTIONS.has(args?.method)&&(current!==captured||version!==revision))throw error();return canonicalRead(args?.method,result);},

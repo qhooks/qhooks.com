@@ -1,3 +1,4 @@
+@import url("/qx-ticket-notices.css");
 /* Limit orders page (pro terminal phase C). Site theme tokens; phone-first; light and dark. */
 .qpo-page{--qpo-up:#2f7d5a;--qpo-down:#b04a3b}
 @media (prefers-color-scheme:dark){.qpo-page{--qpo-up:#5fae8a;--qpo-down:#d06a5b}}

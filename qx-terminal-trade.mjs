@@ -1,3 +1,5 @@
+import { tradeError } from './qx-chain-guard.mjs';
+import { executeTicketSwap } from './qx-ticket-execution.mjs';
 import {prepareTradeThesis,recordTerminalTrade} from './qx-trade-record.mjs';
 import {renderSolanaRewards,enrollSolanaReferrer,recordSolanaRewards} from './qx-solana-rewards.mjs';
 import {mountTradingSettings} from './qx-trading-settings.mjs';
@@ -7,7 +9,7 @@ import {resolveTradingTolerance} from './qx-trading-preferences.mjs';
 // Every quote runs through the real pool and hook, so charges are in the number shown. Trades go through the
 // platform fee router: 1% per trade, 30% of it back to the trader as cashback they claim here (40% for QHOOKS holders on Robinhood Chain).
 import { rpc, livePoolKey, parseUnits, formatUnits, erc20, send, ensureAllowance, connectedAddress, onWalletChange, NATIVE, CHAIN_NAME, h } from '/qx-chain.mjs';
-import { quoteSingle, nativeRoute, quoteNative, FEE_BPS, feeSwapCall, viaSwapCall, nativeHops, cashbackOf, referralLink, claimCall, savedReferrer } from '/qx-swap.mjs';
+import { quoteSingle, nativeRoute, quoteNative, FEE_BPS, viaSwapCall, cashbackOf, referralLink, claimCall, savedReferrer } from '/qx-swap.mjs';
 import { extraAddress, isLive, setUp } from '/qx-extras.mjs';
 import { hasDirectRoute, resolveDirectPool, refusalText } from '/qx-elysium-direct.mjs';
 import { holderMinTokens, shortText } from '/qx-holder-min.mjs';
@@ -104,7 +106,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   if (!TOL.some(([value]) => value === tol)) tolSel.append(h('option', { value: tol, selected: true }, Number(tol) / 100 + '%'));
   tolSel.value = tol;
   let settingsStorage;try{settingsStorage=globalThis.localStorage;}catch{}
-  const tradingSettings=mountTradingSettings({h,storage:settingsStorage,legacyTolerance:savedTolerance,onChange:profileChanged,onError:error=>{status.textContent=error.message;}});
+  const tradingSettings=mountTradingSettings({h,storage:settingsStorage,legacyTolerance:savedTolerance,onChange:profileChanged,onError:error=>{status.textContent=tradeError(error);}});
   function syncProfile(){
     if(st)tradingSettings.setChain(st.chainId,Array.from(paySel.options,option=>unitClass(option.textContent)));
     const profile=tradingSettings.profile(),settings=profile[side],resolved=resolveTradingTolerance(settings,marketPrices,now());tol=String(resolved.bps);
@@ -322,7 +324,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   function solConnectPrompt() {
     const list = solWallets();
     out.replaceChildren(h('span', {}, list.length ? 'Connect a Solana wallet to trade.' : 'No Solana wallet found. Install Phantom, Solflare or Backpack.'),
-      ...list.map(w => h('button', { type: 'button', class: 'qxt-mini qxt-solw', onclick: async () => { try { await connectSol(w.name); refresh(); layout(); } catch (e) { status.textContent = e.message; } } },
+      ...list.map(w => h('button', { type: 'button', class: 'qxt-mini qxt-solw', onclick: async () => { try { await connectSol(w.name); refresh(); layout(); } catch (e) { status.textContent = tradeError(e); } } },
         ...(w.icon ? [h('img', { src: w.icon, alt: '', width: 16, height: 16 })] : []), w.name)));
   }
   async function fetchSolOrder(a,tolerance=tol) {
@@ -417,7 +419,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const items = [[activeState.quote, q, activeState.quoteDecimals, activeState.quoteSymbol], [Z, n, 18, NATIVE[activeState.chainId]]].filter(x => x[1] > 0n);
     cash.replaceChildren(...items.map(([cur, v, d, sym]) => {
       const b = h('button', { type: 'button', class: 'qxt-mini' }, 'Claim');
-      b.addEventListener('click', async () => { if (busy||!alive()||connectedAddress()!==me) return; b.disabled = true; try { await send(activeState.chainId, { to: router, data: claimCall(cur) }, t => { status.textContent = t; }); status.textContent = 'Rewards claimed.'; await showCashback(); document.dispatchEvent(new CustomEvent('qhooks:rewards-claimed')); } catch (e) { status.textContent = e.message; b.disabled = false; } });
+      b.addEventListener('click', async () => { if (busy||!alive()||connectedAddress()!==me) return; b.disabled = true; try { await send(activeState.chainId, { to: router, data: claimCall(cur) }, t => { status.textContent = t; }); status.textContent = 'Rewards claimed.'; await showCashback(); document.dispatchEvent(new CustomEvent('qhooks:rewards-claimed')); } catch (e) { status.textContent = tradeError(e); b.disabled = false; } });
       return h('p', {}, h('em', {}, 'Rewards'), h('span', {}, small(v, d) + ' ' + sym), b);
     }), h('p', {}, link));
     } catch {
@@ -486,7 +488,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       go.disabled = !connectedAddress() || busy;
       if (!connectedAddress()) status.textContent = 'Connect a wallet to trade.';
       await offerFunding(mine);
-    } catch (e) { if (mine === qseq) {current=null;go.disabled=true;out.textContent = /revert|execution/i.test(e.message || '') ? 'The pool refuses this trade right now (its rules may be closed to it).' : e.message || 'No quote for this amount';} }
+    } catch (e) { if (mine === qseq) {current=null;go.disabled=true;out.textContent = /revert|execution/i.test(e.message || '') ? 'The pool refuses this trade right now (its rules may be closed to it).' : tradeError(e);} }
     finally {if(mine===qseq){quoteLoading=false;renderQuoteFreshness();}}
   }
 
@@ -514,20 +516,9 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         if (!live) { s('One-time setup of trading on ' + CHAIN_NAME[chainId] + '…'); await setUp(chainId, 'feeRouter', s, assertContext); }
         // One-click (qx-oneclick.mjs): QHooks markets, ETH/BNB in or token out, no wallet popup. Off or not eligible: wallet signs below.
         const oneClickDone = (c.side === 'sell' || c.pay === 'native' || st.nativePool) && await tryOneClick(c, s);
-        if (oneClickDone) { /* sent by one-click */ }
-        else if (c.side === 'buy' && st.nativePool) {
-          // Native-HYPE pool: HYPE goes straight in (router checks currency0 is native); no wrap.
-          assertTradeOwner(c);
-          await sendRecorded(c, { to: router, data: feeSwapCall(chainId, [{ key, zeroForOne: BigInt(key.currency0) === 0n }], c.a, c.minOut, null, true, deadline), value: c.a }, s, assertContext);
-        } else if (c.side === 'buy' && c.pay === 'native') {
-          const { hops, wrap } = nativeHops(chainId, key, qt, c.route);
-          assertTradeOwner(c);
-          await sendRecorded(c, { to: router, data: feeSwapCall(chainId, hops, c.a, c.minOut, wrap, true, deadline), value: c.a }, s, assertContext);
-        } else {
-          const tin = c.side === 'buy' ? qt : token;
-          await ensureAllowance(chainId, tin, router, c.a, s, assertContext);
-          assertTradeOwner(c);
-          await sendRecorded(c, { to: router, data: feeSwapCall(chainId, [{ key, zeroForOne: key.currency0 === tin }], c.a, c.minOut, null, c.side === 'buy', deadline) }, s, assertContext);
+        if (!oneClickDone) {
+          const receipt = await executeTicketSwap({chainId,key,token,quote:qt,nativePool:st.nativePool,router,trade:c,deadline,onStatus:s,assertContext});
+          queueRecord(c,receipt);
         }
         const after = await erc20(chainId, token, me).catch(() => null), moved = after ? (after.balance > b.token ? after.balance - b.token : b.token - after.balance) : null;
         status.textContent = moved === null ? 'Trade confirmed. Refresh balances.' : (c.side === 'buy' ? 'Bought ' : 'Sold ') + formatUnits(moved, st.decimals, 4) + ' ' + st.symbol + '.';if (c.side === 'buy' && moved !== null) afterBuy();
@@ -547,7 +538,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       const asset = payAsset(), owner = current.owner, chainId = st.chainId, amountNeeded = current.a;
       await funding.update({ owner, chainId, asset, amountNeeded, balance: b ? spendable(b) : undefined, review: async () => destinationCosts({ owner, chainId, asset, amountNeeded,
         spender: await extraAddress('feeRouter', chainId), setup: await isLive(chainId, 'feeRouter') ? 0 : 1 }) });
-    } catch (e) { status.textContent = e.message; go.disabled = true; }
+    } catch (e) { status.textContent = tradeError(e); go.disabled = true; }
   }
   async function arrivedTrade(c, a) {
     if (connectedAddress()?.toLowerCase() !== c.owner?.toLowerCase()) throw new Error('Reconnect the wallet that funded this trade.');
@@ -591,7 +582,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const plan = st.sol ? null : ticketPlan(c);
     if (!st.sol && !plan) return;
     lock(true);
-    try {c.thesis=await prepareTradeThesis({chainId:c.chainId,owner:c.owner,token:c.token,side:c.side,thesis:c.side==='buy'?thesis.value:''});assertTradeOwner(c);}catch(error){status.textContent=error.message;lock(false);return;}
+    try {c.thesis=await prepareTradeThesis({chainId:c.chainId,owner:c.owner,token:c.token,side:c.side,thesis:c.side==='buy'?thesis.value:''});assertTradeOwner(c);}catch(error){status.textContent=tradeError(error);lock(false);return;}
     if (st.sol) { lock(true); return solSubmit(c); }
     lock(true); status.textContent = '';
     const swapArrived = a => { if (plan.silent && !silentActive()) throw new Error('This one-click press expired. Retry the swap from the funds in your wallet.'); return arrivedTrade(c, a); };
@@ -613,11 +604,11 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         await (st.ext ? extSubmit(c) : poolSubmit(c));
         if (asset) { const after = await readAssetBalance(c.owner, { chainId: st.chainId, asset }); if (after > before) proceeds = { chainId: st.chainId, asset, amount: after - before }; }
       });
-    } catch (e) { status.textContent = e.message || 'The trade did not go through'; landed = !!recovery; }
+    } catch (e) { status.textContent = tradeError(e); landed = !!recovery; }
     finally { lock(false); if (landed) { go.disabled = true; if (recovery?.retryable === false) for (const el of followup.querySelectorAll('button')) el.disabled = true; } else await layout(); }
     if (xchainEnabled && proceeds && (cashHome() && cashHome() !== Number(proceeds.chainId) || proceeds.asset.symbol !== cashAsset(proceeds.chainId).symbol)) {
       const home = cashHome(), button = h('button', { type: 'button', class: 'qxt-mini' }, home ? 'Move to ' + chainName(home) : 'Move proceeds to cash');
-      button.addEventListener('click', () => { void moveProceeds({ ...proceeds, home }).catch(e => { status.textContent = e.message; }); });
+      button.addEventListener('click', () => { void moveProceeds({ ...proceeds, home }).catch(e => { status.textContent = tradeError(e); }); });
       followup.replaceChildren(button);
     }
   }
@@ -625,7 +616,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   document.addEventListener('qhooks:rewards-claimed', () => showCashback().catch(() => cash.replaceChildren()));
   sideBtns.forEach(b => b.addEventListener('click', () => setSide(b.dataset.side)));
   paySel.addEventListener('change', () => { if (busy||recovery) return; clearArmed(); pay = paySel.value; amount.value = '';sellPrefillOwner=null; refresh(); layout(); });
-  tolSel.addEventListener('change', () => {if(busy||recovery)return;try{if(!tradingSettings.setTolerance(side,tolSel.value)){syncProfile();status.textContent='Choose Auto or a valid manual tolerance (maximum 50% on Solana, 100% on EVM).';return;}if(tolSel.value!=='auto')store('tol',tolSel.value);}catch(error){syncProfile();status.textContent=error.message;}});
+  tolSel.addEventListener('change', () => {if(busy||recovery)return;try{if(!tradingSettings.setTolerance(side,tolSel.value)){syncProfile();status.textContent='Choose Auto or a valid manual tolerance (maximum 50% on Solana, 100% on EVM).';return;}if(tolSel.value!=='auto')store('tol',tolSel.value);}catch(error){syncProfile();status.textContent=tradeError(error);}});
   amount.addEventListener('input', () => { sellPrefillOwner=null;refresh(); });
   amount.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) submit(); } });
   balance.addEventListener('click', async () => { if(busy||recovery||!st)return;const intent=selection,activeState=st,mine=++qseq;clearTimeout(timer);current=null;go.disabled=true;sellPrefillOwner=null;clearArmed();quoteLoading=false;renderQuoteFreshness(); const b = await balances(); if(!isSelection(intent)||st!==activeState||mine!==qseq)return;if (b) { amount.value = formatUnits(spendable(b), payDecimals(), payDecimals()).replace(/,/g, ''); refresh(); } });
@@ -723,7 +714,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         amount.value=formatUnits(value,precision,precision).replace(/,/g,'');
         void layout();refresh();status.textContent='Sell '+percent+'% prepared. Review the current quote, fees and minimum received before selling.';
         return true;
-      }catch(error){if(alive())status.textContent=error?.message||'Could not read this holding. Refresh and try again.';return false;}
+      }catch(error){if(alive())status.textContent=tradeError(error);return false;}
       finally{if(mine===qseq)pendingSellPrefill=false;}
     },
     /// Instant buy from the feed: sets the amount in the given unit class and sends once quoted.

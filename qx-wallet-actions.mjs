@@ -1,3 +1,4 @@
+import { guardedSend, tradeError } from './qx-chain-guard.mjs';
 // Account panel actions (2026-11-08): "Send" any balance on a chain (its coin, WETH/WBNB, USDC/USDG, QHooks launch
 // tokens) and "Unwrap WETH → ETH" (WETH.withdraw). Sent from the account panel's connected wallet on the row's chain
 // (a row on another chain offers "Switch to …" first). The wallet always shows its own confirmation: these never run
@@ -30,14 +31,7 @@ export function sendable(row) {
 /// Sends one transaction from `from` through `provider` on `chainId` (explicit EIP-1559 fees, 30% gas headroom) and waits.
 export async function sendFrom(provider, from, chainId, tx, say = () => {}, { rpc } = {}) {
   rpc ||= (await import('/qx-chain.mjs')).rpc;
-  const hex = '0x' + Number(chainId).toString(16);
-  if (String(await provider.request({ method: 'eth_chainId' })).toLowerCase() !== hex) throw Error('Your wallet moved to another network. Switch back and try again.');
-  const value = '0x' + BigInt(tx.value || 0).toString(16), fees = {};
-  try { const [block, tip] = await Promise.all([rpc(chainId, 'eth_getBlockByNumber', ['latest', false]), provider.request({ method: 'eth_maxPriorityFeePerGas' }).catch(() => '0x0')]);
-    if (block?.baseFeePerGas) { const t = BigInt(tip || 0); fees.maxPriorityFeePerGas = '0x' + t.toString(16); fees.maxFeePerGas = '0x' + (BigInt(block.baseFeePerGas) * 2n + t).toString(16); } } catch {}
-  try { const est = BigInt(await rpc(chainId, 'eth_estimateGas', [{ from, to: tx.to, data: tx.data, value }])); fees.gas = '0x' + (est * 13n / 10n).toString(16); } catch {}
-  say('Confirm in your wallet…');
-  const hash = await provider.request({ method: 'eth_sendTransaction', params: [{ from, to: tx.to, data: tx.data, value, ...fees }] });
+  const hash=await guardedSend(provider,chainId,{...tx,from},{rpc,onStatus:say});
   say('Waiting for the transaction…');
   for (let i = 0; i < 180; i++) {
     const r = await rpc(chainId, 'eth_getTransactionReceipt', [hash]).catch(() => null);
@@ -60,7 +54,7 @@ export function walletActions(row, { onDone = () => {}, explorer = null, wallet 
   async function run(button, say, tx) {
     button.disabled = true;
     try { if (!wallet?.provider) throw Error('Connect your wallet first.'); const receipt = await sendFrom(wallet.provider, wallet.from, row.chainId, tx, t => { say.textContent = t; }); done(say, receipt); }
-    catch (e) { say.textContent = e?.code === 4001 ? 'Cancelled.' : (e?.message || 'That didn’t go through.'); button.disabled = false; }
+    catch (e) { say.textContent = tradeError(e); button.disabled = false; }
   }
   function amountField(asset) {
     const wrap = el('div', 'qwm-act-amt'), input = el('input'); input.inputMode = 'decimal'; input.placeholder = '0.0'; input.setAttribute('aria-label', 'Amount');
