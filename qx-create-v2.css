@@ -1,0 +1,94 @@
+/* QHooks create v2 (2026-11 redesign). Loaded after the create sheets; needs qx-ds.css. Re-skin and re-layout only:
+   the same nodes, ids, fields, checks and transactions. The idea picker reads as a set of tiles, the chosen idea is
+   marked, and on a phone the Launch button stays in reach with the cost beside it (qx-create-v2.mjs). */
+
+.qv2 body.qxc{background:var(--q-bg);color:var(--q-text)}
+.qv2 .qxc-main{max-width:1040px}
+.qv2 .qxc-main h1{font:700 clamp(30px,4vw,44px)/1.08 var(--q-sans);letter-spacing:-.04em;color:var(--q-text)}
+.qv2 .qxc-main :is(h2,h3){font-family:var(--q-sans);color:var(--q-text)}
+.qv2 .qxc-main p.qxc-kicker{font:600 12.5px/1 var(--q-sans);letter-spacing:.01em;text-transform:none;color:var(--q-gold)}
+.qv2 .qxc-heading p,.qv2 .qxc-heading>a{color:var(--q-text-2)}
+.qv2 .qxc-main :is(.qxc-fine,small,summary),.qv2 .qq-start-note{color:var(--q-text-3)}
+
+/* buttons: secondary by default, one gold primary */
+/* (every button keeps its own kind: boxed ones follow the tokens, link-like ones stay links; only shape and type change) */
+.qv2 .qxc-main button,.qv2 .qxc-main a.qxc-primary{border-radius:var(--q-r);font-family:var(--q-sans);transition:border-color var(--q-fast) ease-out,filter var(--q-fast) ease-out,transform var(--q-fast) ease-out}
+.qv2 .qxc-main button:active{transform:translateY(1px)}
+.qv2 .qxc-main button.qxc-primary,.qv2 .qxc-main a.qxc-primary{background:var(--q-gold-metal);color:var(--q-on-gold);border:0;box-shadow:var(--q-gold-edge);font-weight:680;min-height:48px;padding:0 20px;font-size:15px}
+.qv2 .qxc-main button.qxc-primary:hover{background:var(--q-gold-metal);filter:brightness(1.05)}
+.qv2 .qxc-main button.qxc-primary:disabled{filter:none;opacity:.5}
+
+/* the header's wallet button is a quiet secondary, as on home: gold is for the page's one primary action */
+.qv2 .site-header #qhc-trigger{background:var(--q-raised-2);color:var(--q-text);box-shadow:none;border:1px solid var(--q-line-2);border-radius:var(--q-r);font-weight:650}
+
+/* fields */
+.qv2 .qxc-main label{color:var(--q-text-3);font:500 12px/1.3 var(--q-sans)}
+.qv2 .qxc-main :is(input,select,textarea){border:1px solid var(--q-line);border-radius:var(--q-r-in);background:var(--q-inset);color:var(--q-text);font-family:var(--q-sans);transition:border-color var(--q-fast) ease-out}
+.qv2 .qxc-main :is(input,select,textarea):focus{border-color:var(--q-gold);outline:0}
+.qv2 .qxc-main :is(input[inputmode="decimal"],input[type="number"],.qxc-number){font-family:var(--q-sans);font-variant-numeric:tabular-nums}
+.qv2 .qxc-main input[type="file"]::file-selector-button{background:var(--q-raised-2);color:var(--q-text);border-radius:6px;font-family:var(--q-sans)}
+.qv2 .qxc-main .qxc-check{color:var(--q-text)}
+.qv2 .qxc-main .qxc-check input{accent-color:var(--q-gold)}
+
+/* panels */
+.qv2 .qxc-panel{background:var(--q-raised);border:1px solid var(--q-line);border-radius:14px;padding:22px}
+.qv2 .qxc-panel-head>span{font:500 11.5px/1 var(--q-sans);color:var(--q-text-3);border:1px solid var(--q-line);border-radius:var(--q-r-chip);padding:5px 10px}
+.qv2 .qxc-main .qxc-progress button{border:1px solid var(--q-line);border-radius:12px;background:var(--q-raised)}
+.qv2 .qxc-main .qxc-progress button[aria-current]{border-color:var(--q-gold);background:linear-gradient(180deg,var(--q-gold-a),transparent 70%),var(--q-raised);box-shadow:none}
+.qv2 .qxc-main p.qq-or{font:600 12px/1 var(--q-sans);letter-spacing:.01em;text-transform:none;color:var(--q-text-3)}
+
+/* ---- step 1: the idea picker, a set of tiles ---- */
+.qv2 .qq-head h2{font:680 22px/1.2 var(--q-sans);letter-spacing:-.03em}
+.qv2 .qq-head p:not(.qxc-kicker){color:var(--q-text-2)}
+.qv2 .qxc-main .qq-head>button{border-color:var(--q-line-2)}
+.qv2 .qxc-main .qq-chips button{min-height:32px;padding:0 14px;border-radius:var(--q-r-chip);background:none;border:1px solid var(--q-line);color:var(--q-text-2);font-weight:550}
+.qv2 .qxc-main .qq-chips button[aria-pressed="true"]{background:var(--q-raised-2);color:var(--q-text);border-color:transparent}
+.qv2 .qq-cards{gap:10px}
+.qv2 .qq-card{padding:14px 14px 12px;border:1px solid var(--q-line);border-radius:12px;background:var(--q-raised);transition:border-color var(--q-fast) ease-out,transform var(--q-fast) ease-out}
+.qv2 .qq-card:hover{border-color:var(--q-line-2);transform:translateY(-1px)}
+.qv2 .qxc-main .qq-card h3{font:680 15px/1.25 var(--q-sans);letter-spacing:-.015em;margin:0 0 6px}
+.qv2 .qxc-main .qq-card p{font-size:12.5px;line-height:1.45;color:var(--q-text-2);margin:0 0 6px}
+.qv2 .qxc-main .qq-card p.qq-why{color:var(--q-text-3);font-size:12px;margin-bottom:10px}
+.qv2 .qq-blocks{gap:5px;margin-bottom:10px}
+.qv2 .qq-blocks-none span{font:500 11.5px/1 var(--q-sans);color:var(--q-text-3)}
+.qv2 .qxc-main .qq-card .qq-launch-card{min-height:36px;background:none;border:1px solid var(--q-line-2);color:var(--q-text);font-weight:650}
+.qv2 .qxc-main .qq-card .qq-launch-card:hover,.qv2 .qxc-main .qq-card .qq-launch-card[aria-pressed="true"]{background:var(--q-raised-2);color:var(--q-text);border-color:var(--q-text-3)}
+/* the chosen idea */
+.qv2 .qq-card.qv2-picked{border-color:var(--q-gold);box-shadow:inset 0 0 0 1px var(--q-gold);background:linear-gradient(180deg,var(--q-gold-a),transparent 62%),var(--q-raised)}
+.qv2 .qxc-main .qq-card.qv2-picked .qq-launch-card{background:var(--q-gold-a);border-color:var(--q-gold);color:var(--q-gold)}
+
+/* ---- steps 2 and 3: one card for name, ticker, image, pair and start ---- */
+.qv2 .qq-quick{border-color:var(--q-line-2);max-width:760px;margin-inline:auto}
+.qv2 .qq-preset{border:1px solid var(--q-line);border-radius:12px;background:var(--q-inset)}
+.qv2 .qq-preset small,.qv2 .qq-start-k{color:var(--q-text-3);font:500 12px/1.3 var(--q-sans);letter-spacing:0;text-transform:none}
+.qv2 .qxc-main .qq-preset p{color:var(--q-text-2)}
+.qv2 .qxc-main .qq-start-opt{min-height:38px;padding:0 12px;border-radius:var(--q-r-in);border:1px solid var(--q-line);background:var(--q-raised-2);color:var(--q-text);font:600 13px var(--q-sans)}
+.qv2 .qxc-main .qq-start-opt[aria-pressed="true"]{border-color:var(--q-gold);background:var(--q-gold-a);color:var(--q-text)}
+.qv2 .qxc-main .qq-cost p.qq-total{font:700 24px/1.1 var(--q-sans);letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--q-text)}
+.qv2 .qxc-main #qq-need-image,.qv2 .qxc-main #qc-need-image{color:var(--q-warn);border-color:var(--q-line)}
+.qv2 .qq-image img{border-radius:10px;border:1px solid var(--q-line-2)}
+
+/* sale-first: its status line was light-on-light in the dark theme */
+.qv2 .qsf-summary{background:var(--q-inset);color:var(--q-text-2);border:1px solid var(--q-line);border-radius:var(--q-r-in)}
+/* guided form: the starting market cap gets a usable column */
+.qv2 #qc-screen-1>.qxc-panel .qxc-fields>#qc-start-cap{grid-column:span 3}
+
+@media (max-width:760px){
+  .qv2 .qxc-main{width:calc(100% - 24px);margin-top:96px}
+  .qv2 .qxc-heading{margin-bottom:20px}
+  .qv2 .qq-head h2{font-size:19px}
+  /* two columns of compact tiles: name, what it does, its rules; the reason opens with the chosen tile */
+  .qv2 .qq-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .qv2 .qq-card{padding:12px 11px 10px}
+  .qv2 .qxc-main .qq-card h3{font-size:14px}
+  .qv2 .qxc-main .qq-card p.qq-what{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  .qv2 .qxc-main .qq-card p.qq-why{display:none}
+  .qv2 .qxc-main .qq-card.qv2-picked p.qq-what{display:block}
+  .qv2 .qxc-main .qq-card.qv2-picked p.qq-why{display:block}
+  .qv2 .qxc-main .qq-card .qq-launch-card{min-height:40px;padding:0 8px}
+  .qv2 .qxc-panel{padding:16px}
+  /* the Launch button stays in reach above the tab bar, with the total beside it */
+  .qv2 .qq-quick .qxc-actions{position:sticky;bottom:calc(50px + env(safe-area-inset-bottom));z-index:5;display:flex;flex-wrap:nowrap;align-items:center;gap:12px;margin:16px -16px 0;padding:10px 16px;background:var(--q-raised);background:color-mix(in srgb,var(--q-raised) 94%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-top:1px solid var(--q-line)}
+  .qv2 .qq-quick .qxc-actions[data-total]::before{content:attr(data-total);flex:none;max-width:44%;font:700 15px/1.2 var(--q-sans);font-variant-numeric:tabular-nums;color:var(--q-text)}
+  .qv2 .qq-quick .qxc-actions>.qxc-primary{flex:1;margin:0;min-height:50px;font-size:16px}
+}
