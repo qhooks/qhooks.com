@@ -59,6 +59,13 @@ export const DROPS = {
       '0x807390f11e52e8508636bac3c54b47b17a66dae3', // QStakeLock timed locks (lock owners are scored separately)
       ROUTER,
       ZERO, '0x000000000000000000000000000000000000dead',
+      // Team wallets (Randall 2026-11-11): launch wallet, fomo wallet, Safe owners, keepers.
+      '0xaf48a5ab32ef96ee7a72ed6ed4534be1bc928c73', // launch wallet
+      '0xa393e27ddf15d08d5f719a43c0a5c2a92dba2ae5', // fomo wallet
+      '0x88db60586866294409e47bbbb0b436104f09c1b5', // Safe owner Qhooks1
+      '0x9b13398df547c18e68d1cfe086ff1cb5f1a84127', // Safe owner Qhooks2
+      '0x9f57ea4801259f12ad68564615a7ddf5a1c820e5', // keeper (QDrops rooter)
+      '0x38d0d70da8ca00bf60e1175f607fac7662dd31ac', // keeper (arb)
     ],
     bots: [],
   },

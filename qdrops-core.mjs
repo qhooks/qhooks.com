@@ -72,12 +72,24 @@ export function nextLeaves(previous, awards) {
 }
 /// Splits `pot` (bigint) by weight [{account, weight}] with integer floors; the rounding remainder stays unallocated.
 /// shareCap (0..1) caps any one account's share; capped excess also stays unallocated (it rolls to the next epoch).
-export function splitByWeight(rows, pot, {shareCap = 1} = {}) {
+export function splitByWeight(rows, pot, {shareCap = 1, redistribute = false} = {}) {
   const live = rows.filter(r => BigInt(r.weight) > 0n);
   const total = live.reduce((s, r) => s + BigInt(r.weight), 0n);
   if (!total || pot <= 0n) return [];
   const cap = shareCap >= 1 ? pot : pot * BigInt(Math.round(shareCap * 1e6)) / 1000000n;
-  return live.map(r => { let amount = pot * BigInt(r.weight) / total; if (amount > cap) amount = cap; return {account: r.account, amount}; }).filter(r => r.amount > 0n);
+  if (!redistribute) return live.map(r => { let amount = pot * BigInt(r.weight) / total; if (amount > cap) amount = cap; return {account: r.account, amount}; }).filter(r => r.amount > 0n);
+  // Holder drop (Randall 2026-11-11): what a capped wallet can't take is shared out again among the uncapped ones, by
+  // weight, until nobody is over the cap, so the whole pot is allocated whenever there are enough wallets to hold it.
+  const amount = new Map(), open = new Set(live.map((_, i) => i));
+  let left = pot;
+  for (;;) {
+    const w = [...open].reduce((s, i) => s + BigInt(live[i].weight), 0n);
+    if (!open.size || !w || left <= 0n) break;
+    const over = [...open].filter(i => left * BigInt(live[i].weight) / w >= cap);
+    if (!over.length) { for (const i of open) amount.set(i, left * BigInt(live[i].weight) / w); break; }
+    for (const i of over) { amount.set(i, cap); open.delete(i); left -= cap; }
+  }
+  return live.map((r, i) => ({account: r.account, amount: amount.get(i) || 0n})).filter(r => r.amount > 0n);
 }
 /// Canonical bytes of an epoch file, hashed into dataHash on chain so anyone can check the JSON they downloaded.
 export function canonical(value) {
