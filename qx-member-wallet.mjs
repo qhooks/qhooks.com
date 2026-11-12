@@ -7,6 +7,6 @@ export function memberWallet(value,{allowBareSolana=false}={}){
  return address&&solWallet(address)?{family:'solana',address,key:'solana:'+address,path:'/api/community/profile/solana/'+address}:null;
 }
 export const memberWalletKey=value=>memberWallet(value)?.key||null;
-export function solanaProfileMessage({wallet,id,issuedAt,expiresAt,audienceOrigin='https://qhooks.com'}){
- return['QHooks Solana profile sign-in v1','Domain: '+new URL(audienceOrigin).host,'URI: '+audienceOrigin+'/profile/solana/'+wallet,'Wallet: '+wallet,'Scope: profile:write','Nonce: '+id,'Issued: '+new Date(issuedAt).toISOString(),'Expires: '+new Date(expiresAt).toISOString(),'Signing allows this browser to edit only this public QHooks profile for 7 days. It does not authorize community posts, calls, trading, rewards or transfers.'].join('\n');
+export function solanaProfileMessage({wallet,id,issuedAt,expiresAt,scope='profile:write',audienceOrigin='https://qhooks.com'}){
+ return['QHooks Solana profile sign-in v1','Domain: '+new URL(audienceOrigin).host,'URI: '+audienceOrigin+'/profile/solana/'+wallet,'Wallet: '+wallet,'Scope: '+scope,'Nonce: '+id,'Issued: '+new Date(issuedAt).toISOString(),'Expires: '+new Date(expiresAt).toISOString(),scope==='profile:write trading:visibility'?'Signing allows this browser to edit this public QHooks profile and choose whether terminal trades and PnL are public for 7 days. It does not authorize community posts, calls, trades, rewards or transfers.':'Signing allows this browser to edit only this public QHooks profile for 7 days. It does not authorize community posts, calls, trading, rewards or transfers.'].join('\n');
 }

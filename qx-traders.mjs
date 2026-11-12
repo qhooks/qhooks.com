@@ -1,3 +1,4 @@
+import {migrateCommunityFollowing,communityFollowing} from './qx-community-follow.mjs';
 import {profileUrl,resolveProfileAddress} from './qx-profile-address.mjs';
 import {memberWallet} from './qx-member-wallet.mjs';
 
@@ -48,7 +49,7 @@ export function createTraderSolanaSession({getConnection,capture,fetcher=(...arg
   const signature=await connection.sign(challenge.message);await connection.check();
   const session=await post('',{message:challenge.message,signature});
   if(!valid(session)||session.expiresAt>now()+7*86400000+300000)throw Error('The sign-in response did not match this wallet.');
-  connection.assertCurrent();memory=session;try{storage().setItem(SESSION_KEY,JSON.stringify(session));}catch{}return session;
+  connection.assertCurrent();memory=session;try{storage().setItem(SESSION_KEY,JSON.stringify(session));}catch{}await migrateCommunityFollowing(session,{storage,fetcher,now,current:()=>owner()===wallet}).catch(()=>{});return session;
  }
  return{boardSession,authHeaders,signIn};
 }
@@ -71,7 +72,7 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
  function refreshFollowControls(){if(disposed)return;for(const node of body.querySelectorAll?.('[data-follow-wallet]')||[]){const on=following.has(node.getAttribute('data-follow-wallet'));node.textContent=on?'Following':'Follow trader';node.setAttribute('aria-pressed',String(on));}}
  async function toggleFollow(wallet,node){
   node.disabled=true;
-  try{await signedIn();await client.follow(wallet,!following.has(wallet));await follows();node.textContent=following.has(wallet)?'Following':'Follow trader';node.setAttribute('aria-pressed',String(following.has(wallet)));status.textContent='Following list saved.';}
+  try{await signedIn();await client.follow(wallet,!following.has(wallet));await communityFollowing.refresh().catch(()=>{});events?.dispatchEvent?.(typeof CustomEvent==='function'?new CustomEvent('qhooks:community-following'):new Event('qhooks:community-following'));await follows();node.textContent=following.has(wallet)?'Following':'Follow trader';node.setAttribute('aria-pressed',String(following.has(wallet)));status.textContent='Following list saved.';}
   catch(error){status.textContent=error.message;}finally{node.disabled=false;}
  }
  function traderName(row,{follow=true}={}){
@@ -112,6 +113,7 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
   controls.append(walletLine,accountButtons);
   if(auth?.family?.()==='solana'&&!owner&&solHub){const snapshot=solHub.snapshot(),select=h('select',{'aria-label':'Solana wallet'});for(const wallet of snapshot.wallets)select.append(h('option',{value:wallet.id},wallet.name));const solConnect=button('Connect Solana wallet',async()=>{try{await solHub.connect(select.value);accountControls();void load();}catch(error){status.textContent=error.message;}});solConnect.disabled=!snapshot.wallets.length||snapshot.busy;controls.append(h('div',{class:'qa-actions'},select,solConnect));}
   if(!owner||!mine)return;
+  if(profile){controls.append(h('a',{class:'qa-btn',href:profileUrl({wallet:owner,edit:true})},'Edit profile & privacy'));return;}
   const checkbox=h('input',{type:'checkbox',id:(profile?'qp':'qx')+'-public-trades'}),save=button('Save sharing',async()=>{save.disabled=true;try{await signedIn();if(selectedOwner()!==owner)throw Error('Your wallet changed. Review this setting again.');await client.saveProfile(checkbox.checked);status.textContent=checkbox.checked?'Your terminal trades are public.':'Your terminal trades are private.';void load();}catch(error){status.textContent=error.message;}finally{save.disabled=false;}});
   controls.append(h('label',{class:'qt-opt-in',for:checkbox.id},checkbox,'Show my terminal trades and PnL publicly'),h('p',{class:'qt-help'},'Off by default. Sharing includes terminal buys and sells on every chain, your trade size, entry market cap and any buy thesis. Turning it off hides your trading record and removes you from rankings.'),save);
   checkbox.disabled=true;save.disabled=true;const expected=owner;readProfile(owner).then(value=>{if(!disposed&&selectedOwner()===expected&&checkbox.isConnected){checkbox.checked=value.publicTrades===true;checkbox.disabled=false;save.disabled=false;}}).catch(error=>{if(checkbox.isConnected){checkbox.disabled=true;save.disabled=true;status.textContent=error.message;}});
@@ -179,9 +181,11 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
  const onVisibility=()=>{if(doc.hidden){generation++;timers.clearTimeout(refreshTimer);busy=false;refresh.disabled=false;refresh.textContent='Refresh';body.setAttribute('aria-busy','false');}else void load();};
  const onHash=()=>{if(profile)void load();else if(['#competition','#leaderboard','#trading-feed'].includes(events.location?.hash)){selectTab(events.location.hash==='#competition'?(competition?'competition':'leaderboard'):events.location.hash==='#leaderboard'?'leaderboard':'feed');target.scrollIntoView?.({block:'start'});}};
  let initialized=false;const onWallet=()=>{if(!initialized)return;generation++;accountControls();void load();};
- doc.addEventListener('visibilitychange',onVisibility);events?.addEventListener?.('hashchange',onHash);events?.addEventListener?.('popstate',onHash);events?.addEventListener?.('qhooks:profile-address',onHash);events?.addEventListener?.('storage',onWallet);const offHub=hub?.subscribe?.(onWallet),offSol=solHub?.subscribe?.(()=>{if(auth?.family?.()==='solana')onWallet();});
+ const onProfileSaved=()=>{if(profile)void load();};
+ const onFollowing=()=>{void follows().then(()=>{refreshFollowControls();if(filter==='following')void load();});};
+ doc.addEventListener('visibilitychange',onVisibility);events?.addEventListener?.('qhooks:community-following',onFollowing);events?.addEventListener?.('qhooks:profile-saved',onProfileSaved);events?.addEventListener?.('hashchange',onHash);events?.addEventListener?.('popstate',onHash);events?.addEventListener?.('qhooks:profile-address',onHash);events?.addEventListener?.('storage',onWallet);const offHub=hub?.subscribe?.(onWallet),offSol=solHub?.subscribe?.(()=>{if(auth?.family?.()==='solana')onWallet();});
  initialized=true;accountControls();selectTab(!profile&&events.location?.hash==='#competition'?(competition?'competition':'leaderboard'):!profile&&events.location?.hash==='#leaderboard'?'leaderboard':'feed');if(!profile&&['#competition','#leaderboard','#trading-feed'].includes(events.location?.hash))target.scrollIntoView?.({block:'start'});
- return{refresh:load,selectTab,get state(){return{tab,filter,windowKey,profileWallet,busy};},dispose(){disposed=true;generation++;timers.clearTimeout(refreshTimer);timers.clearInterval(countdownTimer);offHub?.();offSol?.();doc.removeEventListener('visibilitychange',onVisibility);events?.removeEventListener?.('hashchange',onHash);events?.removeEventListener?.('popstate',onHash);events?.removeEventListener?.('qhooks:profile-address',onHash);events?.removeEventListener?.('storage',onWallet);}};
+ return{refresh:load,selectTab,get state(){return{tab,filter,windowKey,profileWallet,busy};},dispose(){disposed=true;generation++;timers.clearTimeout(refreshTimer);timers.clearInterval(countdownTimer);offHub?.();offSol?.();events?.removeEventListener?.('qhooks:community-following',onFollowing);events?.removeEventListener?.('qhooks:profile-saved',onProfileSaved);doc.removeEventListener('visibilitychange',onVisibility);events?.removeEventListener?.('hashchange',onHash);events?.removeEventListener?.('popstate',onHash);events?.removeEventListener?.('qhooks:profile-address',onHash);events?.removeEventListener?.('storage',onWallet);}};
 }
 
 async function boot(){
@@ -189,7 +193,8 @@ async function boot(){
  try{
   const[{getWalletHub},sessions,{createSolanaProfileWallet}]=await Promise.all([import('./wallet-hub.mjs'),import('./qx-board-session.mjs'),import('./qx-solana-profile-wallet.mjs')]);
   const hub=getWalletHub(window),solHub=createSolanaProfileWallet(window),evm=sessions.createBoardSession({getConnection:()=>hub.snapshot().current}),sol=createTraderSolanaSession({getConnection:()=>solHub.snapshot().current,capture:()=>solHub.capture()});let family='evm';
-  const auth={family:()=>family,selectFamily:value=>{family=value;},owner:()=>family==='solana'?solHub.snapshot().current?.owner:hub.snapshot().current?.owner,boardSession:()=>family==='solana'?sol.boardSession():evm.boardSession(),authHeaders:()=>family==='solana'?sol.authHeaders():evm.authHeaders(),signIn:()=>family==='solana'?sol.signIn():evm.signIn(),connect:()=>family==='solana'?target.querySelector('select')?.focus():hub.open()};
+  const auth={family:()=>family,selectFamily:value=>{family=value;void communityFollowing.refresh().catch(()=>{});},owner:()=>family==='solana'?solHub.snapshot().current?.owner:hub.snapshot().current?.owner,boardSession:()=>family==='solana'?sol.boardSession():evm.boardSession(),authHeaders:()=>family==='solana'?sol.authHeaders():evm.authHeaders(),signIn:()=>family==='solana'?sol.signIn():evm.signIn(),connect:()=>family==='solana'?target.querySelector('select')?.focus():hub.open()};
+  communityFollowing.configure(()=>auth.boardSession(),{signIn:auth.signIn});void communityFollowing.refresh().catch(()=>{});
   const client=createTradersClient({headers:auth.authHeaders});
   // The competition tab and links appear only when the Worker turns it on (QHOOKS_TRADER_COMPETITION).
   const competition=target.id==='qp-trading'?false:await client.config().then(c=>!!c?.competition).catch(()=>false);

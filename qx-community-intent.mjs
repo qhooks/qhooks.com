@@ -1,5 +1,6 @@
 // Public community intent: asset selection, local text recovery and explicit call publication.
 // This module never signs or writes merely by loading or restoring a draft.
+import {boardUrl} from './qx-board-address.mjs';
 import {readCallEntry,callEntryError} from './qx-call-entry.mjs';
 import {communityCapabilities} from './qx-community-capabilities.mjs';
 export const COMMUNITY_CHAINS=Object.freeze([['8453','Base'],['4663','Robinhood Chain'],['1','Ethereum'],['42161','Arbitrum'],['56','BNB Chain'],['solana','Solana']]);
@@ -16,16 +17,16 @@ export function launchIntroduction(board){
  const target=communityTarget(board),token=String(board?.token||'');
  if(target.kind!=='launch'||!EVM.test(token)||BigInt(token)===0n||BigInt(target.controller)===0n)throw Error('Open a listed launch board to prepare its introduction.');
  const name=String(board.name||'').replace(/[\r\n\t]/g,' ').trim().slice(0,64),symbol=String(board.symbol||'').replace(/[^a-z0-9]/gi,'').slice(0,10);
- if(!name||!symbol)throw Error('The launch identity is unavailable. Refresh the board or write your own introduction.');
+ if(!name||!symbol)throw Error('The launch identity is still loading. Refresh the board or write your own introduction.');
  const chain=COMMUNITY_CHAINS.find(([id])=>id===target.chainId)?.[1]||'chain '+target.chainId;
  return `${name} ($${symbol}) is live on ${chain}.\n\nContract: ${token.toLowerCase()}\nTrade and review the pool rules: https://qhooks.com/terminal#${communityKey(target)}`;
 }
 export function communityPath(board,{intent=false,call,caller}={}){
  const query=new URLSearchParams();if(intent&&communityCapabilities(board).calls)query.set('intent','call');if(POST.test(call||'')&&EVM.test(caller||'')){query.set('call',call);query.set('caller',caller.toLowerCase());query.set('ref',caller.toLowerCase());}
- return'/board'+(query.size?'?'+query:'')+'#'+communityKey(board);
+ return boardUrl(communityTarget(board))+(query.size?'?'+query:'')+'#'+communityKey(board);
 }
 export function callLinks(board,post){
- if(!communityCapabilities(board).calls)throw Error('Elysium supports discussion posts here; scored calls are unavailable.');
+ if(!communityCapabilities(board).calls)throw Error('Elysium supports discussion posts here; scored calls are not offered there.');
  const b=communityTarget(board),wallet=String(post?.author||'').toLowerCase();if(!POST.test(post?.id||'')||!EVM.test(wallet))throw Error('The published call did not return its identity.');
  const path=communityPath(b,{call:post.id,caller:wallet}),ref='?ref='+wallet;
  return{path,permalink:'https://qhooks.com/call/'+post.id,board:'https://qhooks.com'+path,firstCall:'https://qhooks.com'+communityPath(b,{intent:true,call:post.id,caller:wallet}),trade:'https://qhooks.com/'+(b.kind==='launch'?'l/'+b.chainId+'/'+b.controller+ref:'terminal'+ref+'#'+communityKey(b))};
@@ -50,12 +51,12 @@ export function createCommunityDrafts({storage=()=>localStorage,now=()=>Date.now
 export async function resolveCommunityToken({chainId,query,signal},fetcher=fetch){
  const chain=String(chainId),q=String(query||'').trim();if(!COMMUNITY_BOARD_CHAINS.some(([id])=>id===chain))throw Error('Choose a supported chain.');if(q.length<2||q.length>200)throw Error('Enter a token name or full contract address.');
  const direct=chain==='solana'?/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(q):EVM.test(q);
- if(chain==='99901'&&!direct)throw Error('Use the full Elysium token contract address. Name search is unavailable.');
+ if(chain==='99901'&&!direct)throw Error('Use the full Elysium token contract address. Name search is not offered there.');
  const cancelled=()=>Object.assign(Error('Token search cancelled.'),{name:'AbortError'});if(signal?.aborted)throw cancelled();
  const controller=new AbortController(),abort=()=>controller.abort(),timer=setTimeout(()=>controller.abort(),12000);signal?.addEventListener('abort',abort,{once:true});
  try{
   const path=direct?'/api/community/token/'+chain+'/'+q:'/api/terminal/x/search?'+new URLSearchParams({q,chain});
-  const response=await fetcher(path,{cache:'no-store',signal:controller.signal}),body=await response.json().catch(()=>null);if(signal?.aborted)throw cancelled();if(!body)throw Error('Token search is unavailable. Try again.');if(!response.ok)throw Error(body.error==='unknown_token'?'No token was found at that contract. Check the chain.':'Token search is unavailable. Try again.');
+  const response=await fetcher(path,{cache:'no-store',signal:controller.signal}),body=await response.json().catch(()=>null);if(signal?.aborted)throw cancelled();if(!body)throw Error('Token search is refreshing. Try again.');if(!response.ok)throw Error(body.error==='unknown_token'?'No token was found at that contract. Check the chain.':'Token search is refreshing. Try again.');
   if(direct){const item=body.redirect?{...body.redirect,kind:'launch'}:body.board;if(!item)throw Error('The token resolver returned no board.');return[{...item,...communityTarget(item)}];}
   return(Array.isArray(body.results)?body.results:[]).flatMap(hit=>{try{return[{...hit,...communityTarget({kind:'token',chainId:hit.chainId,address:hit.address})}];}catch{return[];}}).filter(hit=>hit.chainId===chain).slice(0,8);
  }catch(error){if(error.name==='AbortError'){if(signal?.aborted)throw cancelled();throw Error('Token search timed out. Try again.');}throw error;}finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);}
@@ -66,7 +67,7 @@ export function mountCommunityPicker(target,{document:doc=globalThis.document,fe
  const submit=make('button',{type:'submit',class:'qa-btn qx-btn qx-btn-primary'},'Find your token'),status=make('p',{class:'qb-status',role:'status','aria-live':'polite'}),results=make('div',{class:'qb-picker-results'});
  const form=make('form',{class:'qb-picker'},make('label',{for:id+'-chain'},'Chain',select),make('label',{for:id+'-query'},'Token',input),submit);
  let generation=0,searchController=null;
- const invalidateSearch=()=>{const hadSearch=!!searchController||results.children.length>0||!!status.textContent;generation++;searchController?.abort();searchController=null;results.replaceChildren();submit.disabled=false;const note=select.value==='99901'?'Use the full Elysium token contract. Discussion only; scored calls and trading are unavailable here.':hadSearch&&input.value.trim()?'Chain or token changed. Use Find your token to search again.':'';if(status.textContent!==note)status.textContent=note;};
+ const invalidateSearch=()=>{const hadSearch=!!searchController||results.children.length>0||!!status.textContent;generation++;searchController?.abort();searchController=null;results.replaceChildren();submit.disabled=false;const note=select.value==='99901'?'Use the full Elysium token contract. Discussion only; scored calls and trading are not offered here.':hadSearch&&input.value.trim()?'Chain or token changed. Use Find your token to search again.':'';if(status.textContent!==note)status.textContent=note;};
  select.addEventListener('change',invalidateSearch);input.addEventListener('input',invalidateSearch);
  form.addEventListener('submit',async event=>{event.preventDefault();const mine=++generation;searchController?.abort();const currentSearch=new AbortController();searchController=currentSearch;submit.disabled=true;status.textContent='Finding your token…';results.replaceChildren();
   try{const hits=await resolveCommunityToken({chainId:select.value,query:input.value,signal:currentSearch.signal},fetcher);if(mine!==generation)return;status.textContent=hits.length?(select.value==='99901'?'Open this contract’s discussion. Reading and drafting need no wallet.':'Choose a token to draft your call. Reading and drafting need no wallet.'):'No matching tokens. Try the full contract and check the chain.';
@@ -77,7 +78,7 @@ export function mountCommunityPicker(target,{document:doc=globalThis.document,fe
  target.replaceChildren(form,status,results,...(resume?[resume]:[]));return{form,input,select,status,results};
 }
 export async function publishCommunityCall({board,thesis,wallet,api,signMessage,current=()=>true,status=()=>{},fetcher=globalThis.fetch,onEntry=()=>{},beforePublish=()=>{}}){
- if(!communityCapabilities(board).calls)throw Error('Elysium supports discussion posts here; scored calls are unavailable.');
+ if(!communityCapabilities(board).calls)throw Error('Elysium supports discussion posts here; scored calls are not offered there.');
  const text=String(thesis||'').trim(),owner=String(wallet||'').toLowerCase(),target=communityTarget(board);if(!EVM.test(owner)||!text||[...text].length>1000)throw Error('Review your wallet and a thesis of up to 1,000 characters.');
  const check=()=>{if(!current())throw Error('Your wallet, token or thesis changed. Review your call before signing again.');};check();
  const entryReady=async()=>{if(target.kind!=='launch')return;status('Checking the indexed call entry quote…');const entry=await readCallEntry({...target,token:board.token},{fetcher});check();onEntry(entry);check();if(entry.state!=='ready')throw callEntryError(entry);};

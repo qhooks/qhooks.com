@@ -1,3 +1,4 @@
+import {migrateCommunityFollowing} from './qx-community-follow.mjs';
 // One free EIP-191 signature opens the existing seven-day community session.
 // Hub pages inject their current connection; existing Trade/Studio callers keep
 // their public connection-line API. No wallet authority or permission is stored.
@@ -21,6 +22,7 @@ export function createBoardSession({getConnection,fetcher=(...args)=>globalThis.
   const session=await post('/session',{message,signature});await connection.check();
   if(session?.wallet!==wallet||typeof session.token!=='string'||!session.token||!Number.isFinite(session.expiresAt)||session.expiresAt<=now())throw Error('The sign-in response did not match this wallet. Try again.');
   try{storage().setItem(KEY,JSON.stringify(session));}catch{}
+  await migrateCommunityFollowing(session,{storage,fetcher,now,current:()=>owner()===wallet}).catch(()=>{});
   return session;
  }
  function signOut(){const s=boardSession();try{storage().removeItem(KEY);}catch{}if(s)fetcher('/api/community/session',{method:'DELETE',headers:{authorization:'Bearer '+s.token}}).catch(()=>{});}

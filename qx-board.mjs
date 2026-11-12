@@ -1,3 +1,4 @@
+import {readBoardAddress} from './qx-board-address.mjs';
 import {profileUrl} from './qx-profile-address.mjs';
 // Community board for a listed launch (#m=<chain>:<controller>) or token (#t=<chain>:<address>). Reading is public. Posting identity is
 // the wallet: one free EIP-191 sign-in (no transaction) opens a 7-day session kept in this browser, then posts, replies,
@@ -404,6 +405,8 @@ async function load({ keep = false, focus } = {}) {
   }
 }
 function parseTarget() {
+  // A legacy fragment may switch boards without a full navigation.
+  if (!/^#[mt]=/.test(location.hash)) { const address=readBoardAddress(location.pathname); if(address)return address; }
   const m = /^#m=(\d{1,6}):(0x[0-9a-fA-F]{40})$/.exec(location.hash.split('&')[0]);
   if (m) return { kind: 'launch', chainId: m[1], controller: m[2].toLowerCase() };
   const t = /^#t=(8453|1|42161|56|4663|solana|99901):(.+)$/.exec(location.hash.split('&')[0]);
@@ -414,7 +417,7 @@ async function index(mine) {
   document.title = 'Community boards | QHooks';
   root.replaceChildren(h('section', { class: 'qb-hero' }, h('div', { class: 'qb-hero-main' }, h('p', { class: 'qx-eyebrow' }, 'Community'), h('h1', {}, 'Boards ', h('span', { class: 'qx-serif' }, 'for any token.')),
     h('p', { class: 'qa-lede' }, 'Choose a token, write your thesis and put your call on record. Read and draft without a wallet.'),
-    h('div', { class: 'qa-launch-links' }, h('a', { class: 'qa-btn', href: '/terminal' }, 'Open the terminal'),h('a',{class:'qa-btn',href:'/community#following'},'Following on this device')))), h('section',{class:'qb-picker-card','aria-labelledby':'qb-picker-title'},h('h2',{id:'qb-picker-title'},'What’s your call?'),h('div',{id:'qb-token-picker'})),
+    h('div', { class: 'qa-launch-links' }, h('a', { class: 'qa-btn', href: '/terminal' }, 'Open the terminal'),h('a',{class:'qa-btn',href:'/community#following'},'Following')))), h('section',{class:'qb-picker-card','aria-labelledby':'qb-picker-title'},h('h2',{id:'qb-picker-title'},'What’s your call?'),h('div',{id:'qb-token-picker'})),
     h('section', { class: 'qa-section' }, h('div', { class: 'qa-section-head' }, h('h2', {}, 'Active boards'), h('p', {}, 'Boards with posts, most recent activity first.')),
       boardTabs()));
   mountCommunityPicker($('qb-token-picker'),{drafts});

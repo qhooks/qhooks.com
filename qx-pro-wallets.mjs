@@ -59,7 +59,7 @@ let root = null, status = null, activityTimer = null;
 async function loadFollows() {
   S.signedIn = !!boardSession();
   if (!S.signedIn) { S.follows = []; return; }
-  try { S.follows = (await api('/api/wallets/follows')).follows || []; }
+  try { S.follows = ((await api('/api/wallets/follows')).follows || []).filter(row=>row.kind!=='token'); }
   catch (e) { if (e.status === 401) S.signedIn = false; S.follows = []; }
 }
 async function follow(wallet, fields = {}, on = true) {

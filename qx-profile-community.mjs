@@ -6,7 +6,7 @@ export function confirmedEmptyCalls(caller,fallbackStats){
   return !calls.length&&stats?.version===2&&stats.coverage?.completeRecordSet===true&&stats.sample?.total===0;
 }
 
-// Reuse device-local follows. This never subscribes a wallet or creates a social graph.
+// Profile actions share the signed-in wallet’s server following list.
 export function mountProfileCallerActions(target,{wallet,label='',hub,document:doc=globalThis.document,events=globalThis.window,following,caller,fallbackStats}={}){
   const follow=doc.createElement('span'),feed=doc.createElement('a');
   target.classList.add('qmp-profile-actions');feed.setAttribute('href','/community#following');feed.className='qmp-thanks-link';feed.textContent='Open your Following feed →';

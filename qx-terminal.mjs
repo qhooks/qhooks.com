@@ -1,3 +1,4 @@
+import {communityFollowing,followSubject} from './qx-community-follow.mjs';
 import {swapCandles,mergeSwapCandles} from '/qx-swap-candles.mjs';
 import {shapeCandles} from './qx-chart-shape.mjs';
 import {tokenAvatar,bindTokenAvatar} from '/qx-token-avatar.mjs';
@@ -69,7 +70,19 @@ const state = { chain: store('chain') || 'all', feed: store('feed') || 'recent',
   tracked: JSON.parse(store('tracked') || '{}'), activity: [], alerts: store('alerts') === '1', xhits: [], xq: '', xchain:'all',xstatus:'idle',xerror:null,trust: {} };
 if (!TFS.some(([t]) => t === state.tf)) state.tf = 60;
 let memoryStorage;try{memoryStorage=localStorage;}catch{}
-const workspaceMemory=createWorkspaceMemory({storage:memoryStorage});
+let workspaceMemory=createWorkspaceMemory({storage:memoryStorage});
+const watchSubject=raw=>followSubject({kind:'board',board:{kind:raw.kind==='launch'||raw.controller?'launch':'token',chainId:raw.chainId,controller:raw.controller,address:raw.token||raw.address},label:raw.symbol||raw.name||''});
+function watchingAsset(raw){if(!communityFollowing.persistent())return workspaceMemory.has(raw);try{return communityFollowing.has(watchSubject(raw));}catch{return workspaceMemory.has(raw);}}
+function syncedWatchRows(){
+ const snapshot=workspaceMemory.snapshot(),known=[...snapshot.watched,...snapshot.recent,...state.markets],rows=[];
+ for(const subject of communityFollowing.list())if(subject.kind==='board'){const board=subject.board,controller=board.controller,token=board.address;const details=known.find(row=>String(row.chainId)===board.chainId&&(controller?row.controller===controller:(row.token||row.address)===token));const asset=workspaceAsset({...details,kind:controller?'launch':'external',chainId:board.chainId,controller,token:token||details?.token,name:details?.name||subject.label,symbol:details?.symbol||subject.label});if(asset)rows.push(asset);}
+ // Unknown-chain local watches remain reachable until their board can be synced.
+ for(const row of snapshot.watched)try{watchSubject(row);}catch{rows.push(row);}
+ return rows;
+}
+function rehydrateWatches(){workspaceMemory=createWorkspaceMemory({storage:memoryStorage});try{state.watch=new Set(JSON.parse(store('watch')||'[]'));}catch{state.watch=new Set();}if(paneReady){renderHead();renderFeed();}}
+addEventListener('qhooks:watch-migrated',rehydrateWatches);
+addEventListener('qhooks:community-following',()=>{if(paneReady){renderHead();renderFeed();}});
 let marketWorkspace=null,positionsPanel=null,conversationView=null,conversationKey=null,renderedWorkspaceKey=null,renderedWorkspacePhone=null,selectedProof=null;
 
 // ---- Formatting ----
@@ -343,7 +356,7 @@ function xItem(x,i) {
 function renderWorkspaceRail() {
  const selected=selectedContext(),asset=workspaceAsset(selected),current=$('qxt-rail-selected');current.hidden=!asset;
  if(asset)current.replaceChildren(h('span',{class:'qxt-rail-kicker'},'In view'),h('div',{class:'qxt-current-market'},h('b',{},asset.symbol||'Reading token…'),h('span',{},CHAIN_NAME[asset.chainId]||asset.chainId)),h('code',{title:asset.token||asset.controller},asset.token||asset.controller));
- $('qxt-rail-note').textContent=workspaceMemory.snapshot().persistent?'Recent markets and watchlist are saved on this device.':'Kept in this tab. Browser storage is unavailable.';
+ $('qxt-rail-note').textContent=communityFollowing.persistent()?'Watchlist syncs with your wallet. Recent markets stay in this browser.':workspaceMemory.snapshot().persistent?'Sign in to sync your watchlist. Recent markets stay in this browser.':'Kept in this tab. Browser storage is unavailable.';
  const launchMode=['new','opening','trending'].includes(state.feed);$('qxt-launch-view').hidden=!launchMode;if(launchMode)$('qxt-launch-sort').value=state.feed;
 }
 function memoryRow(row,i) {
@@ -356,7 +369,7 @@ function memoryRow(row,i) {
   h('span',{class:'qxt-r2'},h('span',{},value),row.change24!==null?h('span',{class:row.change24>0?'up':row.change24<0?'down':''},pct(row.change24)):null),
   h('span',{class:'qxt-r3 qxt-rail-contract'},h('code',{title:address},short(address)),h('span',{},row.kind==='launch'?'QHooks launch':'Outside token')),h('span',{class:'qxt-memory-time'},(row.origin==='listed'?'Listed launch':row.openedAt?'Viewed '+age(row.openedAt/1000)+' ago':'Watched market')+' · '+freshnessState(row,Date.now(),{fresh:'Live · '}).label)));
 }
-function workspaceRows(){return workspaceSearchRows({query:$('qxt-search').value.trim(),chain:state.chain,launches:state.markets,external:xRows(),saved:workspaceMemory.rows({mode:state.feed})});}
+function workspaceRows(){return workspaceSearchRows({query:$('qxt-search').value.trim(),chain:state.chain,launches:state.markets,external:xRows(),saved:state.feed==='watch'&&communityFollowing.persistent()?syncedWatchRows():workspaceMemory.rows({mode:state.feed})});}
 function keyboardRows(){
  if(state.feed==='wallets')return [];
  const xs=xRows().map(x=>({...x,kind:'external',token:x.address}));
@@ -403,7 +416,7 @@ async function loadFeed() {
     const r = await fetch('/api/terminal/feed?chain=' + chain, { cache: 'no-store' });
     const [j, trust] = await Promise.all([r.ok ? r.json() : null, trustList()]);
     if(revision!==feedRevision||chain!==state.chain)return;state.trust=trust;
-    if (j) { state.markets = j.markets || [];for(const m of state.markets)if(state.watch.has(keyOf(m))&&!workspaceMemory.has({kind:'launch',chainId:m.chainId,controller:m.controller}))workspaceMemory.watch({kind:'launch',chainId:m.chainId,token:m.token,controller:m.controller,symbol:m.symbol,name:m.name},true);renderFeed(); for (const fn of marketListeners) { try { fn(state.markets); } catch {} } }
+    if (j) { state.markets = j.markets || [];for(const m of state.markets)if(!communityFollowing.persistent()&&state.watch.has(keyOf(m))&&!workspaceMemory.has({kind:'launch',chainId:m.chainId,controller:m.controller}))workspaceMemory.watch({kind:'launch',chainId:m.chainId,token:m.token,controller:m.controller,symbol:m.symbol,name:m.name},true);renderFeed(); for (const fn of marketListeners) { try { fn(state.markets); } catch {} } }
   } catch {}
 }
 
@@ -590,7 +603,7 @@ function renderHead() {
   const av = $('qxt-av'); if (av) { av.hidden = false; av.style.setProperty('--h', hue(m.token || state.sel?.controller)); av.firstChild.textContent = (m.symbol || '?').replace(/^\$/, '').slice(0, 1).toUpperCase(); av.querySelector('.qxt-av-logo')?.remove(); const lg = avLogo(m.chainId ?? state.sel?.chainId, m.token, {...d.token,...m}); if (lg) av.firstChild.after(lg); }
   const copy = $('qxt-copy'); copy.hidden = false; copy.textContent = short(m.token); copy.title = 'Copy ' + m.token;
   $('qxt-share').hidden = false; $('qxt-share').textContent = 'Share';
-  const star=$('qxt-star');star.hidden=false;const watching=workspaceMemory.has(selectedContext());star.textContent=watching?'★ Watching':'☆ Watch';star.setAttribute('aria-pressed',String(watching));star.setAttribute('aria-label',(watching?'Remove from':'Add to')+' watchlist: '+m.symbol+' on '+(CHAIN_NAME[m.chainId]||m.chainId));
+  const star=$('qxt-star');star.hidden=false;const watching=watchingAsset(selectedContext());star.textContent=watching?'★ Watching':'☆ Watch';star.setAttribute('aria-pressed',String(watching));star.setAttribute('aria-label',(watching?'Remove from':'Add to')+' watchlist: '+m.symbol+' on '+(CHAIN_NAME[m.chainId]||m.chainId));
   const q = m.quoteSymbol, cell = (k, v, cls) => [h('div', {}, h('dt', {}, k), h('dd', { class: cls || '' }, v))];
   if (d.ext) {
     headTrust();
@@ -1057,7 +1070,7 @@ const workspaceSearch=createWorkspaceSearch({onChange:result=>{state.xhits=resul
 $('qxt-search').addEventListener('input',()=>{state.cursor=-1;const v=$('qxt-search').value.trim();
  if(/^0x[0-9a-fA-F]{40}$/.test(v)&&state.chain!=='all'&&state.chain!=='solana'){$('qxt-search').value='';workspaceSearch.search('',state.chain);location.hash='#t='+state.chain+':'+v.toLowerCase();return;}
  workspaceSearch.search(v,state.chain);});
-$('qxt-star').addEventListener('click',()=>{const selected=selectedContext();if(!selected||!state.data)return;const watched=workspaceMemory.toggle(selected);if(selected.kind==='launch'){const key=keyOf(state.sel);watched?state.watch.add(key):state.watch.delete(key);store('watch',JSON.stringify([...state.watch]));}renderHead();renderFeed();});
+$('qxt-star').addEventListener('click',async()=>{const selected=selectedContext();if(!selected||!state.data)return;const star=$('qxt-star');star.disabled=true;try{let subject;try{subject=watchSubject(selected);}catch{}if(subject&&communityFollowing.persistent()){await communityFollowing.set(subject,!communityFollowing.has(subject));}else{const watched=workspaceMemory.toggle(selected);if(selected.kind==='launch'){const key=keyOf(state.sel);watched?state.watch.add(key):state.watch.delete(key);store('watch',JSON.stringify([...state.watch]));}}renderHead();renderFeed();}catch(error){$('qxt-sync').textContent=error.message;}finally{star.disabled=false;}});
 // Share: a qhooks.com/l/<chain>/<controller> link that shows a preview card on X and in chats.
 $('qxt-share').addEventListener('click', async () => {
   const me = connectedAddress() || '', refq = /^0x[0-9a-fA-F]{40}$/.test(me) ? '?ref=' + me.toLowerCase() : '';

@@ -1,3 +1,4 @@
+import {boardUrl} from './qx-board-address.mjs';
 import {priceText,moveText} from './qx-call-format.mjs';
 import {profileUrl} from './qx-profile-address.mjs';
 // Board rows and small formatters shared by the board page, the Community hub and profiles (no side effects on import).
@@ -6,7 +7,7 @@ import {memberIdentity} from './qx-member-identity.mjs';
 import {checkpointView,scoreCoverageText} from './qx-caller-score-ui.mjs';
 import {firstCallPrompt} from './qx-community-empty.mjs';
 export const num = n => Number(n || 0).toLocaleString();
-export const boardPath = b => '/board#' + (b.kind === 'token' ? 't=' + b.chainId + ':' + b.address : 'm=' + b.chainId + ':' + b.controller);
+export const boardPath = boardUrl;
 export const chainName = chain => chain === 'solana' ? 'Solana' : String(chain)==='99901'?'Elysium':CHAIN_NAME[chain] || chain;
 // The same address mark works for EVM and case-sensitive Solana identities.
 export function addressMark(address) {

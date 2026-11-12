@@ -57,12 +57,13 @@ function showMemberHeader(value){
   $('qp-avatar').replaceChildren(...(value.profile.image?[h('img',{src:value.profile.image,alt:'',width:'88',height:'88'})]:[]));
 }
 function linkedAccountsPublished(value){if(value?.wallet!==viewedProfileKey)return;linkedRevision++;showMemberHeader({...shownMember,wallet:value.wallet,profile:shownMember?.profile||{name:'',bio:'',image:'',links:[]},accounts:value.accounts});}
-const memberEditor=mountMemberProfileEditor($('qp-member-editor'),{hub,sessions:profileSessions,client:memberClient,onPublished:value=>{showMemberHeader(value);void load(value);},onAccountsPublished:linkedAccountsPublished});
+const memberEditor=mountMemberProfileEditor($('qp-member-editor'),{hub,sessions:profileSessions,client:memberClient,onPublished:value=>{showMemberHeader(value);window.dispatchEvent(new CustomEvent('qhooks:profile-saved',{detail:{wallet:value.wallet}}));void load(value);},onAccountsPublished:linkedAccountsPublished});
 const solHub=$('qp-solana-editor')?createSolanaProfileWallet(window):null;
-const solSessions=solHub?solanaProfileSessions(solHub):null;
-const solEditor=solHub?mountMemberProfileEditor($('qp-solana-editor'),{hub:solHub,sessions:solSessions,client:memberClient,idPrefix:'qmps',onPublished:value=>{showMemberHeader(value);void load(value);},onAccountsPublished:linkedAccountsPublished}):null;
+const solSessions=solHub?solanaProfileSessions(solHub,{includeTradingPrivacy:true}):null;
+const solEditor=solHub?mountMemberProfileEditor($('qp-solana-editor'),{hub:solHub,sessions:solSessions,client:memberClient,idPrefix:'qmps',onPublished:value=>{showMemberHeader(value);window.dispatchEvent(new CustomEvent('qhooks:profile-saved',{detail:{wallet:value.wallet}}));void load(value);},onAccountsPublished:linkedAccountsPublished}):null;
 async function prepareSolProfileEditor(wallet,revision){
   if(!solEditor)return;await solEditor.setWallet(wallet);
+  if(new URLSearchParams(location.search||'').get('edit')==='1'&&viewedProfileKey===wallet)requestedSolEditor=wallet;
   if(revision!==seq||requestedSolEditor!==wallet||solHub.snapshot().current?.owner!==wallet||viewedProfileKey!==wallet)return;
   requestedSolEditor=null;solEditor.open();
 }
@@ -88,6 +89,7 @@ if(solHub){
 
 async function prepareProfileEditor(wallet,revision){
   await memberEditor.setWallet(wallet);
+  if(new URLSearchParams(location.search||'').get('edit')==='1'&&viewedProfileKey===wallet)requestedEditor=wallet;
   if(revision!==seq||requestedEditor!==wallet||hub.snapshot().current?.owner?.toLowerCase()!==wallet||viewedProfileKey!==wallet)return;
   requestedEditor=null;memberEditor.open();
 }
@@ -293,7 +295,7 @@ async function loadSolanaProfile(identity,mine){
   paintAvatar($('qp-avatar'),key);$('qp-avatar').classList.add('is-set');document.title=short(address)+' | Solana profile | QHooks';if(shownMember?.wallet===key)showMemberHeader(shownMember);
   $('qp-explorers').replaceChildren('Wallet on ',h('a',{href:'https://solscan.io/account/'+address,target:'_blank',rel:'noopener noreferrer'},'Solana (Solscan) ↗'));$('qp-explorers').hidden=false;
   $('qp-root').replaceChildren(h('p',{class:'qa-loading'},'Reading this Solana profile…'));void prepareSolProfileEditor(key,mine);
-  $('qp-hint').textContent='Solana profile. Name, picture and bio are public when saved. Holdings and trade history are not shared.';
+  $('qp-hint').textContent='Solana profile. Name, picture and bio are public when saved. Holdings stay private. Terminal trades and PnL are shared only when you choose.';
   const accountsRevision=linkedRevision;let member=null,error=null;try{member=await memberClient.read(key);if(accountsRevision!==linkedRevision&&shownMember?.wallet===key)member={...member,accounts:shownMember.accounts};}catch(value){error=value;}
   if(mine!==seq)return;
   if(member)showMemberHeader(member);

@@ -66,11 +66,11 @@ export function mountFollow(target,wallet,{onChange}={}){
  async function load(){try{data=await call('/profile/'+wallet);render();}catch{counts.textContent='Refreshing…';}}
  button.addEventListener('click',async()=>{
   button.disabled=true;msg.textContent='';
-  try{await ensureSession(t=>msg.textContent=t);const on=!data?.viewerFollows,r=await call('/follow',{method:'POST',body:{wallet,on}});
-   data={...data,...r,viewerFollows:r.following};try{communityFollowing.set({kind:'caller',wallet},r.following);}catch{}render();msg.textContent=r.following?'You’ll see their calls in My QHooks and in @qhooks_bot.':'';onChange?.(r);await load();
+  try{await ensureSession(t=>msg.textContent=t);const on=!data?.viewerFollows,r=await call('/follow',{method:'POST',base:'/api/wallets',body:{kind:'caller',wallet,on}});
+   data={...data,...r,viewerFollows:r.following};await communityFollowing.refresh().catch(()=>{});render();msg.textContent=r.following?'You’ll see their calls in My QHooks and in @qhooks_bot.':'';onChange?.(r);await load();
   }catch(e){msg.textContent=errorText(e);}finally{button.disabled=false;}
  });
- load();return{reload:load};
+ const changed=()=>{if(target.isConnected)void load();};globalThis.addEventListener?.('qhooks:community-following',changed);load();return{reload:load,dispose(){globalThis.removeEventListener?.('qhooks:community-following',changed);}};
 }
 function mountProfile(anchor){
  const box=h('div',{class:'qco-profile',id:'qco-profile',hidden:true});anchor.after(box);let current=null,revision=0;

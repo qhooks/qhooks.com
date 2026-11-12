@@ -1,3 +1,4 @@
+import {profileUrl} from './qx-profile-address.mjs';
 import {LIVE} from './chains.mjs';
 
 const known = n => typeof n === 'number' && Number.isFinite(n);
@@ -65,7 +66,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   catch { b.textContent = 'Select address'; }
  }, {'aria-label': 'Copy wallet address'});
  function addresses(evm, solana) {
-  $('qp-addresses').replaceChildren(...[evm, solana].filter(Boolean).map(a => h('div', {class: 'qp-address'}, h('code', {}, a), copyButton(a))));
+  $('qp-addresses').replaceChildren(...[evm, solana].filter(Boolean).map(a => h('div', {class: 'qp-address'}, h('code', {}, a), copyButton(a), h('a', {class:'qa-btn',href:profileUrl({wallet:a===solana?'solana:'+a:a,edit:true})}, 'Edit profile'))));
  }
  function solPicker() {
   const wallets = sol.solWallets(), address = sol.solAddress();

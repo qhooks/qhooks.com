@@ -21,7 +21,7 @@ export function mountCallerRankings(container,note,{document:doc=globalThis.docu
    if(!rows.length)return;
    const m=await loadRows();if(disposed)return;container.replaceChildren(...rows.map((row,index)=>m.callerRow(row,index+1)));container.hidden=false;note.hidden=true;
   }catch{
-   if(disposed)return;container.hidden=true;note.hidden=false;note.textContent=RANKING_WAIT+'. Caller records are unavailable right now. ';
+   if(disposed)return;container.hidden=true;note.hidden=false;note.textContent=RANKING_WAIT+'. Caller records are refreshing. ';
    const retry=doc.createElement('button');retry.type='button';retry.className='qx-btn qx-btn-ghost';retry.textContent='Retry caller records';retry.addEventListener('click',()=>void refresh());note.append(retry);
   }
  }

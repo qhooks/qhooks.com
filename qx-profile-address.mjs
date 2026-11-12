@@ -1,10 +1,10 @@
 import {memberWallet} from './qx-member-wallet.mjs';
 import {normalizeProfileHandle} from './qx-profile-handle-core.mjs';
 
-export function profileUrl({wallet,handle}={}){
- const name=normalizeProfileHandle(handle);if(name)return '/profile/'+name;
+export function profileUrl({wallet,handle,edit=false}={}){
+ const name=normalizeProfileHandle(handle);if(name)return '/profile/'+name+(edit?'?edit=1':'');
  const identity=memberWallet(wallet,{allowBareSolana:true});if(!identity)return '/profile';
- return identity.family==='solana'?'/profile/solana/'+identity.address:'/profile/'+identity.address;
+ return (identity.family==='solana'?'/profile/solana/'+identity.address:'/profile/'+identity.address)+(edit?'?edit=1':'');
 }
 
 // Optional transport makes the same address parser usable in offline fixtures.

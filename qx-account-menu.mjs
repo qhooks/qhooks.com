@@ -1,3 +1,4 @@
+import {profileUrl} from './qx-profile-address.mjs';
 import {homePicker} from './qx-home-currency.mjs';
 import {loadLocalHome, homeToken} from './qx-home-core.mjs';
 // The shared wallet dialog does one job per state (Randall, 2026-11-04: "this should just be a static connect page").
@@ -207,7 +208,7 @@ if (dialog) {
     card.querySelector('.qwm-short').textContent = short(cur.owner);
     card.querySelector('.qwm-wtype').textContent = TYPE[cur.entry?.rdns] || cur.entry?.name || 'Browser wallet';
     renderSwitcher();
-    links.replaceChildren(...[['My QHooks', '/me'], ['Portfolio', portfolio], ['Rewards', '/me#qa-rewards'], ['My launches', '/me#qa-launches'], ['Wallets', '/wallets']].map(([t, h]) => { const a = el('a', null, t); a.href = h; a.addEventListener('click', () => dialog.close()); return a; }));
+    links.replaceChildren(...[['Edit profile', profileUrl({wallet:cur.owner,edit:true})], ['My QHooks', '/me'], ['Portfolio', portfolio], ['Rewards', '/me#qa-rewards'], ['My launches', '/me#qa-launches'], ['Wallets', '/wallets']].map(([t, h]) => { const a = el('a', null, t); a.href = h; a.addEventListener('click', () => dialog.close()); return a; }));
     renderTrades(); loadBalances(); renderCash(); home.refresh();
   };
   // The fund button arrives later (email-login script); keep the footer complete whenever the dialog changes.
