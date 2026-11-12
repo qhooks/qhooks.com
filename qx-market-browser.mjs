@@ -10,7 +10,8 @@ var launchChains = Object.freeze([
   Object.freeze({ id: "42161", slug: "arbitrum", name: "Arbitrum One", gas: "ETH", feeModel: "nitro", coreHref: null, status: "Integration in progress" }),
   Object.freeze({ id: "56", slug: "bnb", name: "BNB Chain", gas: "BNB", feeModel: "bsc", coreHref: null, status: "Integration in progress" }),
   Object.freeze({ id: "5042", slug: "arc", name: "Arc", gas: "USDC", feeModel: "arc-stablecoin", coreHref: null, status: "Integration in progress" }),
-  Object.freeze({ id: "99801", slug: "elysium", name: "Elysium Testnet", gas: "HYPE", feeModel: "nitro", coreHref: null, status: "Integration in progress" })
+  Object.freeze({ id: "99801", slug: "elysium", name: "Elysium Testnet", gas: "HYPE", feeModel: "nitro", coreHref: null, status: "Integration in progress" }),
+  Object.freeze({ id: "99901", slug: "elysium", name: "Elysium", gas: "HYPE", feeModel: "nitro", coreHref: null, status: "Integration in progress" })
 ]);
 function launchChain(id) {
   if (typeof id !== "string") throw new TypeError("Choose a chain ID");
@@ -47,7 +48,7 @@ function renderMarketCards({ document: d, container, rows, chainFor, onOpen }) {
     addressP.className = "market-address";
     addressP.textContent = row.token;
     const statusP = d.createElement("p");
-    statusP.textContent = row.status === "unavailable" ? "Market unavailable" : row.status === "observed" ? "Recently checked" : "Refreshes when you trade";
+    statusP.textContent = row.status === "unavailable" ? "Refreshing" : row.status === "observed" ? "Recently checked" : "Refreshes when you trade";
     const button = d.createElement("button");
     button.type = "button";
     button.className = "workspace-button";
@@ -66,7 +67,7 @@ function selectMarkets(rows, { chainId = "all", query = "", offset = 0, limit = 
   const ensure3 = (ok, message) => {
     if (!ok) throw new TypeError(message);
   };
-  const chains2 = ["1", "56", "8453", "42161", "4663", "5042", "99801"];
+  const chains2 = ["1", "56", "8453", "42161", "4663", "5042", "99801", "99901"];
   const address = (value) => typeof value === "string" && value.length === 42 && /^0x[0-9a-f]{40}$/.test(value) && BigInt(value) > 0n;
   ensure3(Array.isArray(rows) && rows.length <= 1e3, "Bounded market rows required");
   ensure3(chainId === "all" || chains2.includes(chainId), "Invalid directory chain");
@@ -215,8 +216,13 @@ function fields(value, names) {
   ensure2(keys.length === names.length && names.every((k) => descriptors[k]?.enumerable && Object.hasOwn(descriptors[k], "value")));
   return Object.fromEntries(names.map((k) => [k, descriptors[k].value]));
 }
+var images = ["logo", "logoURI", "profileImage", "launchImage", "profileBanner"];
 function rowValue(value, now) {
-  const r = fields(value, [...metadata, "status", "checkedAt", "expiresAt", "transactionAuthorized"]);
+  ensure2(value && Object.getPrototypeOf(value) === Object.prototype);
+  const extra = Object.keys(value).filter((k) => images.includes(k));
+  for (const k of extra) ensure2(typeof value[k] === "string" && value[k].length <= 45e4);
+  const r = fields(Object.fromEntries(Object.entries(value).filter(([k]) => !images.includes(k))), [...metadata, "status", "checkedAt", "expiresAt", "transactionAuthorized"]);
+  for (const k of extra) r[k] = value[k];
   selectMarkets([Object.fromEntries(metadata.map((k) => [k, r[k]]))]);
   ensure2(statuses.includes(r.status) && integer(r.checkedAt) && integer(r.expiresAt) && r.expiresAt === r.checkedAt + 12e4 && r.transactionAuthorized === false);
   return Object.freeze({ ...r, status: r.status === "observed" && (now < r.checkedAt || now >= r.expiresAt) ? "stale" : r.status });
@@ -226,7 +232,9 @@ function marketQuery({ chainId = "all", query = "", offset = 0 } = {}) {
   return Object.freeze({ chainId, query, offset });
 }
 function readMarketPage(value, options = {}, now = Date.now()) {
-  const q = marketQuery(options), p = fields(value, ["version", "kind", "total", "offset", "nextOffset", "rows"]);
+  // The directory may add a refreshing flag and its message while it re-reads chains; both are optional and checked.
+  ensure2(value && Object.getPrototypeOf(value) === Object.prototype && (value.refreshing === void 0 || typeof value.refreshing === "boolean") && (value.refreshingMessage === void 0 || typeof value.refreshingMessage === "string" && value.refreshingMessage.length <= 200));
+  const q = marketQuery(options), p = fields(Object.fromEntries(Object.entries(value).filter(([k]) => k !== "refreshing" && k !== "refreshingMessage")), ["version", "kind", "total", "offset", "nextOffset", "rows"]);
   ensure2(integer(now) && p.version === 1 && p.kind === "qhooks-market-directory" && integer(p.total) && p.total <= 1e3 && p.offset === q.offset);
   ensure2(Array.isArray(p.rows) && p.rows.length === Math.min(24, Math.max(0, p.total - p.offset)));
   const rows = p.rows.map((r) => rowValue(r, now)), selected = selectMarkets(rows, { ...q, offset: 0, limit: 24 });
@@ -235,9 +243,17 @@ function readMarketPage(value, options = {}, now = Date.now()) {
   return Object.freeze({ ...p, rows: Object.freeze(rows) });
 }
 function readMarketTradeLink(value, selected) {
-  const row = rowValue(selected, Date.now()), v = fields(value, ["pool", "observation", "revision", "listedAt", "invalidatedAt", "status", "transactionAuthorized"]);
+  ensure2(value && Object.getPrototypeOf(value) === Object.prototype && (value.refreshing === void 0 || typeof value.refreshing === "boolean") && (value.refreshingMessage === void 0 || typeof value.refreshingMessage === "string" && value.refreshingMessage.length <= 200));
+  if (value.kind === "qhooks-simple-launch") {
+    const one = rowValue(selected, Date.now()), link = "/terminal.html#m=" + one.chainId + ":" + one.controller;
+    ensure2(one.status !== "unavailable" && value.terminal === link, "Market identity changed. Search again.");
+    return link;
+  }
+  const row = rowValue(selected, Date.now()), v = fields(Object.fromEntries(Object.entries(value).filter(([k]) => k !== "refreshing" && k !== "refreshingMessage")), ["pool", "observation", "revision", "listedAt", "invalidatedAt", "status", "transactionAuthorized"]);
   ensure2(row.status !== "unavailable" && ["observed", "stale"].includes(v.status) && v.invalidatedAt === null && v.transactionAuthorized === false && integer(v.revision) && v.revision > 0);
-  const pool = readSwapPoolPackage(JSON.stringify(v.pool)), c = pool.constructor;
+  let pool;
+  try { pool = readSwapPoolPackage(JSON.stringify(v.pool)); } catch { return "/terminal.html#m=" + row.chainId + ":" + row.controller; }
+  const c = pool.constructor;
   ensure2(pool.chainId === row.chainId && pool.controller === row.controller && (c.currency0 === c.quote ? c.currency1 : c.currency0) === row.token && pool.tokenFields.tokenName === row.tokenName && pool.tokenFields.symbol === row.symbol && v.listedAt === row.listedAt, "Market identity changed. Search again.");
   const o = v.observation;
   ensure2(o && o.transactionAuthorized === false && o.chainId === row.chainId && o.controller === row.controller && o.token === row.token);
@@ -251,7 +267,7 @@ function marketErrorText(error) {
     rate_limited: "Too many requests. Wait a minute, then retry.",
     market_not_found: "This market is no longer listed. Search again.",
     timeout: "The directory took too long to respond. Try again.",
-    directory_unavailable: "The market directory is unavailable right now. You can still open a public pool link on the trading page.",
+    directory_unavailable: "The market directory is refreshing. You can still open a public pool link on the trading page.",
     cancelled: "Request cancelled."
   };
   return Object.hasOwn(messages, error?.code) ? messages[error.code] : "Could not load this market. Retry or open its public pool link on the trading page.";
@@ -293,7 +309,7 @@ export function createMarketBrowserClient({ fetchImpl = globalThis.fetch, origin
         if (response.status !== 200) throw failure(response.status === 429 ? "rate_limited" : response.status === 404 ? "market_not_found" : "directory_unavailable");
         const type = response.headers.get("Content-Type"), length = response.headers.get("Content-Length");
         ensure2(typeof type === "string" && /^application\/json(?:[ \t]*;[^\r\n]*)?$/i.test(type) && !/[\r\n]/.test(type));
-        ensure2(length === null || length.length <= 5 && /^(?:0|[1-9][0-9]*)$/.test(length) && String(Number(length)) === length && Number(length) <= 65536);
+        ensure2(length === null || length.length <= 7 && /^(?:0|[1-9][0-9]*)$/.test(length) && String(Number(length)) === length && Number(length) <= 1048576);
         ensure2(typeof response.body?.getReader === "function");
         reader = response.body.getReader();
         const chunks = [];
@@ -304,7 +320,7 @@ export function createMarketBrowserClient({ fetchImpl = globalThis.fetch, origin
           if (done) break;
           ensure2(value instanceof Uint8Array && ++reads <= 1024);
           size += value.byteLength;
-          ensure2(size <= 65536);
+          ensure2(size <= 1048576);
           chunks.push(value);
         }
         ensure2(size > 0);
@@ -342,7 +358,7 @@ export function createMarketBrowserClient({ fetchImpl = globalThis.fetch, origin
     },
     async open(row, { signal } = {}) {
       const selected = rowValue(row, clock());
-      ensure2(selected.status !== "unavailable", "Market unavailable");
+      ensure2(selected.status !== "unavailable", "Refreshing");
       return readMarketTradeLink(await request("/api/markets/" + selected.chainId + "/" + selected.controller, signal), selected);
     }
   });
@@ -425,7 +441,7 @@ export function bindMarketBrowser({ document: d = document, target = window, cli
       note(page.rows.length ? "Showing " + (query.offset + 1) + "\u2013" + (query.offset + page.rows.length) + " of " + page.total + "." : "No QHooks markets match yet. Explore outside tokens or launch your own.");
     } catch (error) {
       if (current(ticket)) {
-        note("QHooks markets are unavailable. Explore outside tokens below, or retry.");
+        note("QHooks markets are refreshing. Explore outside tokens below, or retry.");
         void fallback.show(next);
         $("retry").hidden = false;
       }
