@@ -282,3 +282,17 @@ footer.qa-foot::after { content: ""; position: absolute; left: 50%; top: -120px;
   :is(.qa-hdr, .qa-tabbar, .qa-ribbon, .qa-foot, .qa-menu, .qa-getapp), :is(.qa-hdr, .qa-tabbar, .qa-ribbon, .qa-foot, .qa-menu, .qa-getapp) *, :is(.qa-hdr, .qa-tabbar, .qa-ribbon, .qa-foot, .qa-menu, .qa-getapp) *::before, :is(.qa-hdr, .qa-tabbar, .qa-ribbon, .qa-foot, .qa-menu, .qa-getapp) *::after { animation: none !important; transition: none !important; }
   .qa-ribbon__track { position: static; overflow-x: auto; scrollbar-width: none; height: 100%; }
 }
+
+/* hdrfit (2026-11-12): detail pages under 431 px: the wallet control is a 40 px icon button so the header fits with
+   8 px gaps. The button keeps its id, text (its accessible name) and handlers; only the label is hidden visually. */
+@media (max-width: 430px) {
+  .qa-shell--detail #qa-wallet { flex: none; width: auto; }
+  .qa-shell--detail #qa-wallet :is(#qxt-connect, .qa-wallet__btn, #qhc-trigger.qa-btn) {
+    position: relative; width: 40px; min-width: 40px; max-width: 40px; height: 40px; padding: 0; overflow: hidden;
+    color: transparent !important; font-size: 0 !important; white-space: nowrap; }
+  .qa-shell--detail #qa-wallet :is(#qxt-connect, .qa-wallet__btn, #qhc-trigger.qa-btn)::before {
+    content: ""; position: absolute; inset: 0; margin: auto; width: 20px; height: 20px; background: var(--qa-tx-on-gold, #17130b);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='3.5' y='6' width='17' height='13' rx='3' fill='none' stroke='black' stroke-width='1.8'/%3E%3Cpath d='M15.5 12.5h5M6 6l9-2.5 1 2.5' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='3.5' y='6' width='17' height='13' rx='3' fill='none' stroke='black' stroke-width='1.8'/%3E%3Cpath d='M15.5 12.5h5M6 6l9-2.5 1 2.5' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; }
+  .qa-shell--detail #qa-wallet :is(#qxt-connect.on, .qa-wallet__btn.qa-btn--secondary)::before { background: var(--qa-tx); }
+  .qa-shell--detail .qa-hdr .qa-hdr__title { min-width: 0; }
+}
