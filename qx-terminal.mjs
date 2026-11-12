@@ -167,12 +167,12 @@ function renderLaunchActions(){
 }
 // The safety scan has no Elysium (400). RepoProof's own check covers outside tokens there once its release is live, and
 // queues a token on first view (2026-11-10, via the main thread). Until it accepts the chain: "No automated checks…".
-// Chains where RepoProof's token check answers. Add '99901' when RepoProof's release supports Elysium (until then its
+// Chains where RepoProof's token check answers. Add '99901' when QProof's release supports Elysium (until then its
 // check answers 400 and the page would log an error): the terminal then asks it instead of showing the unsupported copy.
 // 2026-11-10: the set was empty, so this fallback never ran. RepoProof's API (/api/repoproof/check) accepts tokens on
 // these chains (Elysium answers 400 invalid_proof_subject, so it stays out). The safety scan also answers 503 for
 // uncached tokens, and those now fall back here too: a cached RepoProof report shows its verdict, otherwise "Not checked
-// yet" with the RepoProof link instead of "Checks paused · retry".
+// yet" with the QProof link instead of "Checks paused · retry".
 const REPOPROOF_TOKEN_CHAINS=new Set(['1','8453','42161','56','4663','solana']);
 const SAFETY_SKIP=new Set(['99901']); // /api/terminal/x/safety has no Elysium (400).
 async function repoproofTokenChecks(selected,signal){
@@ -181,7 +181,7 @@ async function repoproofTokenChecks(selected,signal){
  try{const r=await fetch('/api/repoproof/check?'+new URLSearchParams({kind:'token',chainId:String(selected.chainId),address:selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase()}),{cache:'no-store',signal});if(!r.ok)return none;
   const v=await r.json();if(v?.version!==1||v.subject?.kind!=='token'||String(v.subject?.chainId)!==String(selected.chainId)||(selected.chainId==='solana'?String(v.subject?.address):String(v.subject?.address).toLowerCase())!==(selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase()))return none;
   const rep=v.report&&['danger','caution','clear','unknown'].includes(v.report.level)&&Array.isArray(v.report.checks)?v.report:null;
-  return {...(rep||{}),level:rep?.level??null,verdict:rep?(rep.level==='clear'?'ok':rep.level):undefined,unavailable:!rep,state:v.state,retryAt:v.retryAt??null,source:'RepoProof via QHooks',checkedAt:v.checkedAt||rep?.completedAt||null,chainId:String(selected.chainId),address:selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase()};
+  return {...(rep||{}),level:rep?.level??null,verdict:rep?(rep.level==='clear'?'ok':rep.level):undefined,unavailable:!rep,state:v.state,retryAt:v.retryAt??null,source:'QProof via QHooks',checkedAt:v.checkedAt||rep?.completedAt||null,chainId:String(selected.chainId),address:selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase()};
  }catch(e){if(signal?.aborted)throw e;return none;}
 }
 // 2026-11-10 (release lead: BRETT showed "No flags" while RepoProof rated it danger; QHOOKS showed "Not checked yet"):
@@ -189,19 +189,19 @@ async function repoproofTokenChecks(selected,signal){
 //   level, and each flag is labelled by its source.
 // - On Robinhood the selected market gets one RepoProof check on view when it has no report (once per subject per browser
 //   session; the server's allowance of 20 checks an hour, 5 per visitor, still applies). Other chains read cached reports
-//   only, so views don't spend the shared allowance; "Check with RepoProof" runs one there.
+//   only, so views don't spend the shared allowance; "Check with QProof" runs one there.
 // - The trade ticket gets the same flags, but its "danger" title says "may not be sellable": a danger that only comes from
 //   RepoProof (e.g. holder concentration) without a failed sell probe reaches the ticket as caution.
 const RISK_RANK={danger:3,caution:2,ok:1,clear:1,unknown:0};
-const sourceName=s=>({goplus:'GoPlus',rugcheck:'RugCheck','RepoProof via QHooks':'RepoProof'})[s]||String(s||'Safety scan');
+const sourceName=s=>({goplus:'GoPlus',rugcheck:'RugCheck','QProof via QHooks':'QProof',RepoProof:'QProof'})[s]||String(s||'Safety scan');
 const lvl=v=>v==='clear'?'ok':v||'unknown';
 export function mergeRisk(base,rp){
  const r=rp&&!rp.unsupported&&!rp.unavailable&&Array.isArray(rp.checks)?rp:null;
  if(!r)return base;if(!base)return rp;
  const b=lvl(base.verdict),x=lvl(r.level),verdict=(RISK_RANK[x]??0)>(RISK_RANK[b]??0)?x:b;
- const rpFlags=r.checks.filter(c=>c&&(c.status==='danger'||c.status==='caution')).sort((p,q)=>(p.status==='danger'?0:1)-(q.status==='danger'?0:1)).map(c=>'RepoProof: '+String(c.title||c.id));
+ const rpFlags=r.checks.filter(c=>c&&(c.status==='danger'||c.status==='caution')).sort((p,q)=>(p.status==='danger'?0:1)-(q.status==='danger'?0:1)).map(c=>'QProof: '+String(c.title||c.id));
  const baseFlags=(Array.isArray(base.flags)?base.flags:[]).map(f=>sourceName(base.source)+': '+f);
- return {...base,verdict,flags:[...rpFlags,...baseFlags],checks:r.checks,source:sourceName(base.source)+' + RepoProof',checkedAt:r.checkedAt||base.checkedAt||null};
+ return {...base,verdict,flags:[...rpFlags,...baseFlags],checks:r.checks,source:sourceName(base.source)+' + QProof',checkedAt:r.checkedAt||base.checkedAt||null};
 }
 export function ticketRisk(c,scan=null){
  if(!c||lvl(c.verdict)!=='danger'||scan&&lvl(scan.verdict)==='danger')return c;

@@ -29,8 +29,8 @@ export const verdictOf = (chainId, controller) => once('v:' + keyOf(chainId, con
   const address=String(controller).toLowerCase(),response=await fetch('/api/repoproof/check?'+new URLSearchParams({kind:'launch',chainId:String(chainId),address}),{cache:'no-store'}),value=await response.json();
   if(value?.version!==1||value.subject?.kind!=='launch'||String(value.subject?.chainId)!==String(chainId)||value.subject?.address?.toLowerCase()!==address)return null;
   const report=value.report;
-  if(!report||!['danger','caution','clear','unknown'].includes(report.level)||!Array.isArray(report.checks))return {level:null,unavailable:true,state:value.state,source:'RepoProof via QHooks',checkedAt:value.checkedAt||null,cached:!!value.cached,stale:!!value.stale};
-  return {...report,state:value.state,source:'RepoProof via QHooks',checkedAt:value.checkedAt||report.completedAt||report.retrievedAt||null,cached:!!value.cached,stale:!!value.stale||value.state!=='ready'||!response.ok};
+  if(!report||!['danger','caution','clear','unknown'].includes(report.level)||!Array.isArray(report.checks))return {level:null,unavailable:true,state:value.state,source:'QProof via QHooks',checkedAt:value.checkedAt||null,cached:!!value.cached,stale:!!value.stale};
+  return {...report,state:value.state,source:'QProof via QHooks',checkedAt:value.checkedAt||report.completedAt||report.retrievedAt||null,cached:!!value.cached,stale:!!value.stale||value.state!=='ready'||!response.ok};
 }).catch(() => null);
 export const trustList = () => once('list', 20000, () => getJson('/api/trust/list')).then(j => j.markets || {}).catch(() => ({}));
 export const forget = (chainId, controller) => { cache.delete('t:' + keyOf(chainId, controller)); cache.delete('v:' + keyOf(chainId, controller)); cache.delete('list'); };
@@ -55,7 +55,7 @@ const completeCoverage=v=>v?.coverage?.complete===true&&v?.coverage?.unknown===0
 function verdictMeta(v){
  const at=checkTime(v),coverage=v?.coverage,checked=Number.isSafeInteger(coverage?.checked)?coverage.checked:null,unknown=Number.isSafeInteger(coverage?.unknown)?coverage.unknown:null;
  const snapshot=v?.snapshot,point=snapshot?(snapshot.chain?' · snapshot '+String(snapshot.chain).slice(0,40):'')+(snapshot.block!=null?' · block '+String(snapshot.block).slice(0,80):snapshot.slot!=null?' · slot '+String(snapshot.slot).slice(0,80):''):'';
- return (v?.source||'RepoProof via QHooks')+' · '+(v?.stale?'refreshing · ':'')+(v?.cached?'cached · ':'')+(at?new Date(at).toISOString()+' ('+ageOf(at)+')':'check time unknown')+' · source coverage: '+(checked!==null?checked+' checked'+(unknown!==null?', '+unknown+' unknown':''):Array.isArray(v?.checks)?v.checks.length+' returned checks; completeness unknown':'unavailable')+(point||'');
+ return (v?.source||'QProof via QHooks')+' · '+(v?.stale?'refreshing · ':'')+(v?.cached?'cached · ':'')+(at?new Date(at).toISOString()+' ('+ageOf(at)+')':'check time unknown')+' · source coverage: '+(checked!==null?checked+' checked'+(unknown!==null?', '+unknown+' unknown':''):Array.isArray(v?.checks)?v.checks.length+' returned checks; completeness unknown':'unavailable')+(point||'');
 }
 export function verdictChip(v) {
   if (!v || !v.level) return h('span', { class: 'qtr-chip' }, v?.unsupported ? 'Not covered' : 'Refreshing…');
@@ -123,14 +123,14 @@ const verifyHref = pool => '/verify#m=' + pool.chainId + ':' + pool.controller;
 function verdictBlock(v) {
   const head = h('div', { class: 'qtr-row' }, h('b', {}, 'Market checks'), verdictChip(v));
   if (!v || !v.level) return h('div', { class: 'qtr-verdict' }, head,
-    h('p', { class: 'qtb-note' }, v?.unsupported ? 'RepoProof does not cover this chain yet.' : 'Refreshing… RepoProof is checking this launch. Contract observations below have separate source coverage.'),
+    h('p', { class: 'qtb-note' }, v?.unsupported ? 'QProof does not cover this chain yet.' : 'Refreshing… QProof is checking this launch. Contract observations below have separate source coverage.'),
     h('p',{class:'qtr-evidence'},verdictMeta(v)),
-    v?.url ? h('a', { class: 'qtr-link', href: v.url, target: '_blank', rel: 'noopener' }, 'Run the check on RepoProof ↗') : null);
+    v?.url ? h('a', { class: 'qtr-link', href: v.url, target: '_blank', rel: 'noopener' }, 'Run the check on QProof ↗') : null);
   return h('div', { class: 'qtr-verdict ' + (v.level==='clear'?'unknown':v.level) }, head,
-    h('p', { class: 'qtr-headline' }, 'RepoProof: ' + v.headline + (v.counts ? ' · ' + (v.counts.danger??'?') + ' red, ' + (v.counts.caution??'?') + ' watch, ' + (v.counts.clear??'?') + ' clear' : '') + (v.stale ? ' (from an earlier check)' : '')),
+    h('p', { class: 'qtr-headline' }, 'QProof: ' + v.headline + (v.counts ? ' · ' + (v.counts.danger??'?') + ' red, ' + (v.counts.caution??'?') + ' watch, ' + (v.counts.clear??'?') + ' clear' : '') + (v.stale ? ' (from an earlier check)' : '')),
     h('p',{class:'qtr-evidence'},verdictMeta(v)),
     v.checks?.length ? h('ul', { class: 'qtr-checks' }, ...v.checks.slice(0, 4).map(c => h('li', { class: c.status==='clear'&&(v.stale||!checkTime(v)||!completeCoverage(v))?'unknown':c.status }, c.title))) : null,
-    v.url ? h('a', { class: 'qtr-link', href: v.url, target: '_blank', rel: 'noopener' }, 'Evidence on RepoProof ↗') : null);
+    v.url ? h('a', { class: 'qtr-link', href: v.url, target: '_blank', rel: 'noopener' }, 'Evidence on QProof ↗') : null);
 }
 const renderRuns=new WeakMap();
 function beginRender(el,key){const revision=(renderRuns.get(el)||0)+1;renderRuns.set(el,revision);el.dataset.key=key;return()=>el.dataset.key===key&&renderRuns.get(el)===revision;}
@@ -154,7 +154,7 @@ export async function renderTrust(el, pool) {
 }
 
 // ---- The terminal's risk banner for a QHooks launch ----
-/** Fills the ticket's banner: copy warning first, then RepoProof's verdict, then the facts that matter at the moment of trading. */
+/** Fills the ticket's banner: copy warning first, then QProof's verdict, then the facts that matter at the moment of trading. */
 export async function renderRisk(el, pool) {
   const key = keyOf(pool.chainId, pool.controller),active=beginRender(el,key);
   el.hidden=false;el.replaceChildren(h('p',{class:'qtr-evidence'},checksSummary({state:'running'})));
@@ -165,7 +165,7 @@ export async function renderRisk(el, pool) {
   const level = t?.copyOf || v?.level === 'danger' || warningChecks.some(c=>c.status==='danger') ? 'danger'
     : v?.level === 'caution' || warningChecks.length || warningFacts.length || f?.recovery ? 'caution' : '';
   const title = t?.copyOf ? 'Copy warning: same ' + t.copyOf.same + ' as $' + t.copyOf.symbol + ' by @' + t.copyOf.handle
-    : v?.level === 'danger' ? 'RepoProof: ' + v.headline : v?.level === 'caution' ? 'Trade with care: ' + v.headline : v?.level === 'clear' ? checksSummary(v) : 'Refreshing market checks…';
+    : v?.level === 'danger' ? 'QProof: ' + v.headline : v?.level === 'caution' ? 'Trade with care: ' + v.headline : v?.level === 'clear' ? checksSummary(v) : 'Refreshing market checks…';
   const partialReads=!f||f.coverage.unavailable>0||f.facts.some(fact=>/unavailable|could not be read|could not be checked/i.test(fact.v));
   // checks-rel 2026-11-10 (walkthrough item 3): final states instead of an endless "Refreshing" — this one line only.
   const summary=checksSummary(v,{flags:warningChecks.length+warningFacts.length});
@@ -177,12 +177,12 @@ export async function renderRisk(el, pool) {
     (v?.checks||[]).some(c=>c.status!=='danger'&&c.status!=='caution')?h('ul',{},...(v.checks.filter(c=>c.status!=='danger'&&c.status!=='caution').map(c=>h('li',{},c.title)))):null,
     f?h('p',{class:'qtr-evidence'},factsMeta(f)):h('p',{class:'qtr-evidence'},'Launch contract observations unavailable.'),
     f?h('ul',{},...f.facts.filter(fact=>fact.tone!=='warn').map(factLine)):null,
-    h('a', { href: v?.url || 'https://repoproof.online/proof#q=' + encodeURIComponent('https://qhooks.com/l/' + pool.chainId + '/' + pool.controller), target: '_blank', rel: 'noopener' }, v?.url && v.level ? 'Evidence on RepoProof ↗' : 'Full check on RepoProof ↗'));
+    h('a', { href: v?.url || 'https://repoproof.online/proof#q=' + encodeURIComponent('https://qhooks.com/l/' + pool.chainId + '/' + pool.controller), target: '_blank', rel: 'noopener' }, v?.url && v.level ? 'Evidence on QProof ↗' : 'Full check on QProof ↗'));
   // Native details/summary retains browser keyboard behavior without a second action or any scan.
   const coverageIncomplete=!v?.level||v.level==='unknown'||!completeCoverage(v)||partialReads||!t;
   const details=h('details',{class:'qtr-risk-details'},h('summary',{class:'qtr-risk-summary'},level?(coverageIncomplete?'Sources · incomplete coverage':'Sources & launch observations'):summary),body);
   const warningTitle=t?.copyOf||v?.level==='danger'||v?.level==='caution'?title:warningChecks.length?'Market checks need attention':'Launch observations need attention';
-  const evidenceState=v?.stale?'Refreshing · last RepoProof check '+(checkTime(v)?ageOf(checkTime(v)):'time unknown'):v?.level&&!checkTime(v)?'RepoProof check time unknown':null;
+  const evidenceState=v?.stale?'Refreshing · last QProof check '+(checkTime(v)?ageOf(checkTime(v)):'time unknown'):v?.level&&!checkTime(v)?'QProof check time unknown':null;
   el.className = 'qxt-risk qtr-ticket-risk ' + (level||'qtr-ticket-risk--compact');
   el.replaceChildren(...(level?[h('b',{},warningTitle),
     h('ul',{},...warningChecks.map(c=>h('li',{},c.title)),...warningFacts.map(factLine)),

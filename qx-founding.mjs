@@ -116,7 +116,7 @@ function row(l, rank) {
 async function trustLinks(l, host) {
   try {
     const r = await fetch(l.links.proof, {cache: 'no-store'}), env = r.ok ? await r.json() : null, u = env?.report?.url;
-    host.append(' · ', /^https:\/\/repoproof\.online\/proof\/[\w-]+$/.test(u || '') ? out(u, 'RepoProof report ↗') : el('span', {}, 'RepoProof check pending'));
+    host.append(' · ', /^https:\/\/repoproof\.online\/proof\/[\w-]+$/.test(u || '') ? out(u, 'QProof report ↗') : el('span', {}, 'QProof check pending'));
   } catch {}
   if (!l.links.builder) return;
   try {

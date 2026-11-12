@@ -504,7 +504,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const report=[...(note ? [note] : []), h('b', {}, title), ...(flags.length ? [h('ul', {}, ...flags.map(f => h('li', {}, f)))] : []),
       h('p', { class: 'qxt-muted' }, 'Source: ' + (typeof v.source === 'string' ? v.source.slice(0, 48) : 'not reported') + '.'),
       ...(v.verdict === 'danger' ? [h('label', {}, h('input', { type: 'checkbox', onchange: () => { if (current) go.disabled = busy || !risk.querySelector('input').checked || (funding.required && !funding.quote); } }), ' I understand and still want to trade')] : []),
-      h('a', { href: 'https://repoproof.online/proof?q=' + encodeURIComponent(st.token), target: '_blank', rel: 'noopener' }, 'Full check on RepoProof ↗')];
+      h('a', { href: 'https://repoproof.online/proof?q=' + encodeURIComponent(st.token), target: '_blank', rel: 'noopener' }, 'Full check on QProof ↗')];
     if(!flags.length&&(v.verdict==='ok'||v.verdict==='unknown')){
       risk.classList.add('qxt-risk-compact');
       risk.replaceChildren(...(note ? [note] : []), h('details',{},h('summary',{},v.verdict==='ok'?'Limited checks · no flags returned':'No safety scan returned'),h('div',{class:'qxt-risk-report'},...report.filter(x => x !== note))));

@@ -45,7 +45,7 @@ export function mountInspectorRepoProof(container,{profile,selection,getSelectio
  else{
   element.append(el(doc,'p','Public contract findings cover this address. Hook behavior, source review and launch admission remain separate checks.',{class:'qd-note'}));
   const details=el(doc,'details'),facts=el(doc,'dl',null,{class:'qd-facts'});details.append(el(doc,'summary','Discovery context for this report'));for(const[label,value]of context.rows){const row=el(doc,'div');row.append(el(doc,'dt',label),el(doc,'dd',value));facts.append(row);}details.append(facts);element.append(details);
-  if(!subject)element.append(el(doc,'p','RepoProof contract checks are not available for this chain. The Discovery evidence and returned routes remain available.',{class:'qd-note',role:'status'}));
+  if(!subject)element.append(el(doc,'p','QProof contract checks are not available for this chain. The Discovery evidence and returned routes remain available.',{class:'qd-note',role:'status'}));
   else if(context.knownNoCode)element.append(el(doc,'p','Discovery found no deployed code at this block. Use Refresh live to check for a deployment before requesting a contract report.',{class:'qd-note',role:'status'}));
   else{
    const target=el(doc,'div');element.append(target);

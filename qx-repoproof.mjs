@@ -29,15 +29,15 @@ export function repoProofSellEvidence(report){
 }
 const reportURL=raw=>{try{const url=new URL(raw);return url.protocol==='https:'&&url.hostname==='repoproof.online'&&!url.port&&!url.username&&!url.password&&/^\/proof\/[a-zA-Z0-9_-]{1,160}$/.test(url.pathname)&&!url.search&&!url.hash?url.href:null;}catch{return null;}};
 export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,onReport=()=>{},document:doc=container?.ownerDocument||globalThis.document,fetcher=(...args)=>globalThis.fetch(...args)}={}){
- const target=repoProofSubject(subject);if(!target||!container?.replaceChildren||!doc?.createElement)throw TypeError('Supply an exact supported RepoProof subject and report container.');
+ const target=repoProofSubject(subject);if(!target||!container?.replaceChildren||!doc?.createElement)throw TypeError('Supply an exact supported QProof subject and report container.');
  const h=(tag,attrs={},...children)=>{const node=doc.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')node.className=v;else if(k.startsWith('on'))node.addEventListener(k.slice(2),v);else if(k in node)node[k]=v;else node.setAttribute(k,v);}node.append(...children.flat().filter(v=>v!==null&&v!==undefined&&v!==false));return node;};
  if(doc.head&&!doc.getElementById('qpr-styles'))doc.head.append(h('link',{id:'qpr-styles',rel:'stylesheet',href:'/qx-repoproof.css'}));
  const id='qpr-'+(++widgetId),status=h('p',{class:'qpr-status',role:'status','aria-live':'polite'}),reportHost=h('div',{class:'qpr-report'}),badge=h('span',{class:'qpr-state'},'Reading cache');
- const check=h('button',{type:'button',class:'qpr-check'},'Check with RepoProof'),refresh=h('button',{type:'button',class:'qpr-refresh'},'Refresh cached report');
+ const check=h('button',{type:'button',class:'qpr-check'},'Check with QProof'),refresh=h('button',{type:'button',class:'qpr-refresh'},'Refresh cached report');
  check.setAttribute('aria-describedby',id+'-privacy');
- const privacy=h('p',{class:'qpr-privacy',id:id+'-privacy'},'This check sends the displayed public address and chain to RepoProof.');
+ const privacy=h('p',{class:'qpr-privacy',id:id+'-privacy'},'This check sends the displayed public address and chain to our proof service, QProof (repoproof.online).');
  const identity=h('p',{class:'qpr-identity'},h('span',{},CHAIN_NAMES[target.chainId]+' · '+label(target.kind)),h('code',{},target.address));
- const element=h('section',{class:'qpr','aria-label':'RepoProof report'},h('div',{class:'qpr-head'},h('h3',{},'RepoProof'),badge),identity,h('div',{class:'qpr-actions'},check,refresh),privacy,status,reportHost);
+ const element=h('section',{class:'qpr','aria-label':'QProof report'},h('div',{class:'qpr-head'},h('h3',{},'QProof'),badge),identity,h('div',{class:'qpr-actions'},check,refresh),privacy,status,reportHost);
  // Keep native report-control activation inside this component. In a terminal,
  // an outer Enter shortcut must not submit a trade while evidence has focus.
  element.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' ')event.stopPropagation();});
@@ -50,11 +50,11 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
   clearTimeout(retryTimer);retryTimer=null;
   const alive=current(),blocked=envelope?.state==='busy'||envelope?.state==='rate_limited',waiting=retryTime!==null&&Date.now()<retryTime||blocked&&retryTime===null;
   check.disabled=!alive||pending||waiting;refresh.disabled=!alive||pending;
-  check.textContent=pending?'Reading…':envelope?.report?'Run another check':'Check with RepoProof';
+  check.textContent=pending?'Reading…':envelope?.report?'Run another check':'Check with QProof';
   const texts={ready:'Report available',refreshing:'Refreshing…',not_checked:'Refreshing…',unavailable:'Refreshing…',busy:'Check in progress',rate_limited:'Check limit reached'};
   badge.textContent=issue?'Refreshing…':pending?'Reading…':envelope?.stale&&envelope?.state==='ready'?'Refreshing…':texts[envelope?.state]||'Reading cache';
   badge.className='qpr-state'+(envelope?.stale?' qpr-stale':'');
-  status.textContent=!alive?'Selection changed. Reopen this report for the current asset.':issue?issue:pending?'Reading the selected asset only…':['not_checked','refreshing'].includes(envelope?.state)?(envelope.report?'Refreshing… RepoProof is rechecking this. The report below is from its last check.':'Refreshing… RepoProof is checking this now. This panel updates by itself.'):envelope?.state==='busy'?'A check is already in progress. Refresh the cached report to read its result.':envelope?.state==='rate_limited'?'The check limit was reached. Refreshing the cache does not request a scan.':envelope?.state==='unavailable'?'Refreshing… RepoProof is checking this. This panel updates by itself.':envelope?.stale?'Refreshing… The report below is from RepoProof’s last check.':'Observations are scoped to this report and its snapshot.';
+  status.textContent=!alive?'Selection changed. Reopen this report for the current asset.':issue?issue:pending?'Reading the selected asset only…':['not_checked','refreshing'].includes(envelope?.state)?(envelope.report?'Refreshing… QProof is rechecking this. The report below is from its last check.':'Refreshing… QProof is checking this now. This panel updates by itself.'):envelope?.state==='busy'?'A check is already in progress. Refresh the cached report to read its result.':envelope?.state==='rate_limited'?'The check limit was reached. Refreshing the cache does not request a scan.':envelope?.state==='unavailable'?'Refreshing… QProof is checking this. This panel updates by itself.':envelope?.stale?'Refreshing… The report below is from QProof’s last check.':'Observations are scoped to this report and its snapshot.';
   if(retryTime!==null&&Date.now()<retryTime){status.textContent+=' Retry after '+time(new Date(retryTime).toISOString())+'.';retryTimer=setTimeout(paintStatus,Math.min(2147483647,retryTime-Date.now()+20));}
  }
  function fields(value,depth=0){
@@ -72,13 +72,13 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
   const strongest=report.level==='danger'||checks.some(c=>c?.status==='danger')?'danger':report.level==='caution'||checks.some(c=>c?.status==='caution')?'caution':report.level;
   const link=reportURL(report.url),sell=repoProofSellEvidence(report),level={danger:'Danger signals reported',caution:'Caution signals reported',clear:'No flags in returned checks',unknown:'Unknown coverage'}[strongest]||'Unknown coverage';
   const source=h('div',{class:'qpr-report-overview'},h('p',{class:'qpr-cache-state'},envelope.cached?'Cached report':'Returned check report',envelope.stale||envelope.state==='refreshing'?' · Refreshing':''),h('p',{class:'qpr-level '+(strongest==='danger'?'danger':strongest==='caution'?'caution':'neutral')},level),
-   report.headline?h('p',{class:'qpr-headline'},h('span',{},'RepoProof summary: '),String(report.headline)):null,
+   report.headline?h('p',{class:'qpr-headline'},h('span',{},'QProof summary: '),String(report.headline)):null,
    h('p',{class:'qpr-counts'},'Reported checks · Danger '+knownCount(counts.danger)+' · Caution '+knownCount(counts.caution)+' · Clear '+knownCount(counts.clear)+' · Unknown '+knownCount(counts.unknown)),
    h('p',{class:'qpr-coverage'},coverage.complete===true?'Complete reported coverage for this snapshot':coverage.complete===false?'Partial reported coverage':'Coverage completeness not reported',
     ' · Checked '+knownCount(coverage.checked)+' · Unknown '+knownCount(coverage.unknown)),
    h('dl',{class:'qpr-meta'},h('div',{},h('dt',{},'Provider retrieval'),h('dd',{},time(report.retrievedAt))),h('div',{},h('dt',{},'Report completed'),h('dd',{},time(report.completedAt))),h('div',{},h('dt',{},'Evidence as of'),h('dd',{},time(envelope.checkedAt)))),
    report.snapshot?fields({snapshot:report.snapshot}):h('p',{class:'qpr-unknown'},'Snapshot chain/block/slot not reported.'),
-   link?h('a',{class:'qpr-report-link',href:link,target:'_blank',rel:'noopener noreferrer'},'Open full RepoProof report ↗'):h('p',{class:'qpr-unknown'},'Report link not available.'));
+   link?h('a',{class:'qpr-report-link',href:link,target:'_blank',rel:'noopener noreferrer'},'Open full QProof report ↗'):h('p',{class:'qpr-unknown'},'Report link not available.'));
   const sellNode=target.kind==='token'||target.kind==='launch'||report.observations?.simulation?h('div',{class:'qpr-sell'},h('h4',{},'Sell evidence'),h('b',{},sell.headline),h('p',{},sell.detail)):null;
   const receiptIds=new Map(receipts.filter(r=>Number.isSafeInteger(r?.index)&&r.index>=0).map(r=>[r.index,id+'-receipt-'+r.index]));
   const rows=checks.map((c,i)=>{const status=['danger','caution','clear','unknown','info'].includes(c?.status)?c.status:'unknown',evidence=Array.isArray(c?.evidence)?c.evidence:[];
@@ -110,7 +110,7 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
    if(body?.version!==1||!sameRepoProofSubject(target,body.subject,{revision:false})||!STATES.has(body.state))throw Error('The report response did not match this asset. Refresh the cached report to retry.');
    if(!response.ok&&!['busy','rate_limited','unavailable'].includes(body.state))throw Error('The report request could not complete. Refresh the cached report to retry.');
    envelope=structuredClone(body);scheduleReread();const nextRetry=retryAfter(response,body),remaining=retryTime!==null&&retryTime>Date.now()?retryTime:null;retryTime=nextRetry===null?remaining:remaining===null?nextRetry:Math.max(remaining,nextRetry);paintReport();try{onReport(structuredClone(envelope));}catch{}return true;
-  }catch(error){if(disposed||mine!==revision)return false;if(!current()){loseContext();return false;}if(envelope?.report)envelope={...envelope,stale:true};scheduleReread(true);issue=method==='GET'?'Refreshing… RepoProof is checking this. This panel updates by itself.':error?.name==='AbortError'?'The report response took too long. Refresh the cached report before requesting another check.':error?.message||'The report could not be read. Refresh the cache to retry.';return false;}
+  }catch(error){if(disposed||mine!==revision)return false;if(!current()){loseContext();return false;}if(envelope?.report)envelope={...envelope,stale:true};scheduleReread(true);issue=method==='GET'?'Refreshing… QProof is checking this. This panel updates by itself.':error?.name==='AbortError'?'The report response took too long. Refresh the cached report before requesting another check.':error?.message||'The report could not be read. Refresh the cache to retry.';return false;}
   finally{clearTimeout(timer);if(requestTimer===timer)requestTimer=null;if(!disposed&&mine===revision){pending=false;paintStatus();}}
  }
  // While RepoProof refreshes (or a read failed), re-read the stored report a bounded number of times.

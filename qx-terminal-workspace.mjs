@@ -101,7 +101,7 @@ export function createWorkspaceSearch({fetchImpl=globalThis.fetch,onChange=()=>{
 }
 export function riskEvidence(raw,{receivedAt=null,pending=false,error=null,native=false}={}) {
  const verdict=raw?.verdict||({clear:'ok'}[raw?.level]||raw?.level),reportedChecks=Array.isArray(raw?.checks)?raw.checks.filter(v=>v&&typeof v.title==='string'):[],flags=Array.isArray(raw?.flags)?raw.flags.filter(v=>typeof v==='string').slice(0,8):reportedChecks.filter(v=>v.status==='danger'||v.status==='caution').map(v=>text(v.title,120)).slice(0,8);
- const source=text(raw?.source,100)||(native?'RepoProof via QHooks':null);
+ const source=text(raw?.source,100)||(native?'QProof via QHooks':null);
  const providerTime=[raw?.checkedAt,raw?.observedAt,raw?.scannedAt,raw?.retrievedAt,raw?.at].find(v=>typeof v==='string'||Number.isSafeInteger(v));
  const stamp=typeof providerTime==='number'?(providerTime<1e12?providerTime*1000:providerTime):typeof providerTime==='string'?Date.parse(providerTime):NaN;
  const asOf=Number.isFinite(stamp)&&stamp>0&&Number.isFinite(new Date(stamp).getTime())?stamp:null;
@@ -207,7 +207,7 @@ export function createMarketWorkspace({getSelection,isBusy=()=>false,now=Date.no
   snapshot(){return {...copy(value),health:marketHealth({...value,now:now()}),checks:riskEvidence(value.risk,{receivedAt:value.riskReceivedAt,pending:value.riskPending,error:value.riskError,native:value.selection?.kind==='launch'})};},
  };return Object.freeze(api);
 }
-export const workspaceSource=value=>({geckoterminal:'GeckoTerminal',coingecko:'CoinGecko',goplus:'GoPlus',rugcheck:'RugCheck',repoproof:'RepoProof'}[value]||value||'Source not reported');
+export const workspaceSource=value=>({geckoterminal:'GeckoTerminal',coingecko:'CoinGecko',goplus:'GoPlus',rugcheck:'RugCheck',repoproof:'QProof'}[value]||value||'Source not reported');
 const clock=value=>value?new Date(value).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'UTC'})+' UTC':null;
 const providerClock=value=>value?new Date(value).toISOString().slice(0,19).replace('T',' ')+' UTC':null;
 export function workspaceLinks(selection) {
@@ -237,7 +237,7 @@ export function renderWorkspaceContext({h,selection,snapshot,chainName=id=>id,on
    checks.detail?h('p',{class:'qxt-checks-note'},checks.detail):null,
    checks.flags.length?h('ul',{},...checks.flags.map(flag=>h('li',{},flag))):null,
    checks.refreshError?h('p',{class:'qxt-checks-note'},'Checks paused. Use Refresh data to retry.'):null,
-   checks.status==='not_checked'||checks.status==='unsupported'?h('p',{class:'qxt-checks-note'},h('a',{href:'https://repoproof.online/proof',target:'_blank',rel:'noopener'},'Run a full check on RepoProof ↗')):null,
+   checks.status==='not_checked'||checks.status==='unsupported'?h('p',{class:'qxt-checks-note'},h('a',{href:'https://repoproof.online/proof',target:'_blank',rel:'noopener'},'Run a full check on QProof ↗')):null,
    h('p',{class:'qxt-checks-note'},'A returned check describes its reported coverage. Review the token controls, liquidity and quoted costs alongside it.')));
  return {identity,data,checks:details};
 }

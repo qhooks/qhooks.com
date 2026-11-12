@@ -195,7 +195,7 @@ function paintProofPop() {
       h('p', null, scored.length ? passed + ' of ' + scored.length + ' passed' + (look ? ' · ' + look + ' to look at' : '') + (unchecked ? ' · ' + unchecked + ' not checked' : '') : 'Refreshing…')), close),
     scored.length ? h('ul', { class: 'ta-pcs' }, scored.map(proofRow)) : null,
     notes.length ? h('details', { class: 'ta-pcs-notes' }, h('summary', null, notes.length + (notes.length === 1 ? ' note' : ' notes')), h('ul', { class: 'ta-pcs' }, notes.map(proofRow))) : null,
-    h('footer', { class: 'ta-proofpop__foot' }, h('span', null, 'Checked by RepoProof'), full)].filter(Boolean));
+    h('footer', { class: 'ta-proofpop__foot' }, h('span', null, 'Checked by QProof'), full)].filter(Boolean));
 }
 function placeProofPop() {
   if (!desk.matches) { proofPop.style.removeProperty('top'); proofPop.style.removeProperty('left'); return; }
