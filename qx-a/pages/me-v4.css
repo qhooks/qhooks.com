@@ -30,3 +30,7 @@ body:has(main.me4) .qa-ambient__art { filter: blur(56px) saturate(.5) brightness
 .me4 .mn-me-hero > .qwc-group { margin: 22px auto 0 0 !important; }
 /* signed out or no launches on phones: a shorter band, so the headline and Connect stay high */
 @media (max-width: 1099px) { .me4 .me4-stage.is-empty { height: 150px; } }
+
+/* design audit #30 + #9: phones: headline and wallet button first, then your launch (only when there is one) */
+@media (max-width: 1099px) { .me4 .me4-stage { order: 2; height: 230px; margin-top: 18px; } }
+.me4 .me4-stage[hidden] { display: none !important; }

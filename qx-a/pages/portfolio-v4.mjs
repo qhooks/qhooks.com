@@ -1,3 +1,4 @@
+import { heroRow } from '/qx-a/herocard.mjs';
 // Portfolio v4 (2026-11-12, site overhaul): one object per state.
 //  - Connected: your largest holdings as minted gold coins (each token's own art) standing in a row on a lit floor,
 //    sized by value (no rings or orbits: Randall, circles read as bundle/bubble maps). The total stays as real text beside it. When the page's live repricing changes the total
@@ -18,12 +19,12 @@ function scene(host, read) {
   const stage = doc.createElement('div'); stage.className = 'pf4-stage'; stage.setAttribute('aria-hidden', 'true');
   const cv = doc.createElement('canvas'); stage.append(cv); host.append(stage);
   const ctx = cv.getContext('2d');
-  let W = 0, H = 0, dpr = 1, raf = 0, visible = true, coins = [], pulseAt = -1e9, key = '', off = WEBGL, s3 = null, items3 = [];
+  let W = 0, H = 0, dpr = 1, raf = 0, visible = true, coins = [], pulseAt = -1e9, key = '', off = true, s3 = null, items3 = []; // design audit #4: flat token cards (herocard.mjs), never the 2D/3D coins
   const t0 = performance.now();
   const size = () => { const r = stage.getBoundingClientRect(); dpr = Math.min(2, devicePixelRatio || 1); W = Math.max(1, r.width); H = Math.max(1, r.height); cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
   function rebuild() {
     const items = read(); const k = items.map((i) => i.sym + ':' + Math.round(i.v || 0)).join('|');
-    if (k === key) return; key = k; items3 = items; s3?.setItems(items);
+    if (k === key) return; key = k; items3 = items; heroRow(stage, items);
     const max = Math.max(1, ...items.map((i) => i.v || 1));
     coins = items.slice(0, 7).map((i, n) => ({ ...i, img: loadImage(i.src), size: .45 + .55 * Math.sqrt((i.v || max * .3) / max), phase: (n / Math.max(1, Math.min(7, items.length))) * Math.PI * 2 }));
     pulseAt = performance.now(); go();
@@ -51,12 +52,11 @@ function scene(host, read) {
   size(); new ResizeObserver(() => { size(); go(); }).observe(stage);
   new IntersectionObserver((e) => { visible = e[0].isIntersecting; if (visible) go(); }).observe(stage);
   doc.addEventListener('visibilitychange', () => { if (!doc.hidden) go(); });
+  stage.classList.add('pf4-stage--set'); cv.hidden = true;
   if (WEBGL) {
-    stage.classList.add('pf4-stage--set'); cv.hidden = true;
     idle(() => import('/qx-a/scene3d.mjs').then(({ mountSet }) => {
       s3 = mountSet(stage, { variant: 'orbit', posY: .82 }); if (!s3) throw new Error('no webgl');
-      if (items3.length) s3.setItems(items3);
-    }).catch(() => { off = false; cv.hidden = false; go(); }), { timeout: 1200 });
+    }).catch(() => {}), { timeout: 1200 });
   }
   return { rebuild, pulse() { pulseAt = performance.now(); s3?.pulse(); go(); }, go };
 }

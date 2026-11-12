@@ -1,3 +1,4 @@
+import { heroArt } from '/qx-a/herocard.mjs'; // design audit #4: the token as a flat card, no coin
 // /profile v4 (2026-11-12, overhaul polish): caller and trader profiles get the same lit set as /create, Portfolio and
 // /community. Phones: the top band (.pv-banner) becomes the set; wide screens: the band is the set's still plate and the live
 // coin stands in the identity column. The coin carries the token of this caller's latest call (the first call in the page's
@@ -26,7 +27,7 @@ function start({ main, banner, hero }) {
   }
   const probe = (src) => new Promise((ok) => { if (!src) return ok(''); const im = new Image(), t = setTimeout(() => ok(''), 4000);
     im.onload = () => { clearTimeout(t); ok(im.naturalWidth ? src : ''); }; im.onerror = () => { clearTimeout(t); ok(''); }; im.src = src; });
-  const face = async (c, fresh) => { const src = await probe(c.src); if (s3 && last === c) s3.setFace(src, c.sym.replace('$', ''), fresh); };
+  const face = (c) => heroArt(stage, { src: c.src, sym: c.sym });
   function update() {
     // the result can arrive after the line itself: re-read on change, re-form the coin only when the call changes
     const c = read(); if (!c || c.key + c.res === key) return;
@@ -34,12 +35,11 @@ function start({ main, banner, hero }) {
     tag.replaceChildren(doc.createTextNode('Latest call'), Object.assign(doc.createElement('b'), { textContent: c.sym }));
     if (c.res) tag.append(Object.assign(doc.createElement('span'), { className: c.up ? 'is-up' : c.down ? 'is-down' : '', textContent: c.res }), doc.createTextNode(' since the call'));
     tag.hidden = false;
-    if (s3 && newCall) face(c, true);
+    if (newCall) face(c);
   }
   stage.classList.add('pf5-stage--set');
   if (webgl) (window.requestIdleCallback || ((f) => setTimeout(f, 200)))(() => import('/qx-a/scene3d.mjs').then(({ mountSet }) => {
     s3 = mountSet(stage, { variant: 'create', posY: wide ? .72 : .78 }); if (!s3) return;
-    if (last) face(last, true);
   }).catch(() => {}), { timeout: 1200 });
   if (root) new MutationObserver(update).observe(root, { childList: true, subtree: true });
   update();

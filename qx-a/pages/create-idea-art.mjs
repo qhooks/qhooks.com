@@ -31,8 +31,9 @@ export function windowText(s) {
 // markup helpers (strings; every value is a number or a fixed label from this file)
 const at = (o) => Object.entries(o).filter(([, v]) => v != null && v !== false).map(([k, v]) => ` ${k}="${v}"`).join('');
 const P = (d, c, k, x = {}) => `<path${at({ d, class: c, 'data-k': k, ...x })}/>`;
-const C = (cx, cy, r, c, k, x = {}) => `<circle${at({ cx, cy, r, class: c, 'data-k': k, ...x })}/>`;
 const R = (x, y, w, h, rx, c, k, o = {}) => `<rect${at({ x, y, width: w, height: h, rx, class: c, 'data-k': k, ...o })}/>`;
+// Markers are square blocks centred on (cx, cy), never circles (2026-11-12 audit #16: no rings, dots or gauges).
+const C = (cx, cy, r, c, k, x = {}) => R(r1(cx - r), r1(cy - r), r1(2 * r), r1(2 * r), 0, c, k, x);
 const T = (x, y, s, c = 'm-t', k, o = {}) => `<text${at({ x, y, class: c, 'data-k': k, ...o })}>${s}</text>`;
 const G = (inner, k, x = {}) => `<g${at({ 'data-k': k, ...x })}>${inner}</g>`;
 const END = { 'text-anchor': 'end' }, MID = { 'text-anchor': 'middle' };
@@ -52,7 +53,7 @@ const ART = {
   plain: {
     dur: 5600, still: 0.2,
     build: (p, gl) => gl(
-      P('M20 102H300', 'm-hair') + P('M20 126H300', 'm-hair') + P('M126 114A34 34 0 0 0 194 114Z', 'm-fill') + C(160, 114, 34, 'm-tr', 'ring') +
+      P('M20 102H300', 'm-hair') + P('M20 126H300', 'm-hair') + R(130, 114, 60, 30, 0, 'm-fill') + R(130, 84, 60, 60, 0, 'm-tr', 'ring') +
       [0, 1, 2].map((i) => C(0, 102, 4.5, 'm-gdot', 'b' + i) + C(0, 126, 4.5, 'm-dot', 's' + i)).join(''),
     ) + T(20, 30, 'One pool', 'm-v') + T(300, 30, 'No tax on trades', 'm-t', null, END) + T(20, 92, 'Buys', 'm-t') + T(300, 146, 'Sells', 'm-t', null, END),
     frame(r, t) {
@@ -60,9 +61,9 @@ const ART = {
       for (let i = 0; i < 3; i++) {
         const u = (t + i / 3) % 1, xb = 20 + u * 280, xs = 300 - u * 280, o = clamp(Math.sin(Math.PI * u) * 1.6);
         mv(r['b' + i], xb, 0); op(r['b' + i], o); mv(r['s' + i], xs, 0); op(r['s' + i], o);
-        near = Math.max(near, 1 - Math.min(1, Math.abs(xb - 160) / 34), 1 - Math.min(1, Math.abs(xs - 160) / 34));
+        near = Math.max(near, 1 - Math.min(1, Math.abs(xb - 160) / 30), 1 - Math.min(1, Math.abs(xs - 160) / 30));
       }
-      put(r.ring, 'r', 34 + near * 2.5);
+      put(r.ring, 'y', 84 - near * 2.5); put(r.ring, 'height', 60 + near * 5);
     },
   },
   // All the supply moves into one pool, the lid closes, and a pull bounces off it.
@@ -109,7 +110,7 @@ const ART = {
     dur: 4600, still: 0.6,
     Y: [58, 81, 105, 129, 152],
     build: (p, gl) => gl(
-      R(150, 42, 34, 126, 9, 'm-band') + P('M150 50V160', 'm-tr', 'edge') + P('M184 105H246', 'm-hair') + C(264, 105, 17, 'm-tr2') +
+      R(150, 42, 34, 126, 2, 'm-band') + P('M150 50V160', 'm-tr', 'edge') + P('M184 105H246', 'm-hair') + R(250, 94, 50, 22, 0, 'm-tr2') +
       [0, 1, 2, 3, 4].map((i) => C(0, 0, 5, i === 2 ? 'm-gdot' : 'm-dot', 'w' + i)).join(''),
     ) + T(20, 30, '1 buy cap per block', 'm-v') + T(167, 186, 'Same block', 'm-t', null, MID) +
       T(300, 30, windowText(p.snipe) + ' anti-snipe', 'm-t', null, END),
@@ -127,21 +128,20 @@ const ART = {
       op(r.edge, Math.max(0.18, 1 - Math.abs(t - 0.4) / 0.1));
     },
   },
-  // The anti-snipe charge on a meter: 50% at the first block, 0 when the window ends.
+  // The anti-snipe charge as one horizontal bar: 50% at the first block, 0 when the window ends.
   fair: {
     dur: 5600, still: 0.3,
     build: (p, gl) => {
-      const ticks = [0, 10, 20, 30, 40, 50].map((v) => { const a = Math.PI - (v / 50) * Math.PI, c = Math.cos(a), s = Math.sin(a); return `M${r1(160 + 80 * c)} ${r1(150 - 80 * s)}L${r1(160 + 87 * c)} ${r1(150 - 87 * s)}`; }).join('');
-      return gl(P('M68 150A92 92 0 0 1 252 150', 'm-hair') + P(ticks, 'm-tick') + P('M68 150A92 92 0 0 1 252 150', 'm-tr m-thick', 'arc') +
-        P('M160 150L160 80', 'm-tr2', 'needle') + C(160, 150, 5, 'm-gdot')) +
+      const ticks = [0, 1, 2, 3, 4, 5].map((i) => `M${20 + i * 56} 126v8`).join('');
+      return gl(R(20, 92, 280, 26, 0, 'm-ghost') + R(20, 92, 280, 26, 0, 'm-fill2', 'arc') + P(ticks, 'm-tick') + P('M300 84V126', 'm-tr', 'needle')) +
         T(20, 30, 'Anti-snipe charge', 'm-t') + T(300, 30, 'Fades to 0 in ' + windowText(p.snipe), 'm-v', null, END) +
-        T(68, 172, '0', 'm-t', null, MID) + T(252, 172, PRESET.snipeTop + '%', 'm-t', null, MID) + T(160, 190, PRESET.snipeTop + '%', 'm-big', 'val', MID);
+        T(20, 152, '0', 'm-t') + T(300, 152, PRESET.snipeTop + '%', 'm-t', null, END) + T(20, 70, PRESET.snipeTop + '%', 'm-big', 'val');
     },
     frame(r, t) {
       const top = PRESET.snipeTop, v = t < 0.08 ? top : t < 0.8 ? top * (1 - (t - 0.08) / 0.72) : t < 0.9 ? 0 : top * ease(seg(t, 0.9, 1));
-      const a = Math.PI - (v / top) * Math.PI, x = 160 + 92 * Math.cos(a), y = 150 - 92 * Math.sin(a);
-      put(r.arc, 'd', `M68 150A92 92 0 0 1 ${r1(x)} ${r1(y)}`); op(r.arc, v > 0.2 ? 1 : 0);
-      put(r.needle, 'd', `M160 150L${r1(160 + 72 * Math.cos(a))} ${r1(150 - 72 * Math.sin(a))}`);
+      const x = 20 + 280 * (v / top);
+      put(r.arc, 'width', x - 20); op(r.arc, v > 0.2 ? 1 : 0);
+      put(r.needle, 'd', `M${r1(x)} 84V126`);
       txt(r.val, Math.round(v) + '%');
     },
   },
@@ -233,7 +233,7 @@ const ART = {
     H: [34, 58, 26, 84, 44], BT: [0.06, 0.19, 0.32, 0.45, 0.58],
     build: (p, gl) => gl(
       P('M24 150H136', 'm-hair') + ART.arena.H.map((h, i) => R(32 + i * 22, 150, 12, 0, 3, 'm-bar', 'a' + i)).join('') + P('M0 0H18', 'm-tr', 'king') +
-      C(236, 104, 34, 'm-hair') + C(236, 104, 34, 'm-tr m-thick', 'clock', { ...DRAW, transform: 'rotate(-90 236 104)' }) + C(236, 104, 34, 'm-tr2', 'pulse') + C(236, 104, 4, 'm-gdot'),
+      P('M180 150H296', 'm-hair') + R(186, 128, 104, 22, 0, 'm-ghost') + R(186, 128, 104, 22, 0, 'm-fill2', 'clock') + R(186, 128, 104, 22, 0, 'm-tr2', 'pulse'),
     ) + T(20, 30, PRESET.launchTax + '% → ' + PRESET.afterTax + '% tax', 'm-v') + T(80, 176, 'Biggest buy', 'm-t', null, MID) + T(236, 176, 'Last buyer', 'm-t', null, MID),
     frame(r, t) {
       const A = ART.arena;
@@ -247,9 +247,9 @@ const ART = {
       if (top >= 0) mv(r.king, 29 + top * 22, 150 - A.H[top] * ease(seg(t, A.BT[top], A.BT[top] + 0.07)) - 9);
       op(r.king, top >= 0 ? 1 : 0);
       const since = last < 0 ? 1 : seg(t, A.BT[last], A.BT[last] + 0.34);
-      put(r.clock, 'stroke-dashoffset', last < 0 ? 1 : since);
+      put(r.clock, 'width', last < 0 ? 0 : 104 * (1 - since));
       const pulse = Math.max(last >= 0 ? 1 - seg(t, A.BT[last], A.BT[last] + 0.1) : 0, seg(t, 0.92, 0.94) * (1 - seg(t, 0.94, 1)));
-      put(r.pulse, 'r', 34 + 12 * (1 - pulse)); op(r.pulse, pulse * 0.8);
+      op(r.pulse, pulse * 0.8);
       op(r.root, fade(t, 0.02, 0.97));
     },
   },
@@ -259,19 +259,19 @@ const ART = {
     B: [[110, 100, 150, 100, 166, 52, 212, 52], [110, 100, 150, 100, 170, 100, 212, 100], [110, 100, 150, 100, 166, 148, 212, 148]],
     build: (p, gl) => gl(
       P('M20 100H110', 'm-hair') + ART.stakers.B.map(([a, b, c, d, e, f, g, h]) => P(`M${a} ${b}C${c} ${d} ${e} ${f} ${g} ${h}`, 'm-tr2')).join('') +
-      C(224, 52, 9, 'm-hair') + C(224, 52, 9, 'm-tr', 'ring', { ...DRAW, transform: 'rotate(-90 224 52)' }) + C(224, 52, 9, 'm-tr2', 'rp') +
+      R(228, 76, 64, 7, 0, 'm-ghost') + R(228, 76, 0, 7, 0, 'm-fill2', 'ring') + R(228, 76, 64, 7, 0, 'm-tr2', 'rp') + C(216, 52, 4, 'm-gdot') +
       C(216, 100, 4, 'm-gdot') + C(216, 148, 4, 'm-gdot') + C(110, 100, 5.5, 'm-gdot') +
       C(0, 100, 5, 'm-dot', 'd') + [0, 1, 2].map((i) => C(0, 0, 3.6, 'm-gdot', 'q' + i)).join(''),
     ) + T(20, 88, 'Trades', 'm-t') + T(110, 84, PRESET.tax + '% tax', 'm-v', null, MID) +
-      T(240, 50, 'Buyback', 'm-t') + T(240, 65, 'every ' + PRESET.buybackMin + ' min', 'm-s') + T(228, 104, 'Stakers', 'm-t') + T(228, 152, 'Referrers', 'm-t'),
+      T(228, 56, 'Buyback', 'm-t') + T(228, 70, 'every ' + PRESET.buybackMin + ' min', 'm-s') + T(228, 104, 'Stakers', 'm-t') + T(228, 152, 'Referrers', 'm-t'),
     frame(r, t, p, k) {
       const A = ART.stakers, a = seg(t, 0.04, 0.3), b = seg(t, 0.3, 0.62);
       mv(r.d, lerp(20, 110, ease(a)), 0); op(r.d, a > 0 && a < 1 ? 1 : 0);
       A.B.forEach(([x0, y0, x1, y1, x2, y2, x3, y3], i) => { const u = ease(b); mv(r['q' + i], bez(x0, x1, x2, x3, u), bez(y0, y1, y2, y3, u)); op(r['q' + i], b > 0 && b < 1 ? 1 : 0); });
       const n = Math.floor(k) % 3, fill = (n + ease(seg(t, 0.62, 0.7))) / 3;
-      put(r.ring, 'stroke-dashoffset', 1 - fill);
+      put(r.ring, 'width', 64 * fill);
       const runs = n === 2 ? seg(t, 0.72, 0.98) : 0;
-      put(r.rp, 'r', 9 + 14 * runs); op(r.rp, runs > 0 ? 1 - runs : 0);
+      op(r.rp, runs > 0 ? 1 - runs : 0);
     },
   },
   // Arb burns: a price gap opens between your pool and another; the shared contract closes it and the token it buys burns.
@@ -303,8 +303,8 @@ const ART = {
     build: (p, gl) => {
       const mx = 20 + 280 * ART['sale-first'].MIN;
       return gl(R(20, 50, 280, 16, 8, 'm-ghost') + R(20, 50, 0, 16, 8, 'm-fill2', 'sf') + C(20, 58, 6, 'm-tr2', 'hp') + P(`M${mx} 42V74`, 'm-tr2', 'mk') +
-        P('M160 70V104', 'm-tr', 'pl', DRAW) + P('M160 104A24 24 0 0 0 160 152Z', 'm-fill2', 'h0') + P('M160 104A24 24 0 0 1 160 152Z', 'm-fill', 'h1') +
-        C(160, 128, 24, 'm-tr', 'pr', { ...DRAW, transform: 'rotate(-90 160 128)' }) +
+        P('M160 70V104', 'm-tr', 'pl', DRAW) + R(136, 104, 24, 48, 0, 'm-fill2', 'h0') + R(160, 104, 24, 48, 0, 'm-fill', 'h1') +
+        P('M160 104H184V152H136V104Z', 'm-tr', 'pr', DRAW) +
         P('M184 128C204 128 210 114 226 116S252 102 268 106S290 94 300 96', 'm-tr', 'tt', DRAW)) +
         T(20, 30, 'Sale at one price', 'm-t') + T(mx, 90, 'Min', 'm-t', 'mt', MID) + T(160, 176, 'Pool opens', 'm-v', 'po', MID);
     },
@@ -312,7 +312,7 @@ const ART = {
       const A = ART['sale-first'];
       let lv = 0, pulse = 0;
       A.BT.forEach((b, i) => { const g = ease(seg(t, b, b + 0.05)); if (g > 0) lv = lerp(i ? A.LV[i - 1] : 0, A.LV[i], g); pulse = Math.max(pulse, seg(t, b, b + 0.05) * (1 - seg(t, b + 0.05, b + 0.09))); });
-      put(r.sf, 'width', 280 * lv); mv(r.hp, 280 * lv, 0); op(r.hp, pulse); put(r.hp, 'r', 6 + 6 * pulse);
+      put(r.sf, 'width', 280 * lv); mv(r.hp, 280 * lv, 0); op(r.hp, pulse);
       cls(r.mk, 'on', lv >= A.MIN); op(r.mt, lv >= A.MIN ? 1 : 0.6);
       put(r.pl, 'stroke-dashoffset', 1 - ease(seg(t, 0.4, 0.48)));
       put(r.pr, 'stroke-dashoffset', 1 - ease(seg(t, 0.48, 0.6)));

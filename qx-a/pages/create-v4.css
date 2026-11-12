@@ -98,3 +98,6 @@
   .cr4 .cr4-tag::before { content: ''; position: absolute; right: 100%; top: 50%; width: 64px; height: 1px; background: linear-gradient(90deg, transparent, rgba(232, 200, 140, .7)); }
   .cr4 .cr4-tag::after { content: ''; position: absolute; right: calc(100% + 64px); top: 50%; width: 5px; height: 5px; margin: -2px -2px 0 0; border-radius: 50%; background: var(--qa-gold); box-shadow: 0 0 10px rgba(232, 200, 140, .8); }
 }
+
+/* design audit #30: on phones the headline and the primary button come first; the token band follows, shorter */
+@media (max-width: 899px) { .cr4 .cr-hero__copy { order: 1; } .cr4 .cr4-stage { order: 2; height: 240px; margin-top: 18px; } .cr4 .cr-hero__live { order: 3; } }

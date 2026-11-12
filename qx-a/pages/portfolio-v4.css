@@ -54,3 +54,6 @@
   .pf4 .pf4-orbit { order: -1; margin: 0 calc(var(--qa-pad) * -1); }
   .pf4 .pf4-stage { height: 250px; }
 }
+
+/* design audit #30: phones: the total first, the holdings row after it */
+@media (max-width: 1099px) { .pf4 .pf4-orbit { order: 1; } .pf4 .pf4-stage { height: 210px; } }

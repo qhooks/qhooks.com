@@ -31,7 +31,8 @@
 .qa-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
 
 /* ---------- ambient light from art ---------- */
-.qa-ambient { position: fixed; inset: 0 0 auto 0; height: 120vh; z-index: 0; pointer-events: none; overflow: hidden; }
+/* audit #38 (2026-11-12): anchored to the top of the page (was fixed), so the haze sits behind the hero and scrolls away instead of riding behind data tables */
+.qa-ambient { position: absolute; inset: 0 0 auto 0; height: 120vh; z-index: 0; pointer-events: none; overflow: hidden; }
 .qa-ambient__art { position: absolute; inset: -14% -30% auto -30%; height: 95vh; background: var(--qa-banner-blur) 62% 40% / cover; filter: blur(48px) saturate(1.6); opacity: var(--qa-art-opacity);
   transform: translate3d(0, var(--qa-amb-y, 0px), 0) scale(1.1); -webkit-mask-image: linear-gradient(180deg, #000, rgba(0,0,0,.8) 42%, transparent 96%); mask-image: linear-gradient(180deg, #000, rgba(0,0,0,.8) 42%, transparent 96%);
   animation: qa-breathe var(--qa-t-ambient) ease-in-out infinite alternate; }
@@ -382,7 +383,7 @@ a.qa-row:hover, button.qa-row:hover { background: var(--qa-wash); }
 /* ---------- brand line: For the next generation of token ______ ---------- */
 .qa-line { position: relative; }
 .qa-line__hook { position: relative; display: block; width: 2px; height: 46px; margin-bottom: 18px; background: linear-gradient(180deg, transparent, var(--qa-gold-hi)); }
-.qa-line__hook::after { content: ""; position: absolute; left: -5px; bottom: -6px; width: 12px; height: 12px; border-radius: 50%; background: #FFF3DA; box-shadow: 0 0 0 2px var(--qa-gold), 0 0 16px rgba(240,218,174,.9); }
+/* audit #33 (2026-11-12): the ringed bead at the line's foot is gone; the thin line stays */
 .qa-line__text { font-size: var(--qa-fs-hero); line-height: 1.02; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); transform-origin: left bottom; transition: transform .7s var(--qa-ease); }
 .qa-line__b { transition: opacity .45s var(--qa-ease); }
 .qa-line__word { display: inline-block; background: var(--qa-gold-metal); -webkit-background-clip: text; background-clip: text; color: transparent; transition: opacity .22s var(--qa-ease), transform .22s var(--qa-ease), filter .22s var(--qa-ease); }
@@ -535,7 +536,7 @@ a.qa-row:hover, button.qa-row:hover { background: var(--qa-wash); }
   .qa-change { font-size: 24px; }
   .qa-stage--wide { height: 264px; }
   .qa-stage--wide .qa-stage__art { position: absolute; inset: 0; height: auto; }
-  .qa-stage--wide .qa-stage__glow { inset: 0 -5% -40% 20%; }
+  .qa-stage--wide .qa-stage__glow { inset: 0 -5% 0 20%; } /* audit #38: stays inside the banner, never under the rows below */
   .qa-stage--wide .qa-stage__frame { inset: 0 0 0 auto; width: 912px;
     -webkit-mask-image: linear-gradient(90deg, transparent, #000 26%), linear-gradient(180deg, #000 78%, transparent); -webkit-mask-composite: source-in;
     mask-image: linear-gradient(90deg, transparent, #000 26%), linear-gradient(180deg, #000 78%, transparent); mask-composite: intersect;

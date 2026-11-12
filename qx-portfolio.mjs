@@ -136,7 +136,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   const letter = String(r.symbol || '').trim().charAt(0).toUpperCase();
   const coin = h('span', {class: 'qp-art' + (size ? ' qp-art--' + size : '') + (r.wallet ? ' qp-art--wallet' : ''), 'data-letter': letter, 'aria-hidden': 'true'});
   const a = String(r.address || ''), x = parseInt(a.slice(2, 6), 16) || 7, y = parseInt(a.slice(6, 10), 16) || 3, hue = x % 360;
-  coin.style?.setProperty?.('--a1', 'hsl(' + hue + ' 62% 58%)'); coin.style?.setProperty?.('--a2', 'hsl(' + (hue + 50 + y % 140) % 360 + ' 52% 24%)');
+  const pal = [['#e8c88c','#2a1d0e'],['#d2ad72','#14110c'],['#f1e7d0','#4a3418'],['#b98d4e','#0d0c0a'],['#9a7a4a','#1b1a17'],['#ece2cc','#2b241a']][(hue + y) % 6]; coin.style?.setProperty?.('--a1', pal[0]); coin.style?.setProperty?.('--a2', pal[1]); // design audit #35: palette tones, not rainbow hues
   const src = r.native ? chainIcon(r.chainId) : r.logo || null;
   if (src) { const img = h('img', {src, alt: '', loading: 'lazy', decoding: 'async'}); img.addEventListener?.('error', () => img.remove?.()); coin.append(img); }
   if (!r.native && !r.wallet && chainIcon(r.chainId)) coin.append(h('img', {class: 'qp-art__chain', src: chainIcon(r.chainId), alt: ''}));

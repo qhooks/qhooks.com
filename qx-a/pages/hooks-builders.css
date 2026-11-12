@@ -131,6 +131,10 @@
 /* the hook render hangs beside the program's headline */
 .bp .cx-hero { position: relative; }
 .bp-hook { position: absolute; z-index: 0; right: -54px; top: -30px; width: 150px; pointer-events: none; }
+/* audit #10 (2026-11-12): under 1100 px the hook hangs in its own band above the words, never behind them */
+@media (max-width: 1099.98px) {
+  .bp-hook { position: relative; right: auto; top: auto; width: 96px; margin: -8px 0 6px auto; }
+}
 .bp-hook img { display: block; width: 100%; height: auto; opacity: .85; transform-origin: 50% 0; animation: bp-sway 9s ease-in-out infinite alternate; -webkit-mask-image: linear-gradient(180deg, #000 50%, transparent 92%); mask-image: linear-gradient(180deg, #000 50%, transparent 92%); filter: drop-shadow(0 30px 40px rgba(0,0,0,.55)); }
 @keyframes bp-sway { from { transform: rotate(-1.4deg); } to { transform: rotate(1.6deg); } }
 .bp .cx-hero > :not(.bp-hook) { position: relative; z-index: 1; }

@@ -67,11 +67,7 @@ function buildHook(steel, gold) {
   const eye = new Mesh(new TorusGeometry(.23, .072, 14, 40), gold); eye.position.set(0, 3.38, 0); g.add(eye);
   const collar = new Mesh(new CylinderGeometry(.108, .108, .4, 24), gold); collar.position.set(0, 2.88, 0); g.add(collar);
   for (let i = 0; i < 7; i++) { const r = new Mesh(new TorusGeometry(.108, .012, 6, 28), gold); r.rotation.x = Math.PI / 2; r.position.set(0, 2.72 + i * .052, 0); g.add(r); }
-  const studGeo = new BoxGeometry(.075, .05, .085);
-  for (let t = .52; t <= .98; t += .036) { // studs on the outside of the bend
-    const p = curve.getPoint(t), tn = curve.getTangent(t), out = new Vector3(tn.y, -tn.x, 0).normalize(); if (out.dot(new Vector3(p.x + .74, p.y + .2, 0)) < 0) out.negate();
-    const s = new Mesh(studGeo, gold); s.position.copy(p).addScaledVector(out, .078); s.lookAt(s.position.clone().add(out)); s.rotateX(Math.PI / 2); g.add(s);
-  }
+  // 2026-11-12 audit #17: the gold studs on the bend read as a dashed glitch under the bloom; the bend is plain steel now
   return g;
 }
 
@@ -111,7 +107,7 @@ const CSS = `.hk4-set{position:absolute;inset:0;overflow:hidden;background:#0506
 @keyframes hk4-grain{0%{transform:translate(0,0)}20%{transform:translate(-7%,4%)}40%{transform:translate(5%,-6%)}60%{transform:translate(-3%,8%)}80%{transform:translate(8%,2%)}}
 @media (prefers-reduced-motion:reduce){.hk4-grain{animation:none}}`;
 
-export function mountHookSet(host, { posY = .62, plate = '/qx-a/set/', prop = '/qx-a/props/launch-block.glb' } = {}) {
+export function mountHookSet(host, { posY = .62, plate = '/qx-a/set/', prop = null } = {}) {
   if (!document.getElementById('hk4-css')) document.head.append(Object.assign(document.createElement('style'), { id: 'hk4-css', textContent: CSS }));
   const cv = document.createElement('canvas'); let renderer;
   try { renderer = new WebGLRenderer({ canvas: cv, alpha: true, antialias: true, powerPreference: 'high-performance' }); } catch { return null; }
@@ -178,7 +174,9 @@ export function mountHookSet(host, { posY = .62, plate = '/qx-a/set/', prop = '/
     if (mBlock) { const mf = mBlock.getObjectByName('face'); if (mf) { mf.material.map = t; mf.material.needsUpdate = true; } }
   }
   let pendingFace = null;
-  const loaded = new GLTFLoader().loadAsync(prop).then((g) => {
+  // 2026-11-12 audit #3: the launch-block slab read as skewered on the hook, so the prop is no longer loaded; the page's
+  // text callout carries the data. form/pulse/setFace stay as no-op-safe calls (the block group stays empty and hidden).
+  const loaded = !prop ? Promise.resolve() : new GLTFLoader().loadAsync(prop).then((g) => {
     const root = g.scene;
     root.traverse((o) => { if (!o.isMesh) return; const n = o.material?.name || ''; if (n === 'Gold') o.material = gold; else if (n === 'Slab') o.material = slab; else if (o.name === 'face') { faceMesh = o; o.material = new MeshStandardMaterial({ color: 0xffffff, roughness: .18, metalness: .1, emissive: 0xffffff, emissiveIntensity: .62, envMapIntensity: .35 }); } else o.material = slab; });
     // a glass pane over the face, for the room's reflection

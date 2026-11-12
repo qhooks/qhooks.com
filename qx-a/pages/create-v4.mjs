@@ -1,3 +1,4 @@
+import { heroArt } from '/qx-a/herocard.mjs';
 // /create v4 (2026-11-12): the launch scene. One object under light: a gold coin, its face the latest real launch on
 // QHooks, standing on a lit floor in a shaft of light with gold dust falling through it. Motion follows real events:
 // the coin forms from the dust when the page opens, and again when a new launch lands in the page's own
@@ -18,8 +19,8 @@ if (hero && !hero.querySelector('.cr4-stage')) {
   // polish (2026-11-12): where WebGL runs, the lit set (a pre-rendered loop of the light shaft, dust and floor) with the
   // coin live on top in real PBR gold (/qx-a/scene3d.mjs, loaded after first paint). Otherwise this 2D scene.
   const webgl = (() => { try { const c = doc.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } })();
-  let use2d = !webgl, s3 = null, last = null;
-  const face3d = (fresh) => { if (s3) s3.setFace(last?.src || '', last?.sym || 'Q', fresh); };
+  let use2d = false, s3 = null, last = null; // design audit #4: the latest launch as a flat card (herocard.mjs); no 2D/3D coin
+  const face3d = () => { if (last) heroArt(stage, { src: last.src, sym: last.sym }); };
   let W = 0, H = 0, dpr = 1, raf = 0, visible = true, t0 = performance.now();
   const mark = new Image(); mark.src = '/app-icons/icon-192.png';
   let face = null, faceKey = '', formAt = -1e9, prevFace = null;
@@ -142,12 +143,11 @@ if (hero && !hero.querySelector('.cr4-stage')) {
   doc.addEventListener('visibilitychange', () => { if (!doc.hidden) go(); });
   if (list) { readList(false); new MutationObserver(() => readList(true)).observe(list, { childList: true }); }
   mark.onload = go; go();
-  if (!use2d) {
-    stage.classList.add('cr4-stage--set'); cv.hidden = true;
+  stage.classList.add('cr4-stage--set'); cv.hidden = true;
+  if (webgl) {
     const start = () => import('/qx-a/scene3d.mjs').then(({ mountSet }) => {
       s3 = mountSet(stage, { variant: 'create', posY: .7 }); if (!s3) throw new Error('no webgl');
-      if (last || formAt < performance.now()) face3d(true);
-    }).catch(() => { use2d = true; cv.hidden = false; go(); });
+    }).catch(() => {});
     (window.requestIdleCallback || ((f) => setTimeout(f, 200)))(start, { timeout: 1200 });
   }
   if (RM) setTimeout(go, 600);

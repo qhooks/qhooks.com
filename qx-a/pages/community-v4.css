@@ -41,3 +41,6 @@
 
 /* commfaces (Randall: no stacked circles): hide the overlapping caller avatars beside the counts line too */
 .cv4 #cx-kicker-faces, .cv4 .cx-hero .qa-ava-stack { display: none !important; }
+
+/* design audit #30: phones: headline and buttons first, the token band after them */
+@media (max-width: 1099px) { .cv4 .cv4-stage { order: 1; height: 230px; margin-top: 18px; margin-bottom: 0; } }

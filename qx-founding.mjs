@@ -41,14 +41,20 @@ function prizes() {
   if (r.creatorShare?.days) set('share-days', String(r.creatorShare.days));
   if (r.boost?.days) set('boost-days', String(r.boost.days));
 }
+// Audit #15 (2026-11-12): one horizontal bar for the spots taken, then the launched tokens as a plain list (no seat
+// grid of rings). Same data as before: spotsLeft for the bar, data.launches for the list.
 function seats(total, launches, open) {
-  const bySlot = new Map(launches.map(l => [Number(l.slot), l])), taken = open ? total - data.spotsLeft : 0;
-  return el('ol', {class: 'fd-seats', 'aria-label': taken + ' of ' + total + ' spots taken'}, ...Array.from({length: total}, (_, i) => {
-    const l = bySlot.get(i + 1), on = i < taken, fresh = on && prevLeft != null && i >= total - prevLeft;
-    const li = el('li', {class: 'fd-seat' + (on ? ' is-taken' : '') + (fresh && !reduced() ? ' is-new' : ''), title: l ? '#' + l.slot + ' ' + (l.symbol || '') : null});
-    if (on && l) li.append(coinOf(l));
-    return li;
-  }));
+  const taken = open ? total - data.spotsLeft : 0, moved = prevLeft != null && prevLeft !== data.spotsLeft;
+  const fill = el('span', {class: 'fd-meter__f'}); fill.style?.setProperty('--p', (clamp01(taken / total) * 100).toFixed(1) + '%');
+  const meter = el('div', {class: 'fd-meter', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(total), 'aria-valuenow': String(taken), 'aria-label': taken + ' of ' + total + ' spots taken'},
+    el('p', {class: 'fd-meter__l'}, flashIf(el('b', {}, taken + ' of ' + total), moved), el('span', {}, 'taken')),
+    el('span', {class: 'fd-meter__t', 'aria-hidden': 'true'}, fill));
+  const sorted = [...launches].sort((a, b) => Number(a.slot) - Number(b.slot));
+  const list = sorted.length ? el('ol', {class: 'fd-launched', 'aria-label': 'Launched tokens'}, ...sorted.map(l => el('li', {},
+    el('span', {class: 'fd-launched__n'}, '#' + l.slot),
+    el('a', {href: '/terminal#' + (l.chainId === 'solana' ? 't=' : 'm=') + l.chainId + ':' + l.token}, el('b', {}, l.symbol || 'Token')),
+    el('span', {class: 'fd-launched__c'}, l.chainId === 'solana' ? 'Solana' : chainById(l.chainId)?.name || l.chainId)))) : null;
+  return el('div', {class: 'fd-seats'}, meter, list);
 }
 function render() {
   const count = $('qfd-count'), list = $('qfd-launches');
@@ -72,9 +78,11 @@ function render() {
     const moved = prevLeft != null && prevLeft !== data.spotsLeft;
     count.replaceChildren(
       el('div', {class: 'fd-count__num'}, flashIf(el('b', {class: 'qfd-big'}, String(data.spotsLeft)), moved), el('span', {}, 'of ' + spots + ' spots left')),
-      seats(spots, data.launches, true),
-      el('p', {class: 'fd-count__note'}, data.status === 'full' ? 'All 50 founding spots are taken.' : 'Counting launches since ' + new Date(data.rules.start * 1000).toLocaleString('en-US', {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'}) + '.'),
-      data.status === 'full' ? null : el('p', {class: 'fd-count__go'}, el('a', {class: 'qa-btn qa-btn--primary qa-btn--lg', href: '/create'}, 'Launch a token')));
+      // the sticky launch button lives in its own box below the number, so on phone it can never slide over the count
+      el('div', {class: 'fd-count__rest'},
+        seats(spots, data.launches, true),
+        el('p', {class: 'fd-count__note'}, data.status === 'full' ? 'All 50 founding spots are taken.' : 'Counting launches since ' + new Date(data.rules.start * 1000).toLocaleString('en-US', {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'}) + '.'),
+        data.status === 'full' ? null : el('p', {class: 'fd-count__go'}, el('a', {class: 'qa-btn qa-btn--primary qa-btn--lg', href: '/create'}, 'Launch a token'))));
     prevLeft = data.spotsLeft;
   }
   const tc = $('fd-team-count'); if (tc) tc.textContent = data.launches.length ? String(data.launches.length) : '';

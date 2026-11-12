@@ -13,7 +13,7 @@ let at = 0;
 function coin(m) {
   const el = h('span', { class: 'qp-art', 'data-letter': String(m.symbol || '?').charAt(0).toUpperCase(), 'aria-hidden': 'true' });
   const a = String(m.controller || ''), x = parseInt(a.slice(2, 6), 16) || 7, hue = x % 360;
-  el.style.setProperty('--a1', `hsl(${hue} 62% 58%)`); el.style.setProperty('--a2', `hsl(${(hue + 80) % 360} 52% 24%)`);
+  const pal = [['#e8c88c','#2a1d0e'],['#d2ad72','#14110c'],['#f1e7d0','#4a3418'],['#b98d4e','#0d0c0a'],['#9a7a4a','#1b1a17'],['#ece2cc','#2b241a']][hue % 6]; el.style.setProperty('--a1', pal[0]); el.style.setProperty('--a2', pal[1]); // design audit #35: palette tones
   const logo = sameOrigin(m.logo || m.profileImage || m.logoURI);
   if (logo) { const img = h('img', { src: logo, alt: '', loading: 'lazy', decoding: 'async' }); img.addEventListener('error', () => img.remove()); el.append(img); }
   return el;

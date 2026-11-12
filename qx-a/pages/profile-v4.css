@@ -21,3 +21,6 @@ body:has(main.pf5) .qa-ambient__art { filter: blur(56px) saturate(.5) brightness
 }
 /* headings on the overhaul scale (same words) */
 .pf5 #qp-calls-h { font-size: clamp(32px, 4.2vw, 56px); line-height: .9; font-weight: 880; font-stretch: 125%; letter-spacing: -.03em; text-transform: uppercase; }
+
+/* design audit: the latest call as a flat card; a shorter band on phones */
+@media (max-width: 1099px) { .pf5 .pv-banner { height: 240px; } }

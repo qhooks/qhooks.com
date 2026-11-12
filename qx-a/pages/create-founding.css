@@ -1,4 +1,4 @@
-/* System A, /founding: Founding Launchers as a race. The 50 spots are a seat map, the prizes are big figures,
+/* System A, /founding: Founding Launchers as a race. The 50 spots are one bar plus a plain list, the prizes are big figures,
    the launches are a leaderboard ranked by milestone progress. Rules copy stays whole, on the open floor. */
 
 .fd { padding-bottom: 32px; }
@@ -7,27 +7,35 @@
 .fd-title { font-size: 46px; }
 .fd-title span { display: inline; }
 
-/* spots: the number, then the 50 seats */
+/* spots: the number, then one bar (taken of 50) and the launched tokens as a plain list (audit #15: no seat grid) */
 .fd-count__num { display: flex; align-items: baseline; gap: 12px; }
 .fd .qfd-big { font-size: 96px; line-height: .85; font-weight: 860; font-stretch: var(--qa-wd-display); letter-spacing: -.05em; color: var(--qa-gold-hi); text-shadow: 0 0 40px rgba(210,173,114,.35); }
 .fd-count__num span { font-size: 18px; font-weight: 700; color: var(--qa-tx-2); }
-.fd-seats { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 8px; margin: 22px 0 0; max-width: 520px; }
-.fd-seat { position: relative; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--qa-rule-2); }
-.fd-seat.is-taken { box-shadow: 0 0 0 2px var(--qa-gold), 0 0 16px -2px rgba(210,173,114,.6); }
-.fd-seat .fd-coin { position: absolute; inset: 0; width: auto; height: auto; }
-.fd-seat .fd-coin span { font-size: 12px; }
-.fd-seat.is-new { animation: fd-seat 1.4s var(--qa-ease-out) both; }
-@keyframes fd-seat { 0% { transform: scale(.4); box-shadow: 0 0 0 0 rgba(240,218,174,.9); } 60% { transform: scale(1.12); } 100% { transform: none; } }
+.fd-seats { display: grid; gap: 18px; margin: 26px 0 0; max-width: 620px; }
+.fd-meter { display: grid; gap: 10px; }
+.fd-meter__l { display: flex; align-items: baseline; gap: 8px; margin: 0; font-size: 14px; font-weight: 650; color: var(--qa-tx-3); }
+.fd-meter__l b { font-size: 18px; font-weight: 820; letter-spacing: -.01em; color: var(--qa-tx); font-variant-numeric: tabular-nums; }
+.fd-meter__t { position: relative; display: block; height: 14px; background: #0b0b0a repeating-linear-gradient(90deg, transparent 0 calc(2% - 1px), rgba(240,218,174,.09) calc(2% - 1px) 2%); box-shadow: inset 0 0 0 1px var(--qa-rule-2); overflow: hidden; }
+.fd-meter__f { position: absolute; left: 0; top: 0; bottom: 0; width: var(--p, 0%); background: linear-gradient(90deg, var(--qa-gold-lo), var(--qa-gold-hi)); transition: width var(--qa-t-flash) var(--qa-ease); }
+.fd-launched { display: grid; margin: 0; padding: 0; list-style: none; }
+.fd-launched li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 11px 0; box-shadow: 0 -1px 0 var(--qa-rule); font-size: 14px; }
+.fd-launched li:last-child { box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+.fd-launched__n { color: var(--qa-tx-3); font-variant-numeric: tabular-nums; }
+.fd-launched a { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--qa-tx); text-decoration: none; }
+.fd-launched a b { font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
+.fd-launched a:hover b { color: var(--qa-gold-hi); }
+.fd-launched__c { color: var(--qa-tx-2); white-space: nowrap; }
 .fd-count__note { margin: 16px 0 0; font-size: 14px; color: var(--qa-tx-3); }
 .fd-count__go { margin: 18px 0 0; }
-/* phone and tablet: the launch button stays in reach while the spots are on screen, above the tab bar */
+/* phone and tablet: the launch button stays in reach while the spots are on screen, above the tab bar. It sits in
+   .fd-count__rest (below the number), so sticking can never slide it over the count. */
 @media (max-width: 1099px) {
   .fd-count__go { position: sticky; z-index: 6; bottom: var(--cx-dock-bottom); margin: 18px calc(var(--qa-pad) * -1) 0; padding: 12px var(--qa-pad); background: linear-gradient(180deg, transparent, var(--qa-glass) 30%, var(--qa-glass)); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
   .fd-count__go .qa-btn { width: 100%; }
 }
 
 /* coins */
-.fd-coin { position: relative; width: 48px; height: 48px; flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--qa-gold-metal); color: var(--qa-tx-on-gold); font-weight: 820; box-shadow: 0 0 0 1.5px var(--qa-gold-lo), 0 10px 22px -10px rgba(0,0,0,.85); }
+.fd-coin { position: relative; width: 48px; height: 48px; flex: none; border-radius: 4px; overflow: hidden; display: grid; place-items: center; background: var(--qa-gold-metal); color: var(--qa-tx-on-gold); font-weight: 820; box-shadow: 0 0 0 1.5px var(--qa-gold-lo), 0 10px 22px -10px rgba(0,0,0,.85); }
 .fd-coin img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
 /* prizes: figures on the floor, hairlines between */
@@ -105,9 +113,11 @@
   .fd .fd-hero { padding-top: 56px; max-width: 1060px; }
   .fd-title { font-size: 80px; }
   .fd-count { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "num seats" "note seats" "go seats"; column-gap: 64px; align-items: start; }
+  .fd-count__rest { display: contents; }
   .fd-count__num { grid-area: num; flex-direction: column; gap: 6px; }
   .fd .qfd-big { font-size: 160px; }
-  .fd-seats { grid-area: seats; max-width: none; grid-template-columns: repeat(10, minmax(0, 52px)); gap: 12px; justify-content: end; align-self: center; }
+  .fd-seats { grid-area: seats; max-width: 720px; width: 100%; justify-self: end; align-self: center; margin: 0; gap: 22px; }
+  .fd-meter__t { height: 18px; }
   .fd-count__note { grid-area: note; }
   .fd-count__go { grid-area: go; }
   .fd-prize-list, .fd-teams { margin: 0; }
@@ -119,4 +129,4 @@
   .fd-team__acts { flex-direction: column; align-items: flex-end; text-align: right; max-width: 220px; }
   .fd-check, .fd-rules { max-width: 980px; }
 }
-@media (prefers-reduced-motion: reduce) { .fd-seat.is-new, .fd-team.is-new { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .fd-team.is-new { animation: none; } .fd-meter__f { transition: none; } }
