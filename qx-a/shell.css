@@ -40,14 +40,16 @@ body.qa-shell--ribbon { --qa-ribbon-h: 32px; }
 html:has(> body.qa-shell:not(.qa-shell--adopt)) { scroll-padding-top: calc(var(--qa-hdr-h) + env(safe-area-inset-top) + 44px); }
 html:has(> body.qa-shell--ribbon:not(.qa-shell--adopt)) { scroll-padding-top: calc(var(--qa-hdr-h) + env(safe-area-inset-top) + 76px); }
 body.qa-shell--getapp { --qa-getapp-h: 52px; }
-body.qa-shell.qa-shell--detail { padding-bottom: calc(var(--qa-dock-h) + env(safe-area-inset-bottom) + var(--qa-getapp-h, 0px)); }
+/* the tab bar stays on every page (Randall, 2026-11-12); a Buy/Sell dock sits directly above it */
+body.qa-shell:has(> .qa-dock) { padding-bottom: calc(var(--qa-tabbar-h) + var(--qa-dock-h) + env(safe-area-inset-bottom) + var(--qa-getapp-h, 0px)); }
 body.qa-shell.qa-shell--over-art { padding-top: 0; }
-body.qa-shell:is(.qa-shell--notabs, .qa-shell--tg) { padding-bottom: calc(env(safe-area-inset-bottom) + var(--qa-getapp-h, 0px)); }
+body.qa-shell.qa-shell--tg { padding-bottom: calc(env(safe-area-inset-bottom) + var(--qa-getapp-h, 0px)); }
+body.qa-shell.qa-shell--tg:has(> .qa-dock) { padding-bottom: calc(var(--qa-dock-h) + env(safe-area-inset-bottom) + var(--qa-getapp-h, 0px)); }
 body.qa-shell.qa-shell--adopt { padding-top: 0; }
 .qa-shell .qa-tabs--section { --qa-sticky-top: calc(var(--qa-hdr-h) + env(safe-area-inset-top) + var(--qa-ribbon-h, 0px)); }
 .qa-shell { --qa-toast-bottom: calc(var(--qa-tabbar-h) + var(--qa-getapp-h, 0px)); }
-.qa-shell.qa-shell--detail { --qa-toast-bottom: var(--qa-dock-h); }
-.qa-shell:is(.qa-shell--notabs, .qa-shell--tg) { --qa-toast-bottom: var(--qa-getapp-h, 0px); }
+.qa-shell:has(> .qa-dock) { --qa-toast-bottom: calc(var(--qa-tabbar-h) + var(--qa-dock-h) + var(--qa-getapp-h, 0px)); }
+.qa-shell.qa-shell--tg { --qa-toast-bottom: var(--qa-getapp-h, 0px); }
 
 /* ---------- header (phone) / nav (desktop): one element ---------- */
 header.qa-hdr { position: fixed; z-index: var(--qa-z-nav); top: 0; left: 0; right: 0; width: auto; max-width: none; margin: 0; height: calc(var(--qa-hdr-h) + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 12px 0 14px;
@@ -133,7 +135,7 @@ a.qa-ribbon__item:hover { color: var(--qa-tx); background: var(--qa-wash); }
 /* ---------- 5-tab bar (phone) ---------- */
 nav.qa-tabbar { position: fixed; z-index: var(--qa-z-nav); left: 0; right: 0; bottom: 0; height: calc(var(--qa-tabbar-h) + env(safe-area-inset-bottom)); margin: 0; padding: 0 0 env(safe-area-inset-bottom);
   display: grid; grid-template-columns: repeat(5, 1fr); border: 0; background: var(--qa-glass); -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4); box-shadow: 0 -1px 0 var(--qa-rule); }
-.qa-shell:is(.qa-shell--detail, .qa-shell--notabs, .qa-shell--tg) .qa-tabbar { display: none; }
+.qa-shell.qa-shell--tg .qa-tabbar { display: none; }
 .qa-tabbar .qa-tabbar__a { position: relative; display: grid; justify-items: center; align-content: center; gap: 3px; min-width: 0; font-size: 11px; font-weight: 650; color: var(--qa-tx-3); transition: color var(--qa-t-quick) var(--qa-ease); -webkit-tap-highlight-color: transparent; }
 .qa-tabbar .qa-tabbar__a .qa-i { width: 23px; height: 23px; }
 .qa-tabbar .qa-tabbar__a.is-on { color: var(--qa-tx); }
@@ -146,8 +148,8 @@ nav.qa-tabbar { position: fixed; z-index: var(--qa-z-nav); left: 0; right: 0; bo
 /* ---------- Android: get the app, attached above the tab bar ---------- */
 aside.qa-getapp { position: fixed; z-index: var(--qa-z-nav); left: 0; right: 0; bottom: calc(var(--qa-tabbar-h) + env(safe-area-inset-bottom)); height: 52px; margin: 0; padding: 0 8px 0 14px; display: flex; align-items: center; gap: 10px;
   font-size: 14px; font-weight: 650; background: var(--qa-slab-a); box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); border-radius: 0; }
-.qa-shell:is(.qa-shell--detail, .qa-shell--notabs, .qa-shell--tg) .qa-getapp { bottom: env(safe-area-inset-bottom); }
-.qa-shell--detail .qa-getapp { bottom: calc(var(--qa-dock-h) + env(safe-area-inset-bottom)); }
+.qa-shell.qa-shell--tg .qa-getapp { bottom: env(safe-area-inset-bottom); }
+.qa-shell:has(> .qa-dock) .qa-getapp { bottom: calc(var(--qa-tabbar-h) + var(--qa-dock-h) + env(safe-area-inset-bottom)); }
 aside.qa-getapp.qx-getapp { max-width: none; margin: 0; border: 0; border-radius: 0; color: var(--qa-tx); font: 650 14px/1.3 var(--qa-sans); }
 .qa-getapp img { width: 28px; height: 28px; border-radius: 8px; }
 aside.qa-getapp.qx-getapp a.qa-btn { padding: 0 12px; border-radius: 10px; }
@@ -295,4 +297,37 @@ footer.qa-foot::after { content: ""; position: absolute; left: 50%; top: -120px;
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='3.5' y='6' width='17' height='13' rx='3' fill='none' stroke='black' stroke-width='1.8'/%3E%3Cpath d='M15.5 12.5h5M6 6l9-2.5 1 2.5' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='3.5' y='6' width='17' height='13' rx='3' fill='none' stroke='black' stroke-width='1.8'/%3E%3Cpath d='M15.5 12.5h5M6 6l9-2.5 1 2.5' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; }
   .qa-shell--detail #qa-wallet :is(#qxt-connect.on, .qa-wallet__btn.qa-btn--secondary)::before { background: var(--qa-tx); }
   .qa-shell--detail .qa-hdr .qa-hdr__title { min-width: 0; }
+}
+
+/* header balance (2026-11-12): the connected wallet's balance beside the wallet button; tap = this chain / all chains */
+.qa-hdr .qa-bal { flex: none; display: inline-grid; align-content: center; justify-items: end; height: 38px; padding: 0 11px; border-radius: var(--qa-r-m);
+  background: var(--qa-wash-2); color: var(--qa-tx); font: 760 14px/1.05 var(--qa-sans); font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; }
+.qa-hdr .qa-bal[hidden] { display: none; }
+.qa-hdr .qa-bal b { font-weight: 760; }
+.qa-hdr .qa-bal span { font-size: 10.5px; font-weight: 600; color: var(--qa-tx-3); letter-spacing: .01em; }
+.qa-hdr .qa-bal[data-mode="usd"] b { color: var(--qa-gold-hi); }
+@media (max-width: 430px) {
+  .qa-hdr .qa-bal { height: 40px; padding: 0 9px; font-size: 13px; }
+  /* connected: the wallet button is the 40 px icon so balance, wallet and menu fit at 360 */
+  .qa-hdr:has(.qa-bal:not([hidden])) #qa-wallet { flex: none; width: auto; }
+  .qa-hdr:has(.qa-bal:not([hidden])) #qa-wallet :is(#qxt-connect, .qa-wallet__btn, #qhc-trigger.qa-btn) {
+    position: relative; width: 40px; min-width: 40px; max-width: 40px; height: 40px; padding: 0; overflow: hidden;
+    color: transparent !important; font-size: 0 !important; white-space: nowrap; }
+  .qa-hdr:has(.qa-bal:not([hidden])) #qa-wallet :is(#qxt-connect, .qa-wallet__btn, #qhc-trigger.qa-btn)::before {
+    content: ""; position: absolute; inset: 0; margin: auto; width: 20px; height: 20px; background: var(--qa-tx);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='3.5' y='6' width='17' height='13' rx='3' fill='none' stroke='black' stroke-width='1.8'/%3E%3Cpath d='M15.5 12.5h5M6 6l9-2.5 1 2.5' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='3.5' y='6' width='17' height='13' rx='3' fill='none' stroke='black' stroke-width='1.8'/%3E%3Cpath d='M15.5 12.5h5M6 6l9-2.5 1 2.5' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; }
+}
+/* the token terminal on small phones: its header also carries Watch and Share, so the title gives way to the balance */
+@media (max-width: 430px) { .qa-shell--detail .qa-hdr:has(.qa-hdr__actions > *):has(.qa-bal:not([hidden])) .qa-hdr__title { display: none; } }
+/* wrapfix (2026-11-12): the footer never sets the page's width (its link row asked for 515 px inside /offline's grid). */
+.qa-foot { contain: inline-size; justify-self: stretch; }
+/* shellfix3 (2026-11-12): the tab bar is solid so nothing shows through it; the connected wallet (balance showing) is
+   the outlined icon button, gold is only for Connect. */
+nav.qa-tabbar { background: var(--qa-floor); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 -1px 0 var(--qa-rule-2); }
+@media (max-width: 430px) {
+  /* the right-hand group keeps its size so the title takes the ellipsis (the call page at 360 ran to 366 px) */
+  .qa-hdr .qa-hdr__end { flex-shrink: 0; }
+  .qa-hdr:has(.qa-bal:not([hidden])) #qa-wallet :is(#qxt-connect, .qa-wallet__btn, #qhc-trigger.qa-btn) {
+    background: transparent !important; box-shadow: inset 0 0 0 1px var(--qa-rule-2) !important; }
+  .qa-hdr:has(.qa-bal:not([hidden])) #qa-wallet :is(#qxt-connect, .qa-wallet__btn, #qhc-trigger.qa-btn)::before { background: var(--qa-tx) !important; }
 }

@@ -339,7 +339,7 @@
 .qst-dock__s > span { transition: color .9s var(--qa-ease), text-shadow .9s var(--qa-ease); }
 .qst-dock__s > span.is-tick { color: var(--qa-gold-hi); text-shadow: 0 0 14px rgba(240,218,174,.6); transition: none; }
 .qst-dock__btn { height: 40px; }
-.qst-has-dock.qa-shell--detail { padding-bottom: calc(70px + env(safe-area-inset-bottom)); --qa-toast-bottom: 70px; }
+.qst-has-dock.qa-shell--detail { padding-bottom: calc(70px + var(--qa-tabbar-h) + env(safe-area-inset-bottom)); --qa-toast-bottom: calc(70px + var(--qa-tabbar-h)); }
 
 /* ---------- desktop: rail | step | preview ---------- */
 @media (min-width: 1100px) {
@@ -384,3 +384,5 @@
 @media (prefers-reduced-motion: reduce) {
   .qst-card__img, .qst-card__sheen, .qst-hook, .qst-hook__clip::before { animation: none !important; }
 }
+/* the studio dock sits directly above the permanent tab bar (2026-11-12); Telegram has no tab bar */
+@media (max-width: 1099px) { .qst-dock { bottom: calc(var(--qa-tabbar-h) + env(safe-area-inset-bottom)); padding-bottom: 11px; } .qa-shell--tg .qst-dock { bottom: 0; padding-bottom: calc(11px + env(safe-area-inset-bottom)); } .qst-has-dock.qa-shell--tg { padding-bottom: calc(70px + env(safe-area-inset-bottom)); } }

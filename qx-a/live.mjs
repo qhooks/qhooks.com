@@ -84,7 +84,7 @@ export function startLive(rib) {
       first = false;
       // The resting list: every QHooks launch that traded today, busiest first, then the burn total.
       const rest = markets.filter((m) => m.tr > 0).sort((a, b) => (b.v || 0) - (a.v || 0))
-        .map((m) => ({ symbol: m.s, img: m.i, side: (m.ch || 0) >= 0 ? 'buy' : 'sell', change: m.ch, label: m.v != null ? fmt.usd(m.v) + ' 24h' : null, href: market(m) }));
+        .map((m) => ({ symbol: m.s, img: m.i, side: (m.ch || 0) >= 0 ? 'buy' : 'sell', change: m.ch, label: m.v != null ? fmt.usd(m.v) + ' volume' : null, href: market(m) }));
       const burned = burns?.total ? tokens(burns.total) : null;
       if (burned) rest.push({ symbol: 'QHOOKS', side: 'burn', label: fmt.tok(burned) + ' burned', href: '/qhooks-token' });
       if (rest.length) rib.set(rest);
@@ -101,8 +101,8 @@ export function startLive(rib) {
         const p = prev.get(m.c + m.k);
         if (!p) { if (m.at && Date.now() - m.at < 864e5) rib.news({ kind: 'launch', label: 'New launch', text: '$' + m.s + (m.n ? ' · ' + m.n : ''), img: m.i, href: market(m) }); continue; }
         const db = (m.b ?? 0) - (p.b ?? 0), ds = (m.se ?? 0) - (p.se ?? 0), one = (m.tr ?? 0) - (p.tr ?? 0) === 1, dv = (m.v ?? 0) - (p.v ?? 0);
-        if (db > 0) rib.push({ symbol: m.s, img: m.i, side: 'buy', label: db > 1 ? db + ' buys' : 'Buy', usd: one && ds <= 0 && dv > 0 ? dv : null, href: market(m) });
-        if (ds > 0) rib.push({ symbol: m.s, img: m.i, side: 'sell', label: ds > 1 ? ds + ' sells' : 'Sell', usd: one && db <= 0 && dv > 0 ? dv : null, href: market(m) });
+        if (db > 0) rib.push({ symbol: m.s, img: m.i, side: 'buy', count: db, usd: one && ds <= 0 && dv > 0 ? dv : null, href: market(m) });
+        if (ds > 0) rib.push({ symbol: m.s, img: m.i, side: 'sell', count: ds, usd: one && db <= 0 && dv > 0 ? dv : null, href: market(m) });
       }
     }
     prev = new Map(markets.map((m) => [m.c + m.k, m]));
@@ -111,7 +111,7 @@ export function startLive(rib) {
     if (seenCalls) for (const c of calls?.c || []) if (!seenCalls.has(c.id)) rib.news({ kind: 'call', label: 'New call', text: fmt.short(c.w) + ' called $' + c.s, w: c.w, href: '/community#callers' });
     if (seenBurns) for (const b of burns?.r || []) if (!seenBurns.has(b.tx)) {
       rib.news({ kind: 'burn', label: 'Buyback', text: 'burned ' + tokAmt(tokens(b.wei)) + ' QHOOKS', href: '/qhooks-token' });
-      rib.push({ symbol: 'QHOOKS', side: 'burn', label: 'Burned ' + tokAmt(tokens(b.wei)), href: '/qhooks-token' });
+      rib.push({ symbol: 'QHOOKS', side: 'burn', label: 'buyback burned ' + tokAmt(tokens(b.wei)), href: '/qhooks-token' });
     }
     seenCalls = callIds; seenBurns = burnTx;
   }

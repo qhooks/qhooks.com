@@ -104,8 +104,10 @@ export function homePicker({document: doc = globalThis.document, getOwner = () =
     hint.hidden = pref.chainId !== 1;
     const result = owner && homeTransfer(owner, store); recovery.replaceChildren();
     if (result) {
-      recovery.append(doc.createTextNode(homePanelLine(result)));
-      if (result.landed && !result.completed) {
+      // menufast (2026-11-12): the button says Move home; the line doesn't repeat it
+      const moveable = result.landed && !result.completed;
+      recovery.append(doc.createTextNode(moveable ? homePanelLine(result).replace(/ · Move home$/, '') : homePanelLine(result)));
+      if (moveable) {
         const move = el('button', 'Move home'); move.type = 'button';
         move.addEventListener('click', async () => { try { const {openMoveFunds} = await import('./qx-move-funds.mjs'); const home = homeToken(pref); await openMoveFunds({homeCurrency: true, from: {chainId: result.chainId, token: result.address}, to: {chainId: pref.chainId, token: home.address}, amount: result.amountText}); } catch (e) { note.textContent = tradeError(e); } });
         recovery.append(move);

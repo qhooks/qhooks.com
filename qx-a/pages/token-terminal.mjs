@@ -76,6 +76,26 @@ top.append(stage, tickerSlot);
 // The terminal's own identity nodes move into the stage (they keep their ids, so the terminal still finds them).
 symWrap.append($('qxt-symbol'), sealEl);
 $('qxt-symbol').classList.add('ta-sym-h');
+// shellfix3 (2026-11-12): the full ticker always shows. Step the size down until it fits its column (15 px floor),
+// then wrap; refit when the symbol changes or the column resizes.
+{
+  const symH = $('qxt-symbol'); let fitW = -1, fitText = null;
+  const fitSym = () => {
+    const w = symH.clientWidth, t = symH.textContent;
+    if (w === fitW && t === fitText) return; fitW = w; fitText = t;
+    const over = () => symH.scrollWidth > symH.clientWidth + 1;
+    const step = (floor) => { let s = parseFloat(getComputedStyle(symH).fontSize) || 26; while (over() && s > floor) { s -= 1; symH.style.fontSize = s + 'px'; } };
+    symH.style.fontSize = ''; symH.classList.remove('ta-sym-wrap'); ident.classList.remove('ta-long');
+    step(18);
+    // a long ticker: the socials move to their own row so the ticker gets the full width, then step down again
+    if (over()) { symH.style.fontSize = ''; ident.classList.add('ta-long'); step(15); }
+    if (over()) symH.classList.add('ta-sym-wrap');
+    fitW = symH.clientWidth;
+  };
+  new MutationObserver(() => requestAnimationFrame(fitSym)).observe(symH, { childList: true, characterData: true, subtree: true });
+  if (globalThis.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(fitSym)).observe(symWrap);
+  requestAnimationFrame(fitSym);
+}
 nameMeta.append($('qxt-name'));
 const markSlot = h('span', { class: 'ta-marks' }); meta.append(markSlot);
 for (const id of ['qxt-copy']) { const b = $(id); if (b) { b.classList.add('ta-copy'); b.prepend(icon('copy')); meta.append(b); } }

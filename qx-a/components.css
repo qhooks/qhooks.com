@@ -318,7 +318,7 @@ a.qa-row:hover, button.qa-row:hover { background: var(--qa-wash); }
 .qa-lines dt { color: var(--qa-tx-3); }
 .qa-lines dd { margin: 0; font-weight: 680; }
 .qa-fine { margin-top: 10px; font-size: 12px; line-height: 1.45; color: var(--qa-tx-3); }
-.qa-dock { position: fixed; z-index: var(--qa-z-dock); left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 12px calc(12px + env(safe-area-inset-bottom));
+.qa-dock { position: fixed; z-index: var(--qa-z-dock); left: 0; right: 0; bottom: calc(var(--qa-tabbar-h) + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 12px 10px;
   background: linear-gradient(180deg, transparent, var(--qa-glass) 32%, var(--qa-floor)); }
 .qa-scrim { position: fixed; inset: 0; z-index: var(--qa-z-sheet); background: rgba(0,0,0,.58); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); animation: qa-fade var(--qa-t-quick) var(--qa-ease) both; }
 .qa-sheet { position: fixed; z-index: calc(var(--qa-z-sheet) + 1); left: 0; right: 0; bottom: 0; max-height: 92vh; overflow: auto; padding: 10px 18px calc(16px + env(safe-area-inset-bottom)); border-radius: var(--qa-r-slab) var(--qa-r-slab) 0 0;
@@ -547,3 +547,7 @@ a.qa-row:hover, button.qa-row:hover { background: var(--qa-wash); }
   .qa-stage--wide .qa-quote { padding: 18px 0 0; }
 }
 .qa-quote { padding: 16px var(--qa-pad) 0; }
+/* Telegram Mini App: no tab bar, so the dock sits on the bottom edge again */
+.qa-shell--tg .qa-dock { bottom: 0; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+/* wrapfix (2026-11-12): long unbroken strings in post text (links, addresses) wrap instead of widening the page. */
+.qa-post__text { overflow-wrap: anywhere; }

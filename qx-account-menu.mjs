@@ -115,7 +115,9 @@ if (dialog) {
     amts.append(line(r.native.amount, r.native.symbol, r.native.usd));
     if (r.stable?.amount > 0) amts.append(line(r.stable.amount, r.stable.symbol, r.stable.usd));
     for (const t of r.tokens || []) if (t.amount > 0) amts.append(line(t.amount, t.symbol, t.usd));
-    if (r.error) amts.append(el('small', 'qwm-err', 'Didn’t answer'));
+    // menufast (2026-11-12): a row still being read keeps its last amounts and says so; one that never answered says that
+    if (r.refreshing || r.tokensPending) amts.append(el('small', 'qwm-err', 'Refreshing'));
+    else if (r.error) amts.append(el('small', 'qwm-err', 'Didn’t answer'));
     if (here) { b.setAttribute('aria-current', 'true'); b.title = 'Your wallet is on ' + r.name; }
     else { b.title = 'Switch your wallet to ' + r.name; b.disabled = !!switching; b.addEventListener('click', () => switchTo(r.chainId)); }
     b.append(img, name, amts); const li = el('li'); li.append(b);
@@ -133,7 +135,8 @@ if (dialog) {
     }
     const pref = loadLocalHome(cur?.owner);
     if (moveFunds && Number(r.chainId) !== pref.chainId && !r.error && r.native.amount > 0) {
-      const back = el('button', 'qwm-act', fmtAmt(r.native.amount) + ' ' + r.native.symbol + ' on ' + r.name + ' · Move home'); back.type = 'button';
+      // menufast (2026-11-12): the row already shows the amount and chain; the button just says what it does
+      const back = el('button', 'qwm-act', 'Move home'); back.type = 'button'; back.setAttribute('aria-label', 'Move ' + fmtAmt(r.native.amount) + ' ' + r.native.symbol + ' on ' + r.name + ' home');
       back.addEventListener('click', async () => { try { const token = homeToken(pref); dialog.close(); await moveFunds.openMoveFunds({homeCurrency: true, from: {chainId: Number(r.chainId), token: moveFunds.NATIVE_TOKEN}, to: {chainId: pref.chainId, token: token.address}}); } catch { balStatus.textContent = 'Home asset is refreshing.'; } });
       li.append(back);
     }
@@ -159,7 +162,15 @@ if (dialog) {
   function loadBalances() {
     if (!cur || !dialog.open) return;
     const owner = cur.owner, { fresh } = cachedBalances(owner); renderBalances();
-    if (!fresh) refreshBalances(owner).then(() => { if (cur?.owner === owner) renderBalances(); }, () => { if (cur?.owner === owner && !cachedBalances(owner).data) { balStatus.textContent = 'Balances didn’t load. Close and reopen to retry.'; } });
+    if (fresh) return;
+    // menufast (2026-11-12): each chain's row paints as it lands; chains that didn't answer get one more read while the
+    // menu stays open.
+    const paint = () => { if (cur?.owner === owner) renderBalances(); };
+    refreshBalances(owner, { onProgress: paint }).then((d) => {
+      paint();
+      const slow = (d?.rows || []).filter(r => r.refreshing || r.error).map(r => chainById(String(r.chainId))).filter(Boolean);
+      if (slow.length) setTimeout(() => { if (dialog.open && cur?.owner === owner) refreshBalances(owner, { chains: slow, onProgress: paint }).then(paint, () => {}); }, 2500);
+    }, () => { if (cur?.owner === owner && !cachedBalances(owner).data) { balStatus.textContent = 'Balances didn’t load. Close and reopen to retry.'; } });
   }
   // Tapping a chain switches the wallet there. The hub treats a network change as a new connection, so (like the
   // terminal and My QHooks) the page is told first and the same wallet is rejoined instead of shown disconnected.
@@ -190,7 +201,8 @@ if (dialog) {
     const k = cashKey = cur.owner; out.textContent = '';
     try {
       const v = await moveFunds.cashTotal(cur.owner), usd = Number(typeof v === 'object' ? v?.usd : v);
-      if (k === cashKey && Number.isFinite(usd)) out.textContent = 'Cash $' + usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      // menufast (2026-11-12): this is the stablecoins total (USDC/USDG); "Cash $0.00" next to the full total confused
+      if (k === cashKey && Number.isFinite(usd)) out.textContent = usd > 0 ? 'Stablecoins $' + usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
     } catch { if (k === cashKey) cashKey = ''; }
   }
   function moveIntoFoot() {

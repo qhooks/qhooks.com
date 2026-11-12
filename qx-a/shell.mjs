@@ -252,6 +252,8 @@ export function mountShell(o = {}) {
     // Switch between list and detail in place (the terminal does this on #t= / #m= hash changes, without a reload).
     setMode(mode, { title, back } = {}) { apply({ mode, title, back }); },
   };
+  // the connected wallet's balance beside the wallet button, on every page (qx-a/balance.mjs)
+  if (!adopt) import('./balance.mjs').then((m) => m.mountBalance(header.querySelector('.qa-hdr__end'), walletSlot)).catch(() => {});
   S = { api, apply };
   apply({ ...o, footer: o.footer !== false && !(adopt && o.footer == null) });
   if (!adopt && !o.wallet) adoptWallet(walletSlot);
@@ -456,12 +458,21 @@ export function makeRibbon({ speed = 38 } = {}) {
   const el = h('div', { class: 'qa-ribbon', role: 'region', 'aria-label': 'Live across QHooks' }, track, newsEl);
   track.append(h('span', { class: 'qa-ribbon__item qa-ribbon__idle' }, h('span', { class: 'qa-ribbon__dot', 'aria-hidden': 'true' }), h('b', null, 'Live across QHooks'), h('span', null, 'Refreshing…')));
   let x = 0, last = 0, paused = false, hover = false, recent = [], raf = 0, queue = [], newsTimer = 0;
+  // ribbonwords (2026-11-12): each item reads as what happened ("0x3ce8… bought $121 QWERTY"), never a bare "$0.18"
+  // next to a symbol, which reads as a price.
+  const words = (t) => {
+    const sym = h('b', null, t.symbol), usd = t.usd != null ? h('span', { class: 'qa-ribbon__usd' }, fmt.usdExact(t.usd)) : null;
+    if (t.side === 'burn') return t.label ? [sym, h('span', null, t.label)] : [h('span', null, 'Buyback burned'), usd, usd ? h('span', null, 'of') : null, sym];
+    if (t.change != null) return [sym, h('span', { class: t.change >= 0 ? 'qa-ribbon__up' : 'qa-ribbon__down' }, fmt.pct(t.change) + ' 24h'), t.label ? h('span', null, t.label) : null];
+    if (t.label) return [sym, h('span', null, t.label), usd];
+    const sell = t.side === 'sell';
+    if (t.count > 1) return [h('span', null, t.count + (sell ? ' sells on' : ' buys on')), sym];
+    if (t.w) return [h('span', null, fmt.short(t.w)), h('span', null, sell ? 'sold' : 'bought'), usd, sym];
+    return [h('span', null, sell ? 'Sold' : 'Bought'), usd, sym];
+  };
   const item = (t, fresh) => {
     const kids = [ico(t.side === 'burn' ? 'flame' : t.side === 'drop' ? 'gift' : t.side === 'sell' ? 'down' : 'up', 'qa-glyph'),
-      t.img ? h('i', { style: { 'background-image': `url("${t.img}")` } }) : null, h('b', null, t.symbol),
-      t.change != null ? h('span', { class: t.change >= 0 ? 'qa-ribbon__up' : 'qa-ribbon__down' }, fmt.pct(t.change)) : null,
-      t.label ? h('span', null, t.label) : null, t.usd != null ? h('span', { class: 'qa-ribbon__usd' }, fmt.usdExact(t.usd)) : null,
-      t.w ? h('span', null, fmt.short(t.w)) : null];
+      t.img ? h('i', { style: { 'background-image': `url("${t.img}")` } }) : null, ...words(t)];
     return h(t.href ? 'a' : 'span', { class: `qa-ribbon__item is-${t.side || 'buy'}${fresh && !RM ? ' is-fresh' : ''}`, href: t.href || null, tabindex: t.href ? '-1' : null }, kids);
   };
   const fill = () => { if (!recent.length || RM) return; let guard = 0; while (track.scrollWidth < el.clientWidth * 2.2 && guard++ < 60) track.append(item(recent[guard % recent.length], false)); };

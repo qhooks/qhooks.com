@@ -419,9 +419,9 @@ body.qa.qxt .qxt-side { display: flex; flex-direction: column; gap: 0; padding: 
   body.qa.qxt .ta-slab-extras .ta-slab-tape-wrap { display: none; }
 }
 body.qa.qxt .ta-dock { display: none; }
-@media (max-width: 1099px) { body.qa.qxt.ta-token:not(.ta-sheet-open) .ta-dock { display: grid; } body.qa.qxt.ta-token { padding-bottom: calc(var(--qa-dock-h) + env(safe-area-inset-bottom)); } body.qa.qxt.ta-token .qa-tabbar { display: none; } }
+@media (max-width: 1099px) { body.qa.qxt.ta-token:not(.ta-sheet-open) .ta-dock { display: grid; } body.qa.qxt.ta-token { padding-bottom: calc(var(--qa-tabbar-h) + var(--qa-dock-h) + env(safe-area-inset-bottom)); } body.qa.qxt.ta-token.qa-shell--tg { padding-bottom: calc(var(--qa-dock-h) + env(safe-area-inset-bottom)); } }
 body.qa.qxt.qa-shell { --qa-toast-bottom: var(--qa-tabbar-h); }
-body.qa.qxt.ta-token { --qa-toast-bottom: var(--qa-dock-h); }
+body.qa.qxt.ta-token { --qa-toast-bottom: calc(var(--qa-tabbar-h) + var(--qa-dock-h)); }
 /* ticket internals */
 body.qa.qxt #qxt-ticket { font-size: 14px; color: var(--qa-tx-2); }
 body.qa.qxt #qxt-ticket .qxt-side-toggle { display: inline-flex; gap: 22px; padding: 0; margin: 0 0 12px; border-radius: 0; background: none; }
@@ -725,3 +725,10 @@ a.cx-who__link { display: inline-flex; align-items: center; gap: 3px; min-height
 a.cx-who__link:hover, a.cx-who__link:focus-visible { text-decoration-color: var(--qa-gold); color: var(--qa-gold-hi); }
 .cx-who__chev { font-weight: 700; font-size: 1.15em; line-height: 1; color: var(--qa-gold); transform: translateY(-1px); }
 a.cx-face { min-width: 44px; min-height: 44px; display: grid; place-items: start center; flex: none; align-self: start; border-radius: 50%; }
+/* shellfix3 (2026-11-12): the ticker is never cut; token-terminal.mjs steps the size down to fit, wrapping is the last resort. */
+body.qa.qxt h1.ta-sym-h { text-overflow: clip; }
+body.qa.qxt h1.ta-sym-h.ta-sym-wrap { white-space: normal; overflow-wrap: anywhere; line-height: 1.05; }
+@media (max-width: 1099px) {
+  .ta-stage .qa-ident.ta-long { grid-template-areas: "coin sym sym" "soc soc soc" "meta meta meta"; }
+  .ta-stage .qa-ident.ta-long .ta-soc { justify-self: start; }
+}

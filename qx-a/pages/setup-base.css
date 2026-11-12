@@ -133,5 +133,6 @@
  .setup .qa-wallet__btn { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 .setup .qa-wallet__btn { min-height: 44px; height: 44px; }
-.setup.qa-shell--detail { padding-bottom: env(safe-area-inset-bottom); }
+.setup.qa-shell--detail { padding-bottom: calc(var(--qa-tabbar-h) + env(safe-area-inset-bottom)); }
+.setup.qa-shell--detail.qa-shell--tg { padding-bottom: env(safe-area-inset-bottom); }
 .setup .qwallet-consent { min-height: 44px; }
