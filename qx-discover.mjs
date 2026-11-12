@@ -264,7 +264,7 @@ export function renderProfile(h, watched = false) {
   const tape=h.tape;
   const tapeActivity=tape && tape.pools!=null && tape.swaps24h!=null && Number(tape.pools)===0 && Number(tape.swaps24h)===0
     ? note('No pools for this hook on the Tape yet.')
-    : tape ? `<dl class="qd-facts">${fact('Tape pools',formatNumber(tape.pools))}${fact('Tape swaps, 24h',formatNumber(tape.swaps24h))}${tape.lastSwapBlock!=null?fact('Last swap block',formatNumber(tape.lastSwapBlock)):''}</dl>`+note(sourceText(tape,'QHooks finalized PoolManager logs'))
+    : tape ? `<dl class="qd-facts">${fact('Tape pools',formatNumber(tape.pools))}${fact('Tape swaps, 24h',formatNumber(tape.swaps24h))}${tape.lastSwapBlock!=null?fact('Last swap block',formatNumber(tape.lastSwapBlock)):''}</dl>`+note(sourceText(tape,'QHooks confirmed PoolManager logs'))
     : note('No Tape coverage was returned for this hook.');
   const activity=panel('Activity',`<dl class="qd-facts">${fact('Indexed pools',formatNumber(h.board?.pools,'no snapshot for this hook'))}${fact('Indexed swaps',formatNumber(h.board?.swaps,'no snapshot for this hook'))}</dl>`+note(boardNote)+tapeActivity);
   const build=panel('Build one like this',`<div class="qd-build">${(h.buildLike || []).map(b=>`<article><p class="qd-kicker">${esc(b.kind)}</p><h3>${link(safeURL(b.url,true),b.title)}</h3><p>${esc(b.why)}</p></article>`).join('') || note('No matching Lab template, launch block or module was returned.')}</div>`);
@@ -343,7 +343,7 @@ export function renderTapeWindow(body) {
     if(!w||!Number.isFinite(Number(w.fromBlock))||!Number.isFinite(Number(w.toBlock)))return name+'no window yet';
     return `${name}blocks ${formatNumber(w.fromBlock)}–${formatNumber(w.toBlock)}${w.complete?'':' (still filling)'}${counts?`, ${formatNumber(counts.swaps)} swaps in ${formatNumber(counts.pools)} pools`:''}`;
   });
-  return parts.join(' · ')+` · finalized PoolManager logs, ${formatTime(body.generatedAt)}`;
+  return parts.join(' · ')+` · confirmed PoolManager logs, ${formatTime(body.generatedAt)}`;
 }
 export function renderTapeActivity(body,names=new Map()) {
   const hooks=tapeActivityRows(body).slice().sort((a,b)=>b.swaps-a.swaps), top=Math.max(1,...hooks.map(h=>Number(h.swaps)||0));
@@ -567,7 +567,7 @@ function boot() {
     }
     async function load(){
       if(busy)return;busy=true;const current=++generation;
-      status('Refreshing finalized records…');if(liveEl)liveEl.textContent='Refreshing…';$('qd-refresh').disabled=true;for(const el of form.elements)el.disabled=true;
+      status('Refreshing confirmed records…');if(liveEl)liveEl.textContent='Refreshing…';$('qd-refresh').disabled=true;for(const el of form.elements)el.disabled=true;
       try{
         const p=params(),kinds=['status','pools','swaps','activity'];
         const urlOf=kind=>API+'/tape/'+kind+'?'+(kind==='activity'?p:new URLSearchParams(kind==='status'?{}:{chain:p.get('chain'),limit:'25'}));
@@ -576,7 +576,7 @@ function boot() {
         if(current!==generation)return;
         const failures=apply(kinds,results,p,false);
         drawRows();resolveNames(current);refreshedAt=Date.now();liveEl?.classList.add('is-on');
-        status(failures.length?'Some records could not refresh · '+failures.join('; ')+'. Last loaded records remain visible.':'Finalized records refreshed · '+formatTime(new Date().toISOString()));
+        status(failures.length?'Some records could not refresh · '+failures.join('; ')+'. Last loaded records remain visible.':'Confirmed records refreshed · '+formatTime(new Date().toISOString()));
       }catch(e){fail(e);}
       finally{busy=false;$('qd-refresh').disabled=false;for(const el of form.elements)el.disabled=false;}
     }
