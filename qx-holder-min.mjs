@@ -22,7 +22,7 @@ export async function applyHolderMin(doc = document) {
   const n = await holderMinTokens();
   if (!n) return false;
   const v = fullText(n);
-  doc.querySelectorAll('[data-qx-holdermin]').forEach(e => { e.textContent = v; });
+  doc.querySelectorAll('[data-qx-holdermin]').forEach(e => { e.textContent = e.dataset.qxHoldermin === 'short' ? shortText(n) : v; });   // short: "100K", the approved cashback wording
   const w = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
   for (let t = w.nextNode(); t; t = w.nextNode()) if (THRESHOLD_TEXT.test(t.textContent)) { THRESHOLD_TEXT.lastIndex = 0; t.textContent = t.textContent.replace(THRESHOLD_TEXT, v + '+ QHOOKS'); }
   return true;

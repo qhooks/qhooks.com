@@ -387,7 +387,7 @@ function buildTraders() {
   T.el = h('div', null, id, h('div', { class: 'hm-trade-px' }, T.price.el, T.change.el), T.chartBox, T.stats.el);
   tradeBox.replaceChildren(T.el);
   T.tape = tape({ rows: 8 });
-  tradeSide?.replaceChildren(h('div', { class: 'hm-live-h' }, h('b', null, 'Trades'), h('span', null, 'QHOOKS, newest first')), T.tape.el, h('a', { class: 'qa-link hm-call-go', href: '/terminal#t=' + QCHAIN + ':' + QH }, 'Trade here for 40% back →'));
+  tradeSide?.replaceChildren(h('div', { class: 'hm-live-h' }, h('b', null, 'Trades'), h('span', null, 'QHOOKS, newest first')), T.tape.el, h('a', { class: 'qa-link hm-call-go', href: '/terminal#t=' + QCHAIN + ':' + QH }, 'Trade QHOOKS →'));
   T.chart = liveChart(canvas, {
     series: () => S.series,
     getLive: () => ({ ts: nowS(), price: qPrice() || (S.series.length ? S.series[S.series.length - 1][1] : 0) }),

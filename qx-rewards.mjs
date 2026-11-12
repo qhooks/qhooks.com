@@ -157,7 +157,7 @@ async function load(notice = '') {
     list, status, refresh,
     h('section', { class: 'qxt-rewards-ref' },
       h('h3', {}, 'Bring traders. Earn rewards.'),
-      h('p', {}, 'Share your link with your community. Earn 20% of QHooks’ terminal fee on eligible referred EVM trades. They receive 30% of that fee as cashback.'),
+      h('p', {}, 'Bring traders, get 20% of their fee. They get 30% back on EVM trades, 40% on Robinhood Chain if they hold 100K QHOOKS.'),
       h('div', { class: 'qxt-rewards-link' }, h('code', { title: link }, 'qhooks.com/terminal.html?ref=' + short(me)), copy)));
   let snapshot;
   try { snapshot = await scan(me, generation); } catch { snapshot = unavailable(me); }

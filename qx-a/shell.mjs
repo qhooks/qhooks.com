@@ -47,7 +47,7 @@ export const SECTIONS = [
     ['Boards', '/community#boards', 'Make a call and rally a token’s community'], ['Get the app', '/android', 'QHooks for Android and iPhone']] },
   { id: 'grow', title: 'Community', links: [
     ['QHOOKS', '/qhooks-token', 'The QHOOKS token and its plan'], ['Make a call', '/community#make-a-call', 'Put a token thesis on record'],
-    ['Calls & callers', '/community#callers', 'See public calls and caller track records'], ['Cashback & referrals', '/me#qa-rewards', '30% of the trading fee back to you; 20% to referrers'],
+    ['Calls & callers', '/community#callers', 'See public calls and caller track records'], ['Cashback & referrals', '/me#qa-rewards', '30% back on EVM trades · 40% on Robinhood Chain if you hold 100K QHOOKS'],
     ['Portfolio', '/portfolio', 'Every holding, seven chains and Solana'], ['My QHooks', '/me', 'Your launches, stakes, rewards and claims'],
     ['Holder staking', '/stake', 'Stake for a share of a launch’s income'], ['Buyback and burn', '/hooks#block-buyback', 'Charges buy the token back and burn it'],
     ['Graduation', '/graduation', 'Choose when liquidity moves to its next pool'], ['Team locks', '/hooks#hk-beside-h', 'Cliffs, drips and a public sell notice']] },

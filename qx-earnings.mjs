@@ -187,7 +187,7 @@ export async function rewardsSection(me, refresh = () => {}) {
     h('button',{type:'button',class:'qa-btn',onclick:refresh},'Refresh reward balances'));
   const link=referralLink(me),copy=h('button',{type:'button',class:'qa-btn'},'Copy referral link'),status=h('p',{class:'qa-status',role:'status','aria-live':'polite'});
   copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(link);status.textContent='Referral link copied. Token-specific calls carry their own trade link.';}catch{status.replaceChildren('Copy your link: ',h('a',{href:link},link));}});
-  const ref=h('div',{class:'qa-ref'},h('span',{},'Bring traders. Earn 20% of the trading fee from eligible referred trades. They get 30% cashback.'),h('code',{},link),copy,status);
+  const ref=h('div',{class:'qa-ref'},h('span',{},'Bring traders, get 20% of their fee. They get 30% back on EVM trades, 40% on Robinhood Chain if they hold 100K QHOOKS.'),h('code',{},link),copy,status);
   return{rows,partial:snapshot.partial,snapshot,coverage,ref};
 }
 
@@ -218,7 +218,7 @@ export async function renderEarnings(me, {launches, earn, vests, rewards, built,
     section('qa-launches', 'Your launches', 'Income waiting in each launch, your share of it, and where its keys stand. The dashboard has everything for one launch.', coverage?.launches==='unavailable'?[h('p',{class:'qa-empty'},'Your launches could not be read. Refresh the account to retry.')]:await launchesSection(me, launches, refresh)),
     section('qa-earn', 'Earning', 'Stakes and raffle entries in the modules of the launches you hold.', earn.length ? earn : [h('p', { class: 'qa-empty' }, partial?'Some income could not be read. Refresh the account to check again.':'No stakes or raffle entries yet. Launches that pay holders show a Staking or Modules tab in the terminal.')]),
     vests.length ? section('qa-vest', 'Vesting streams', 'Your share of a launch, reaching you evenly over time.', vests) : null,
-    includeRewards ? section(rewardsId, 'Rewards', 'Terminal trades earn 30% of their fee back; referrals earn 20%. One balance per currency, per chain.', [...(rewards.rows.length ? rewards.rows : [h('p', { class: 'qa-empty' }, rewards.partial?'Some reward balances could not be read. Refresh to retry.':'No claimable balance in the checked assets yet.')]), rewards.coverage, rewards.ref].filter(Boolean)) : null,
+    includeRewards ? section(rewardsId, 'Rewards', '30% back on EVM trades · 40% on Robinhood Chain if you hold 100K QHOOKS. Bring traders, get 20% of their fee. One balance per currency, per chain.', [...(rewards.rows.length ? rewards.rows : [h('p', { class: 'qa-empty' }, rewards.partial?'Some reward balances could not be read. Refresh to retry.':'No claimable balance in the checked assets yet.')]), rewards.coverage, rewards.ref].filter(Boolean)) : null,
     built ? section('qa-built', 'Modules you built', 'Your builder share of modules in the marketplace.', built) : null
   ].filter(Boolean);
 }
