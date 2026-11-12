@@ -12,6 +12,7 @@ import {pendingHomeBuy, dismissHomeBuy, homeBuyRecoveryView, finishHomeBuy} from
 import {prepareTradeThesis,recordTerminalTrade} from './qx-trade-record.mjs';
 import {renderSolanaRewards,enrollSolanaReferrer,recordSolanaRewards} from './qx-solana-rewards.mjs';
 import {mountTradingSettings} from './qx-trading-settings.mjs';
+import {mountAvailable, availableText} from './qx-ticket-funds.mjs';
 import {resolveTradingTolerance} from './qx-trading-preferences.mjs';
 // Terminal trade ticket: market buys and sells through the launch's live pool and its blocks, amount
 // presets, price tolerance, price impact, and buys paid in the native coin where the chain allows.
@@ -82,11 +83,13 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const config = await homeConfig().catch(() => ({enabled: false}));
     const pref = await loadHomePref(owner).catch(() => loadLocalHome(owner));
     if (intent !== selection || state !== st || busy || recovery || owner !== connectedAddress()) return;
-    homeEnabled = config.enabled; homePref = pref;
+    homeEnabled = config.enabled; homePref = pref; homeRow.hidden = !homeEnabled; homeRowName.textContent = homeName(pref);
     paySel.querySelector('option[value="home"]')?.remove();
     if (!st?.sol && homeTicketDefault(st?.chainId, pref, homeEnabled) === 'home') {
       paySel.prepend(h('option', {value: 'home'}, 'Home (' + homeName(pref) + ')'));
-      if (defaultSelection && side === 'buy') { homeSelected = true; pay = homeMarketPay(); }
+      // 2026-11-12: Home stays a choice in the pay chip, never the default. Buys start from the token's own chain; when
+      // that is short, the ticket uses the wrapped coin there, then moves funds from another chain (offerFunding).
+      if (defaultSelection && side === 'buy') { homeSelected = false; pay = homeMarketPay(); }
     } else {
       homeSelected = false;
       if (homeEnabled && defaultSelection && side === 'buy' && st && !st.sol && Number(st.chainId) === pref.chainId) {
@@ -108,7 +111,15 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   const thesis = h('input', {type:'text',maxLength:280,placeholder:'Buy thesis · optional, 140 characters',ariaLabel:'Public buy thesis',autocomplete:'off'});
   const thesisRow = h('label',{class:'qxt-trader-thesis'},h('span',{},'Public buy thesis'),thesis,h('small',{},'Shown with this buy when your public trading profile is on. ',h('a',{href:'/community#trading-feed'},'Trading profile')));
   const unit = h('span', { class: 'qxt-unit' });
-  const balance = h('button', { type: 'button', class: 'qxt-bal', title: 'Use the whole balance' });
+  const balance = h('button', { type: 'button', class: 'qxt-bal', title: 'Use the whole balance' }, 'Max');
+  // 2026-11-12: one money line above the amount (what can be spent here, with chain); tap for every chain.
+  const avail = mountAvailable({h, getOwner: () => connectedAddress(), getChain: () => st?.chainId});
+  let autoNote = '', unitUsd = null, usdMode = false;
+  // $/token toggle on the amount (default token). In $ mode the visible box takes dollars and writes the token amount
+  // into the real amount field, which every quote and send path already reads.
+  const usdInput = h('input', {type: 'text', inputMode: 'decimal', placeholder: '$0', autocomplete: 'off', ariaLabel: 'Amount in US dollars', hidden: true, class: 'qxt-usd-input'});
+  const unitToggle = h('button', {type: 'button', class: 'qxt-unit-toggle', ariaLabel: 'Enter the amount in dollars', disabled: true}, '$');
+  const usdEcho = h('small', {class: 'qxt-usd-echo'});
   const presets = h('div', { class: 'qxt-presets', role: 'group', ariaLabel: 'Amount presets' });
   const out = h('div', { class: 'qxt-out' }, 'Choose a launch to trade.');
   const quoteTime = h('time', { class: 'qxt-fee' });
@@ -123,11 +134,12 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   const FUND_CHAINS = [['8453','Base'],['1','Ethereum'],['42161','Arbitrum'],['56','BNB'],['4663','Robinhood Chain']];
   function showAddFunds(b) {
     const me = connectedAddress();
-    if (!b || !me || !st || st.sol || side !== 'buy' || b.native !== 0n || b.quote !== 0n) { addFunds.hidden = true; return; }
+    // Shown when this chain is empty, and when the amount is short here and no other chain can cover it (funding.noSource).
+    if (!b || !me || !st || st.sol || side !== 'buy' || !(b.native === 0n && b.quote === 0n || funding.noSource)) { addFunds.hidden = true; return; }
     const native = NATIVE[st.chainId] || 'ETH', others = FUND_CHAINS.filter(([id]) => id !== String(st.chainId)).map(([, n]) => n);
     const copy = h('button', { type: 'button', class: 'qxt-mini' }, 'Copy');
     copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(me); copy.textContent = 'Copied'; } catch { copy.textContent = 'Copy failed'; } });
-    addFunds.replaceChildren(h('strong', {}, 'Add ' + native + ' to buy.'), ' Send ' + native + ' on ' + (CHAIN_NAME[st.chainId] || 'this network') + ' to your QHooks wallet: ', h('code', { title: me }, me.slice(0, 6) + '…' + me.slice(-4)), ' ', copy, ' — or pay from ' + others.slice(0, -1).join(', ') + ' or ' + others.at(-1) + ' if you hold ' + native + ' there.');
+    addFunds.replaceChildren(h('strong', {}, 'Top up ' + native + ' on ' + (CHAIN_NAME[st.chainId] || 'this network').replace(/ Chain$/, '') + '.'), ' Send it to your QHooks wallet: ', h('code', { title: me }, me.slice(0, 6) + '…' + me.slice(-4)), ' ', copy, funding.noSource ? '' : ' — or pay from ' + others.slice(0, -1).join(', ') + ' or ' + others.at(-1) + ' if you hold ' + native + ' there.');
     addFunds.hidden = false;
   }
   // After an EVM buy through the QHooks router: the cashback line and the referral link, where they are earned.
@@ -155,7 +167,10 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   }
   function profileChanged(){if(busy||recovery)return;status.textContent='';syncProfile();clearArmed();refresh();if(st)layout();}
   syncProfile();
-  const payLabel = h('span', {}, 'Pay with'), payRow = h('label', { class: 'qxt-pay' }, payLabel, paySel);
+  const payLabel = h('span', {}, 'Pay with'), payRow = h('label', { class: 'qxt-pay qxt-pay-chip' }, payLabel, paySel);
+  // Home currency is a setting, not part of the buy: one collapsed row inside Settings.
+  const homeRowName = h('span', {class: 'qxt-home-name'});
+  const homeRow = h('details', {class: 'qxt-home-row'}, h('summary', {}, h('span', {}, 'Home currency'), homeRowName), homeSettings.element);
 
   const cash = h('div', { class: 'qxt-cash' });
   const risk = h('div', { class: 'qxt-risk', hidden: true });
@@ -163,17 +178,20 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   const funding = createFundingRow({ h, getPlan: q => tradePlan(current, q), onChange: ({ quote, ready }) => {
     clearArmed(); if (current) current.funding = quote;
     go.disabled = busy || !!(current?.homeRequired && !current.home) || !quoteMatches(current) || !ready || (st?.safety?.verdict === 'danger' && !risk.querySelector('input')?.checked);
+    // The primary button names the whole path when it moves money first (Relay), so one tap reads as one action.
+    if (funding.noSource) void balances().then(showAddFunds).catch(() => {});
+    const from = funding.from; if (!busy && from && quote) go.textContent = 'Move from ' + (CHAIN_NAME[from.chainId] || 'other chain').replace(/ Chain$/, '') + ' & buy ' + (st?.symbol || '');
   } });
   const quoteDetails=h('div',{class:'qxt-quote-details'});
   if(tradingSettings.summary)tradingSettings.summary.textContent='Edit trading profile';
   const settingsSummary=h('summary',{},'Settings');
-  const settings=h('details',{class:'qxt-ticket-settings'},settingsSummary,homeSettings.element,tradingSettings.element,h('label',{class:'qxt-pay'},h('span',{},'Slippage'),tolSel),thesisRow,quoteDetails,quoteTools,cashSettings(h),cash);
+  const settings=h('details',{class:'qxt-ticket-settings'},settingsSummary,homeRow,tradingSettings.element,h('label',{class:'qxt-pay'},h('span',{},'Slippage'),tolSel),thesisRow,quoteDetails,quoteTools,cashSettings(h),cash);
   settings.addEventListener('keydown',event=>{if(event.key==='Escape'&&settings.open){event.preventDefault();event.stopPropagation();settings.open=false;settingsSummary.focus();}});
   function presentQuote(...nodes){const main=nodes.filter((n,i)=>i===0||String(n.getAttribute?.('class')||n.className||'').split(' ').includes('qxt-impact'));out.replaceChildren(...main);quoteDetails.replaceChildren(...nodes.filter(n=>!main.includes(n)));}
   card.replaceChildren(
     h('div', { class: 'qxt-side-toggle', role: 'group', ariaLabel: 'Trade side' }, ...sideBtns, sellToCash),
     payRow,
-    risk, h('div', { class: 'qxt-amount' }, amount, unit), h('div', { class: 'qxt-meta' }, balance), addFunds, presets, out, funding.element, go, signIn, status, followup, settings);
+    risk, ...avail.elements, h('div', { class: 'qxt-amount' }, amount, usdInput, unit), h('div', {class: 'qxt-usd-row'}, usdEcho, unitToggle), addFunds, funding.element, presets, out, go, signIn, status, followup, settings);
   import('/qx-oneclick.mjs').then(m => m.mountOneClickToggle(settings)).catch(() => {}); // One-click trading toggle (hidden unless an email/Google wallet is connected)
 
   const targetKey=t=>!t?'none':t.kind==='launch'?'m:'+String(t.chainId)+':'+String(t.controller).toLowerCase():'t:'+String(t.chainId)+':'+(String(t.chainId)==='solana'?String(t.address):String(t.address).toLowerCase());
@@ -183,7 +201,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     selection=Object.freeze({revision:++selectionRevision,key:targetKey(target)});thesis.value='';
     clearTimeout(timer);qseq++;current=null;st=null;priceUsd=null;marketPrices=[];sellCash=false;homeSelected=false;sellPrefillOwner=null;pendingSellPrefill=false;
     funding.clear();quoteDetails.replaceChildren();followup.replaceChildren();cash.replaceChildren();risk.replaceChildren();risk.hidden=true;
-    amount.value='';unit.textContent='';balance.textContent='';balance.disabled=true;paySel.replaceChildren();
+    amount.value='';unit.textContent='';balance.disabled=true;avail.set('');autoNote='';paySel.replaceChildren();
     clearArmed();go.disabled=true;status.textContent='';out.textContent=target?(target.kind==='launch'?'Loading the launch…':'Loading the token…'):'Choose a token to trade.';
     quoteLoading=false;renderQuoteFreshness();
     return selection;
@@ -236,6 +254,37 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     return { token: t.balance, quote: q.balance, native: BigInt(n), home: pay === 'homeAsset' ? (await erc20(st.chainId, homeToken(homePref).address, me)).balance : 0n };
   }
   const spendable = b => side === 'sell' ? b.token : pay === 'homeAsset' ? b.home : pay === 'native' ? b.native : b.quote;
+  const wrappedQuote = () => !!st && !st.sol && !st.multi && !!st.quote && !st.nativePool && String(selectedQuote().quote || '').toLowerCase() === String(chainById(st.chainId)?.wrappedNative || '').toLowerCase();
+  const asNum = (v, d) => Number(formatUnits(v, d, 8).replace(/,/g, ''));
+  // The money line: the amount, symbol and chain this ticket will spend from; the wrapped coin on the same chain is named
+  // with it, because the ticket uses it automatically when the native coin is short (see offerFunding).
+  function moneyLine(b) {
+    if (side === 'sell') return availableText({side, usdPrice: unitUsd, main: {amount: asNum(b.token, st.decimals), symbol: st.symbol, chain: CHAIN_NAME[st.chainId]}});
+    if (homeSelected) return 'Paying from your home balance · ' + homeName(homePref);
+    const extras = [];
+    if (wrappedQuote() && pay === 'native' && b.quote > 0n) extras.push({amount: asNum(b.quote, 18), symbol: st.quoteSymbol});
+    if (wrappedQuote() && pay === 'quote' && b.native > 0n) extras.push({amount: asNum(b.native, 18), symbol: NATIVE[st.chainId]});
+    const text = availableText({side, usdPrice: unitUsd, main: {amount: asNum(spendable(b), payDecimals()), symbol: payUnit(), chain: st.sol ? 'Solana' : CHAIN_NAME[st.chainId]}, extras});
+    return autoNote ? text + ' · ' + autoNote : text;
+  }
+  function syncUsd() {
+    const a = Number(amount.value), ok = unitUsd > 0 && amount.value !== '' && Number.isFinite(a);
+    if (usdMode && document.activeElement !== usdInput) usdInput.value = ok ? (Math.round(a * unitUsd * 100) / 100).toString() : '';
+    usdEcho.textContent = !ok ? '' : usdMode ? '≈ ' + amount.value + ' ' + (st ? payUnit() : '') : '≈ $' + (a * unitUsd).toLocaleString('en-US', {maximumFractionDigits: a * unitUsd >= 100 ? 0 : 2});
+  }
+  function setUsdMode(on) {
+    usdMode = !!on && unitUsd > 0; amount.hidden = usdMode; usdInput.hidden = !usdMode;
+    unitToggle.textContent = usdMode ? (st ? payUnit() : 'Token') : '$'; unitToggle.setAttribute('aria-label', usdMode ? 'Enter the amount in ' + (st ? payUnit() : 'tokens') : 'Enter the amount in dollars');
+    unit.textContent = usdMode ? 'USD' : st ? payUnit() : ''; syncUsd(); (usdMode ? usdInput : amount).focus?.({preventScroll: true});
+  }
+  // The pay chip lists each source with its chain and balance; option text stays the bare symbol (presets key off it).
+  function labelPayOptions(b) {
+    for (const o of paySel.options) {
+      const chain = st.sol ? 'Solana' : (CHAIN_NAME[st.chainId] || '').replace(/ Chain$/, '');
+      const bal = !b ? '' : o.value === 'native' ? ' · ' + formatUnits(b.native, st.sol ? 9 : 18, 4) : o.value === 'quote' && side === 'buy' ? ' · ' + formatUnits(b.quote, selectedQuote().quoteDecimals || 18, 4) : '';
+      o.label = o.value === 'home' ? o.textContent + ' · other chain' : o.textContent + ' on ' + chain + bal;
+    }
+  }
   const buttonText = () => sellCash ? 'Sell all to cash' : (side === 'buy' ? 'Buy ' : 'Sell ') + (st?.symbol || '');
   function clearArmed() { clearTimeout(armTimer); armedAt = null; impactArmedAt = null; go.textContent = buttonText(); }
   // Pool depth in USD for the low-liquidity line: the direct route's pool, else the open market's header (same token only).
@@ -300,14 +349,18 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       paySel.replaceChildren(...options); paySel.value = side === 'buy' && homeSelected ? 'home' : pay;
     }
     payRow.hidden = side === 'sell' && !st.multi || paySel.options.length < 2;
-    payLabel.textContent = st.multi && side === 'sell' ? 'Receive' : 'Pay with';
-    unit.textContent = payUnit();
+    payLabel.textContent = st.multi && side === 'sell' ? 'Receive' : 'Pay from';
+    unit.textContent = usdMode ? 'USD' : payUnit(); if (usdMode) unitToggle.textContent = payUnit();
     go.textContent = buttonText();showSignIn();
     const profile=tradingSettings.profile(),list = side === 'sell' ? profile.sellPercentages.map(p => [p + '%', p]) : profile.amounts[unitClass(payUnit())].map(v => [v, v]);
-    presets.replaceChildren(...list.map(([label, v], i) => h('button', { type: 'button', title: 'Key ' + (i + 1), onclick: () => preset(i) }, label)));
+    presets.replaceChildren(...list.map(([label, v], i) => h('button', { type: 'button', title: 'Key ' + (i + 1), onclick: () => preset(i) }, label)), balance);
     const b = await balances().catch(() => null);
     if(st!==activeState||!isSelection(intent)||mine!==layoutRevision||busy||recovery)return;
-    balance.textContent = b ? 'Balance ' + formatUnits(spendable(b), payDecimals(), 4) + ' ' + payUnit() : st?.sol ? (solAddress() ? '' : 'Connect a Solana wallet to trade') : '';
+    unitUsd = side === 'sell' ? priceUsd : await readQuoteUsd(payUnit()).catch(() => null);
+    if(st!==activeState||!isSelection(intent)||mine!==layoutRevision||busy||recovery)return;
+    unitToggle.disabled = !(unitUsd > 0); if (!(unitUsd > 0) && usdMode) setUsdMode(false); syncUsd();
+    avail.set(b ? moneyLine(b) : st?.sol ? (solAddress() ? '' : 'Connect a Solana wallet to trade') : '');labelPayOptions(b);
+    homeRowName.textContent = homeName(homePref);
     balance.disabled = !b;showAddFunds(b);
     refresh();
     showCashback().catch(() => cash.replaceChildren());
@@ -499,6 +552,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   }
 
   function refresh() {
+    syncUsd();
     if (busy||recovery) return;
     pendingSellPrefill=false;
     clearArmed();
@@ -614,6 +668,11 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     try {
       const b = await balances();
       if (mine !== qseq||!quoteMatches(current)) return;
+      // Short on the native coin but holding the wrapped coin on this chain (Randall: 0.0019 ETH + 1.552 WETH on
+      // Robinhood): pay with the wrapped coin directly, no unwrap and no other chain. Same value, one less step.
+      if (b && wrappedQuote() && (pay === 'native' || homeSelected) && b.native < current.a && b.quote >= current.a && [...paySel.options].some(o => o.value === 'quote')) {
+        homeSelected = false; pay = 'quote'; paySel.value = 'quote'; autoNote = 'using your ' + st.quoteSymbol; void layout(); return;
+      }
       if (homeSelected) {
         funding.clear(); go.disabled = true;
         const reviewed = current;
@@ -769,9 +828,13 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
 
   document.addEventListener('qhooks:rewards-claimed', () => showCashback().catch(() => cash.replaceChildren()));
   sideBtns.forEach(b => b.addEventListener('click', () => setSide(b.dataset.side)));
-  paySel.addEventListener('change', () => { if (busy||recovery) return; clearArmed(); homeSelected = paySel.value === 'home'; pay = homeSelected ? homeMarketPay() : paySel.value; amount.value = '';sellPrefillOwner=null; refresh(); layout(); });
+  paySel.addEventListener('change', () => { if (busy||recovery) return; clearArmed(); autoNote = ''; homeSelected = paySel.value === 'home'; pay = homeSelected ? homeMarketPay() : paySel.value; amount.value = '';sellPrefillOwner=null; refresh(); layout(); });
   tolSel.addEventListener('change', () => {if(busy||recovery)return;try{if(!tradingSettings.setTolerance(side,tolSel.value)){syncProfile();status.textContent='Choose Auto or a valid manual tolerance (maximum 50% on Solana, 100% on EVM).';return;}if(tolSel.value!=='auto')store('tol',tolSel.value);}catch(error){syncProfile();status.textContent=tradeError(error);}});
   amount.addEventListener('input', () => { sellPrefillOwner=null;refresh(); });
+  usdInput.addEventListener('input', () => { if (!st || !(unitUsd > 0)) return; const v = Number(usdInput.value.replace(/[$,\s]/g, ''));
+    amount.value = Number.isFinite(v) && v > 0 ? String(Number((v / unitUsd).toFixed(Math.min(8, payDecimals())))) : ''; sellPrefillOwner = null; refresh(); });
+  usdInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) submit(); } });
+  unitToggle.addEventListener('click', () => { if (!busy && !recovery) setUsdMode(!usdMode); });
   amount.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) submit(); } });
   balance.addEventListener('click', async () => { if(busy||recovery||!st)return;const intent=selection,activeState=st,mine=++qseq;clearTimeout(timer);current=null;go.disabled=true;sellPrefillOwner=null;clearArmed();quoteLoading=false;renderQuoteFreshness(); const b = await balances(); if(!isSelection(intent)||st!==activeState||mine!==qseq)return;if (b) { amount.value = formatUnits(spendable(b), payDecimals(), payDecimals()).replace(/,/g, ''); refresh(); } });
   go.addEventListener('click', submit);
@@ -786,7 +849,8 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       'This pool sells to ' + symbol + '. Cash conversion is available in Move funds after the sale.';
   });
 
-  function setSide(s) { if (busy||recovery || !['buy','sell'].includes(s) || side === s && !sellCash&&!pendingSellPrefill) return; clearArmed(); sellCash = false; side = s;homeSelected = s === 'buy' && homeTicketDefault(st?.chainId, homePref, homeEnabled) === 'home';if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} amount.value = '';sellPrefillOwner=null;pendingSellPrefill=false; refresh(); layout(); }
+  function setSide(s) { if (busy||recovery || !['buy','sell'].includes(s) || side === s && !sellCash&&!pendingSellPrefill) return; clearArmed(); sellCash = false; side = s;homeSelected = false;autoNote = ''; // Home is chosen in the pay chip, never by switching side (2026-11-12)
+if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} amount.value = '';sellPrefillOwner=null;pendingSellPrefill=false; refresh(); layout(); }
 
   restorePendingBuy();
   return {

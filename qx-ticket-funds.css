@@ -1,0 +1,39 @@
+/* Buy ticket money line, pay chip and home-currency row (2026-11-12). Loaded by qx-ticket-funds.mjs. */
+body.qa.qxt #qxt-ticket .qxt-pay-chip { display: flex; flex-direction: row; align-items: center; gap: 8px; margin: 10px 0 2px; }
+body.qa.qxt #qxt-ticket .qxt-pay-chip > span:first-child { flex: none; font-size: var(--qa-fs-small); color: var(--qa-tx-3); }
+body.qa.qxt #qxt-ticket .qxt-pay-chip select { width: auto; max-width: 100%; height: 34px; padding: 0 30px 0 12px; border: 1px solid var(--qa-rule-2); border-radius: 999px; background-color: var(--qa-wash); font-size: 14px; font-weight: 640; color: var(--qa-tx); }
+body.qa.qxt #qxt-ticket .qxt-avail { display: block; width: 100%; margin: 8px 0 4px; padding: 0; border: 0; background: none; text-align: left; font: 600 14px/1.35 var(--qa-sans); color: var(--qa-tx-2); cursor: pointer; }
+body.qa.qxt #qxt-ticket .qxt-avail::after { content: " ›"; color: var(--qa-tx-3); }
+body.qa.qxt #qxt-ticket .qxt-avail[aria-expanded="true"]::after { content: " ⌄"; }
+body.qa.qxt #qxt-ticket .qxt-avail[hidden], body.qa.qxt #qxt-ticket .qxt-avail-more[hidden] { display: none; }
+body.qa.qxt #qxt-ticket .qxt-avail-more { margin: 2px 0 8px; padding: 8px 10px; border: 1px solid var(--qa-rule); border-radius: var(--qa-r-m); background: var(--qa-wash); }
+body.qa.qxt #qxt-ticket .qxt-avail-total { margin: 0 0 6px; font-size: 13px; color: var(--qa-tx-3); }
+body.qa.qxt #qxt-ticket .qxt-avail-total b { font-size: 15px; color: var(--qa-tx); }
+body.qa.qxt #qxt-ticket .qxt-avail-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 6px 0; border-top: 1px solid var(--qa-rule-row); font-size: 13px; }
+body.qa.qxt #qxt-ticket .qxt-avail-row.here .qxt-avail-chain { color: var(--qa-gold-hi); }
+body.qa.qxt #qxt-ticket .qxt-avail-chain { font-weight: 640; color: var(--qa-tx); }
+body.qa.qxt #qxt-ticket .qxt-avail-assets { grid-column: 1; color: var(--qa-tx-2); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+body.qa.qxt #qxt-ticket .qxt-avail-usd { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--qa-tx-2); font-variant-numeric: tabular-nums; }
+body.qa.qxt #qxt-ticket .qxt-presets .qxt-bal { flex: 1; height: 42px; font-size: 15px; font-weight: 680; color: var(--qa-tx-3); box-shadow: -1px 0 0 var(--qa-rule); }
+body.qa.qxt #qxt-ticket .qxt-home-row { margin: 6px 0 10px; border-bottom: 1px solid var(--qa-rule-row); }
+body.qa.qxt #qxt-ticket .qxt-home-row > summary { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; cursor: pointer; list-style: none; font-size: 14px; color: var(--qa-tx); }
+body.qa.qxt #qxt-ticket .qxt-home-row > summary::-webkit-details-marker { display: none; }
+body.qa.qxt #qxt-ticket .qxt-home-row > summary .qxt-home-name { color: var(--qa-tx-3); }
+body.qa.qxt #qxt-ticket .qxt-home-row > summary .qxt-home-name::after { content: " ›"; }
+body.qa.qxt #qxt-ticket .qxc-funding select[hidden] { display: none; }
+body.qa.qxt #qxt-ticket .qxc-funding b { display: block; margin-bottom: 4px; color: var(--qa-tx); }
+/* Phone sheet: the primary button stays in view at the bottom of the sheet however long the ticket gets (states with a
+   funding card or the Top-up card pushed it below the fold), and toasts move to the top while the sheet is open so they
+   never cover it. */
+html.qv2-sheet body.qa.qxt #qxt-ticket .qxt-go:not([hidden]) { position: sticky; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 3; box-shadow: 0 0 0 10px var(--qa-slab-b, #0F1311), 0 -18px 22px 4px var(--qa-slab-b, #0F1311); }
+html.qv2-sheet body.qa.qxt #qxt-ticket .qxt-go:disabled { opacity: 1; background: #26332c; color: rgba(255,255,255,.55); }
+html.qv2-sheet body.qa.qxt .qxt-side > #qxt-ticket { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+html.qv2-sheet .qa-toasts { top: calc(env(safe-area-inset-top) + 10px); bottom: auto; }
+body.qa.qxt #qxt-ticket .qxt-usd-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 0 4px; }
+body.qa.qxt #qxt-ticket .qxt-usd-row .qxt-unit-toggle { flex: none; margin-left: 8px; min-width: 44px; height: 32px; padding: 0 10px; border: 1px solid var(--qa-rule-2); border-radius: 999px; background: var(--qa-wash); font: 640 13px/1 var(--qa-sans); color: var(--qa-tx-2); }
+body.qa.qxt #qxt-ticket .qxt-usd-row .qxt-unit-toggle:disabled { opacity: .45; }
+body.qa.qxt #qxt-ticket .qxt-amount .qxt-usd-input[hidden], body.qa.qxt #qxt-ticket .qxt-amount #qxt-amount[hidden] { display: none; }
+body.qa.qxt #qxt-ticket .qxt-usd-echo { display: block; min-height: 16px; margin: 0; font-size: 12.5px; color: var(--qa-tx-3); font-variant-numeric: tabular-nums; }
+body.qa.qxt #qxt-ticket .qxc-funding .qxc-more { margin-top: 4px; font-size: 12.5px; color: var(--qa-tx-3); }
+body.qa.qxt #qxt-ticket .qxc-funding .qxc-more > summary { cursor: pointer; color: var(--qa-tx-3); }
+body.qa.qxt #qxt-ticket .qxc-funding .qxc-more[hidden] { display: none; }

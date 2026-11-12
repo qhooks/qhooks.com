@@ -278,29 +278,42 @@ export function createFundingRow({ h, onChange = () => {}, action = 'swap', getP
   let revision = 0, input = null, active = null, required = false, busy = false;
   const select = h('select', { ariaLabel: 'Funding source' }), line = h('span'), detail = h('span'), prompts = h('span');
   const reload = h('button', { type: 'button', class: 'qxt-mini' }, 'Refresh funding');
-  const element = h('div', { class: 'qxc-funding', hidden: true }, h('b', {}, action === 'order' ? 'Fund this order from another chain' : 'Pay from another chain'), select, line, detail, prompts, reload);
+  // 2026-11-12 (buy ticket): one picker on the ticket. With a single source the choice is plain text, not a select;
+  // the refresh button only shows after an error (quotes refresh themselves).
+  const title = h('b', {}, action === 'order' ? 'Fund this order from another chain' : 'Your ETH here is short · pay from another chain');
+  let picked = null, noSource = false;
+  // Two short lines when a route is ready (main's sheet notes, 2026-11-12); the buffer and gas reserve sit behind Details.
+  const more = h('details', { class: 'qxc-more' }, h('summary', {}, 'Details'), detail);
+  const element = h('div', { class: 'qxc-funding', hidden: true }, title, select, line, prompts, more, reload);
+  reload.hidden = true;
   function notify() { onChange({ quote: active, required, ready: !required || !!active }); }
   function clear() { revision++; active = null; input = null; required = false; element.hidden = true; notify(); }
   async function pick(mine) {
     active = null; notify();
-    line.textContent = 'Getting Relay fees…'; detail.textContent = ''; prompts.textContent = '';
+    line.textContent = 'Getting Relay fees…'; detail.textContent = ''; prompts.textContent = ''; more.hidden = true;
     try {
-      const from = input.choices[Number(select.value)];
+      const from = input.choices[Number(select.value)]; picked = from; reload.hidden = true;
       const quote = await request({ ...input, from, to: { chainId: input.chainId, asset: input.asset }, estimatedGasCost: input.costs.estimatedGasCost });
       if (mine !== revision) return;
       active = quote;
       const summary = summarize(quote), prefix = action === 'order' ? 'Fund from ' : 'Pay with ';
       select.options[select.selectedIndex].textContent = prefix + displayAmount(summary.inAmount, from.decimals) + ' ' + from.symbol + ' on ' + chainName(from.chainId);
       // Plain line first; the provider breakdown stays in the hover detail.
-      line.textContent = `Moving cost ≈ $${summary.feeTotalUsd} · arrives in about ${summary.timeSeconds ?? 20} s · a little extra ${chainById(input.chainId).native} is kept for gas.`;
+      const usd2 = v => { const n = Number(v); return Number.isFinite(n) ? (n > 0 && n < 0.01 ? '<0.01' : n.toFixed(2)) : v; };
+      const gas2 = v => { const n = Number(v); return Number.isFinite(n) ? String(Number(n.toPrecision(2))) : v; };
+      const gas4 = v => { const n = Number(v); return Number.isFinite(n) ? String(Number(n.toPrecision(4))) : v; };
+      if (select.options.length < 2) title.textContent = (action === 'order' ? 'Funding from ' : 'Paying from ') + chainName(from.chainId);
+      line.textContent = `Moving ≈ $${usd2(summary.feeTotalUsd)} · ~${summary.timeSeconds ?? 20} s`;
       line.title = `Bridge provider: Relay · its fee $${summary.relayerFeeUsd} · network gas $${summary.gasFeeUsd} · no QHooks fee`;
-      detail.textContent = `Includes a 0.5% buffer; anything unused stays in your wallet. Gas kept on ${chainById(input.chainId).name}: about ${formatAmount(input.costs.estimatedGasCost, 18)} ${chainById(input.chainId).native}.`;
-      prompts.textContent = fundingPrompts(quote, { ...input.costs, ...getPlan(quote), action }).text + ' · Your wallet may also ask to switch networks.';
-    } catch (e) { if (mine !== revision) return; line.textContent = e.message; }
+      detail.textContent = `Moves ${displayAmount(summary.inAmount, from.decimals)} ${from.symbol} from ${chainName(from.chainId)} with Relay (its fee $${usd2(summary.relayerFeeUsd)}, network gas $${usd2(summary.gasFeeUsd)}, no QHooks fee). Includes a 0.5% buffer; anything unused stays in your wallet. About ${gas4(formatAmount(input.costs.estimatedGasCost, 18))} ${chainById(input.chainId).native} is kept on ${chainById(input.chainId).name} for gas. Your wallet may ask to switch networks.`;
+      const plan = { ...input.costs, ...getPlan(quote), action }, count = fundingPrompts(quote, plan).total;
+      prompts.textContent = count ? `${count} confirms: move${plan.setup ? ', set up' : ''}${plan.approvals ? ', approve' : ''}, then ${action === 'order' ? 'place the order' : action}.` : 'No wallet prompts.';
+      more.hidden = false;
+    } catch (e) { if (mine !== revision) return; line.textContent = e.message; reload.hidden = false; }
     notify();
   }
   async function update(next) {
-    const mine = ++revision; input = next; active = null; required = true; notify();
+    const mine = ++revision; input = next; active = null; required = true; noSource = false; notify();
     element.hidden = false; select.replaceChildren(); line.textContent = 'Reading funding balances…'; detail.textContent = ''; prompts.textContent = '';
     try {
       const balance = next.balance ?? await readBalance(next.owner, { chainId: next.chainId, asset: next.asset });
@@ -311,12 +324,12 @@ export function createFundingRow({ h, onChange = () => {}, action = 'swap', getP
       input = { ...next, choices, costs };
       select.replaceChildren(...choices.map((t, i) => h('option', { value: String(i) }, `${displayAmount(t.balance, t.decimals)} ${t.symbol} on ${chainName(t.chainId)}`)));
       if (!choices.length) throw error('insufficient_balance', 'No other-chain balance can cover this amount.');
-      select.value = '0'; await pick(mine);
-    } catch (e) { if (mine === revision) { line.textContent = e.message; notify(); } }
+      select.hidden = choices.length < 2; title.textContent = action === 'order' ? 'Fund this order from another chain' : choices.length < 2 ? 'Your ' + chainById(next.chainId).native + ' here is short · paying from ' + chainName(choices[0].chainId) : 'Your ' + chainById(next.chainId).native + ' here is short · pay from'; select.value = '0'; await pick(mine);
+    } catch (e) { if (mine === revision) { noSource = e.code === 'insufficient_balance'; title.textContent = noSource ? 'Not enough on any chain. Top up or pick a smaller amount.' : title.textContent; line.textContent = noSource ? '' : e.message; reload.hidden = noSource; notify(); } }
   }
   select.addEventListener('change', () => { if (!busy) void pick(++revision); });
   reload.addEventListener('click', () => { if (!busy && input) void update(input); });
-  return { element, update, clear, get quote() { return active; }, get required() { return required; },
+  return { element, update, clear, get quote() { return active; }, get required() { return required; }, get from() { return active ? picked : null; }, get noSource() { return noSource; },
     fresh() { return active && now() - active.funding.quotedAt <= 30000; },
     setBusy(value) { busy = value; select.disabled = value; reload.disabled = value; } };
 }

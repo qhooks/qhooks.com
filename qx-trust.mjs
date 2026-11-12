@@ -165,10 +165,10 @@ export async function renderRisk(el, pool) {
   const level = t?.copyOf || v?.level === 'danger' || warningChecks.some(c=>c.status==='danger') ? 'danger'
     : v?.level === 'caution' || warningChecks.length || warningFacts.length || f?.recovery ? 'caution' : '';
   const title = t?.copyOf ? 'Copy warning: same ' + t.copyOf.same + ' as $' + t.copyOf.symbol + ' by @' + t.copyOf.handle
-    : v?.level === 'danger' ? 'RepoProof: ' + v.headline : v?.level === 'caution' ? 'Trade with care: ' + v.headline : v?.level === 'clear' ? checksSummary(v,{hasTimestamp:!!checkTime(v)}) : 'Refreshing market checks…';
+    : v?.level === 'danger' ? 'RepoProof: ' + v.headline : v?.level === 'caution' ? 'Trade with care: ' + v.headline : v?.level === 'clear' ? checksSummary(v) : 'Refreshing market checks…';
   const partialReads=!f||f.coverage.unavailable>0||f.facts.some(fact=>/unavailable|could not be read|could not be checked/i.test(fact.v));
   // checks-rel 2026-11-10 (walkthrough item 3): final states instead of an endless "Refreshing" — this one line only.
-  const summary=checksSummary(v,{hasTimestamp:!!checkTime(v)});
+  const summary=checksSummary(v,{flags:warningChecks.length+warningFacts.length});
   const creator=h('li',{},...(t?.verified?['Creator verified on X: ',badge(t.verified,{compact:true})]:[t?'Creator not verified on X':'Creator not verified on X']));
   const factLine=fact=>h('li',{},h('b',{},fact.k+': '),fact.v);
   const body=h('div',{class:'qtr-risk-detail-body'},

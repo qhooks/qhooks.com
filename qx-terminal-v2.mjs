@@ -18,7 +18,8 @@ if (main && ticket) {
   function syncPoolNote() {
     const sym = $('qxt-symbol')?.textContent.trim() || '';
     const box = $('qxt-pool-warning'), official = !!$('qxt-official')?.querySelector('.qxo-official');
-    const on = marketOpen() && !!sym && (official || (!!box && !box.hidden));
+    // 2026-11-12 (main's sheet notes): not inside our own ticket; it read as an embed/partner line. Kept off here.
+    const on = false && marketOpen() && !!sym && (official || (!!box && !box.hidden));
     if (note.hidden !== !on) note.hidden = !on;
     const t = 'For the best route, trade ' + sym + ' on qhooks.com or the official pool →';
     if (on && note.firstChild.textContent !== t) note.firstChild.textContent = t;
