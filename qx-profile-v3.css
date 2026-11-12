@@ -105,3 +105,5 @@ main.pv3[data-pv3-state="lookup"] :is(#qp-avatar,#qp-addr){display:none}
  main.pv3 .qb-call-thesis{grid-column:1/-1!important;font-size:16px}
  .pv3-chk,.pv3-pos{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+/* one Follow: the signed Follow beside Copy trades. The second control wrote the same server list (Social B). */
+main.pv3 .qmp-profile-actions .qcf-control{display:none}
