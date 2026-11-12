@@ -94,6 +94,9 @@ export function splitByWeight(rows, pot, {shareCap = 1, redistribute = false, re
   if (remainder && !open.size && left > 0n) for (const [i, r] of live.entries()) amount.set(i, (amount.get(i) || 0n) + left * BigInt(r.weight) / total);
   return live.map((r, i) => ({account: r.account, amount: amount.get(i) || 0n})).filter(r => r.amount > 0n);
 }
+/// Callouts pool cap (Randall 2026-11-12): the per-caller cap applies only when enough callers score to fill the pool
+/// under it (4+ at 25%); with fewer, the day is split plain pro rata by points.
+export const calloutShareCap = (scorers, shareCap = 1) => shareCap < 1 && scorers * shareCap >= 1 ? shareCap : 1;
 /// Canonical bytes of an epoch file, hashed into dataHash on chain so anyone can check the JSON they downloaded.
 export function canonical(value) {
   if (Array.isArray(value)) return '[' + value.map(canonical).join(',') + ']';

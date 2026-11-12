@@ -1,1 +1,3 @@
 @import url("./setup-base.css");
+/* Full fee addresses stay visible, including on a 390px screen. */
+.setup #qrs-fee-accounts p { font-size: 14px; overflow-wrap: anywhere; }

@@ -12,7 +12,7 @@ async function simulateSol(serialized){
 }
 export async function solApi(path,body){const r=await fetch('/api/sol-launch/'+path,{...(body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{}),cache:'no-store'}),v=await r.json();if(!r.ok)throw Error(v.error||'Solana request failed.');return v;}
 export async function solRuntime(){const s=await import('/vendor/dbc.mjs'),connection=new s.Connection(new URL('/api/sol-launch/rpc',location.origin).href,'confirmed');return {...s,connection,client:new s.DynamicBondingCurveClient(connection,'confirmed')};}
-export async function prepareSolTransaction(runtime,transaction,signers=[],owner=solAddress()){
+export async function prepareSolTransaction(runtime,transaction,signers=[],owner=solAddress(),{walletFirst=false}={}){
  if(!owner||owner!==solAddress())throw Error('Connect the wallet for this transaction.');
  const {connection,PublicKey}=runtime,last=await connection.getLatestBlockhash('confirmed');transaction.feePayer=new PublicKey(owner);transaction.recentBlockhash=last.blockhash;
  // Phantom must sign first. Clear stale signatures when refreshing a review;
@@ -22,12 +22,16 @@ export async function prepareSolTransaction(runtime,transaction,signers=[],owner
  const simulation=await simulateSol(serialized);
  const fee=await connection.getFeeForMessage(transaction.compileMessage(),'confirmed');if(fee.value==null)throw Error('Network cost unavailable. Refresh review.');
  const prepared={transaction,serialized,last,networkLamports:fee.value,owner,units:simulation.unitsConsumed||null};
- approvals.set(prepared,{serialized,owner,signers:[...signers]});return prepared;
+ approvals.set(prepared,{serialized,owner,signers:[...signers],walletFirst});return prepared;
 }
 export async function sendPreparedSol(runtime,prepared){
  const approval=approvals.get(prepared);if(!approval||approval.serialized!==prepared.serialized||approval.owner!==prepared.owner)throw Error('Review this transaction again before signing.');
  if(solAddress()!==prepared.owner)throw Error('The wallet changed. Review again.');
- const coSign=approval.signers.length?async bytes=>{
+ const coSign=approval.walletFirst?async bytes=>{
+  const signed=runtime.Transaction.from(bytes);
+  if(b64(signed.serializeMessage())!==b64(prepared.transaction.serializeMessage()))throw Error('The wallet changed this account setup. Nothing was sent. Review again.');
+  return bytes;
+ }:approval.signers.length?async bytes=>{
   // Deserialize the wallet's result, including its fee/Lighthouse instructions and
   // wallet signature. Never rebuild the original message after wallet approval.
   const signed=runtime.Transaction.from(bytes);

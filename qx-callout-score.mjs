@@ -4,7 +4,7 @@
 // button or call link (recorded per call), or a wallet following the caller. The caller's own stake gain is shown on
 // the card as information and never counts. Ours on top: ×1.25 while the caller still holds the called token (read on
 // chain at scoring), no points on your own launch, the low-cap weight, full weight for the first 3 calls a day only.
-import {splitByWeight} from './qdrops-core.mjs';
+import {splitByWeight,calloutShareCap} from './qdrops-core.mjs';
 export const CALLOUT_RULES=Object.freeze({
  id:'qhooks-callouts-v3',
  ownStakeCapUsd:1000,        // information only: the stake shown on the card counts up to this much USD at the call price
@@ -93,12 +93,12 @@ export function scoreCalls({calls,follows,refs=new Map(),tradesOf,mark,excluded=
  const shares=poolShares(callers,rules.shareCap);for(const c of callers)c.poolShare=shares.get(c.caller)||0;
  return{method:rules.id,markAt,callers,totalPoints:callers.reduce((s,c)=>s+c.points,0)};
 }
-/// Each caller's share of the day's pool, the same split QDrops pays (splitByWeight with redistribute + remainder):
-/// by points, at most shareCap each while others can take the rest, and the whole pool when everyone is at the cap.
+/// Each caller's share of the day's pool, the same split QDrops pays: by points; with 4+ scoring callers at most shareCap
+/// each, the capped excess shared again among the rest; with fewer, plain pro rata (calloutShareCap).
 export function poolShares(callers,shareCap=CALLOUT_RULES.shareCap){
  const SCALE=1000000000000n,out=new Map();
  const rows=callers.filter(c=>c.points>0).map(c=>({account:c.caller,weight:BigInt(c.points)}));
- for(const r of splitByWeight(rows,SCALE,{shareCap,redistribute:true,remainder:true}))out.set(r.account,Math.round(Number(r.amount*1000000n/SCALE))/1000000);
+ for(const r of splitByWeight(rows,SCALE,{shareCap:calloutShareCap(rows.length,shareCap),redistribute:true,remainder:true}))out.set(r.account,Math.round(Number(r.amount*1000000n/SCALE))/1000000);
  return out;
 }
 /// The caller's own stake result. atUnits: tokens held at the call; nowUnits: held now (same base units); callUsd / nowUsd:

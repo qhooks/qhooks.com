@@ -12,7 +12,7 @@ async function check(){
  if(!go)return;
  const config=await get('/api/sol-launch/config');
  if(page==='launch'&&config?.ready)return done('qss','Done. Solana launches are open.','/create?chain=solana','Launch a Solana coin');
- if(page==='referral'){const ref=await get('/api/sol-referral');if(ref?.ready)return config?.ready
+ if(page==='referral'){const ref=await get('/api/sol-referral');if(ref?.ready&&ref.feeAccountsReady===true)return config?.ready
   ?done('qrs','Done. Solana launches are open.','/create?chain=solana','Launch a Solana coin')
   :done('qrs','Done. The referral is recorded.','/sol-launch-setup?go=solana','Next: create the launch config');}
 }
