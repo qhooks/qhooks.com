@@ -3,6 +3,8 @@ import { assertWalletChain } from './qx-chain-guard.mjs';
 export const EMBEDDED_RDNS='io.qhooks.privy';
 export const EMBEDDED_UUID='a5a1c026-7eb1-4317-89a9-340dca71c881';
 const ACTIONS=new Set(['eth_sendTransaction','eth_signTypedData_v4','personal_sign','wallet_switchEthereumChain','wallet_addEthereumChain']);
+// confirmhold (2026-11-12): requests the wallet shows a confirm for; our sheets step under it while they are pending (qx-confirm-top.mjs).
+const SIGNS=new Set(['eth_sendTransaction','eth_signTypedData_v4','personal_sign']);
 // The SDK's own RPC can answer quantities as numbers or as padded/uppercase hex; the launch code requires canonical
 // lowercase quantities. Only these numeric reads (and numeric block fields) are rewritten, value-preserving.
 const QUANTITY_READS=new Set(['eth_chainId','eth_blockNumber','eth_gasPrice','eth_maxPriorityFeePerGas','eth_getTransactionCount','eth_estimateGas','eth_getBalance']);
@@ -29,7 +31,7 @@ export function embeddedWalletProvider(target,identity={uuid:EMBEDDED_UUID,name:
   async request(args){if(disposed||!current)throw error();
    const expected=args?.method==='eth_sendTransaction'?args.params?.[0]?.chainId:args?.method==='eth_signTypedData_v4'?JSON.parse(args.params?.[1]||'{}').domain?.chainId:null;
    if(expected!=null){const checkingSession=session;await assertWalletChain(provider,expected);if(disposed||!current||session!==checkingSession)throw error();}
-   const captured=current,version=revision,signedIn=session,result=await captured.request(args);
+   const captured=current,version=revision,signedIn=session,confirm=SIGNS.has(args?.method)&&target.qhooksConfirmTop?.hold,result=confirm?await confirm(()=>captured.request(args)):await captured.request(args);
    // A signature or transaction the wallet already approved stands while the same sign-in lasts, even if the SDK
    // re-issued its provider for a network change meanwhile; reporting it as failed would invite a second send.
    if(disposed||signedIn!==session||!ACTIONS.has(args?.method)&&(current!==captured||version!==revision))throw error();return canonicalRead(args?.method,result);},

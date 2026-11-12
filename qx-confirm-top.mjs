@@ -9,6 +9,16 @@
 const PRIVY = ['privy-dialog', 'privy-dialog-backdrop', 'privy-modal-content'];
 const under = new Set();
 let started = false;
+// confirmhold (2026-11-12): while a signing request to the email/Google wallet is pending, the confirm counts as shown
+// even before (or without) Privy's markup being recognised. The wallet menu then steps down too instead of closing,
+// so a Send/Unwrap panel keeps its place under the confirm.
+let held = 0;
+export async function whileWalletConfirms(run) {
+  held++; syncConfirmTop();
+  try { return await run(); }
+  finally { held = Math.max(0, held - 1); setTimeout(() => syncConfirmTop(), 0); }
+}
+if (typeof globalThis !== 'undefined') globalThis.qhooksConfirmTop = Object.freeze({ hold: whileWalletConfirms });
 
 // Privy's confirm is a Headless UI dialog in a portal at the end of <body> (not a top-layer <dialog>): match its ids, or any
 // Headless UI portal dialog in case the ids change.
@@ -21,12 +31,13 @@ function keepFlagUntilClosed(dialog) {
   // The 'close' event fires after this task; listeners added earlier (the dialog's own) still see the flag.
   dialog.addEventListener('close', () => { if (!under.has(dialog)) delete dialog.dataset.qxUnder; }, {once: true});
 }
-export function syncConfirmTop(d = document) {
-  if (confirmShown(d)) {
+export function syncConfirmTop(d = globalThis.document) {
+  if (!d) return;
+  if (held > 0 || confirmShown(d)) {
     for (const dialog of d.querySelectorAll('dialog[open]')) {
       let modal = false; try { modal = dialog.matches(':modal'); } catch {}
       if (!modal) continue;
-      if (dialog.id === 'qhc-dialog') { dialog.close(); continue; }
+      if (dialog.id === 'qhc-dialog' && !held) { dialog.close(); continue; }
       dialog.dataset.qxUnder = '1'; under.add(dialog);
       dialog.close(); dialog.show();
     }
