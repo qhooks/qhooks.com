@@ -551,3 +551,6 @@ a.qa-row:hover, button.qa-row:hover { background: var(--qa-wash); }
 .qa-shell--tg .qa-dock { bottom: 0; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
 /* wrapfix (2026-11-12): long unbroken strings in post text (links, addresses) wrap instead of widening the page. */
 .qa-post__text { overflow-wrap: anywhere; }
+/* solidbars (2026-11-12): sticky and fixed bars are solid like the header and tab bar, so nothing shows through them */
+:root :is(.qa-tabs--section, .qa-ribbon, .hd-toc, .hd--changelog .qcl-date, .ey-jump, .mn-me-nav, .qst-ws .studio-steps, .qst-studio .qj-nav, .qst-dock) {
+  background: var(--qa-floor); -webkit-backdrop-filter: none; backdrop-filter: none; }
