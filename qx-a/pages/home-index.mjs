@@ -8,7 +8,8 @@
 //                                                        again only when the feed shows a newer trade on them
 //   /api/community/activity                              calls, at load then every 60 s
 //   /api/qhooks/buybacks                                 read by qx-burn-ticker.mjs (every 20 s); this page listens for its result
-// Every motion is a real event: a trade, a burn, a call, a launch, a new holder. Nothing is replayed or invented.
+// Every motion is a real event (a trade, a burn, a call, a launch, a new holder) or the brand line's own loop, which shows
+// the latest real card for each word. Nothing is replayed or invented.
 import { mountShell } from '/qx-a/shell.mjs';
 import { profileUrl } from '/qx-profile-address.mjs';
 import { h, icon, RM, fmt, setArt, coin, avatar, keeperAvatar, tokenChip, statStrip, tape, toast, liveLabel, liveChart, bigPrice, changeLine, post, callOutcome, supplyMap, countdown, state, skeletonRows, restart, inView, checks } from '/qx-a/components.mjs';
@@ -42,30 +43,77 @@ const ribbon = shell.ribbon;
 
 /* ================= the hero: the brand line, looping ================= */
 // "For the next generation of token builders / callers / holders / traders", resting on "For the next generation."
-// It loops so it is never missed (Randall, 2026-11-12). Each word brings one live fact about those people, read from the
-// same public data the page already loads; nothing is invented and an unknown fact says "Refreshing". The slot has a fixed
-// height, so the page never moves. Reduced motion crossfades each word instead of rolling it. It pauses while the tab
-// is hidden or the hero is scrolled away.
+// It loops so it is never missed (Randall, 2026-11-12). Each word brings its people's live card onto the hook (the stage,
+// below), read from the same public data the page already loads; nothing is invented and an unknown card says
+// "Refreshing". The slot and the stage have fixed heights, so the page never moves. Reduced motion crossfades the word
+// and the card instead of rolling and dropping them. It pauses while the tab is hidden or the hero is scrolled away.
 const WORDS = ['builders', 'callers', 'holders', 'traders'];
-const FACTS = {}; // word (or 'rest') -> () => { text, icon } | null; filled in by the data loaders below
+const CARDS = {}; // word (or 'rest') -> () => card | null; filled in at the end, from the data the loaders keep
+
+/* ================= the stage: the hook holds one live card ================= */
+// The gold hook hangs from the top of the screen. Its cord holds a card: the newest launch, the latest call, the latest
+// buyback, the latest trades, or the whole floor at rest. The coin on the card is the one on the hook; the light of the
+// hero is that token's own art. Real trades tug the cord and lift their size off the coin.
+const stageEl = $('[data-hm-stage]'), lightEl = $('[data-hm-light]');
+const QART = '/qx-a/img/qhooks-banner-blur.jpg';
+const stage = (() => {
+  if (!stageEl) return { show() {}, hit() {}, refresh() {}, coin: () => null, key: () => null };
+  let cur = null, curKey = null, lightArt = '', li = 0;
+  const light = (art) => {
+    if (!lightEl || !art || art === lightArt) return; lightArt = art;
+    const layers = lightEl.children, on = layers[li], next = layers[(li = 1 - li)];
+    if (!next) return;
+    next.style.setProperty('background-image', `url("${art}")`);
+    next.classList.add('is-on'); on?.classList.remove('is-on');
+  };
+  const build = (c) => {
+    const cn = coin(c.coin || QLOGO, { size: 'md', alt: '' });
+    cn.querySelector('img')?.addEventListener('error', (e) => { e.target.src = QLOGO; }, { once: true });
+    const body = h('span', { class: 'hm-card__body' },
+      h('span', { class: 'hm-card__kick' + (c.kickCls ? ' ' + c.kickCls : '') }, c.kick),
+      c.rows ? h('span', { class: 'hm-card__rows' }, c.rows) : h('span', { class: 'hm-card__t' }, c.title, c.coins ? h('span', { class: 'hm-card__coins' }, c.coins) : null),
+      !c.rows && c.sub ? h('span', { class: 'hm-card__s' }, c.sub) : null);
+    const fig = c.fig ? h('span', { class: 'hm-card__fig ' + (c.figCls || '') }, h('b', null, c.fig), c.figSub ? h('small', null, c.figSub) : null) : null;
+    const el = h(c.href ? 'a' : 'div', { class: 'hm-card', href: c.href || null, tabindex: c.href ? '-1' : null, dataset: { k: c.kind || '' } }, body, fig, h('span', { class: 'hm-card__coin' }, cn, c.ava || null));
+    el.coin = cn; el.rowsEl = body.querySelector('.hm-card__rows'); el.sig = c.sig || '';
+    return el;
+  };
+  function show(key, instant) {
+    curKey = key;
+    const c = CARDS[key]?.() || null;
+    if (!c) return; // keep what is on the hook until this card's data is in
+    const next = build(c);
+    const old = stageEl.querySelector('.hm-card.is-on');
+    stageEl.append(next);
+    if (instant || RM) next.classList.add('is-on', 'no-drop'); else { void next.offsetWidth; next.classList.add('is-on'); }
+    if (old) { old.classList.remove('is-on'); old.classList.add('is-off'); setTimeout(() => old.remove(), RM ? 340 : 420); }
+    stageEl.querySelectorAll('.hm-card.is-wait').forEach((x) => x !== next && x.remove());
+    cur = next; light(c.art);
+  }
+  // A new trade while the trades card is up: its row slides in at the top of the card that is already on the hook.
+  function refresh(key) {
+    if (!cur || curKey !== key) return;
+    const c = CARDS[key]?.(); if (!c?.rows || !cur.rowsEl) return;
+    cur.rowsEl.replaceChildren(...c.rows); if (!RM) c.rows[0]?.classList.add('is-enter');
+    light(c.art);
+  }
+  // A real trade: the coin on the hook rings, the cord tugs, and the trade's size lifts off the coin.
+  function hit(side, usd, w) {
+    cur?.coin?.pulse?.(side === 'sell' ? -1 : 1);
+    if (RM || !(usd >= .01)) return;
+    const chip = h('span', { class: 'hm-chip is-' + side }, side === 'burn' ? keeperAvatar() : w ? avatar(w) : null, (side === 'burn' ? 'Buyback ' : side === 'sell' ? '▼ ' : '▲ ') + fmt.usdExact(usd));
+    // chips that rise together stack instead of covering each other
+    chip.style.setProperty('--i', String(stageEl.querySelectorAll('.hm-chip').length));
+    stageEl.append(chip); setTimeout(() => chip.remove(), 1700);
+  }
+  return { show, refresh, hit, coin: () => cur?.coin || null, key: () => curKey };
+})();
+
 const brand = (() => {
   const line = $('[data-hm-line]'), slot = line && $('[data-hm-slot]', line);
-  const proof = $('[data-hm-proof]'), proofT = $('[data-hm-proof-t]'), proofIco = $('[data-hm-proof-ico]');
   if (!line || !slot) return { refresh() {} };
-  const HOLD = 2300, REST = 2900, ROLL = RM ? 320 : 560;
+  const HOLD = 2800, REST = 3200, ROLL = RM ? 320 : 560;
   let k = 0, timer = 0, running = false, inViewNow = true, key = 'builders';
-  const paintFact = (instant) => {
-    if (!proof) return;
-    const f = FACTS[key]?.() || null;
-    const apply = () => {
-      proofT.textContent = f?.text || 'Refreshing';
-      proofIco.replaceChildren(...(f?.icon ? [f.icon] : []));
-      proof.classList.toggle('has-ico', !!f?.icon);
-      proof.classList.remove('is-out');
-    };
-    if (instant) return apply();
-    proof.classList.add('is-out'); setTimeout(apply, 180);
-  };
   const showWord = (w) => {
     const old = $('.hm-slot__w.is-on', slot), next = h('span', { class: 'hm-slot__w' }, w + '.');
     next.dataset.hmWord = '';
@@ -80,7 +128,7 @@ const brand = (() => {
     key = resting ? 'rest' : WORDS[k];
     line.classList.toggle('is-rest', resting);
     if (!resting) showWord(WORDS[k]);
-    paintFact(false);
+    stage.show(key, false);
     timer = setTimeout(tick, resting ? REST : HOLD);
   };
   function tick() { if (running) step(); }
@@ -91,52 +139,70 @@ const brand = (() => {
   };
   document.addEventListener('visibilitychange', sync);
   new IntersectionObserver(([e]) => { inViewNow = e.isIntersecting; sync(); }, { threshold: 0.15 }).observe(line);
-  (document.fonts?.ready || Promise.resolve()).then(() => { paintFact(true); sync(); });
-  return { refresh() { paintFact(true); } };
+  (document.fonts?.ready || Promise.resolve()).then(() => { stage.show(key, true); sync(); });
+  // data arrived: fill the card for the current word if it is still waiting for it
+  return { refresh() { if (!stageEl?.querySelector('.hm-card.is-on:not(.is-wait)')) stage.show(key, true); } };
 })();
 
-/* ================= the hook: real trades tug the line ================= */
-const rig = $('[data-hm-rig]'), coinWrap = $('[data-hm-coin]'), coinPulse = coinWrap?.querySelector('.qa-coin__pulse');
-const heroEl = $('.hm-hero'), tagEl = $('[data-hm-tag]');
-// The coin hangs from the bend of the hook: the cord is as long as it takes to reach the live read beside it.
+/* ================= the hook: real trades tug the cord ================= */
+const rig = $('[data-hm-rig]'), coinWrap = $('[data-hm-coin]');
+const heroEl = $('.hm-hero'), tagEl = $('[data-hm-tag]'), copyEl = $('.hm-copy');
+const BEND_X = .52, BEND_Y = .97; // where the cord leaves the hook, as a share of the hook image (matches .hm-bob)
+let pivotToCoin = 0;
+// Positions come from layout offsets (never the transformed boxes), so a swing in progress never skews them.
+// Wide screens: the hook keeps its place on the right and the card hangs under it, beside the actions, when there is room
+// for a full card there. Otherwise (phone, tablet, small laptops) the card sits in the flow under the brand line and the
+// hook moves over the card's coin.
+const xIn = (el) => { let x = 0; for (let e = el; e && e !== heroEl; e = e.offsetParent) x += e.offsetLeft; return x; };
+const yIn = (el) => { let y = 0; for (let e = el; e && e !== heroEl; e = e.offsetParent) y += e.offsetTop; return y; };
 function hang() {
-  if (!rig || !heroEl || !tagEl || !coinWrap) return;
-  // Below 1100px the hook is not drawn and the QHOOKS read is a plain row with its own coin.
-  if (innerWidth < 1100) { ['--hm-tag-pad', '--hm-tag-mt', '--hm-tag-top', '--hm-tag-right'].forEach((p) => tagEl.style.removeProperty(p)); return; }
-  const coinEl = coinWrap.querySelector('.qa-coin'), cH = coinEl.offsetHeight || 56;
-  const hr = heroEl.getBoundingClientRect(), rr = rig.getBoundingClientRect();
-  const bx = rr.left + rr.width * .52 - hr.left, by = rr.top + rig.offsetHeight * .97 - hr.top;
-  const right = Math.max(0, hr.width - bx + cH / 2 + 16);
+  if (!rig || !heroEl || !stageEl || !copyEl || !coinWrap) return;
+  const card = stageEl.querySelector('.hm-card'), cb = card?.querySelector('.hm-card__coin');
+  if (!card || !cb) return;
+  ['--hm-stage-l', '--hm-stage-t', '--hm-stage-w'].forEach((p) => stageEl.style.removeProperty(p));
+  stageEl.classList.remove('is-hung'); heroEl.style.removeProperty('min-height'); rig.style.removeProperty('--hm-rig-l');
+  const rw = rig.offsetWidth, rh = rig.offsetHeight, fromRight = card.offsetWidth - (cb.offsetLeft + cb.offsetWidth / 2), coinTop = cb.offsetTop;
   if (innerWidth >= 1100) {
-    // the read sits to the left of the coin, centred on it; positions are relative to the tag's offset parent
-    const cord = 70, op = (tagEl.offsetParent || heroEl).getBoundingClientRect();
-    coinWrap.style.setProperty('--hm-cord', cord + 'px');
-    const coinCy = hr.top + by + cord + cH / 2, coinLeft = hr.left + bx - cH / 2;
-    tagEl.style.setProperty('--hm-tag-top', Math.round(coinCy - op.top - tagEl.offsetHeight / 2) + 'px');
-    tagEl.style.setProperty('--hm-tag-right', Math.round(op.right - coinLeft + 18) + 'px');
-    return;
+    const bx = rig.offsetLeft + rw * BEND_X, by = rig.offsetTop + rh * BEND_Y, right = bx + fromRight;
+    const blockers = [...document.querySelectorAll('.hm-actions > *, .hm-tag__coin, .hm-tag__read')].filter((e) => e.offsetWidth);
+    const clear = Math.max(0, ...blockers.map((e) => xIn(e) + e.offsetWidth)) + 40, w = Math.min(560, Math.floor(right - clear));
+    if (w >= 430) {
+      const brand = $('[data-hm-line]'), top = Math.max(Math.round(by + 44 - coinTop), brand ? yIn(brand) + brand.offsetHeight + 18 : 0);
+      stageEl.classList.add('is-hung');
+      stageEl.style.setProperty('--hm-stage-w', w + 'px');
+      stageEl.style.setProperty('--hm-stage-l', Math.round(right - w - copyEl.offsetLeft) + 'px');
+      stageEl.style.setProperty('--hm-stage-t', Math.round(top - copyEl.offsetTop) + 'px');
+      coinWrap.style.setProperty('--hm-cord', Math.round(top + coinTop - by + 3) + 'px');
+      pivotToCoin = top + coinTop - rig.offsetTop;
+      heroEl.style.setProperty('min-height', Math.round(top + stageEl.offsetHeight + 56) + 'px');
+      return;
+    }
   }
-  tagEl.style.setProperty('--hm-tag-pad', Math.round(right) + 'px');
-  const mt = parseFloat(getComputedStyle(tagEl).marginTop) || 0, tr = tagEl.getBoundingClientRect();
-  const top0 = tr.top - hr.top - mt, need = Math.max(18, by + 22 + cH / 2 - (top0 + tr.height / 2));
-  tagEl.style.setProperty('--hm-tag-mt', Math.round(need) + 'px');
-  coinWrap.style.setProperty('--hm-cord', Math.round(top0 + need + tr.height / 2 - cH / 2 - by) + 'px');
+  const sx = xIn(stageEl), sy = yIn(stageEl), cx = sx + card.offsetWidth - fromRight;
+  rig.style.setProperty('--hm-rig-l', Math.round(cx - rw * BEND_X) + 'px');
+  const by = rig.offsetTop + rh * BEND_Y;
+  coinWrap.style.setProperty('--hm-cord', Math.max(12, Math.round(sy + coinTop - by + 3)) + 'px');
+  pivotToCoin = sy + coinTop - rig.offsetTop;
 }
 if (heroEl) { new ResizeObserver(() => hang()).observe(heroEl); document.fonts?.ready.then(hang); hang(); }
 let spring = null;
-function tug(side, usd = 0) {
-  if (coinPulse && !RM) { coinPulse.className = 'qa-coin__pulse'; void coinPulse.offsetWidth; coinPulse.classList.add(side === 'sell' ? 'is-sell' : 'is-buy'); }
+function tug(side, usd = 0, w = null) {
+  stage.hit(side, usd, w);
   if (RM || !rig) return;
   const k = Math.min(1, .35 + Math.log10(1 + usd) / 3.2);
   spring = { t0: performance.now(), a: (side === 'sell' ? -1.1 : side === 'burn' ? .7 : 1.6) * k, y: (side === 'sell' ? -5 : side === 'burn' ? 3 : 10) * k };
   requestAnimationFrame(swing);
 }
+// The hook turns about the top of the screen; the card follows the end of the cord, so the two never part.
 function swing(now) {
   if (!spring) return;
-  const t = (now - spring.t0) / 1000, e = Math.exp(-t * 3.4), c = Math.cos(t * 8.5);
-  rig.style.setProperty('--hm-swing', (spring.a * e * c).toFixed(3) + 'deg');
-  coinWrap?.style.setProperty('--hm-tug', (spring.y * e * Math.cos(t * 11)).toFixed(2) + 'px');
-  if (t < 2.4) requestAnimationFrame(swing); else { rig.style.removeProperty('--hm-swing'); coinWrap?.style.removeProperty('--hm-tug'); spring = null; }
+  const t = (now - spring.t0) / 1000, e = Math.exp(-t * 3.4), a = spring.a * e * Math.cos(t * 8.5), y = spring.y * e * Math.cos(t * 11);
+  rig.style.setProperty('--hm-swing', a.toFixed(3) + 'deg');
+  coinWrap?.style.setProperty('--hm-tug', y.toFixed(2) + 'px');
+  stageEl?.style.setProperty('--hm-tug', y.toFixed(2) + 'px');
+  stageEl?.style.setProperty('--hm-card-x', (-pivotToCoin * Math.sin(a * Math.PI / 180)).toFixed(2) + 'px');
+  if (t < 2.4) requestAnimationFrame(swing);
+  else { rig.style.removeProperty('--hm-swing'); coinWrap?.style.removeProperty('--hm-tug'); stageEl?.style.removeProperty('--hm-tug'); stageEl?.style.removeProperty('--hm-card-x'); spring = null; }
 }
 const tagPrice = bigPrice($('[data-hv-qp]') || h('span'));
 const tagChange = $('[data-hv-qc]');
@@ -156,6 +222,10 @@ function poll(fn, ms) {
   run(); loop();
   return { now: run };
 }
+// A server read can come back from cache first and fresh a moment later, so a burn or trade that is new to this page can
+// still be minutes old. Only events from the last few minutes tug the hook, rise off the coin or toast; older ones only
+// join the tapes.
+const isNews = (ts) => nowS() - (num(ts) || 0) < 180;
 const flash = (el, text) => { if (!el) return; if (el.textContent && el.textContent !== text && !RM) { el.classList.add('is-tick'); setTimeout(() => el.classList.remove('is-tick'), 60); } el.textContent = text; };
 const count = (key, v) => { const s = $(`[data-hm-count="${key}"]`); if (s && v != null) flash(s, String(v)); };
 const chainName = (c) => CHAINS[String(c)] || 'Chain ' + c;
@@ -164,7 +234,7 @@ const pctCls = (x) => (x > .0005 ? 'qa-up' : x < -.0005 ? 'qa-down' : 'qa-muted'
 
 /* ================= state ================= */
 const H = {}, T = {};
-const S = { feed: null, markets: [], q: null, qSum: null, rate: null, series: [], qTrades: [], seenTrades: new Set(), holders: new Set(), burns: null, seenBurns: new Set(), calls: [], seenCalls: new Set(), seenLaunch: new Set(), other: new Map() };
+const S = { feed: null, markets: [], q: null, qSum: null, rate: null, series: [], qTrades: [], seenTrades: new Set(), holders: new Set(), burns: null, seenBurns: new Set(), calls: [], seenCalls: new Set(), seenLaunch: new Set(), other: new Map(), recent: [] };
 let calls = []; // the call posts on screen, each with update() for the live price
 const qPrice = () => num(S.qSum?.priceUsd) ?? num(S.markets.find((m) => lower(m.token) === QH)?.summary?.priceUsd);
 
@@ -279,6 +349,8 @@ async function readOther(m, live) {
     list.forEach((t) => o.seen.add(t.id));
     const img = logoOf(m.logo) ? abs(logoOf(m.logo)) : undefined;
     for (const t of add) ribbonTrade({ symbol: m.symbol, img, side: t.buy ? 'buy' : 'sell', usd: t.valueUsd, w: t.trader, ts: t.ts }, !live);
+    add.forEach((t) => noteTrade(t, m));
+    if (live) { stage.refresh('traders'); add.filter((t) => isNews(t.ts)).forEach((t, i) => setTimeout(() => tug(t.buy ? 'buy' : 'sell', num(t.valueUsd) || 0, t.trader), RM ? 0 : i * 420)); } else brand.refresh();
   } catch {}
 }
 
@@ -358,7 +430,8 @@ async function loadQ() {
   if (first) {
     const candles = (Array.isArray(body.candles) ? body.candles : []).filter((c) => num(Number(c?.close)) && num(Number(c?.time)));
     S.series = S.rate ? candles.map((c) => [Number(c.time), Number(c.close) * S.rate]) : trades.map((t) => [t.ts, t.priceUsd]).reverse();
-    S.qTrades = trades; trades.forEach((t) => S.seenTrades.add(t.id));
+    S.qTrades = trades; trades.forEach((t) => { S.seenTrades.add(t.id); noteTrade(t); });
+    brand.refresh();
     (body.holders || []).forEach((x) => { if (!x.excludedFromHolderCount) S.holders.add(lower(x.holder)); });
     paintTraders(null); drawHolders();
     const lastTs = trades[0]?.ts; if (lastTs) T.live.setLast(Math.max(0, Date.now() - lastTs * 1000));
@@ -380,10 +453,12 @@ function onTrade(t, prev, before) {
   const side = t.buy ? 'buy' : 'sell', usd = num(t.valueUsd) || 0, from = S.series.length ? S.series[S.series.length - 1][1] : t.priceUsd;
   S.series.push([t.ts, t.priceUsd]);
   T.chart?.trade({ from, to: t.priceUsd, side, usd }); T.live?.hit();
+  noteTrade(t); stage.refresh('traders');
   if (usd >= .01) T.tape?.push(toRow(t));
   paintTraders(prev);
-  tug(side, usd);
   if (usd >= .01) ribbon?.push({ symbol: 'QHOOKS', img: abs(QLOGO), side, usd, w: t.trader });
+  if (!isNews(t.ts)) return;
+  tug(side, usd, t.trader);
   const who = lower(t.trader);
   if (t.buy && !before.has(who) && S.holders.has(who)) {
     toast({ kind: 'holder', title: h('span', null, h('b', null, 'New holder'), ' · ' + fmt.tok(num(t.token) || 0) + ' QHOOKS'), body: `${fmt.short(t.trader)} bought ${fmt.usdExact(usd)}`, ava: avatar(t.trader) });
@@ -447,8 +522,9 @@ function drawHolders(update = false) {
   // the burns tape needs the WETH price from the trades
   if (S.burns && !H.burnsDrawn && wethUsd()) {
     H.burnsDrawn = true;
-    const recent = (S.burns.burns?.recent || []).slice(0, 6);
-    recent.forEach((b) => S.seenBurns.add(b.tx));
+    // every burn in this read counts as seen (not only the six on screen), so the next read toasts only newer ones
+    const all = S.burns.burns?.recent || [], recent = all.slice(0, 6);
+    all.forEach((b) => { S.seenBurns.add(b.tx); S.lastBurnAt = Math.max(S.lastBurnAt || 0, num(b.at) || 0); });
     H.tape.render(recent.map(burnRow)); H.tape.ages(nowS());
     recent.slice(0, 4).forEach((b) => { const r = burnRow(b); ribbonTrade({ symbol: 'QHOOKS', img: abs(QLOGO), side: 'burn', usd: r.usd, w: null, ts: b.at }, true); });
   }
@@ -458,15 +534,18 @@ function onBuybacks(e) {
   const { data, fetchedAt } = e.detail || {}; if (!data) return;
   const firstBurns = !S.burns; S.burns = data; S.bbAt = fetchedAt || Date.now();
   if (!firstBurns && H.burnsDrawn) {
-    const fresh = (data.burns?.recent || []).filter((b) => !S.seenBurns.has(b.tx)).reverse();
+    const fresh = (data.burns?.recent || []).filter((b) => b.tx && !S.seenBurns.has(b.tx) && (num(b.at) || 0) > (S.lastBurnAt || 0)).reverse();
     for (const b of fresh) {
-      S.seenBurns.add(b.tx); const r = burnRow(b);
-      H.tape.push(r); tug('burn', r.usd);
+      S.seenBurns.add(b.tx); S.lastBurnAt = Math.max(S.lastBurnAt || 0, num(b.at) || 0); const r = burnRow(b);
+      H.tape.push(r);
+      if (!isNews(b.at)) continue;
+      tug('burn', r.usd);
       ribbon?.push({ symbol: 'QHOOKS', img: abs(QLOGO), side: 'burn', usd: r.usd });
       toast({ kind: 'burn', title: h('span', null, h('b', null, 'Buyback'), ' · burned'), body: `${fmt.tok(r.tok)} QHOOKS for ${fmt.usdExact(r.usd)}`, ava: keeperAvatar() });
     }
   }
   drawHolders(!firstBurns);
+  if (firstBurns) brand.refresh();
 }
 document.addEventListener('qx:buybacks', onBuybacks);
 if (globalThis.__qxBuybacks) onBuybacks({ detail: globalThis.__qxBuybacks });
@@ -552,33 +631,62 @@ async function loadProofs() {
   const got = await Promise.all(picks.map((m) => getJSON('/api/repoproof/check?' + new URLSearchParams({ kind: 'token', chainId: String(m.chainId), address: lower(m.token) }))
     .then((r) => ({ m, r }), () => ({ m, r: null }))));
   const ready = got.filter((x) => x.r?.state === 'ready' && x.r.report && Array.isArray(x.r.report.checks));
-  if (!ready.length) { proofBox.replaceChildren(state('empty', { title: 'No checks to show yet', body: 'Open any token in the terminal to see its pre-buy check.', action: 'Open the terminal', onAction: () => location.assign('/terminal') })); return; }
-  proofBox.replaceChildren(h('div', { class: 'hm-live-h' }, h('b', null, 'Latest checks'), h('span', null, 'The most traded launches')), h('div', { class: 'hm-proofs' }, ready.map(({ m, r }) => proofCard(m, r))));
+  if (!ready.length) { proofBox.replaceChildren(state('empty', { title: 'No checks yet', body: 'Open a token in the terminal to check it.', action: 'Open the terminal', onAction: () => location.assign('/terminal') })); return; }
+  proofBox.replaceChildren(h('div', { class: 'hm-live-h' }, h('b', null, 'Latest checks'), h('span', null, 'Most traded')), h('div', { class: 'hm-proofs' }, ready.map(({ m, r }) => proofCard(m, r))));
 }
 
-/* ================= hero facts: one live line per brand-line word ================= */
-const smallIcon = (src, label) => { const el = h('span', { class: 'hm-proof__img' }); if (src) { const img = h('img', { src, alt: '', decoding: 'async' }); img.addEventListener('error', () => { img.remove(); el.textContent = String(label || '?').slice(0, 1); }, { once: true }); el.append(img); } else el.textContent = String(label || '?').slice(0, 1).toUpperCase(); return el; };
-FACTS.builders = () => {
+/* ================= the cards on the hook: one per brand-line word ================= */
+// Every card is read from what the loaders above already hold. A card with no data yet returns null and the hook keeps
+// what it has. The QHOOKS outcome on a call is shown only when both prices are USD (see callPost).
+const artOf = (m) => (!m ? null : lower(m.token) === QH ? QART : logoOf(m.profileBanner) || logoOf(m.logo));
+const marketOf = (a) => (a ? S.markets.find((x) => lower(x.token) === lower(a) || lower(x.controller) === lower(a)) : null);
+// The latest trades from every launch this page reads (QHOOKS live, the two most active others), newest first.
+function noteTrade(t, m) {
+  const usd = num(t?.valueUsd) || 0; if (usd < .01 || !num(t?.ts)) return;
+  const isQ = !m || lower(m.token) === QH, id = t.id || t.trader + ':' + t.ts + ':' + usd;
+  if (S.recent.some((r) => r.id === id)) return;
+  S.recent.push({ id, ts: t.ts, side: t.buy ? 'buy' : 'sell', usd, w: t.trader, sym: isQ ? 'QHOOKS' : m.symbol || 'Token',
+    img: isQ ? QLOGO : logoOf(m.logo), art: isQ ? QART : artOf(m), href: isQ ? '/terminal#t=' + QCHAIN + ':' + QH : launchHref(m) });
+  S.recent.sort((a, b) => b.ts - a.ts); S.recent.length = Math.min(S.recent.length, 12);
+}
+const tradeRow = (r) => h('span', { class: 'hm-card__row is-' + r.side }, h('b', null, (r.side === 'sell' ? '▼ ' : '▲ ') + fmt.usdExact(r.usd)), tokenChip(r.sym, r.img), h('time', null, fmt.age(nowS() - r.ts)));
+CARDS.builders = () => {
   const m = S.markets.filter((x) => x.live).sort((a, b) => (b.listedAt || 0) - (a.listedAt || 0))[0];
   if (!m) return null;
-  const at = num(m.launchedAt) || (num(m.listedAt) ? m.listedAt / 1000 : null);
-  return { text: `${m.symbol || m.name || 'A token'} launched on ${chainName(m.chainId)}${at ? ' ' + fmt.age(nowS() - at) + ' ago' : ''}`, icon: smallIcon(logoOf(m.logo) || (lower(m.token) === QH ? QLOGO : null), m.symbol) };
+  const at = num(m.launchedAt) || (num(m.listedAt) ? m.listedAt / 1000 : null), t = num(m.summary?.trades24);
+  return { kind: 'launch', art: artOf(m), coin: logoOf(m.logo) || (lower(m.token) === QH ? QLOGO : null), href: launchHref(m),
+    kick: 'Newest launch', title: m.symbol || m.name || 'Token',
+    sub: [chainName(m.chainId), at ? fmt.age(nowS() - at) + ' ago' : null, t != null ? t + (t === 1 ? ' trade' : ' trades') : null].filter(Boolean).join(' · ') };
 };
-FACTS.callers = () => {
+CARDS.callers = () => {
   const c = S.latestCall; if (!c) return null;
-  const sym = c.board?.symbol || c.board?.name || 'token', isQ = lower(c.board?.address) === QH;
-  // A multiple only when both prices are USD for sure: QHOOKS calls against the live USD price. (The activity feed's
-  // priceNow can be in the pool's quote unit while the call price is in USD, which would read as a false -100%.)
+  const sym = c.board?.symbol || c.board?.name || 'token', isQ = lower(c.board?.address) === QH, m = marketOf(c.board?.address);
   const now = isQ && c.call?.quoteSymbol === 'USD' ? qPrice() : null, x = now && c.call?.price ? now / c.call.price : null;
-  const ago = num(c.createdAt) ? ' ' + fmt.age((Date.now() - c.createdAt) / 1000) + ' ago' : '';
-  return { text: `${fmt.short(c.author)} called $${sym}${x ? ' · ' + fmt.mult(x) + ' since' : ago}`, icon: avatar(c.author) };
+  const ago = num(c.createdAt) ? fmt.age((Date.now() - c.createdAt) / 1000) + ' ago' : null;
+  return { kind: 'call', art: isQ ? QART : artOf(m) || boardLogo(c.board), coin: boardLogo(c.board), ava: avatar(c.author), href: c.links?.path || (c.id ? '/call/' + c.id : '/community#callers'),
+    kick: 'Latest call', title: '$' + sym,
+    sub: [fmt.short(c.author), num(c.call?.price) ? 'at ' + fmt.price(c.call.price) : null, ago].filter(Boolean).join(' · '),
+    fig: x ? fmt.mult(x) : null, figCls: x ? pctCls(x - 1) : '', figSub: x ? 'since' : null };
 };
-FACTS.holders = () => (P.holders == null && P.burned == null ? null
-  : { text: [P.holders != null ? `${P.holders.toLocaleString('en-US')} QHOOKS holders` : null, P.burned != null ? `${fmt.tok(P.burned)} burned` : null].filter(Boolean).join(' · '), icon: smallIcon(QLOGO, 'Q') });
-FACTS.traders = () => (P.trades == null ? null
-  : { text: `${P.trades.toLocaleString('en-US')} trades${P.vol != null ? ' · ' + fmt.usd(P.vol) + ' volume' : ''} in the last 24h`, icon: null });
-FACTS.rest = () => (P.launches == null ? null
-  : { text: `${P.launches} live launches${P.trades != null ? ' · ' + P.trades.toLocaleString('en-US') + ' trades today' : ''}`, icon: null });
+CARDS.holders = () => {
+  const b = S.burns?.burns?.recent?.[0], tok = b ? units(b.burnedWei) : 0;
+  const tail = [P.burned != null ? fmt.tok(P.burned) + ' total' : null, P.holders != null ? P.holders.toLocaleString('en-US') + ' holders' : null];
+  if (b && tok > 0) return { kind: 'burn', art: QART, coin: QLOGO, href: '/qhooks-token#qx-buybacks', kick: 'Buyback', kickCls: 'is-fire',
+    title: fmt.tok(tok) + ' QHOOKS burned', sub: [num(b.at) ? fmt.age(nowS() - b.at) + ' ago' : null, ...tail].filter(Boolean).join(' · ') };
+  if (P.holders == null && P.burned == null) return null;
+  return { kind: 'burn', art: QART, coin: QLOGO, href: '/qhooks-token', kick: 'Holders', title: P.holders != null ? P.holders.toLocaleString('en-US') + ' holders' : fmt.tok(P.burned) + ' burned', sub: tail.filter(Boolean).join(' · ') };
+};
+CARDS.traders = () => {
+  const rows = S.recent.slice(0, 3); if (!rows.length) return null;
+  return { kind: 'trades', art: rows[0].art, coin: rows[0].img, href: rows[0].href, kick: 'Latest trades', kickCls: 'is-buy', rows: rows.map(tradeRow) };
+};
+CARDS.rest = () => {
+  if (P.launches == null) return null;
+  const live = S.markets.filter((m) => m.live).sort((a, b) => (num(b.summary?.trades24) || 0) - (num(a.summary?.trades24) || 0)).slice(0, 6);
+  const tail = [P.trades != null ? P.trades.toLocaleString('en-US') + ' trades' : null, P.vol != null ? fmt.usd(P.vol) + ' volume' : null].filter(Boolean).join(' · ');
+  return { kind: 'rest', art: QART, coin: QLOGO, href: '/markets', kick: 'Live now', title: P.launches + ' live launches', coins: live.map((m) => iconFor(m, 'hm-card__mini')),
+    sub: tail ? tail + ' in 24h' : null };
+};
 
 /* ================= start ================= */
 poll(loadFeed, 60000);
