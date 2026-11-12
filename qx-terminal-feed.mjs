@@ -6,7 +6,7 @@ import {renderFeedFeedback} from './qx-terminal-feed-presentation.mjs';
 import {browserFeed,browserSearch,readCachedFeed,writeCachedFeed} from './qx-browser-market.mjs';
 import {applyTokenQuery} from './qx-tg-prefill.mjs';
 import {classifyQuery, createWalletLookup, renderWalletPanel} from './qx-wallet-lookup.mjs';
-import {ethCall} from './qx-chain.mjs';
+import {tokenFacts} from './qx-token-venue.mjs';
 globalThis.__qxTokenQuery = globalThis.__qxTokenQuery || applyTokenQuery();
 import {
   CHAINS, TABS, SORT_KEYS, DASH, rowViewModel, sortRows, launchRow, searchRow,
@@ -453,19 +453,24 @@ async function loadWallet(address, controller, mine) {
     if (mine === searchGeneration) showWallet({address, error: true});
   } finally { clearTimeout(timer); }
 }
-async function isToken(chain, address, signal) {
-  let timer;
-  const abort = () => finish('');
-  let finish;
-  const stop = new Promise(resolve => {
-    finish = resolve;
-    timer = setTimeout(() => resolve(''), 3000);
-    signal.addEventListener('abort', abort, {once: true});
+// mktsearch (2026-11-12): a pasted contract is a token when symbol() and decimals() answer on a supported chain. The
+// chain the visitor is on is asked first, then every other EVM chain at once; each read is capped at 4 s. Only an address
+// that is no token anywhere opens the wallet view (Randall pasted ROOQ, AEON, BULW and got "Wallet · $0.00").
+const EVM_CHAINS = CHAINS.map(([id]) => id).filter(id => id !== 'all' && id !== 'solana');
+function capped(promise, ms, signal) {
+  return new Promise(resolve => {
+    const done = v => { clearTimeout(timer); signal?.removeEventListener('abort', stop); resolve(v); }, stop = () => done(null);
+    const timer = setTimeout(stop, ms); signal?.addEventListener('abort', stop, {once: true});
+    Promise.resolve(promise).then(done, () => done(null));
   });
-  try {
-    const result = await Promise.race([ethCall(chain, address, '0x95d89b41').catch(() => ''), stop]);
-    return typeof result === 'string' && /^0x[0-9a-f]+$/i.test(result) && /[1-9a-f]/i.test(result.slice(2));
-  } finally { clearTimeout(timer); signal.removeEventListener('abort', abort); }
+}
+async function tokenChain(address, chain, signal) {
+  const probe = id => capped(tokenFacts(id, address, {signal}), 4000, signal).then(f => f ? id : null);
+  let rest = EVM_CHAINS;
+  if (EVM_CHAINS.includes(chain)) { if (await probe(chain)) return chain; rest = EVM_CHAINS.filter(id => id !== chain); }
+  if (signal.aborted) return null;
+  // The first chain that answers wins; null once every chain has answered or timed out.
+  return new Promise(resolve => { let left = rest.length; if (!left) resolve(null); for (const id of rest) probe(id).then(hit => { if (hit) resolve(hit); else if (--left === 0) resolve(null); }); });
 }
 async function runSearch({walletOnly = false} = {}) {
   if (state.query.length < 2 || document.hidden) return;
@@ -476,12 +481,14 @@ async function runSearch({walletOnly = false} = {}) {
   state.searching = true; renderRows();
   const ceiling = setTimeout(() => controller.abort(), 12000);
   try {
-    if (walletOnly || (kind === 'evm' && chain !== 'all' && chain !== 'solana')) {
-      const token = !walletOnly && await isToken(chain, query, controller.signal);
+    if (kind === 'evm' && !walletOnly) {
+      const found = await tokenChain(query, chain, controller.signal);
       if (mine !== searchGeneration) return;
+      if (found) { clearTimeout(ceiling); clearSearch(); openPasted(found, query); return; }
+    }
+    if (walletOnly || (kind === 'evm' && chain !== 'all' && chain !== 'solana')) {
       clearTimeout(ceiling);
-      if (token) { clearSearch(); openPasted(chain, query); }
-      else await loadWallet(query, controller, mine);
+      await loadWallet(query, controller, mine);
       return;
     }
     // Server search first; when it fails or finds nothing, the browser searches the providers itself.

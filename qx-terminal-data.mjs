@@ -39,10 +39,32 @@ async function serverHeader(chainId,address,signal,fetcher){
  try{const r=await fetcher(`/api/terminal/x/token/${chainId}/${address}`,{cache:'no-store',signal});return r.ok?{t:await r.json()}:{status:r.status};}
  catch(e){if(signal?.aborted)throw e;return {status:0};}
 }
-export async function loadExternalHeader({chainId,address,tf,signal,fetcher=globalThis.fetch,retryMs=1200,dex}){
+// mktsearch (2026-11-12): an outside token with no market, or only a near-empty pool, is never offered for trading
+// against that pool. A launchpad token still on its curve (Pons on Robinhood Chain: AEON, BULW) says so, with the curve's
+// link; a contract with no pool says "No pool found for X on Y yet". The extra read happens only on those paths.
+const deepest=t=>{const v=[...(t?.pools||[]).map(p=>p?.liquidityUsd),t?.liquidityUsd].filter(x=>typeof x==='number'&&Number.isFinite(x));return v.length?Math.max(...v):null;};
+function venueError(message,{view=null,link=null}={}){const e=Error(message);e.view=view;e.link=link;e.venue=true;return e;}
+async function outsideVerdict({chainId,address,t,fetcher,signal,venue,early}){
+ if(String(chainId)==='solana')return null;
+ const v=venue||await import('./qx-token-venue.mjs'),depth=t?deepest(t):null;
+ if(t&&!(depth!=null&&depth<v.THIN_LIQUIDITY_USD))return null;
+ const facts=await (early||v.outsideFacts(chainId,address,{fetcher,signal})).catch(()=>null);if(signal?.aborted)throw Error('aborted');
+ const {chainById}=await import('./chains.mjs'),chain=chainById(String(chainId))?.name||'this chain',sym=t?.symbol||facts?.symbol||null;
+ if(facts?.pons&&!facts.pons.graduated)return venueError(v.curveLine(sym,facts.pons),{view:sym,link:facts.pons.curveUrl?{href:facts.pons.curveUrl,text:'View the curve'}:null});
+ if(t)return venueError((sym||'This token')+' has no pool with real liquidity on '+chain+' yet (the deepest one listed holds $'+depth.toFixed(2)+'). Trading is off for it here.',{view:sym});
+ if(facts?.symbol)return venueError('No pool found for '+facts.symbol+' on '+chain+' yet.',{view:facts.symbol});
+ return null;
+}
+export async function loadExternalHeader({chainId,address,tf,signal,fetcher=globalThis.fetch,retryMs=1200,dex,venue}){
+ // On a launchpad chain the venue read starts beside the market read (one display-cached relay batch), so a curve token's
+ // line doesn't wait for the market read to fail first.
+ let early=null;
+ if(String(chainId)!=='solana'){const v=venue||await import('./qx-token-venue.mjs').catch(()=>null);if(v?.hasLaunchpad?.(chainId)){early=v.outsideFacts(chainId,address,{fetcher,signal});early.catch(()=>{});}}
  let got=await serverHeader(chainId,address,signal,fetcher);
  if(!got.t&&got.status!==404&&got.status!==-1){await new Promise(r=>setTimeout(r,retryMs));if(signal?.aborted)throw Error('aborted');got=await serverHeader(chainId,address,signal,fetcher);}
  if(!got.t){const t=await browserHeader({chainId,address,fetcher,dex}).catch(()=>null);if(t)got={t};}
+ const verdict=await outsideVerdict({chainId,address,t:got.t,fetcher,signal,venue,early}).catch(e=>{if(signal?.aborted)throw e;return null;});
+ if(verdict)throw verdict;
  if(!got.t)throw Error(got.status===404?'No market found for this token.':plainMarketError());
  const t=got.t,token=chainId==='solana'?t.address:t.address?.toLowerCase();
  if(token!==address||(t.chainId!=null&&String(t.chainId)!==chainId))throw Error('Token metadata does not match this selection. Choose the token again.');

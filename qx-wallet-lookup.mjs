@@ -133,11 +133,13 @@ export function renderWalletPanel(container, view, handlers = {}) {
       track.textContent = 'Tracking'; track.setAttribute('aria-pressed', 'true');
     } catch { feedback.textContent = 'Could not track this wallet on this device. Try again.'; }
   });
-  panel.append(el('header', {class: 'qxfd-wallet-header'}, addressLabel,
+  // DOM append() prints null as the text "null" (Randall's "Wallet · $0.00 · null"): only real nodes go in.
+  const parts = [el('header', {class: 'qxfd-wallet-header'}, addressLabel,
     el('div', {class: 'qxfd-wallet-actions'}, copy, track, el('a', {href: profileUrl({wallet:EVM.test(address)?address:'solana:'+address,handle:view.handle})}, 'Profile'))),
     el('div', {class: 'qxfd-wallet-total'}, el('span', {class: 'qxfd-wallet-caption'}, 'Portfolio value'), el('strong', {}, view.unpriced && !view.totalUsd ? '—' : usd(view.totalUsd)), view.refreshing || view.unpriced ? el('span', {class: 'qxfd-wallet-caption'}, view.refreshing ? 'Refreshing' : 'Some prices refreshing') : null),
     view.chains.some(chain => chain.valueUsd >= 0.01) ? el('div', {class: 'qxfd-wallet-chips', tabindex: '0', 'aria-label': 'Value by chain'}, ...view.chains.filter(chain => chain.valueUsd >= 0.01).map(chain =>
-      el('span', {class: 'qxfd-wallet-chip'}, chain.name + ' ', el('b', {}, usd(chain.valueUsd))))) : null, feedback);
+      el('span', {class: 'qxfd-wallet-chip'}, chain.name + ' ', el('b', {}, usd(chain.valueUsd))))) : null, feedback];
+  panel.append(...parts.filter(node => node != null));
 
   const solana = classifyQuery(address) === 'solana';
   const tabs = el('div', {class: 'qxfd-wallet-tabs', role: 'tablist', 'aria-label': 'Wallet view'});

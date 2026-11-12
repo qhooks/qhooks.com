@@ -921,14 +921,19 @@ async function saleState(chainId,token){
     return Error(text);
   }catch{return null;}
 }
-async function select(chainId,controller,{quiet=false}={}) {
+// mktsearch (2026-11-12): a #m= link the directory answers 404 for (an outside token linked or pasted as a launch, e.g.
+// #m=4663:<AEON>) opens as that outside token (#t=) instead of stopping at "This launch is not listed.". A launch made
+// seconds ago can 404 until the launch scan lands, so while that outside page has no market the link is re-checked a few
+// times and switches back to the launch once it is listed.
+async function select(chainId,controller,{quiet=false,recheck=true}={}) {
   if(String(chainId)==='solana')return selectExternal('solana',String(controller),{quiet});
   chainId=String(chainId);controller=String(controller).toLowerCase();
-  return selectionFlow.open({kind:'launch',chainId,controller,quiet},async run=>{
+  let outside=false;
+  const opened=await selectionFlow.open({kind:'launch',chainId,controller,quiet},async run=>{
     // On chains with sale-first launches, a token still in its sale answers here at once (it has no market yet).
     const saleP=SALE_CHAINS.has(chainId)?saleState(chainId,controller):Promise.resolve(null);
     const r=await Promise.race([fetch(`/api/markets/${chainId}/${controller}`,{cache:'no-store',signal:run.controller.signal}),saleP.then(s=>s?Promise.reject(s):new Promise(()=>{}))]);
-    if(!run.active())return false;if(!r.ok){const sale=r.status===404?await saleP:null;if(sale)throw sale;throw Error('This launch is not listed.');}
+    if(!run.active())return false;if(!r.ok){const sale=r.status===404?await saleP:null;if(sale)throw sale;if(r.status===404&&/^0x[0-9a-f]{40}$/.test(controller)){outside=true;return true;}throw Error('This launch is not listed.');}
     const record=await r.json(),pool=record.pool;if(!run.active())return false;
     if(String(pool?.chainId)!==chainId||pool?.controller?.toLowerCase()!==controller)throw Error('Launch metadata does not match this selection. Choose the launch again.');
     state.pool=pool;window.__qhooksPool=pool;document.dispatchEvent(new CustomEvent('qhooks:pool',{detail:pool}));
@@ -939,6 +944,19 @@ async function select(chainId,controller,{quiet=false}={}) {
     refreshSelectedChecks();renderTools();if(!quiet)$('qxt-main').classList.add('has-market');
     poll=setInterval(()=>{if(!document.hidden)loadMarket();},5000);return true;
   });
+  if(!outside)return opened;
+  const shown=await selectExternal(chainId,controller,{quiet});
+  if(!shown&&recheck)void recheckLaunch(chainId,controller,quiet);
+  return shown;
+}
+async function recheckLaunch(chainId,address,quiet){
+  for(const ms of [4000,8000,15000,25000]){
+    await new Promise(r=>setTimeout(r,ms));
+    if(state.sel?.chainId!==chainId||state.sel?.ext!==address||state.data)return;
+    const r=await fetch('/api/markets/'+chainId+'/'+address,{cache:'no-store'}).catch(()=>null);
+    if(state.sel?.chainId!==chainId||state.sel?.ext!==address||state.data)return;
+    if(r?.ok){void select(chainId,address,{quiet,recheck:false});return;}
+  }
 }
 // Outside-token metadata, chart and trades are owned by the admitted selection.
 let externalRead=0;
@@ -1163,7 +1181,9 @@ selectionFlow=createTerminalSelection({ticket,
   if(!target.quiet&&matchMedia('(max-width:760px)').matches)$('qxt-head').scrollIntoView({block:'start'});
  },
  onClear(){if(matchMedia('(max-width:760px)').matches)requestAnimationFrame(()=>scrollTo({top:0,behavior:'auto'}));mseq++;onchainEvm.clear();clearInterval(poll);poll=null;selectedProof.clear();clearConversation();marketWorkspace.clear();state.sel=null;state.data=null;state.pool=null;window.__qhooksPool=null;document.dispatchEvent(new CustomEvent('qhooks:pool',{detail:null}));state.loading=false;state.loadError=null;clearMarketView();$('qxt-sync').textContent='';restoreSelectionURL();},
- onFailure(error){mseq++;onchainEvm.clear();clearInterval(poll);poll=null;state.pool=null;window.__qhooksPool=null;document.dispatchEvent(new CustomEvent('qhooks:pool',{detail:null}));state.loading=false;state.loadError=error.message||'Could not load this token. Choose it again to retry.';state.data=null;marketWorkspace.failMarket(selectedContext(),error);marketWorkspace.failRisk(selectedContext(),Error('Market metadata is unavailable; checks were not loaded.'));clearMarketView('Token unavailable');$('qxt-sync').textContent=state.loadError;},
+ onFailure(error){mseq++;onchainEvm.clear();clearInterval(poll);poll=null;state.pool=null;window.__qhooksPool=null;document.dispatchEvent(new CustomEvent('qhooks:pool',{detail:null}));state.loading=false;state.loadError=error.message||'Could not load this token. Choose it again to retry.';state.data=null;marketWorkspace.failMarket(selectedContext(),error);marketWorkspace.failRisk(selectedContext(),Error('Market metadata is unavailable; checks were not loaded.'));clearMarketView(error.view||'Token unavailable');$('qxt-sync').textContent=state.loadError;
+  // mktsearch: a venue line (a launchpad curve, no pool yet) carries its link, painted after the failure settles.
+  if(error.link?.href){const msg=state.loadError,link=error.link;setTimeout(()=>{const el=$('qxt-sync');if(!el||el.textContent!==msg)return;const a=document.createElement('a');a.href=link.href;a.target='_blank';a.rel='noopener';a.textContent=link.text||'Open';el.replaceChildren(msg+' ',a);},0);}},
  onBlocked(){restoreSelectionURL();$('qxt-sync').textContent='Finish the current trade or resolve its funded recovery before changing tokens.';},
 });
 function backToTokens(){return selectionFlow.clear();}
@@ -1195,8 +1215,19 @@ async function openTerminalHash(hash) {
   if (!route) return false;
   let { kind, chain, address, trade } = route;
   if (kind === 't') {
-    const controller = await qhooksMarketFor(chain, address);
+    // mktsearch: the directory search for a pasted address can be a cold read (up to its 4 s cap). Past 1.5 s the outside
+    // page opens, and if the address turns out to be a QHooks launch the page switches to its market when the answer lands.
+    const lookup = qhooksMarketFor(chain, address);
+    let controller = await Promise.race([lookup, new Promise(r => setTimeout(() => r(undefined), 1500))]);
     if (revision !== linkRevision) return true;
+    if (controller === undefined) {
+      controller = null;
+      void lookup.then(c => {
+        if (!c || revision !== linkRevision || state.sel?.chainId !== chain || state.sel?.ext !== address) return;
+        history.replaceState(history.state, '', location.pathname + location.search + '#m=' + chain + ':' + c);
+        void select(chain, c);
+      });
+    }
     if (controller) {
       const params = new URLSearchParams(String(hash || '').replace(/^#/, ''));params.delete('t');
       const rest = params.toString();
