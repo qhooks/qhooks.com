@@ -174,3 +174,24 @@ directoryCoverage().then((c) => {
   cells[1].firstChild.textContent = String(c.chains);
   cells[2].firstChild.textContent = c.swaps >= 1e6 ? (c.swaps / 1e6).toFixed(1) + 'M' : c.swaps.toLocaleString('en-US');
 }).catch(() => { $('hk-dir').hidden = true; });
+
+/* ---------- Builders: modules in the marketplace (the reviewed list Create offers) ---------- */
+(async () => {
+  const box = $('hk-modules'); if (!box) return;
+  try {
+    const r = await fetch('/market/modules.json', { headers: { accept: 'application/json' } }); if (!r.ok) throw new Error();
+    const list = (await r.json()).modules.filter((m) => m.status === 'listed');
+    if (!list.length) { box.replaceChildren(h('p', { class: 'hl-small' }, 'No modules listed yet. Yours could be the first.')); return; }
+    box.replaceChildren(...list.map((m) => h('a', { class: 'qa-row hk-mod', href: '/builders#module-' + m.slug },
+      h('span', { class: 'hl-gt hl-gt--sm', dataset: { hlGlyph: m.panel === 'raffle' ? 'raffle' : m.panel === 'stake' ? 'stake' : 'module' } }),
+      h('span', { class: 'qa-row__main' }, h('span', { class: 'qa-row__t' }, m.name), h('span', { class: 'hk-mod__s' }, m.summary)),
+      h('span', { class: 'qa-row__v' }, h('b', null, m.builderBps ? (m.builderBps / 100) + '% to builder' : 'No builder share'), h('small', null, 'Built by ' + m.builderName)))));
+    fillGlyphs(box);
+  } catch { box.replaceChildren(h('p', { class: 'hl-small' }, 'Refreshing the module list.')); }
+})();
+// Copy the MCP address.
+$('hk-mcp-copy')?.addEventListener('click', async (e) => {
+  const b = e.currentTarget, text = b.dataset.copy, was = b.textContent;
+  try { await navigator.clipboard.writeText(text); b.textContent = 'Copied'; } catch { b.textContent = text; }
+  setTimeout(() => { b.textContent = was; }, 1800);
+});

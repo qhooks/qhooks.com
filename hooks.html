@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Hooks | QHooks</title>
-<meta name="description" content="Launch blocks for Uniswap v4: anti-snipe, taxes, burns, buybacks, pots, market-hours and storm fees. Set once at launch on Base, Robinhood Chain, Ethereum, Arbitrum or BNB Chain.">
+<title>Builders Lab | QHooks</title>
+<meta name="description" content="Build your own hook: write a module, test it, list it, and set a builder share of up to 10%, fixed in its code. Or build through MCP.">
 <link rel="icon" href="qhooks-logo.jpg">
 <script src="theme.js"></script>
 <link rel="preload" href="/qx-a/fonts/mona-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="/wallet-site.css">
 <link rel="stylesheet" href="/qx-a/pages/hooks-lane.css">
 <link rel="stylesheet" href="/qx-a/pages/hooks-hooks.css">
-<link rel="modulepreload" href="/wallet-site.mjs"><link rel="modulepreload" href="/wallet-hub.mjs"><link rel="modulepreload" href="/wallet-hub-fresh.mjs"><link rel="modulepreload" href="/full-launch/prototypes/qwallet/client/wallet-session.mjs"><link rel="modulepreload" href="/wallet-discovery.mjs"><link rel="modulepreload" href="/wallet-preference.mjs"><link rel="modulepreload" href="/wallet-rpc-compat.mjs"><link rel="modulepreload" href="/chain-catalog.mjs"><link rel="modulepreload" href="/wallet-login.mjs"><link rel="modulepreload" href="/embedded-wallet-provider.mjs"><meta property="og:type" content="website"><meta property="og:site_name" content="QHooks"><meta property="og:title" content="Hooks | QHooks"><meta property="og:description" content="Launch blocks for Uniswap v4: anti-snipe, taxes, burns, buybacks, pots, market-hours and storm fees. Set once at launch on Base, Robinhood Chain, Ethereum, Arbitrum or BNB Chain."><meta property="og:image" content="https://qhooks.com/og/qhooks-card.png?v=2"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://qhooks.com/og/qhooks-card.png?v=2"><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/app-icons/apple-touch-icon.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="QHooks"><meta name="theme-color" content="#090B0A">
+<link rel="modulepreload" href="/wallet-site.mjs"><link rel="modulepreload" href="/wallet-hub.mjs"><link rel="modulepreload" href="/wallet-hub-fresh.mjs"><link rel="modulepreload" href="/full-launch/prototypes/qwallet/client/wallet-session.mjs"><link rel="modulepreload" href="/wallet-discovery.mjs"><link rel="modulepreload" href="/wallet-preference.mjs"><link rel="modulepreload" href="/wallet-rpc-compat.mjs"><link rel="modulepreload" href="/chain-catalog.mjs"><link rel="modulepreload" href="/wallet-login.mjs"><link rel="modulepreload" href="/embedded-wallet-provider.mjs"><meta property="og:type" content="website"><meta property="og:site_name" content="QHooks"><meta property="og:title" content="Builders Lab | QHooks"><meta property="og:description" content="Build your own hook: write a module, test it, list it, and set a builder share of up to 10%, fixed in its code. Or build through MCP."><meta property="og:image" content="https://qhooks.com/og/qhooks-card.png?v=2"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://qhooks.com/og/qhooks-card.png?v=2"><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/app-icons/apple-touch-icon.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="QHooks"><meta name="theme-color" content="#090B0A">
 </head>
 <body class="qa" data-a-shell data-qa-active="hooks">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -23,12 +23,36 @@
  <section class="hk-hero hl-hero" aria-labelledby="hk-title">
   <div class="hk-hook" aria-hidden="true"><img src="/qx-a/img/hook-cut.png" alt="" width="520" height="1000" decoding="async"></div>
   <div class="hk-hero-copy">
-   <p class="hl-eyebrow">Hooks</p>
-   <h1 id="hk-title" class="hl-h1">Every trade, <span class="hl-gold">your rules.</span></h1>
-   <p class="hl-lede">Snipe guards, taxes, burns, buybacks, pots and market fees. Set once at launch. Nobody can change them after, including you.</p>
-   <div class="hl-cta"><a class="qa-btn qa-btn--primary" href="/qtoken-studio">Build a launch</a><a class="qa-btn qa-btn--secondary" href="#presets">Start from a preset</a></div>
+   <p class="hl-eyebrow">Builders Lab</p>
+   <h1 id="hk-title" class="hl-h1">Build your own <span class="hl-gold">hook.</span></h1>
+   <p class="hl-lede">Write a module. Test it. List it. Set a builder share of up to 10%, fixed in its code.</p>
+   <div class="hl-cta"><a class="qa-btn qa-btn--primary" href="/builders#guide">Start building</a><a class="qa-btn qa-btn--secondary" href="/lab">Open the Lab</a></div>
+   <p class="hk-create-link">Launching a token? <a class="qa-link" href="/create">Go to Create</a></p>
    <p class="hk-pulse" id="hk-pulse" aria-live="polite"></p>
   </div>
+ </section>
+ <section class="hl-sec hk-how hk-build" id="build" aria-labelledby="hk-build-h">
+  <header class="qa-head"><h2 class="qa-head__t" id="hk-build-h">Build your own</h2></header>
+  <ol class="hk-how-rail">
+   <li><span class="hl-gt" data-hl-glyph="code"></span><b>Write</b><span>Start from the open template. It takes a share of launch income. <a class="qa-link" href="/builders#guide">Builder guide</a></span></li>
+   <li><span class="hl-gt" data-hl-glyph="tools"></span><b>Test</b><span>Run its tests, or build and deploy a hook in the Lab. <a class="qa-link" href="/lab">Open the Lab</a></span></li>
+   <li><span class="hl-gt" data-hl-glyph="review"></span><b>List</b><span>Submit it. Once reviewed, it&rsquo;s in Create. <a class="qa-link" href="/market-submit">Submit a module</a></span></li>
+   <li><span class="hl-gt" data-hl-glyph="payees"></span><b>Share</b><span>Set a builder share of up to 10% of what it receives. It&rsquo;s fixed in the module&rsquo;s code.</span></li>
+  </ol>
+ </section>
+ <section class="hl-sec hk-agents" id="agents" aria-labelledby="hk-agents-h">
+  <div class="hk-open-row">
+   <span class="hl-gt hl-gt--lg" data-hl-glyph="module"></span>
+   <div><h2 class="hl-h3 hk-open-t" id="hk-agents-h">Build with an agent</h2>
+    <p class="hl-p">Point any MCP client at <a class="qa-link" href="/api#agents">qhooks.com/mcp</a>. It reads launches and tokens, quotes, and prepares launches and trades. Your wallet signs; agents can&rsquo;t deploy or list.</p>
+    <p class="hl-small hk-agents-tools">Tools: list_launches · token_info · quote · prepare_launch · prepare_trade.</p></div>
+   <span class="hk-agents-act"><button class="qa-btn qa-btn--secondary" type="button" id="hk-mcp-copy" data-copy="https://qhooks.com/mcp">Copy MCP address</button><a class="qa-link" href="/api#agents">Agent docs</a></span>
+  </div>
+ </section>
+ <section class="hl-sec hk-modules" id="modules" aria-labelledby="hk-modules-h">
+  <header class="qa-head"><h2 class="qa-head__t" id="hk-modules-h">Builders</h2><span class="qa-head__note">Modules in the marketplace</span></header>
+  <div class="qa-list hk-mod-list" id="hk-modules" aria-live="polite"><span class="qa-skel qa-skel--row"></span><span class="qa-skel qa-skel--row"></span></div>
+  <p class="hl-small"><a class="qa-link" href="/builders#modules">All modules</a> · <a class="qa-link" href="/hook-marketplace">Hook marketplace</a></p>
  </section>
 
  <section class="qa-stats hk-stats" aria-label="At a glance"><div class="qa-stats__track">
