@@ -70,7 +70,9 @@
   const add = (tag, attrs) => { const el = document.createElement(tag); for (const k in attrs) el.setAttribute(k, attrs[k]); head.appendChild(el); return el; };
   add('link', { rel: 'stylesheet', href: '/qx-a/tokens.css', blocking: 'render' });
   add('link', { rel: 'stylesheet', href: '/qx-a/bridge.css', blocking: 'render' });
-  add('script', { type: 'module', src: '/qx-a/bridge.mjs' });
+  // perf (2026-11-12): a bundled page (meta qx-bundle=bridge) already carries bridge.mjs in its bundle; loading it
+  // here too would load the shell twice.
+  if (!/(^|\s)bridge(\s|$)/.test(document.querySelector('meta[name="qx-bundle"]')?.content || '')) add('script', { type: 'module', src: '/qx-a/bridge.mjs' });
   window.addEventListener('load', () => {
     setTimeout(() => { if (!root.classList.contains('qa-mounted')) root.classList.add('qa-bridge-off'); }, 4000);
   }, { once: true });

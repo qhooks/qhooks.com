@@ -36,7 +36,8 @@ export function mountBalance(end, before) {
   const amt = doc.createElement('b'), sub = doc.createElement('span');
   btn.append(amt, sub);
   (before && before.parentNode === end ? before : end.lastElementChild)?.before(btn);
-  let who = remembered(), mode = get(MODE) === 'usd' ? 'usd' : 'chain', last = 0, seq = 0, totalStarted = '';
+  // dollarfirst (2026-11-12): the dollar total across chains leads; a stored "chain" choice still wins
+  let who = remembered(), mode = get(MODE) === 'chain' ? 'chain' : 'usd', last = 0, seq = 0, totalStarted = '';
 
   function paint() {
     if (!who) { btn.hidden = true; return; }
@@ -71,10 +72,15 @@ export function mountBalance(end, before) {
     try {
       const m = await import('/qx-balances.mjs');
       const cached = m.cachedBalances(owner);
-      if (cached.data && Number.isFinite(cached.data.total)) { put(KEY + owner + ':usd', String(cached.data.total)); paint(); }
+      // only a finished reading: one still in progress has only the chains that answered so far
+      if (cached.data && !cached.data.reading && Number.isFinite(cached.data.total)) { put(KEY + owner + ':usd', String(cached.data.total)); paint(); }
       if (cached.fresh && !force) return;
       const d = await m.refreshBalances(owner);
       if (d && Number.isFinite(d.total)) { put(KEY + owner + ':usd', String(d.total)); if (who?.owner === owner) paint(); }
+      // a chain that didn't answer in time gets one more read, so the header settles on the full total (the wallet
+      // menu does the same); no polling beyond this one retry
+      const slow = (d?.rows || []).filter((r) => r.refreshing || r.error).map((r) => chainById(String(r.chainId))).filter(Boolean);
+      if (slow.length) setTimeout(() => { if (who?.owner === owner) m.refreshBalances(owner, { chains: slow }).then((d2) => { if (d2 && Number.isFinite(d2.total)) { put(KEY + owner + ':usd', String(d2.total)); if (who?.owner === owner) paint(); } }, () => {}); }, 2500);
     } catch { /* the chain balance still shows */ }
   }
 
@@ -84,7 +90,7 @@ export function mountBalance(end, before) {
     if (!who) return;
     if (changed || why === 'trade') readChain(true);
     const idle = globalThis.requestIdleCallback || ((f) => setTimeout(f, 1500));
-    idle(() => readTotal(why === 'trade'));
+    if (mode === 'usd') readTotal(why === 'trade'); else idle(() => readTotal(why === 'trade'));
   }
 
   btn.addEventListener('click', () => {
@@ -93,7 +99,7 @@ export function mountBalance(end, before) {
   });
 
   // instant: the remembered wallet and chain, from the last visit
-  if (who) { paint(); readChain(true); }
+  if (who) { paint(); readChain(true); if (mode === 'usd') readTotal(false); }
   // the live connection: connect, chain switch, disconnect
   import('/wallet-hub.mjs').then(({ getWalletHub }) => {
     getWalletHub(window).subscribe((s) => {

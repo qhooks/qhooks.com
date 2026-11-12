@@ -181,8 +181,18 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   $('qp-chains').replaceChildren(...choices.map(c => button(c.name, () => {
    prefs.chain = c.chainId;
    for (const b of $('qp-chains').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.chain === c.chainId));
-   paintHoldings();
+   paintHoldings(); paintHeroValue();
   }, {'aria-pressed': String(c.chainId === prefs.chain), 'data-chain': c.chainId})));
+ }
+ // pfchain (2026-11-12): the hero shows the total across chains, or the chain picked in the chips
+ function shownValue() {
+  if (!current || prefs.chain === 'all') return current?.valueUsd ?? null;
+  return sumKnown(current.rows.filter(r => r.chainId === prefs.chain && !r.spam).map(r => r.valueUsd));
+ }
+ function paintHeroValue(dir = 0, failed = []) {
+  const pick = prefs.chain !== 'all' && current?.allocation.find(c => c.chainId === prefs.chain);
+  paintTotal(shownValue(), dir);
+  $('qp-value-label').textContent = pick ? 'Value on ' + pick.name : current?.partial || failed.length ? 'Known value · partial reading' : 'Total value';
  }
  // The balance: changed digits flash green or red and fade (System A big price), only on a live price move.
  function paintTotal(value, dir) {
@@ -222,8 +232,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   $('qp-allocation').replaceChildren(bar, legend);
  }
  function paintOverview(failed = []) {
-  const m = current; $('qp-total').classList.remove('qp-skeleton'); paintTotal(m.valueUsd, 0);
-  $('qp-value-label').textContent = m.partial || failed.length ? 'Known value · partial reading' : 'Total value';
+  const m = current; $('qp-total').classList.remove('qp-skeleton'); paintHeroValue(0, failed);
   paintChange();
   $('qp-at').textContent = m.at ? 'Read ' + new Date(m.at).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit', second: '2-digit'}) : 'Refreshing';
   $('qp-overview').setAttribute('aria-busy', 'false');
@@ -270,7 +279,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   feed = liveFeed(data.markets); liveAt = Date.now();
   const before = current.valueUsd, {moved, logos} = applyLive(current, feed);
   if (moved.length) {
-   paintTotal(current.valueUsd, Math.sign((current.valueUsd ?? 0) - (before ?? 0))); paintChange(); paintAllocation(); paintTop(); paintPnl(); paintHoldings();
+   paintHeroValue(Math.sign((current.valueUsd ?? 0) - (before ?? 0))); paintChange(); paintAllocation(); paintTop(); paintPnl(); paintHoldings();
    for (const r of moved) { const row = $('qp-holdings').querySelector?.('[data-key="' + marketKey(r.chainId, r.address) + '"]'); if (row && r.dir) { row.classList.add(r.dir > 0 ? 'is-up' : 'is-down'); setTimeout(() => row.classList.remove('is-up', 'is-down'), 1200); } }
   } else if (logos) { paintTop(); paintHoldings(); }
   paintAge();

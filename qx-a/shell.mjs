@@ -254,6 +254,8 @@ export function mountShell(o = {}) {
   };
   // the connected wallet's balance beside the wallet button, on every page (qx-a/balance.mjs)
   if (!adopt) import('./balance.mjs').then((m) => m.mountBalance(header.querySelector('.qa-hdr__end'), walletSlot)).catch(() => {});
+  // the connected wallet's balance beside the wallet button, on every page (qx-a/balance.mjs)
+  if (!adopt) import('./balance.mjs').then((m) => m.mountBalance(header.querySelector('.qa-hdr__end'), walletSlot)).catch(() => {});
   S = { api, apply };
   apply({ ...o, footer: o.footer !== false && !(adopt && o.footer == null) });
   if (!adopt && !o.wallet) adoptWallet(walletSlot);
