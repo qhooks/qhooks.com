@@ -38,7 +38,7 @@ export function createSolanaProfileWallet(target=globalThis.window){
   function assertCurrent(){if(disposed||current!==connection||mine!==generation||!wallets.has(connection.wallet))throw changed();}
   async function check(){assertCurrent();const first=account(connection.wallet.accounts?.[0]);if(!first||first.address!==connection.address){clear();throw changed();}assertCurrent();}
   return Object.freeze({owner:connection.owner,assertCurrent,check,async sign(message){
-   await check();if(typeof message!=='string'||!message)throw Error('The profile sign-in message is unavailable.');
+   await check();if(typeof message!=='string'||!message)throw Error('Refreshing the profile sign-in message. Try again.');
    const messageBytes=new TextEncoder().encode(message),[result]=await connection.wallet.features['solana:signMessage'].signMessage({account:connection.account,message:messageBytes});
    await check();if(!bytes(result?.signature)||result.signature.length!==64||!equal(result.signedMessage,messageBytes))throw Error('The wallet did not sign the exact profile message.');
    return base58Encode(result.signature);
