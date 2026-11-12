@@ -251,4 +251,35 @@ watch($('qq-ideas'), () => { syncChains(); dressCards(); }, { childList: true, s
 document.addEventListener('change', (e) => { if (e.target?.id === 'qq-chain') syncChains(); });
 document.addEventListener('visibilitychange', refreshOn);
 syncChains(); dressCards(); paintNames(); paintIdea(); paintReady(); paintLaunch(); paintDone();
+
+/* ---------- upload tiles: Sale first and token profile pickers (finish sweep, 2026-11-12) ---------- */
+// The native "Choose File" controls become tiles with the picked image inside. Presentation only: each input keeps its id,
+// label and change handler (visually hidden, still focusable; the whole label opens the picker). The preview is the
+// module's own image (Sale first: moved into the tile) or a copy of the profile editor's preview card (token profile).
+// Quick launch already has its own rows (.cx-file), and the quantum key-file input is left alone.
+const PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+function dressUpload(input) {
+  if (input.dataset.crTile || input.classList.contains('cx-file')) return;
+  const label = input.closest('label'); if (!label) return;
+  input.dataset.crTile = '1'; input.classList.add('cx-file');
+  const kind = /-restore$/.test(input.id) || /json/.test(input.accept) ? 'file' : /banner/.test(input.id) ? 'banner' : 'image';
+  label.classList.add('cr-tiled', 'cr-tiled--' + kind);
+  if (kind === 'file') { label.insertBefore(el('span', { class: 'cr-tile cr-tile--file', 'aria-hidden': 'true' }, 'Choose file'), input); return; }
+  const tile = el('span', { class: 'cr-tile cr-tile--' + kind });
+  const ask = el('span', { class: 'cr-tile__ask', 'aria-hidden': 'true' }); ask.innerHTML = PLUS; ask.append(el('b', {}, kind === 'banner' ? 'Add banner' : 'Add image'));
+  const own = label.querySelector('img'), pv = own || el('img', { class: 'cr-tile__mirror', alt: '', hidden: true });
+  const paint = () => tile.classList.toggle('has-img', !pv.hidden && !!pv.getAttribute('src'));
+  tile.append(ask, pv, el('span', { class: 'cr-tile__change', 'aria-hidden': 'true' }, 'Change'));
+  label.insertBefore(tile, input);
+  if (!own) {
+    const src = input.closest('.qtp-editor')?.querySelector(kind === 'banner' ? '.qtp-preview-banner' : '.qtp-preview-avatar');
+    const copy = () => { const s = src && !src.hidden && src.getAttribute('src'); if (s) { if (pv.getAttribute('src') !== s) pv.src = s; pv.hidden = false; } else { pv.hidden = true; pv.removeAttribute('src'); } };
+    if (src) { new MutationObserver(copy).observe(src, { attributes: true, attributeFilter: ['src', 'hidden'] }); copy(); }
+  }
+  new MutationObserver(paint).observe(pv, { attributes: true, attributeFilter: ['src', 'hidden'] });
+  paint();
+}
+const dressUploads = () => { for (const i of document.querySelectorAll('#qsf-root input[type=file], .qtp-editor input[type=file]')) dressUpload(i); };
+watch($('main'), dressUploads, { childList: true, subtree: true });
+dressUploads();
 document.fonts?.ready.then(reelNav);

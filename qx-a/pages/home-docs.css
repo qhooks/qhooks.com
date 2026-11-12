@@ -66,7 +66,7 @@
 .hd details p { font-size: 15.5px; line-height: 1.6; color: var(--qa-tx-2); }
 
 /* "On this page": underlined tabs that scroll sideways on a phone and follow the section in view */
-.hd-toc { position: sticky; z-index: 20; top: var(--qa-sticky-top, calc(var(--qa-hdr-h) + env(safe-area-inset-top))); display: flex; gap: 0 22px; margin: 22px calc(var(--qa-pad) * -1) 0; padding: 0 var(--qa-pad); overflow-x: auto; scrollbar-width: none; background: var(--qa-glass); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); box-shadow: 0 1px 0 var(--qa-rule), 0 -1px 0 var(--qa-rule); }
+.hd-toc { position: sticky; z-index: 20; top: var(--qa-sticky-top, calc(var(--qa-hdr-h) + env(safe-area-inset-top))); display: flex; gap: 0 22px; margin: 22px calc(var(--qa-pad) * -1) 0; padding: 0 var(--qa-pad); overflow-x: auto; scrollbar-width: none; background: var(--qa-floor); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 1px 0 var(--qa-rule), 0 -1px 0 var(--qa-rule); }
 .hd-toc::-webkit-scrollbar { display: none; }
 .hd-toc a { position: relative; flex: none; display: inline-flex; align-items: center; height: 46px; font-size: 14px; font-weight: 680; color: var(--qa-tx-3); white-space: nowrap; transition: color var(--qa-t-quick) var(--qa-ease); }
 .hd-toc a:hover { color: var(--qa-tx-2); }

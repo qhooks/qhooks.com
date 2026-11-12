@@ -222,6 +222,24 @@ html:has(.cr-go) { scroll-padding-bottom: calc(var(--cx-dock-bottom, 0px) + 96px
 .cr .qsf-tiers { margin-top: 10px; }
 .cr .qsf-summary { margin-top: 16px; padding-top: 14px; box-shadow: 0 -1px 0 var(--qa-rule); font-size: 15px; line-height: 1.5; color: var(--qa-tx); max-width: 72ch; }
 .cr .qsf-price-cap { color: var(--qa-tx-3); }
+
+/* upload tiles (create-create.mjs dressUpload): Sale first and token profile pickers; the input stays in the label */
+.cr .cr-tiled { display: grid; justify-items: start; align-content: start; gap: 8px; cursor: pointer; }
+.cr .cr-tile { position: relative; display: grid; place-items: center; overflow: hidden; background: var(--qa-wash-2); box-shadow: inset 0 0 0 1px var(--qa-rule); color: var(--qa-tx-2); transition: background-color var(--qa-t-quick) var(--qa-ease), box-shadow var(--qa-t-quick) var(--qa-ease); }
+.cr .cr-tile--image { width: 88px; height: 88px; border-radius: 50%; }
+.cr .cr-tile--banner { width: 100%; max-width: 480px; aspect-ratio: 3 / 1; border-radius: 16px; }
+.cr .cr-tile--file { height: 36px; padding: 0 14px; border-radius: var(--qa-r-m); box-shadow: none; font-size: 13.5px; font-weight: 720; color: var(--qa-tx); }
+.cr .cr-tiled:hover .cr-tile { background: var(--qa-rule-2); }
+.cr .cr-tile__ask { display: grid; justify-items: center; gap: 4px; font-size: 12.5px; font-weight: 720; }
+.cr .cr-tile__ask svg { width: 20px; height: 20px; fill: none; stroke: var(--qa-gold); stroke-width: 1.8; stroke-linecap: round; }
+.cr .cr-tiled .cr-tile > img[alt] { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; aspect-ratio: auto; object-fit: cover; border-radius: 0; box-shadow: none; }
+.cr .cr-tiled .cr-tile > img[hidden] { display: none; }
+.cr .cr-tile.has-img { box-shadow: 0 0 0 2px var(--qa-gold-lo); }
+.cr .cr-tile.has-img .cr-tile__ask { visibility: hidden; }
+.cr .cr-tile__change { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 16px 0 7px; text-align: center; font-size: 12px; font-weight: 740; color: #F4F1E9; background: linear-gradient(transparent, rgba(0,0,0,.62)); visibility: hidden; }
+.cr .cr-tile.has-img .cr-tile__change { visibility: visible; }
+.cx .qtp-upload:has(.cr-tiled) { align-items: end; }
+.cx .qtp-upload .cr-tiled small { display: block; margin-top: 2px; }
 .cr-sale .qxc-actions { justify-content: flex-start; }
 
 /* ---------- expert: the three-step flow, same floor ---------- */
