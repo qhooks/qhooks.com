@@ -1,0 +1,107 @@
+/* QHooks profile v3: the person, then the proof, then the calls. Layout and look only; the page's own scripts still
+   draw the content and run every control. Scoped to main.pv3. One type treatment: Archivo at normal width, weight 700. */
+@font-face{font-family:"Archivo";src:url(/qx-archivo.woff2) format("woff2");font-weight:100 900;font-stretch:62% 125%;font-style:normal;font-display:swap;unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+main.pv3{--pd:"Archivo",var(--q-sans);--pm:var(--q-mono,ui-monospace,Menlo,monospace);--pr:var(--q-line);--pr2:var(--q-line-2);
+ display:grid;grid-template-columns:372px minmax(0,1fr);gap:0 56px;align-items:start;width:min(1240px,calc(100% - 48px));max-width:none;margin:0 auto;padding:118px 0 96px}
+main.pv3>*{grid-column:2;min-width:0;max-width:none;width:auto;margin-left:0;margin-right:0}
+main.pv3>.qp-hero{grid-column:1;grid-row:1/span 30;position:sticky;top:96px;display:block;padding:0;border:0;background:none}
+main.pv3 :is(h1,h2,h3){font-family:var(--pd)!important;font-stretch:100%;font-weight:700;letter-spacing:-.02em}
+
+/* who */
+main.pv3 .qp-id{display:grid;gap:14px;align-items:start;grid-template-columns:1fr}
+main.pv3 .qp-id>div{display:grid;gap:12px;min-width:0}
+main.pv3 #qp-avatar{width:92px;height:92px;border-radius:50%;overflow:hidden;box-shadow:0 0 0 1px var(--pr2)}
+main.pv3 .qp-hero .qx-eyebrow{display:none}
+main.pv3 #qp-title{margin:0;font-size:38px;line-height:1.05;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+main.pv3 #qp-title .qma-chip{display:inline-flex;align-items:center;min-height:26px;padding:0 10px;border-radius:999px;background:var(--q-raised-2);border:0;font:600 13px var(--q-sans);letter-spacing:0;color:var(--q-text);text-decoration:none}
+main.pv3 .pv3-handle{display:inline-flex;align-items:center;gap:8px;font:500 13.5px var(--pm);color:var(--q-text-2)!important;text-decoration:none!important;overflow-wrap:anywhere}
+main.pv3 #qp-title.is-addr{font-size:28px}
+main.pv3 #qp-addr{margin:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* the person is their name and picture, not a wallet address: the address is not printed (Copy address still copies it) */
+main.pv3 #qp-full{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+main.pv3 #qp-addr .qa-btn{min-height:34px;padding:0 12px;font-size:13px;border-radius:10px}
+main.pv3 .qmp-identity{display:contents}
+main.pv3 .qmp-profile-details{order:4;display:grid;gap:10px}
+main.pv3 .qmp-profile-details:empty{display:none}
+main.pv3 #qco-profile{order:5}
+main.pv3 .qmp-profile-actions{order:6}
+main.pv3 #qp-explorers{order:7}
+main.pv3 .qmp-bio{margin:0;font-size:16px;line-height:1.45;color:var(--q-text)}
+main.pv3 .qma-plain-links p{margin:0;font-size:14px;color:var(--q-text-2)}
+main.pv3 #qco-profile{display:grid;gap:12px;grid-template-columns:1fr}
+main.pv3 .qco-counts{font-size:14px;color:var(--q-text-2)}
+main.pv3 .qco-counts b{font:700 18px var(--pd);color:var(--q-text)}
+.pv3-acts{display:flex;gap:8px}
+main.pv3 .qco-follow,.pv3-acts .qco-follow{flex:1;min-height:46px;border-radius:13px;border:0;font:700 15px var(--pd);color:var(--q-on-gold,#1b1407);background:var(--q-gold-metal);box-shadow:var(--q-gold-edge,none)}
+.pv3-copy{flex:1;min-height:46px;border-radius:13px;border:1px solid var(--pr2);display:inline-flex;align-items:center;justify-content:center;font:700 15px var(--pd);color:var(--q-text);text-decoration:none}
+main.pv3 .qmp-profile-actions{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;font-size:13px}
+main.pv3 .qcf-control{display:inline-flex;align-items:center;gap:8px}
+main.pv3 .qcf-button{min-height:34px;padding:0 12px;font-size:13px;border-radius:10px}
+main.pv3 #qp-explorers{margin:0;font-size:13px;color:var(--q-text-3)}
+main.pv3[data-pv3-state="profile"] #qp-find{display:none}
+main.pv3[data-pv3-state="profile"] #qp-tiles{display:none}
+
+/* proof */
+.pv3-proof{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border:1px solid var(--pr);border-radius:18px;overflow:hidden;margin:0 0 16px}
+.pv3-proof div{padding:18px 18px 16px;border-left:1px solid var(--pr);margin-left:-1px}
+.pv3-proof b{display:block;font:700 30px/1 var(--pd);letter-spacing:-.02em;color:var(--q-text);font-variant-numeric:tabular-nums}
+.pv3-proof b.is-up{color:var(--q-up)}.pv3-proof b.is-down{color:var(--q-down)}
+.pv3-proof span{display:block;margin-top:7px;font-size:13px;color:var(--q-text-2)}
+main.pv3 #qp-trading{border:1px solid var(--pr);border-radius:18px;padding:20px;background:none;margin:0 0 16px}
+main.pv3 .qa-section{background:none;border:0;border-radius:0;padding:0;margin:34px 0 0}
+main.pv3 #qp-root>.qa-section:first-child{margin-top:8px}
+main.pv3 .qa-section-head h2,main.pv3 .qa-section>h2{font-size:22px;margin:0}
+main.pv3 .qb-badgeset{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+main.pv3 .qb-badge{min-height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--pr);display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--q-text);background:none;text-decoration:none}
+
+/* a wallet that keeps its trades private: one plain line; the owner's controls sit behind one button */
+main.pv3 #qp-trading.pv3-private{padding:16px 20px}
+main.pv3 #qp-trading.pv3-private :is(.qt-account,.qt-tabs,.qt-filters,.qa-section-head button,.qa-section-head p){display:none}
+main.pv3 #qp-trading.pv3-private .qa-section-head h2{font-size:15px;font-weight:600;font-family:var(--q-sans)!important;letter-spacing:0;color:var(--q-text-2)}
+main.pv3 #qp-trading.pv3-private .qa-empty{margin:6px 0 0;font-size:15px;color:var(--q-text)}
+.pv3-mine{margin-top:10px;background:none;border:0;padding:0;font:600 13px var(--q-sans);color:var(--q-text-2);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+
+/* calls */
+main.pv3 .qb-call-stats,main.pv3 .qmp-score-coverage{font-size:13px;color:var(--q-text-3);margin:6px 0 0}
+main.pv3 details.qmp-method{margin-top:8px;font-size:13px;color:var(--q-text-3);border:0;background:none;padding:0}
+main.pv3 .qb-callline{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 28px;padding:24px 0;margin:0;border:0;border-bottom:1px solid var(--pr);border-radius:0;background:none}
+main.pv3 .qb-callline>*{grid-column:1/-1;margin:0}
+main.pv3 .qb-postline-head{grid-column:1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13.5px;color:var(--q-text-2)}
+main.pv3 .qb-board-name{display:inline-flex;align-items:center;gap:9px;font:700 18px var(--pd);color:var(--q-text)!important;text-decoration:none}
+main.pv3 .qb-token-icon,main.pv3 .qb-token-logo{width:28px;height:28px;border-radius:50%}
+.pv3-held{min-height:26px;padding:0 10px;border-radius:999px;background:var(--q-up-a,rgba(82,201,144,.12));color:var(--q-up);font:600 12.5px var(--q-sans);display:inline-flex;align-items:center}
+.pv3-held.is-sold{background:var(--q-down-a,rgba(242,105,92,.13));color:var(--q-down)}
+.pv3-res{grid-column:2!important;grid-row:1/span 2;text-align:right;align-self:start}
+.pv3-res b{display:block;font:700 34px/1 var(--pd);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pv3-res b.is-up{color:var(--q-up)}.pv3-res b.is-down{color:var(--q-down)}
+.pv3-res span{display:block;margin-top:6px;font-size:13px;color:var(--q-text-2)}
+main.pv3 .qb-call-thesis{grid-column:1!important;font-size:17px;line-height:1.45;color:var(--q-text)}
+main.pv3 .qb-callline.has-chk .qb-callline-prices{display:none}
+.pv3-chk,.pv3-pos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--pr);border-radius:12px;overflow:hidden;font-size:13px;color:var(--q-text-2)}
+.pv3-chk div,.pv3-pos div{padding:9px 12px;border-left:1px solid var(--pr);margin-left:-1px}
+.pv3-chk b,.pv3-pos b{display:block;font:600 14px var(--pm);color:var(--q-text);font-variant-numeric:tabular-nums}
+.pv3-chk b.is-up,.pv3-pos b.is-up{color:var(--q-up)}.pv3-chk b.is-down,.pv3-pos b.is-down{color:var(--q-down)}
+.pv3-pos h4{grid-column:1/-1;margin:0;padding:9px 12px;border-bottom:1px solid var(--pr);font:600 12.5px var(--q-sans);color:var(--q-text-2);background:var(--q-raised)}
+main.pv3 .qb-callline .qa-actions{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;margin-top:4px}
+.pv3-buy{min-height:42px;padding:0 18px;border-radius:13px;display:inline-flex;align-items:center;font:700 14.5px var(--pd);color:var(--q-on-gold,#1b1407)!important;background:var(--q-gold-metal);text-decoration:none!important}
+.pv3-none{grid-column:1/-1;max-width:560px;display:grid;gap:10px;margin:0 0 18px}
+.pv3-none h2{font-size:26px;overflow-wrap:anywhere;margin:0}
+.pv3-none p{margin:0;color:var(--q-text-2)}
+main.pv3[data-pv3-state="lookup"],main.pv3[data-pv3-state="notfound"]{grid-template-columns:minmax(0,640px);justify-content:start}
+main.pv3[data-pv3-state="lookup"]>*,main.pv3[data-pv3-state="notfound"]>*{grid-column:1}
+main.pv3[data-pv3-state="lookup"]>.qp-hero,main.pv3[data-pv3-state="notfound"]>.qp-hero{position:static;grid-row:auto}
+main.pv3[data-pv3-state="notfound"] :is(.qp-id,#qp-trading,#qp-tiles,#qp-root){display:none}
+main.pv3[data-pv3-state="lookup"] :is(#qp-avatar,#qp-addr){display:none}
+
+@media (max-width:900px){
+ main.pv3{grid-template-columns:minmax(0,1fr);gap:0;width:calc(100% - 32px);padding:92px 0 120px}
+ main.pv3>*,main.pv3>.qp-hero{grid-column:1}
+ main.pv3>.qp-hero{position:static;grid-row:auto;margin-bottom:24px}
+ main.pv3 #qp-avatar{width:76px;height:76px}
+ main.pv3 #qp-title{font-size:31px}
+ .pv3-proof{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .pv3-proof b{font-size:26px}
+ .pv3-res b{font-size:24px}.pv3-res span{display:none}
+ main.pv3 .qb-call-thesis{grid-column:1/-1!important;font-size:16px}
+ .pv3-chk,.pv3-pos{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
