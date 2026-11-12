@@ -14,102 +14,127 @@
 <link rel="stylesheet" href="/qx-a/shell.css">
 <link rel="stylesheet" href="/qx-a/pages/home-base.css">
 <link rel="stylesheet" href="/qx-a/pages/home-index.css">
+<link rel="stylesheet" href="/qx-a/landing/landing.css">
 <script type="module" src="/qx-a/pages/home-index.mjs"></script>
-<link rel="modulepreload" href="/wallet-site.mjs"><link rel="modulepreload" href="/wallet-hub.mjs"><link rel="modulepreload" href="/wallet-hub-fresh.mjs"><link rel="modulepreload" href="/full-launch/prototypes/qwallet/client/wallet-session.mjs"><link rel="modulepreload" href="/wallet-discovery.mjs"><link rel="modulepreload" href="/wallet-preference.mjs"><link rel="modulepreload" href="/wallet-rpc-compat.mjs"><link rel="modulepreload" href="/chain-catalog.mjs"><link rel="modulepreload" href="/wallet-login.mjs"><link rel="modulepreload" href="/embedded-wallet-provider.mjs"><meta property="og:type" content="website"><meta property="og:site_name" content="QHooks"><meta property="og:title" content="QHooks | For the next generation of token builders"><meta property="og:description" content="Launch with 100+ Uniswap v4 hooks on Robinhood Chain, Base, BNB Chain, Arbitrum, Ethereum, Elysium or Solana. Trade EVM and Solana tokens. Make calls, build your record and earn from the traders you bring."><meta property="og:image" content="https://qhooks.com/og/qhooks-card.png?v=2"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://qhooks.com/og/qhooks-card.png?v=2"><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/app-icons/apple-touch-icon.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="QHooks"><meta name="theme-color" content="#111613">
+<link rel="modulepreload" href="/wallet-site.mjs"><link rel="modulepreload" href="/wallet-hub.mjs"><link rel="modulepreload" href="/wallet-hub-fresh.mjs"><link rel="modulepreload" href="/full-launch/prototypes/qwallet/client/wallet-session.mjs"><link rel="modulepreload" href="/wallet-discovery.mjs"><link rel="modulepreload" href="/wallet-preference.mjs"><link rel="modulepreload" href="/wallet-rpc-compat.mjs"><link rel="modulepreload" href="/chain-catalog.mjs"><link rel="modulepreload" href="/wallet-login.mjs"><link rel="modulepreload" href="/embedded-wallet-provider.mjs"><meta property="og:type" content="website"><meta property="og:site_name" content="QHooks"><meta property="og:title" content="QHooks | For the next generation of token builders"><meta property="og:description" content="Launch with 100+ Uniswap v4 hooks on Robinhood Chain, Base, BNB Chain, Arbitrum, Ethereum, Elysium or Solana. Trade EVM and Solana tokens. Make calls, build your record and earn from the traders you bring."><meta property="og:image" content="https://qhooks.com/og/qhooks-card.png?v=2"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://qhooks.com/og/qhooks-card.png?v=2"><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/app-icons/apple-touch-icon.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="QHooks"><meta name="theme-color" content="#070807">
 </head>
-<body class="qa hm-body" data-a-shell>
+<body class="qa hm-body l3-body" data-a-shell>
 <a class="a-skip" href="#main">Skip to content</a>
-<div class="qa-ambient" aria-hidden="true"><div class="qa-ambient__art"></div><div class="qa-ambient__grain"></div></div>
-<main id="main" class="qa-page hm">
- <section class="hm-hero" aria-labelledby="hm-title">
-  <div class="hm-light" data-hm-light aria-hidden="true"><i></i><i></i></div>
-  <div class="hm-rig" data-hm-rig aria-hidden="true"><div class="hm-sway"><img class="hm-hook" src="/qx-a/img/hook-cut.png" alt="" width="520" height="1000" fetchpriority="high"><span class="hm-bob" data-hm-coin><span class="hm-cord"></span><span class="qa-coin qa-coin--md"><img class="qa-coin__img" src="/qhooks-logo.jpg" alt="" width="96" height="96"><span class="qa-coin__ring"></span><span class="qa-coin__pulse"></span></span></span></div></div>
-  <div class="hm-copy">
-   <h1 class="hm-brand" id="hm-title" data-hm-line aria-label="For the next generation of token builders, callers, holders and traders.">
-    <span class="hm-brand__a" aria-hidden="true">For the next generation<span class="hm-brand__dot">.</span></span>
-    <span class="hm-brand__b" aria-hidden="true"><span class="hm-brand__of">of token</span><span class="hm-slot" data-hm-slot><span class="hm-slot__w is-on" data-hm-word>builders.</span></span><span class="hm-brand__all"><span>builders</span><span>callers</span><span>holders</span><span>traders</span></span></span>
-   </h1>
-   <p class="hm-sub">Trade, launch and call tokens on <span data-chain-count>seven</span> chains and Solana.</p>
-   <div class="hm-stage" data-hm-stage aria-hidden="true"><div class="hm-card is-on is-wait"><span class="hm-card__coin"><span class="qa-coin qa-coin--md"><img class="qa-coin__img" src="/qhooks-logo.jpg" alt="" width="96" height="96"><span class="qa-coin__ring"></span><span class="qa-coin__pulse"></span></span></span><span class="hm-card__body"><span class="hm-card__kick">Live now</span><span class="hm-card__t">Refreshing</span></span></div></div>
-   <div class="hm-actions"><a class="qa-btn qa-btn--primary qa-btn--lg" href="/create">Launch a token</a><a class="qa-btn qa-btn--secondary qa-btn--lg" href="/terminal">Open the terminal</a></div>
-   <a class="hm-tag" href="/terminal#t=4663:0x20429af7ca3b0ce4d99edbaa0693f26c5df05195" data-hm-tag>
-    <img class="hm-tag__coin" src="/qhooks-logo.jpg" alt="" width="40" height="40">
-    <span class="hm-tag__read">
-     <span class="hm-tag__who"><span class="qa-chain-dot"></span><b>QHOOKS</b><span>Robinhood Chain</span></span>
-     <span class="hm-tag__px"><span data-hv-qp>Refreshing</span><small data-hv-qc data-dir="0"></small></span>
-     <span class="hm-tag__go">30% back on EVM trades · 40% on Robinhood Chain if you hold <span class="hm-nw"><span data-qx-holdermin="short">100K</span> QHOOKS</span></span>
-    </span>
-   </a>
-   <p class="hm-lede">Launch with 100+ hooks. Trade EVM and Solana tokens in one terminal. Make calls, build a public record and earn from every trader you bring.</p>
-   <a class="qa-link hm-call" href="/community#make-a-call"><b>Make a call.</b> Bring your community</a>
-   <div class="hm-chains"><span>Launch on</span><div><span class="hm-chain"><img src="/chain-symbol-icons/robinhood.svg" alt="Robinhood" width="17" height="17"></span><span class="hm-chain"><img src="/chain-symbol-icons/base.svg" alt="Base" width="17" height="17"></span><span class="hm-chain"><img src="/chain-symbol-icons/bnb.svg" alt="BNB" width="17" height="17"></span><span class="hm-chain"><img src="/chain-symbol-icons/arbitrum.svg" alt="Arbitrum" width="17" height="17"></span><span class="hm-chain"><img src="/chain-symbol-icons/ethereum.svg" alt="Ethereum" width="17" height="17"></span><span class="hm-chain"><img src="/chain-symbol-icons/elysium.svg" alt="Elysium" width="17" height="17"></span><span class="hm-chain"><img src="/chain-symbol-icons/monad.svg" alt="Monad" width="17" height="17"></span><span class="hm-chain"><img src="/chain-symbol-icons/solana.svg" alt="Solana" width="17" height="17"></span></div></div>
-  </div>
- </section>
+<div class="l3-stage" data-l3-stage aria-hidden="true">
+ <canvas class="l3-gl" data-l3-gl></canvas>
+ <div class="l3-poster" data-l3-poster><img src="/qx-a/img/hook-cut.png" alt="" width="520" height="1000" fetchpriority="high"></div>
+ <div class="l3-grade"></div>
+ <div class="l3-ticks"></div>
+</div>
+<main id="main" class="qa-page hm l3">
+ <div class="l3-chapters" data-l3-chapters>
 
- <section class="hm-pulse" aria-label="Live across QHooks" data-hm-pulse></section>
- <section class="qx-ca hm-ca" aria-label="QHOOKS contract address"><span class="qx-ca-k">QHOOKS contract · Robinhood Chain</span><code class="qx-ca-v">0x20429af7ca3b0ce4d99edbaa0693f26c5df05195</code><button type="button" class="qx-ca-copy qa-btn qa-btn--secondary qa-btn--sm" data-copy="0x20429af7ca3b0ce4d99edbaa0693f26c5df05195">Copy</button><a class="qx-ca-go" href="/terminal#t=4663:0x20429af7ca3b0ce4d99edbaa0693f26c5df05195">Trade QHOOKS →</a></section><p class="qx-home-burn" data-burn-ticker hidden></p>
-
- <div class="hm-acts" id="lifecycle">
-  <section class="hm-act hm-act--builders" id="start" aria-labelledby="hm-b-t">
-   <header class="hm-act__head">
-    <span class="qa-line__hook" aria-hidden="true"></span>
-    <h2 class="hm-act__word" id="hm-b-t">Builders<sup data-hm-count="launches"></sup></h2>
-    <p class="hm-act__say">Launch on <span data-chain-count>seven</span> chains and Solana.</p>
-    <p class="hm-act__sub">One screen for a quick launch, or every rule in Studio.</p>
-    <nav class="hm-chainpick" aria-label="Launch on a chain"><a href="/create?chain=4663" aria-label="Launch on Robinhood"><img src="/chain-symbol-icons/robinhood.svg" alt="" width="22" height="22"></a><a href="/create?chain=8453" aria-label="Launch on Base"><img src="/chain-symbol-icons/base.svg" alt="" width="22" height="22"></a><a href="/create?chain=56" aria-label="Launch on BNB"><img src="/chain-symbol-icons/bnb.svg" alt="" width="22" height="22"></a><a href="/create?chain=42161" aria-label="Launch on Arbitrum"><img src="/chain-symbol-icons/arbitrum.svg" alt="" width="22" height="22"></a><a href="/create?chain=1" aria-label="Launch on Ethereum"><img src="/chain-symbol-icons/ethereum.svg" alt="" width="22" height="22"></a><a href="/create?chain=99901" aria-label="Launch on Elysium"><img src="/chain-symbol-icons/elysium.svg" alt="" width="22" height="22"></a><a href="/create?chain=143" aria-label="Launch on Monad"><img src="/chain-symbol-icons/monad.svg" alt="" width="22" height="22"></a><a href="/create?chain=solana" aria-label="Launch on Solana"><img src="/chain-symbol-icons/solana.svg" alt="" width="22" height="22"></a></nav>
-    <div class="hm-blocks"><p><span>Launch blocks</span><a href="/hooks#block-antiSnipe">Anti-snipe</a><a href="/hooks#block-buyback">Buyback and burn</a><a href="/hooks#block-autoBurn">Auto burn</a><a href="/hooks#block-tax">Buy and sell tax</a><a href="/hooks#block-king">King of the pool</a><a href="/hooks#block-clockPot">Last buyer wins</a></p></div>
-    <div class="hm-act__do"><a class="qa-btn qa-btn--primary" href="/create">Create a token</a><a class="qa-link" href="/qtoken-studio">Expert Studio</a><a class="qa-link" href="/hooks">Browse launch blocks</a></div>
-   </header>
-   <div class="hm-act__live" data-hm-launches aria-live="polite"></div>
+  <section class="l3-ch l3-ch--hero" data-ch="hero" aria-labelledby="hm-title">
+   <div class="l3-ch__in">
+    <div class="l3-ch__band" aria-hidden="true"></div>
+    <div class="l3-ch__head">
+     <h1 class="l3-brand" id="hm-title" data-hm-line aria-label="For the next generation of token builders, callers, holders and traders.">
+      <span class="l3-brand__a" aria-hidden="true">For the next generation</span>
+      <span class="l3-brand__b" aria-hidden="true">of token</span>
+     </h1>
+     <nav class="l3-index" aria-label="Chapters">
+      <a href="#start"><i>01</i>Builders<span data-hm-count="launches"></span></a>
+      <a href="#community"><i>02</i>Callers<span data-hm-count="calls"></span></a>
+      <a href="#holders"><i>03</i>Holders<span data-hm-count="holders"></span></a>
+      <a href="#traders"><i>04</i>Traders<span data-hm-count="traders"></span></a>
+     </nav>
+     <p class="l3-hero__sub">Launch, call, hold and trade tokens on <span data-chain-count>seven</span> chains and Solana.</p>
+    </div>
+    <div class="l3-ch__foot">
+     <div class="hm-actions"><a class="qa-btn qa-btn--primary qa-btn--lg" href="/create">Launch a token</a><a class="qa-btn qa-btn--secondary qa-btn--lg" href="/terminal">Open the terminal</a></div>
+     <a class="l3-tag" href="/terminal#t=4663:0x20429af7ca3b0ce4d99edbaa0693f26c5df05195" data-hm-tag>
+      <img class="l3-tag__coin" src="/qhooks-logo.jpg" alt="" width="44" height="44">
+      <span class="l3-tag__who"><b>QHOOKS</b><span>Robinhood Chain</span><span class="l3-tag__px"><span data-hv-qp>Refreshing</span><small data-hv-qc data-dir="0"></small></span></span>
+      <span class="l3-tag__go">30% back on EVM trades · 40% on Robinhood Chain if you hold <span class="hm-nw"><span data-qx-holdermin="short">100K</span> QHOOKS</span></span>
+     </a>
+    </div>
+   </div>
   </section>
 
-  <section class="hm-act hm-act--callers" id="community" aria-labelledby="hm-c-t">
-   <header class="hm-act__head">
-    <span class="qa-line__hook" aria-hidden="true"></span>
-    <h2 class="hm-act__word" id="hm-c-t">Callers<sup data-hm-count="calls"></sup></h2>
-    <p class="hm-act__say">Make the call. Bring the crowd. Earn your share.</p>
-    <div class="hm-split" aria-label="The trading fee"><div><b>30%</b><span>back to you</span></div><div><b>20%</b><span>to your referrer</span></div></div>
-    <p class="hm-act__sub"><a href="/me#qa-rewards">30% back on EVM trades · 40% on Robinhood Chain if you hold <span data-qx-holdermin="short">100K</span> QHOOKS. Bring traders, get 20% of their fee.</a></p>
-    <div class="hm-act__do"><a class="qa-btn qa-btn--secondary" href="/community#make-a-call">Make a call</a><a class="qa-link" href="/community#callers">Calls &amp; callers</a></div>
-   </header>
-   <div class="hm-act__live" data-hm-calls aria-live="polite"></div>
+  <section class="l3-ch l3-ch--builders" id="start" data-ch="builders" aria-labelledby="hm-b-t">
+   <div class="l3-ch__in">
+    <div class="l3-ch__band" aria-hidden="true"></div>
+    <header class="l3-ch__head">
+     <p class="l3-kick"><span>01</span><b>For the next generation of token</b></p>
+     <h2 class="l3-word l3-word--gold" id="hm-b-t">Builders<sup data-hm-count="launches"></sup></h2>
+     <p class="l3-say">Six launch blocks. One transaction.</p>
+     <div class="l3-blocks" data-l3-blocks><a href="/hooks#block-antiSnipe">Anti-snipe</a><a href="/hooks#block-buyback">Buyback and burn</a><a href="/hooks#block-autoBurn">Auto burn</a><a href="/hooks#block-tax">Buy and sell tax</a><a href="/hooks#block-king">King of the pool</a><a href="/hooks#block-clockPot">Last buyer wins</a></div>
+    </header>
+    <div class="l3-ch__foot">
+     <div class="l3-slab"><div class="hm-live-h"><b>Newest launches</b><a class="qa-link" href="/markets">All markets</a></div><div data-hm-launches aria-live="polite"></div></div>
+     <div class="l3-do"><a class="qa-btn qa-btn--primary" href="/create">Create a token</a><a class="qa-link" href="/hooks">Launch blocks</a><a class="qa-link" href="/qtoken-studio">Expert Studio</a></div>
+    </div>
+   </div>
   </section>
 
-  <section class="hm-act hm-act--holders" id="holders" aria-labelledby="hm-h-t">
-   <header class="hm-act__head">
-    <span class="qa-line__hook" aria-hidden="true"></span>
-    <h2 class="hm-act__word" id="hm-h-t">Holders<sup data-hm-count="holders"></sup></h2>
-    <p class="hm-act__say">Stake, lock and graduate.</p>
-    <p class="hm-act__sub">Holders stake for a share of income. Buybacks burn supply. Team tokens wait behind a public sell notice. You choose when the pool graduates.</p>
-    <div class="hm-act__do"><a class="qa-btn qa-btn--secondary" href="/terminal#t=4663:0x20429af7ca3b0ce4d99edbaa0693f26c5df05195&amp;tab=staking">Stake in the terminal</a><a class="qa-link" href="/graduation">Plan graduation</a><a class="qa-link" href="/hooks#hk-beside-h">Team locks and buybacks</a></div>
-    <div class="qx-drop qx-drop-hero hm-drop" data-drop-banner hidden role="status"></div>
-   </header>
-   <div class="hm-act__live" data-hm-holders aria-live="polite"></div>
+  <section class="l3-ch l3-ch--callers" id="community" data-ch="callers" aria-labelledby="hm-c-t">
+   <div class="l3-ch__in">
+    <div class="l3-ch__band" aria-hidden="true"></div>
+    <header class="l3-ch__head">
+     <p class="l3-kick"><span>02</span><b>For the next generation of token</b></p>
+     <h2 class="l3-word l3-word--gold" id="hm-c-t">Callers<sup data-hm-count="calls"></sup></h2>
+     <p class="l3-say">Make the call. Bring the crowd.</p>
+     <p class="l3-sub"><a href="/me#qa-rewards">30% back on EVM trades · 40% on Robinhood Chain if you hold <span data-qx-holdermin="short">100K</span> QHOOKS. Bring traders, get 20% of their fee.</a></p>
+    </header>
+    <div class="l3-ch__foot">
+     <div class="l3-slab"><div class="hm-live-h"><b>Latest call</b><a class="qa-link" href="/community#callers">Every caller</a></div><div data-hm-calls aria-live="polite"></div></div>
+     <div class="l3-do"><a class="qa-btn qa-btn--secondary" href="/community#make-a-call">Make a call</a><a class="qa-link" href="/community">Community</a></div>
+    </div>
+   </div>
   </section>
 
-  <section class="hm-act hm-act--traders" id="traders" aria-labelledby="hm-t-t">
-   <header class="hm-act__head">
-    <span class="qa-line__hook" aria-hidden="true"></span>
-    <h2 class="hm-act__word" id="hm-t-t">Traders<sup data-hm-count="traders"></sup></h2>
-    <p class="hm-act__say">Trade it. Keep more of it.</p>
-    <p class="hm-act__sub">Trade launches, EVM tokens via 0x and Solana via Jupiter.</p>
-    <div class="hm-act__do"><a class="qa-btn qa-btn--secondary" href="/terminal">Open the terminal</a><a class="qa-link" href="/markets">Browse markets</a></div>
-   </header>
-   <div class="hm-act__live" data-hm-trade aria-live="off"></div>
-   <div class="hm-trade-side" data-hm-trade-side></div>
+  <section class="l3-ch l3-ch--holders" id="holders" data-ch="holders" aria-labelledby="hm-h-t">
+   <div class="l3-ch__in">
+    <div class="l3-ch__band" aria-hidden="true"></div>
+    <header class="l3-ch__head">
+     <p class="l3-kick"><span>03</span><b>For the next generation of token</b></p>
+     <h2 class="l3-word l3-word--gold" id="hm-h-t">Holders<sup data-hm-count="holders"></sup></h2>
+     <p class="l3-say">Stake, lock and graduate.</p>
+     <div class="l3-price" data-hm-price></div>
+    </header>
+    <div class="l3-ch__foot">
+     <div class="l3-slab"><div class="hm-live-h"><b>Buybacks</b><a class="qa-link" href="/qhooks-token#qx-buybacks">Every burn</a></div><div data-hm-holders aria-live="polite"></div></div>
+     <div class="l3-do"><a class="qa-btn qa-btn--secondary" href="/terminal#t=4663:0x20429af7ca3b0ce4d99edbaa0693f26c5df05195&amp;tab=staking">Stake QHOOKS</a><a class="qa-link" href="/graduation">Graduation</a><a class="qa-link" href="/hooks#hk-beside-h">Team locks</a></div>
+    </div>
+   </div>
   </section>
 
-  <section class="hm-act hm-act--proof" id="proof" aria-labelledby="hm-p-t">
-   <header class="hm-act__head">
-    <span class="qa-line__hook" aria-hidden="true"></span>
-    <h2 class="hm-act__word" id="hm-p-t">Proof</h2>
-    <p class="hm-act__say">Check it before you buy.</p>
-    <p class="hm-act__sub">Code, mint and blacklist switches, liquidity, holders.</p>
-    <div class="hm-act__do"><a class="qa-btn qa-btn--secondary" href="/terminal">Check a token</a><a class="qa-link" href="/lp-proof">Liquidity proof</a></div>
-   </header>
-   <div class="hm-act__live" data-hm-proofs aria-live="polite"></div>
+  <section class="l3-ch l3-ch--traders" id="traders" data-ch="traders" aria-labelledby="hm-t-t">
+   <div class="l3-ch__in">
+    <div class="l3-ch__band" aria-hidden="true"></div>
+    <header class="l3-ch__head">
+     <p class="l3-kick"><span>04</span><b>For the next generation of token</b></p>
+     <h2 class="l3-word l3-word--gold" id="hm-t-t">Traders<sup data-hm-count="traders"></sup></h2>
+     <p class="l3-say">Eight chains. One terminal.</p>
+    </header>
+    <div class="l3-ch__foot">
+     <div class="l3-slab"><div class="hm-live-h"><b>Live trades</b><span>QHOOKS, newest first</span></div><div data-hm-trade aria-live="off"></div></div>
+     <div class="l3-do"><a class="qa-btn qa-btn--secondary" href="/terminal">Open the terminal</a><a class="qa-link" href="/markets">Markets</a><a class="qa-link" id="proof" href="/lp-proof">Liquidity proof</a></div>
+    </div>
+   </div>
+  </section>
+
+  <section class="l3-ch l3-ch--close" data-ch="close" aria-labelledby="hm-close-t">
+   <div class="l3-ch__in">
+    <div class="l3-ch__band" aria-hidden="true"></div>
+    <div class="l3-close">
+     <h2 id="hm-close-t">For the next generation<span class="l3-dot">.</span></h2>
+     <div class="hm-actions"><a class="qa-btn qa-btn--primary qa-btn--lg" href="/create">Launch a token</a><a class="qa-btn qa-btn--secondary qa-btn--lg" href="/terminal">Open the terminal</a></div>
+     <p class="l3-close__row"><a class="qa-link" href="/community#make-a-call"><b>Make a call.</b>&nbsp;Bring your community</a><a class="qa-link" href="/me">My QHooks</a></p>
+    </div>
+   </div>
   </section>
  </div>
+
+ <div class="l3-after">
+ <div class="qx-drop qx-drop-hero hm-drop" data-drop-banner hidden role="status"></div>
+ <section class="hm-pulse" aria-label="Live across QHooks" data-hm-pulse></section>
+ <section class="qx-ca hm-ca" aria-label="QHOOKS contract address"><span class="qx-ca-k">QHOOKS contract · Robinhood Chain</span><code class="qx-ca-v">0x20429af7ca3b0ce4d99edbaa0693f26c5df05195</code><button type="button" class="qx-ca-copy qa-btn qa-btn--secondary qa-btn--sm" data-copy="0x20429af7ca3b0ce4d99edbaa0693f26c5df05195">Copy</button><a class="qx-ca-go" href="/terminal#t=4663:0x20429af7ca3b0ce4d99edbaa0693f26c5df05195">Trade QHOOKS →</a></section><p class="qx-home-burn" data-burn-ticker hidden></p>
 
  <section class="hm-places" aria-label="More of QHooks"><nav aria-label="More of QHooks">
   <a href="/discover"><svg viewBox="0 0 22 26" aria-hidden="true"><path d="M14 2v13a6 6 0 0 1-12 0v-2"/><path d="m2 13 3 3"/></svg><span><b>Hooks</b><span>Find the hook. Read the proof.</span></span></a>
@@ -154,12 +179,13 @@
   <a class="hm-mk" href="/builders"><span class="mk-k">Builders marketplace</span><strong>Build a module, <span class="hm-gold">earn up to 10% of what it receives</span> in every launch that uses it.</strong><span class="mk-go">Browse modules →</span></a>
  </section>
 
- <section class="hm-close" aria-labelledby="hm-close-t">
-  <h2 id="hm-close-t">Your token. Your rules. <span class="hm-gold">Your keys.</span></h2>
+ <section class="hm-close" aria-labelledby="hm-close2-t">
+  <h2 id="hm-close2-t">Your token. Your rules. <span class="hm-gold">Your keys.</span></h2>
   <div class="hm-actions"><a class="qa-btn qa-btn--primary qa-btn--lg" href="/create">Launch a token</a><a class="qa-btn qa-btn--secondary qa-btn--lg" href="/terminal">Open the terminal</a></div>
   <a class="qa-link" href="/lab">Build a hook in the Lab →</a>
   <p class="hm-phone" id="on-your-phone"><a class="hm-phone__a" href="/terminal"><img src="/app-icons/icon-192.png" alt="" width="34" height="34"><b>On your phone</b>Add it to your home screen. Open qhooks.com and choose Add to Home Screen from your browser’s menu.</a><a class="hm-phone-alt" href="/android">QHooks for Android →</a></p>
  </section>
+ </div>
 <nav class="a-dir" data-a-dir aria-label="Everything on QHooks">
  <div><h2>Build</h2><ul><li><a href="/hook-marketplace">Hook marketplace</a></li><li><a href="/hooks">Launch blocks</a></li><li><a href="/#pq-hooks">Post-quantum hooks</a></li><li><a href="/lab">Lab</a></li><li><a href="/graduation-lab">QGraduation Lab</a></li><li><a href="/builders">Builders marketplace</a></li><li><a href="/builders-program">Builders program</a></li></ul></div>
  <div><h2>Launch</h2><ul><li><a href="/create">Create a token</a></li><li><a href="/qtoken-studio">Expert Studio</a></li><li><a href="/launch">Choose a chain</a></li><li><a href="/relaunch">Relaunch</a></li><li><a href="/pricing">Pricing</a></li><li><a href="/verify">Verify your launch</a></li></ul></div>
