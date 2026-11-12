@@ -10,15 +10,27 @@ const h=(tag,text)=>{const e=document.createElement(tag);if(text)e.textContent=t
 const seen=new Map();
 let current=null,creatorRevision=0;
 const hub=getWalletHub(window);
-async function creatorCard(){
-  const turn=++creatorRevision;document.getElementById('qxt-finish-token')?.remove();
-  const c=hub.snapshot().current,b=current?.body;if(!c||!b||b.chainId==='solana'||b.profile?.image&&b.profile?.banner)return;
-  let creator=b.creator;
-  if(!creator)try{
+// newcomerA (2026-11-12): the "Get your logo into wallets" form is for the token's creator only. Creator identity is
+// the one this card already used: the profile's creator, else the launch controller's creator() (selector 0xb387ef92),
+// compared with the connected wallet. Read once per token; anyone else sees the token's links without the form.
+const creators=new Map();
+async function creatorOf(b){
+  const key=b.chainId+':'+b.controller;if(b.creator)return b.creator;if(creators.has(key))return creators.get(key);
+  let creator=null;
+  try{
     const r=await fetch(chainById(b.chainId).rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_call',params:[{to:b.controller,data:'0xb387ef92'},'latest']})});const j=await r.json();
     if(r.ok&&/^0x0{24}[a-fA-F0-9]{40}$/.test(j.result||''))creator='0x'+j.result.slice(-40);
-  }catch{return;}
-  if(turn!==creatorRevision||hub.snapshot().current!==c||!needsCreatorArtwork(b.profile,creator,c.owner))return;
+    creators.set(key,creator);
+  }catch{}
+  return creator;
+}
+async function creatorCard(){
+  const turn=++creatorRevision;document.getElementById('qxt-finish-token')?.remove();current?.listing?.remove();
+  const c=hub.snapshot().current,b=current?.body;if(!c||!b||b.chainId==='solana')return;
+  const creator=await creatorOf(b);
+  if(turn!==creatorRevision||hub.snapshot().current!==c||current?.body!==b||!creator||!c.owner||creator.toLowerCase()!==c.owner.toLowerCase())return;
+  if(current.listing)current.section.append(current.listing);
+  if(!needsCreatorArtwork(b.profile,creator,c.owner))return;
   const card=h('aside');card.id='qxt-finish-token';card.className='qtp-publish';card.append(h('strong','Finish your token: add its icon and banner'));
   const a=h('a','Add icon and banner →');a.href='/token-profile?m='+b.chainId+':'+b.controller;card.append(a);current.section.append(card);
 }
@@ -41,7 +53,7 @@ async function load(){
     const identity=h('div');identity.className='qxt-profile-identity';if(value.image){const img=h('img');img.src=value.image;img.alt=body.name+' profile picture';identity.append(img);}identity.append(h('strong',body.name));section.append(identity);
     if(value.description)section.append(h('p',value.description));
     const links=h('div');links.className='qxt-profile-links';for(const [key,label]of [['website','Website'],['x','X'],['discord','Discord'],['telegram','Telegram']]){if(value.links[key]){const a=h('a',label+' ↗');a.href=value.links[key];a.target='_blank';a.rel='ugc noopener noreferrer';links.append(a);}}
-    section.append(links);const pool=window.__qhooksPool,panel=mountGetListed({chainId:body.chainId,token:body.token,pool:String(pool?.chainId)===match[1]&&pool?.controller===address?pool.poolId:null,profile:value});if(panel)section.append(panel);current={body,section};announce({...value,banner,image:value.image||'',links:value.links||{}});void creatorCard();
+    section.append(links);const pool=window.__qhooksPool,panel=mountGetListed({chainId:body.chainId,token:body.token,pool:String(pool?.chainId)===match[1]&&pool?.controller===address?pool.poolId:null,profile:value});current={body,section,listing:panel||null};announce({...value,banner,image:value.image||'',links:value.links||{}});void creatorCard();
   }catch{if(turn===revision)section.remove();}
 }
 if(head){addEventListener('hashchange',load);document.addEventListener('qhooks:pool',load);hub.subscribe(()=>void creatorCard());void load();}

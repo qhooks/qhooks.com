@@ -159,8 +159,69 @@ function paintProof() {
   proofChip.children[1].textContent = danger ? 'Proof · high risk' : caution ? 'Proof · caution' : 'Proof clear';
   proofChip.children[2].textContent = danger ? danger + '/' + total : caution ? caution + '/' + total : clear + '/' + total;
 }
-proofChip.addEventListener('click', () => $('builder')?.scrollIntoView({ block: 'start', behavior: RM ? 'auto' : 'smooth' }));
-new MutationObserver(paintProof).observe($('qxt-repoproof'), { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['hidden'] });
+/* newcomerA (2026-11-12): the chip opens the checks themselves (a sheet on a phone, a popover on desktop), the ones
+   that need a look first, each with a one-line reason, and a link to the full report. Read from the same RepoProof
+   report the page already shows (#qxt-repoproof); nothing new is fetched. */
+const PROOF_RANK = { danger: 0, caution: 1, unknown: 2, clear: 3, info: 4 };
+const PROOF_WORD = { danger: 'Failed', caution: 'Warning', unknown: 'Not checked', clear: 'Passed', info: 'Note' };
+const oneLine = (t) => { const s = String(t || '').replace(/\s+/g, ' ').trim(), first = (s.match(/^.+?[.!?](?=\s|$)/) || [s])[0].replace(/[.]$/, ''); return first.length > 96 ? first.slice(0, first.lastIndexOf(' ', 92)) + '…' : first; };
+function readProofChecks() {
+  const rp = $('qxt-repoproof');
+  const list = [...(rp?.querySelectorAll('.qpr-checks > details') || [])].map((d) => {
+    const st = (d.querySelector(':scope > summary .qpr-check-status')?.className.match(/\b(danger|caution|clear|unknown|info)\b/) || [])[1] || 'unknown';
+    const det = d.querySelector(':scope > .qpr-disclosure-body .qpr-detail')?.textContent || '';
+    return { st, title: d.querySelector(':scope > summary .qpr-check-title b')?.textContent.trim() || 'Check', why: /^No further detail/.test(det) ? '' : oneLine(det) };
+  }).sort((a, b) => PROOF_RANK[a.st] - PROOF_RANK[b.st]);
+  return { list, link: rp?.querySelector('.qpr-report-link')?.href || '' };
+}
+const proofScrim = h('div', { class: 'qa-scrim ta-proofscrim', hidden: true });
+const proofPop = h('div', { class: 'ta-proofpop', id: 'ta-proofpop', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'ta-proofpop-h', hidden: true });
+proofChip.setAttribute('aria-haspopup', 'dialog'); proofChip.setAttribute('aria-controls', 'ta-proofpop'); proofChip.setAttribute('aria-expanded', 'false');
+body.append(proofScrim, proofPop);
+const proofRow = (c) => h('li', { class: 'ta-pc is-' + c.st }, h('span', { class: 'ta-pc__dot', 'aria-hidden': 'true' }),
+  h('div', { class: 'ta-pc__txt' }, h('b', null, c.title), c.why ? h('span', null, c.why) : null), h('span', { class: 'ta-pc__st' }, PROOF_WORD[c.st]));
+function paintProofPop() {
+  const { list, link } = readProofChecks(), scored = list.filter((c) => c.st !== 'info'), notes = list.filter((c) => c.st === 'info');
+  const passed = scored.filter((c) => c.st === 'clear').length, look = scored.filter((c) => c.st === 'danger' || c.st === 'caution').length;
+  const unchecked = scored.filter((c) => c.st === 'unknown').length;
+  const close = h('button', { type: 'button', class: 'qa-btn qa-btn--icon ta-proofpop__x', 'aria-label': 'Close checks' }, h('span', { 'aria-hidden': 'true' }, '×'));
+  close.addEventListener('click', () => closeProof(true));
+  const full = link ? h('a', { class: 'qa-btn qa-btn--secondary qa-btn--sm ta-proofpop__full', href: link, target: '_blank', rel: 'noopener noreferrer' }, 'Full report', icon('out'))
+    : h('button', { type: 'button', class: 'qa-btn qa-btn--secondary qa-btn--sm ta-proofpop__full' }, 'Full report');
+  if (!link) full.addEventListener('click', () => { closeProof(); $('qxt-repoproof')?.scrollIntoView({ block: 'start', behavior: RM ? 'auto' : 'smooth' }); });
+  proofPop.replaceChildren(...[
+    desk.matches ? null : h('span', { class: 'qa-sheet__grip', 'aria-hidden': 'true' }),
+    h('header', { class: 'ta-proofpop__head' }, h('div', null, h('h2', { id: 'ta-proofpop-h' }, 'Proof checks'),
+      h('p', null, scored.length ? passed + ' of ' + scored.length + ' passed' + (look ? ' · ' + look + ' to look at' : '') + (unchecked ? ' · ' + unchecked + ' not checked' : '') : 'Refreshing…')), close),
+    scored.length ? h('ul', { class: 'ta-pcs' }, scored.map(proofRow)) : null,
+    notes.length ? h('details', { class: 'ta-pcs-notes' }, h('summary', null, notes.length + (notes.length === 1 ? ' note' : ' notes')), h('ul', { class: 'ta-pcs' }, notes.map(proofRow))) : null,
+    h('footer', { class: 'ta-proofpop__foot' }, h('span', null, 'Checked by RepoProof'), full)].filter(Boolean));
+}
+function placeProofPop() {
+  if (!desk.matches) { proofPop.style.removeProperty('top'); proofPop.style.removeProperty('left'); return; }
+  const r = proofChip.getBoundingClientRect(), w = proofPop.offsetWidth || 400;
+  proofPop.style.top = Math.round(r.bottom + scrollY + 10) + 'px';
+  proofPop.style.left = Math.round(Math.max(16, Math.min(r.left + scrollX, scrollX + doc.documentElement.clientWidth - w - 16))) + 'px';
+}
+let proofOpen = false;
+function openProof() {
+  paintProofPop(); proofOpen = true;
+  proofPop.classList.toggle('qa-sheet', !desk.matches); proofPop.classList.toggle('is-pop', desk.matches);
+  proofPop.hidden = false; proofScrim.hidden = desk.matches; placeProofPop();
+  proofChip.setAttribute('aria-expanded', 'true');
+  proofPop.querySelector('.ta-proofpop__x')?.focus({ preventScroll: true });
+}
+function closeProof(refocus) {
+  if (!proofOpen) return; proofOpen = false; proofPop.hidden = true; proofScrim.hidden = true;
+  proofChip.setAttribute('aria-expanded', 'false'); if (refocus) proofChip.focus({ preventScroll: true });
+}
+proofChip.addEventListener('click', (e) => { e.stopPropagation(); proofOpen ? closeProof() : openProof(); });
+proofScrim.addEventListener('click', () => closeProof());
+doc.addEventListener('click', (e) => { if (proofOpen && desk.matches && !proofPop.contains(e.target) && !proofChip.contains(e.target)) closeProof(); });
+addEventListener('keydown', (e) => { if (proofOpen && e.key === 'Escape') closeProof(true); });
+addEventListener('resize', () => { if (proofOpen) { proofPop.classList.toggle('qa-sheet', !desk.matches); proofPop.classList.toggle('is-pop', desk.matches); proofScrim.hidden = desk.matches; placeProofPop(); } });
+addEventListener('hashchange', () => closeProof());
+new MutationObserver(() => { paintProof(); if (proofOpen) paintProofPop(); }).observe($('qxt-repoproof'), { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['hidden'] });
 
 /* ================= stats: the terminal's own strip, ruled, with ticks ================= */
 const statsEl = $('qxt-stats');

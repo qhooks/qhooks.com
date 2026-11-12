@@ -138,6 +138,13 @@ body.qa.qxt .ta-back { position: absolute; z-index: 3; display: none; }
   body.qa.qxt .ta-back:hover { color: var(--qa-tx); }
   .ta-stage { --qa-stage-top: calc(var(--qa-nav-h) + 40px); }
   .qa-shell--over-art .ta-stage.qa-stage--wide { height: calc(318px + var(--qa-nav-h)); --qa-stage-top: calc(var(--qa-nav-h) + 40px); }
+  /* newcomerA (2026-11-12): the banner wash stops at the stage's lower edge (the ticker band), so the stats, route row and
+     Buy/Sell tabs below sit on the floor and keep text at 4.5:1 or better (SKUNK measured 2.3:1, HOOKDOG 1.6:1).
+     Two layers bled: the stage glow (it runs 40% below the stage) and the page ambient (fixed, so scrolling slid the
+     stats over its brightest part). The ambient now scrolls with the stage, and both fade out over the stage's last 60px. */
+  body.qa.qxt.ta-token .qa-ambient { position: absolute; height: calc(318px + var(--qa-nav-h));
+    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 60px), transparent); mask-image: linear-gradient(180deg, #000 calc(100% - 60px), transparent); }
+  .ta-stage.qa-stage--wide .qa-stage__art { -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 60px), transparent); mask-image: linear-gradient(180deg, #000 calc(100% - 60px), transparent); }
 }
 
 /* ---------- ticker band (desktop) ---------- */
@@ -732,3 +739,29 @@ body.qa.qxt h1.ta-sym-h.ta-sym-wrap { white-space: normal; overflow-wrap: anywhe
   .ta-stage .qa-ident.ta-long { grid-template-areas: "coin sym sym" "soc soc soc" "meta meta meta"; }
   .ta-stage .qa-ident.ta-long .ta-soc { justify-self: start; }
 }
+
+/* newcomerA (2026-11-12): proof chip → checks sheet (phone) / popover (desktop) */
+.ta-proofscrim[hidden], .ta-proofpop[hidden] { display: none !important; }
+.ta-proofpop { box-sizing: border-box; color: var(--qa-tx); font-size: 14px; }
+.ta-proofpop.qa-sheet { max-height: 82vh; max-width: 100vw; overflow-x: hidden; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
+.ta-proofpop.is-pop { position: absolute; z-index: calc(var(--qa-z-sheet) + 1); width: min(420px, calc(100vw - 32px)); max-height: min(560px, calc(100vh - 140px)); overflow: auto; padding: 16px 18px 14px;
+  border-radius: 16px; background: var(--qa-slab); box-shadow: var(--qa-slab-edge), var(--qa-slab-shadow); border: 1px solid var(--qa-rule-2); }
+.ta-proofpop__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.ta-proofpop__head h2 { margin: 0; font-size: 18px; font-weight: 720; letter-spacing: -.01em; }
+.ta-proofpop__head p { margin: 3px 0 0; color: var(--qa-tx-2); font-size: 13.5px; }
+.ta-proofpop__x { flex: none; width: 36px; height: 36px; font-size: 20px; line-height: 1; }
+.ta-pcs { list-style: none; margin: 0; padding: 0; display: grid; }
+.ta-pc { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: start; gap: 10px; padding: 11px 0; border-top: 1px solid var(--qa-rule); }
+.ta-pc__dot { width: 9px; height: 9px; margin-top: 6px; border-radius: 50%; background: var(--qa-buy); }
+.ta-pc__txt { min-width: 0; display: grid; gap: 2px; }
+.ta-pc__txt b { font-weight: 650; overflow-wrap: anywhere; }
+.ta-pc__txt span { color: var(--qa-tx-2); font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ta-pc__st { font-size: 12px; font-weight: 700; color: var(--qa-buy); white-space: nowrap; padding-top: 2px; }
+.ta-pc.is-danger .ta-pc__dot { background: var(--qa-sell); } .ta-pc.is-danger .ta-pc__st { color: var(--qa-sell); }
+.ta-pc.is-caution .ta-pc__dot { background: var(--qa-warn); } .ta-pc.is-caution .ta-pc__st { color: var(--qa-warn); }
+.ta-pc.is-unknown .ta-pc__dot, .ta-pc.is-info .ta-pc__dot { background: var(--qa-tx-3); } .ta-pc.is-unknown .ta-pc__st, .ta-pc.is-info .ta-pc__st { color: var(--qa-tx-2); }
+.ta-pc.is-danger, .ta-pc.is-caution { background: linear-gradient(90deg, var(--qa-rule-row), transparent); }
+.ta-pcs-notes { border-top: 1px solid var(--qa-rule); }
+.ta-pcs-notes > summary { cursor: pointer; padding: 11px 0; color: var(--qa-tx-2); font-weight: 600; font-size: 13.5px; }
+.ta-proofpop__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--qa-rule); color: var(--qa-tx-3); font-size: 12.5px; }
+.ta-proofpop__full { display: inline-flex; align-items: center; gap: 6px; }
