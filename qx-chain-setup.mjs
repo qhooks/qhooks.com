@@ -120,12 +120,28 @@ async function send(chainId,s){
   let r=null;for(let i=0;i<180&&!r;i++){r=await rpc(chainId,'eth_getTransactionReceipt',[hash]).catch(()=>null);if(!r)await new Promise(res=>setTimeout(res,2000));}
   if(!r)throw Error('Still pending. Check your wallet activity, then reload this page.');
   if(r.status!=='0x1')throw Error('The network refused it. Only gas was spent.');
-  const after=await check(chainId,s);state[chainId].steps[s.id]=after;
+  let after=await check(chainId,s).catch(()=>'none');
+  // Some networks' reads lag the receipt by a few blocks (Robinhood Chain: minutes). Re-read before saying anything.
+  for(let i=0;i<24&&after==='none';i++){say(chainId,'Confirmed. Waiting for the network to show the contract…');await new Promise(res=>setTimeout(res,5000));after=await check(chainId,s).catch(()=>'none');}
+  state[chainId].steps[s.id]=after;
   if(after==='ok')say(chainId,'Set up at '+s.address+'.','ok');
-  else if(after==='none')say(chainId,'Confirmed, but no contract at '+s.address+' yet. Reload in a minute.','bad');
+  else if(after==='none'){say(chainId,'Confirmed. The network is still catching up. This page switches to Done on its own.');watchCode(chainId,s);}
   else say(chainId,'Confirmed, but the code at '+s.address+' is not what this step expects. Stop and check.','bad');
  }catch(e){say(chainId,/reject|denied|cancel/i.test(e?.message||'')?'Cancelled in your wallet. Nothing was sent.':(e?.message||'That did not go through.'),'bad');}
  finally{busy=false;draw();refresh(chainId);}
+}
+// Keeps re-reading a confirmed step in the background (every 15 s, up to 20 min) and flips it to Done when the code shows.
+async function watchCode(chainId,s){
+ for(let i=0;i<80;i++){
+  await new Promise(res=>setTimeout(res,15000));
+  const v=await check(chainId,s).catch(()=>'none');
+  if(v==='none')continue;
+  state[chainId].steps[s.id]=v;
+  const mine=status.chain===chainId;   // don't talk over a step on another chain
+  if(!mine)draw();else if(v==='ok')say(chainId,'Set up at '+s.address+'.','ok');else say(chainId,'Confirmed, but the code at '+s.address+' is not what this step expects. Stop and check.','bad');
+  refresh(chainId);return;
+ }
+ if(status.chain===chainId)say(chainId,'Confirmed, but no contract at '+s.address+' yet. Reload in a minute.','bad');
 }
 // Switch (or add) a network that only the manifest knows, then wait for the hub to see it.
 async function switchManifest(conn,chainId,n){
