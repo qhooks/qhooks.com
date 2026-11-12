@@ -88,19 +88,19 @@
   --qa-gold-lo: #C9A262;
   --qa-gold-metal: linear-gradient(180deg, #E9CF9C 0%, #CFA662 50%, #A9803F 100%);
   --qa-gold-wash: rgba(139, 102, 49, .1);
-  --qa-buy: #0E9F5C;
+  --qa-buy: #0A7A45;
   --qa-buy-deep: #0B8A4F;
   --qa-buy-wash: rgba(14, 159, 92, .1);
   --qa-buy-btn: linear-gradient(180deg, #34D88A, #12A863);
-  --qa-sell: #D93A41;
+  --qa-sell: #B42C33;
   --qa-sell-deep: #C02F36;
   --qa-sell-wash: rgba(217, 58, 65, .09);
   --qa-sell-btn: linear-gradient(180deg, #F0636A, #D0353D);
-  --qa-warn: #B4661A;
+  --qa-warn: #8E4F0E;
   --qa-fire: #E06A18;
   --qa-fire-text: linear-gradient(180deg, #F29A3D, #E06A18 60%, #B8410F);
-  --qa-info: #2F6BD8;
-  --qa-chain-rh: #7FA300;
+  --qa-info: #2459BE;
+  --qa-chain-rh: #5A7400;
   --qa-glow-gold: 0 0 8px rgba(139, 102, 49, .35);
   --qa-glow-buy: none;
   --qa-glow-sell: none;
@@ -176,3 +176,18 @@
     --qa-section-gap: 56px;
   }
 }
+
+/* daylight (2026-11-12): the lit-set stages are dark in both themes, so text inside them uses the dark tokens (never dark-on-dark) */
+[data-theme="light"] :is(.cr4-stage, .cv4-stage, .pf4-stage, .me4-stage, .pf5-stage, .lp5-stage, .hk4-stage, .qs3),
+[data-theme="light"] main.pf5 .pv-banner {
+  color-scheme: dark;
+  --qa-tx: #F4F1E9; --qa-tx-2: rgba(244, 241, 233, .70); --qa-tx-3: rgba(244, 241, 233, .52);
+  --qa-gold: #D2AD72; --qa-gold-hi: #F0DAAE; --qa-gold-lo: #8E6C3A;
+  --qa-buy: #3EDD8F; --qa-sell: #FF5E64; --qa-up: #3EDD8F; --qa-down: #FF5E64;
+  --qa-rule: rgba(255, 255, 255, .07); --qa-rule-2: rgba(255, 255, 255, .12);
+  color: var(--qa-tx);
+}
+
+/* daylight: older modules colour text with --qx-ink / --ink and an ivory fallback; pages that don't load bridge.css never define them,
+   so in day mode they fell back to ivory on the light floor. Map them to the theme (pages that define their own still win). */
+[data-theme="light"] { --qx-ink: var(--qa-tx); --ink: var(--qa-tx); --qx-muted: var(--qa-tx-2); --qx-faint: var(--qa-tx-3); --qx-line: var(--qa-rule); --qx-line-2: var(--qa-rule-2); --line: var(--qa-rule-2); }
