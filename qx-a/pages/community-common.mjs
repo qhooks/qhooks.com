@@ -4,7 +4,7 @@
 // the one follow store (qx-community-follow.mjs), member profiles (qx-member-profile.mjs) and the market index
 // (/api/terminal/feed). Nothing here invents a number: a field that is missing is simply not drawn.
 import { mountShell } from '/qx-a/shell.mjs';
-import { h, icon, RM, fmt, avatar, xBadge, restart, toast } from '/qx-a/components.mjs';
+import { h, icon, RM, fmt, avatar, xBadge, restart, toast, inView } from '/qx-a/components.mjs';
 import { createMemberProfileClient } from '/qx-member-profile.mjs';
 import { profileUrl } from '/qx-profile-address.mjs';
 import { callLinks, communityKey } from '/qx-community-intent.mjs';
@@ -63,11 +63,15 @@ export function face(wallet, size = 'lg', { link = true } = {}) {
   return el;
 }
 // A name that starts as the short wallet and becomes the profile name (with the verified X badge).
+// Linked names read as links: underlined, a chevron, and a 44 px tap target (2026-11-12, Randall: "I have trouble finding
+// where to click to get to a profile from a call").
 export function nameTag(wallet, { link = true, cls = 'qa-post__name', badge = true } = {}) {
-  const name = h(link ? 'a' : 'span', { class: cls, href: link ? profileUrl({ wallet }) : null, title: wallet }, fmt.short(wallet));
+  const label = h('span', { class: 'cx-who__t' }, fmt.short(wallet));
+  const name = h(link ? 'a' : 'span', { class: cls + (link ? ' cx-who__link' : ''), href: link ? profileUrl({ wallet }) : null, title: link ? 'Open profile' : wallet, 'aria-label': link ? 'Open profile of ' + fmt.short(wallet) : null },
+    label, link ? h('span', { class: 'cx-who__chev', 'aria-hidden': 'true' }, '›') : null);
   const wrap = h('span', { class: 'cx-who' }, name);
   person(wallet).then((p) => {
-    if (p.name) name.textContent = p.name;
+    if (p.name) { label.textContent = p.name; if (link) name.setAttribute('aria-label', 'Open profile of ' + p.name); }
     if (link && p.handle) name.href = profileUrl({ wallet, handle: p.handle });
     if (badge && p.x) wrap.append(xBadge('@' + p.x));
   });
@@ -244,7 +248,8 @@ export function reactRow(post, { replies = 0, replyHref, call, links, buyLabel }
     share.addEventListener('click', async () => { try { await navigator.clipboard.writeText(links.permalink); toast({ kind: 'call', title: 'Copied', body: 'Call link ready to share' }); } catch { status.replaceChildren('Copy this call link: ', h('a', { href: links.permalink }, links.permalink)); } });
     row.append(share);
   }
-  if (call && post?.id && post.author) { const t = h('span', { class: 'cx-thanks' }); row.append(t); void mountBoardCallThanks(t, { id: post.id, author: post.author }); }
+  // Thank caller reads its count only once the card is on screen (a feed of 20 calls used to start 20 reads at load).
+  if (call && post?.id && post.author) { const t = h('span', { class: 'cx-thanks' }); row.append(t); const mount = () => void mountBoardCallThanks(t, { id: post.id, author: post.author }); try { inView(t, mount, 0); } catch { mount(); } }
   if (links?.trade && buyLabel) row.append(h('a', { class: 'qa-react qa-react--buy', href: links.trade, title: 'Trades through this link credit the caller as referrer where eligible.' }, buyLabel));
   row.setReactions = (p) => { if (!p) return; state = { reactions: p.reactions || {}, mine: p.mine || [] }; btns.forEach((x) => x.paint()); };
   return h('div', { class: 'cx-actions' }, row, status);

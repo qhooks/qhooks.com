@@ -3,11 +3,17 @@ import {migrateCommunityFollowing} from './qx-community-follow.mjs';
 // Hub pages inject their current connection; existing Trade/Studio callers keep
 // their public connection-line API. No wallet authority or permission is stored.
 import {connectedAddress,signMessage,captureMessageWallet} from '/qx-chain.mjs';
+import {getWalletHub} from '/wallet-hub.mjs';
 const KEY='qhooks:board-session:v1';
-export function createBoardSession({getConnection,fetcher=(...args)=>globalThis.fetch(...args),storage=()=>localStorage,now=Date.now}={}){
- const owner=()=>getConnection?getConnection()?.owner?.toLowerCase()||null:connectedAddress();
+// hub: the site's wallet hub connection, used when the page has no #qt-connection line (2026-11-12: System A profile,
+// community and home pages have none, so the profile Follow always answered "Connect your wallet first." and no follow
+// from a Privy email wallet ever saved). Pages with a line keep it as the fallback.
+export function createBoardSession({getConnection,hub=null,fetcher=(...args)=>globalThis.fetch(...args),storage=()=>localStorage,now=Date.now}={}){
+ const hubOwner=()=>{try{return hub?.()?.owner?.toLowerCase()||null;}catch{return null;}};
+ const owner=()=>getConnection?getConnection()?.owner?.toLowerCase()||null:hubOwner()||connectedAddress();
  function capture(){
   if(getConnection)return captureMessageWallet(getConnection);
+  if(hubOwner())return captureMessageWallet(hub);
   const wallet=owner();if(!wallet)throw Error('Connect a wallet first');
   const assertCurrent=()=>{if(owner()!==wallet)throw Error('Your wallet changed. Review and sign in again.');};
   return Object.freeze({owner:wallet,assertCurrent,check:async()=>assertCurrent(),sign:async text=>{assertCurrent();const result=await signMessage(text);assertCurrent();return result;}});
@@ -26,7 +32,8 @@ export function createBoardSession({getConnection,fetcher=(...args)=>globalThis.
   return session;
  }
  function signOut(){const s=boardSession();try{storage().removeItem(KEY);}catch{}if(s)fetcher('/api/community/session',{method:'DELETE',headers:{authorization:'Bearer '+s.token}}).catch(()=>{});}
- return Object.freeze({boardSession,authHeaders,signIn,signOut,capture});
+ return Object.freeze({boardSession,authHeaders,signIn,signOut,capture,wallet:owner});
 }
-const shared=createBoardSession();
-export const boardSession=shared.boardSession,authHeaders=shared.authHeaders,signIn=shared.signIn,signOut=shared.signOut,capture=shared.capture;
+const siteHub=()=>{try{return globalThis.window?getWalletHub(globalThis.window).snapshot?.().current||null:null;}catch{return null;}};
+const shared=createBoardSession({hub:siteHub});
+export const boardSession=shared.boardSession,authHeaders=shared.authHeaders,signIn=shared.signIn,signOut=shared.signOut,capture=shared.capture,sessionWallet=shared.wallet;

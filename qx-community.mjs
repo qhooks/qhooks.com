@@ -36,13 +36,23 @@ function selectView(id){if(view===id)return;view=id;viewTabs.set(id);body=null;v
 addEventListener('hashchange',()=>{if(location.hash==='#following')selectView('following');else if(location.hash==='#recent-calls')selectView('recent');});
 const key=()=>[view,chain,'',''].join('|');
 
-async function read(extra={}){if(view==='following')await communityFollowing.refresh?.().catch(()=>{});return reader.read(activityQuery({view,chain,limit:20,...extra}),{force:true});}
+// The first Recent read was started in <head> by qx-community-early.mjs; take it once.
+const valid=b=>b?.kind==='qhooks-community-activity'&&Array.isArray(b.calls)&&Array.isArray(b.callers);
+async function early(extra){const e=globalThis.__qxActivityEarly;if(!e||view!=='recent'||chain!=='all'||Object.keys(extra).length||Date.now()-e.at>20000)return null;globalThis.__qxActivityEarly=null;const b=await e.body;return valid(b)?b:null;}
+async function read(extra={}){if(view==='following')await communityFollowing.refresh?.().catch(()=>{});return(await early(extra))||reader.read(activityQuery({view,chain,limit:20,...extra}),{force:true});}
+// The last Recent page this device saw paints at once (no animation) while the fresh read runs; prices are USD from the
+// server, so nothing waits for the market feed. Stored for 10 min; never for Following.
+const SAVED='qx.community.recent.v1';
+const savedBody=()=>{try{const v=JSON.parse(localStorage.getItem(SAVED)||'null');return v&&Date.now()-v.at<600000&&valid(v.body)?v.body:null;}catch{return null;}};
+const saveBody=b=>{try{if(view==='recent'&&chain==='all')localStorage.setItem(SAVED,JSON.stringify({at:Date.now(),body:b}));}catch{}};
 async function load(){
-  const mine=++serial;feed.replaceChildren(skeletonRows(3));note.textContent='';more.hidden=true;
-  try{const[next]=await Promise.all([read(),readMarkets().catch(()=>null)]);if(mine!==serial)return;body=next;render();}
-  catch(e){if(mine!==serial)return;feed.replaceChildren(state('loading',{title:'Refreshing',body:e.message||'Calls are refreshing. Your follows and drafts are unchanged.',action:'Check now',onAction:()=>void load()}));}
+  const mine=++serial;note.textContent='';more.hidden=true;
+  const saved=view==='recent'&&chain==='all'?savedBody():null;
+  if(saved){body=saved;render({animate:false});}else feed.replaceChildren(skeletonRows(3));
+  try{const next=await read();if(mine!==serial)return;body=next;render({animate:!saved});saveBody(next);}
+  catch(e){if(mine!==serial||saved)return;feed.replaceChildren(state('loading',{title:'Refreshing',body:e.message||'Calls are refreshing. Your follows and drafts are unchanged.',action:'Check now',onAction:()=>void load()}));}
 }
-function render(){
+function render({animate=true}={}){
   cards.clear();feed.replaceChildren();
   const calls=body?.calls||[];
   if(!calls.length){
@@ -51,7 +61,7 @@ function render(){
   }
   const prior=seen.read(key()),fresh=prior?calls.filter(c=>newerThan(c,prior)).length:0;
   if(fresh)note.textContent=fresh+' new '+(fresh===1?'call':'calls')+' since you last looked on this device.';
-  calls.forEach((c,i)=>{const el=callPost(c,{enter:!RM&&i<6});if(el.classList.contains('is-enter'))el.style.setProperty('animation-delay',(i*70)+'ms');cards.set(c.id,el);feed.append(el);});
+  calls.forEach((c,i)=>{const el=callPost(c,{enter:animate&&!RM&&i<6});if(el.classList.contains('is-enter'))el.style.setProperty('animation-delay',(i*70)+'ms');cards.set(c.id,el);feed.append(el);});
   void hydrateReactions([...cards.values()]);
   more.hidden=!body?.nextCursor||calls.length>=80;
   seen.save(key(),body?.latestCursor);

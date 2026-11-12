@@ -17,7 +17,7 @@ if (main && d.call) {
   if (slot) slot.parentElement.replaceWith(face(d.author, 'xl'));
   person(d.author).then((p) => {
     const name = main.querySelector('.qcall-name');
-    if (name && p.name) name.textContent = p.name;
+    if (name && p.name) (name.querySelector('.cx-who__t') || name).textContent = p.name;
     if (p.x && !main.querySelector('.qcall-x')) main.querySelector('.qcall-meta')?.prepend(h('span', { class: 'qcall-x' }, h('a', { href: 'https://x.com/' + encodeURIComponent(p.x), target: '_blank', rel: 'noopener noreferrer nofollow ugc' }, xBadge('@' + p.x))));
   });
   // the token's mark and art

@@ -3,7 +3,7 @@ import {profileUrl,resolveProfileAddress} from './qx-profile-address.mjs';
 // the callout points board on Community. Mounts itself on whichever of those pages loads it.
 import {holderMinTokens,shortText} from '/qx-holder-min.mjs';
 import {clampInto} from '/qx-more-text.mjs';
-import {boardSession,authHeaders,signIn} from '/qx-board-session.mjs';
+import {boardSession,authHeaders,signIn,sessionWallet} from '/qx-board-session.mjs';
 import {publishCommunityCall} from '/qx-community-intent.mjs';
 import {connectedAddress,onWalletChange,signMessage} from '/qx-chain.mjs';
 import {communityFollowing} from '/qx-community-follow.mjs';
@@ -22,7 +22,10 @@ async function call(path,{method='GET',body,base='/api/callouts'}={}){
  const j=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(Error(j.message||j.error||'failed'),{code:j.error,status:r.status});return j;
 }
 const communityApi=(path,{method='GET',auth,body}={})=>call(path,{method,body,base:'/api/community'});
-async function ensureSession(status){if(boardSession())return true;if(!connectedAddress())throw Object.assign(Error('Connect your wallet first.'),{code:'connect'});status?.('Sign in with a free signature. No transaction.');await signIn();return!!boardSession();}
+// The wallet comes from the site's wallet hub (System A pages have no connection line). No wallet: open the wallet
+// dialog. A sign-in that doesn't open a session is an error, never a silent follow request without auth.
+const viewerWallet=()=>sessionWallet()||connectedAddress();
+async function ensureSession(status){if(boardSession())return true;if(!viewerWallet()){try{dispatchEvent(new Event('qa:wallet'));}catch{}throw Object.assign(Error('Connect your wallet to follow. The wallet window is open.'),{code:'connect'});}status?.('Sign in with a free signature. No transaction.');try{await signIn();}catch(e){throw Object.assign(Error(/user rejected|denied|cancel/i.test(e?.message||'')?'Signature cancelled. Nothing was saved.':'Sign-in failed: '+(e?.message||'try again')+'. Nothing was saved.'),{code:'sign_in_failed'});}if(!boardSession())throw Object.assign(Error('Sign-in did not finish. Nothing was saved. Try again.'),{code:'sign_in_failed'});return true;}
 
 // ---------- Terminal: Call it ----------
 export function boardFromHash(hash=location.hash){const m=/(?:^#|&)([mt])=(\d{1,6}):(0x[0-9a-fA-F]{40})/.exec(hash||'');if(!m)return null;return m[1]==='m'?{kind:'launch',chainId:m[2],controller:m[3].toLowerCase()}:{kind:'token',chainId:m[2],address:m[3].toLowerCase()};}
@@ -62,13 +65,13 @@ export function mountFollow(target,wallet,{onChange}={}){
  const counts=h('span',{class:'qco-counts'}),button=h('button',{type:'button',class:'qa-btn qco-follow','aria-pressed':'false'},'Follow'),msg=h('span',{class:'qco-note',role:'status','aria-live':'polite'});
  target.replaceChildren(counts,button,msg);let data=null;
  const render=()=>{if(!data)return;counts.replaceChildren(h('b',{},num(data.followers)),data.followers===1?' follower':' followers',' · ',h('b',{},num(data.following)),' following',...(data.points?.total?[' · ',h('b',{},num(data.points.total)),' callout points']:[]));
-  const own=data.viewer&&data.viewer===wallet||connectedAddress()===wallet;button.hidden=own;button.textContent=data.viewerFollows?'Following':'Follow';button.setAttribute('aria-pressed',String(!!data.viewerFollows));};
+  const own=data.viewer&&data.viewer===wallet||viewerWallet()===wallet;button.hidden=own;button.textContent=data.viewerFollows?'Following':'Follow';button.setAttribute('aria-pressed',String(!!data.viewerFollows));};
  async function load(){try{data=await call('/profile/'+wallet);render();}catch{counts.textContent='Refreshing…';}}
  button.addEventListener('click',async()=>{
-  button.disabled=true;msg.textContent='';
+  button.disabled=true;msg.textContent='';msg.classList.remove('qco-note--err');
   try{await ensureSession(t=>msg.textContent=t);const on=!data?.viewerFollows,r=await call('/follow',{method:'POST',base:'/api/wallets',body:{kind:'caller',wallet,on}});
    data={...data,...r,viewerFollows:r.following};await communityFollowing.refresh().catch(()=>{});render();msg.textContent=r.following?'You’ll see their calls in My QHooks and in @qhooks_bot.':'';onChange?.(r);await load();
-  }catch(e){msg.textContent=errorText(e);}finally{button.disabled=false;}
+  }catch(e){msg.textContent=['connect','sign_in_failed'].includes(e?.code)?e.message:'Follow did not save: '+errorText(e);msg.classList.add('qco-note--err');}finally{button.disabled=false;}
  });
  const changed=()=>{if(target.isConnected)void load();};globalThis.addEventListener?.('qhooks:community-following',changed);load();return{reload:load,dispose(){globalThis.removeEventListener?.('qhooks:community-following',changed);}};
 }

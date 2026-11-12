@@ -10,6 +10,7 @@
 //   /api/qhooks/buybacks                                 read by qx-burn-ticker.mjs (every 20 s); this page listens for its result
 // Every motion is a real event: a trade, a burn, a call, a launch, a new holder. Nothing is replayed or invented.
 import { mountShell } from '/qx-a/shell.mjs';
+import { profileUrl } from '/qx-profile-address.mjs';
 import { h, icon, RM, fmt, setArt, coin, avatar, keeperAvatar, tokenChip, statStrip, tape, toast, liveLabel, liveChart, bigPrice, changeLine, post, callOutcome, supplyMap, countdown, state, skeletonRows, restart, inView, checks } from '/qx-a/components.mjs';
 import '/qx-shell.mjs'; // legacy runtime: wallet copy, get-the-app, proof entry points (its old header code finds no header here)
 
@@ -494,6 +495,10 @@ function callPost(c, enter) {
   const p = post({ w: c.author, name: fmt.short(c.author), age: fmt.age((Date.now() - c.createdAt) / 1000), what: h('span', null, 'called', tokenChip('$' + sym, boardLogo(c.board))), text: c.text, media: out ? [out] : [], enter });
   const href = c.links?.path || (c.id ? '/call/' + c.id : null);
   if (href) p.querySelector('.qa-post__body').append(h('a', { class: 'hm-call-go', href }, 'Open the call →'));
+  // The caller's face and name open their profile (components.post draws them as plain text).
+  const prof = profileUrl({ wallet: c.author }), label = 'Open profile of ' + fmt.short(c.author), ava = p.querySelector(':scope > .qa-ava'), nm = p.querySelector('.qa-post__name');
+  if (ava) { const link = h('a', { class: 'cx-face', href: prof, 'aria-label': label }); ava.replaceWith(link); link.append(ava); }
+  if (nm) nm.replaceWith(h('a', { class: 'qa-post__name cx-who__link', href: prof, title: 'Open profile', 'aria-label': label }, h('span', { class: 'cx-who__t' }, nm.textContent), h('span', { class: 'cx-who__chev', 'aria-hidden': 'true' }, '›')));
   return { el: p, update: () => { const v = nowP(); if (out && v != null) out.update(v); } };
 }
 async function loadCalls() {

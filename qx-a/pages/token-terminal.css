@@ -719,3 +719,9 @@ body.qa.qxt .ta-proof b { margin-left: 2px; }
 @media (prefers-reduced-motion: reduce) {
   body.qa.qxt *, body.qa.qxt *::before, body.qa.qxt *::after { animation: none !important; transition: none !important; }
 }
+
+/* Caller names on call cards are links to the profile: visible as links, a chevron, a 44 px tap target (2026-11-12). */
+a.cx-who__link { display: inline-flex; align-items: center; gap: 3px; min-height: 44px; margin: -11px 0; padding: 0 4px 0 0; color: var(--qa-tx); text-decoration: underline; text-decoration-color: var(--qa-gold-lo); text-decoration-thickness: 1px; text-underline-offset: 4px; -webkit-tap-highlight-color: transparent; }
+a.cx-who__link:hover, a.cx-who__link:focus-visible { text-decoration-color: var(--qa-gold); color: var(--qa-gold-hi); }
+.cx-who__chev { font-weight: 700; font-size: 1.15em; line-height: 1; color: var(--qa-gold); transform: translateY(-1px); }
+a.cx-face { min-width: 44px; min-height: 44px; display: grid; place-items: start center; flex: none; align-self: start; border-radius: 50%; }

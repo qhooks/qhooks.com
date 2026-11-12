@@ -389,9 +389,10 @@ function renderCalls(d, fresh = new Set()) {
       nowP > 0 ? h('div', { class: 'qa-outcome__col' }, h('span', null, 'Now'), h('b', { 'data-ta-now': '' }, fmt.price(nowP))) : null,
       mult ? h('div', { class: 'qa-outcome__x' }, h('b', { class: mult >= 1 ? 'qa-up' : 'qa-down', 'data-ta-mult': String(cp) }, fmt.mult(mult)), h('span', null, 'since the call')) : null) : null;
     const pos = callPosition(c.position);
-    const el = h('article', { class: 'qa-post ta-call' + (fresh.has(c.id) && !RM ? ' is-enter' : '') }, avatar(c.author, 'lg'),
+    const prof = profileUrl({ wallet: c.author });
+    const el = h('article', { class: 'qa-post ta-call' + (fresh.has(c.id) && !RM ? ' is-enter' : '') }, h('a', { class: 'cx-face', href: prof, 'aria-label': 'Open profile of ' + fmt.short(c.author) }, avatar(c.author, 'lg')),
       h('div', { class: 'qa-post__body' },
-        h('div', { class: 'qa-post__head' }, h('a', { class: 'qa-post__name', href: profileUrl({ wallet: c.author }) }, fmt.short(c.author)), h('span', null, age),
+        h('div', { class: 'qa-post__head' }, h('a', { class: 'qa-post__name cx-who__link', href: prof, title: 'Open profile', 'aria-label': 'Open profile of ' + fmt.short(c.author) }, h('span', { class: 'cx-who__t' }, fmt.short(c.author)), h('span', { class: 'cx-who__chev', 'aria-hidden': 'true' }, '›')), h('span', null, age),
           h('span', { class: 'qa-post__what' }, 'called ', h('b', null, c.board?.symbol ? '$' + c.board.symbol : d.meta.symbol))),
         c.text ? h('p', { class: 'qa-post__text' }, c.text) : null,
         outcome ? h('div', { class: 'qa-post__media' }, outcome, pos) : pos ? h('div', { class: 'qa-post__media' }, pos) : null,

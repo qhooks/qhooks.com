@@ -165,3 +165,6 @@ main.pv3:not([data-pv3-state="profile"]) .pv-banner { display: none; }
   main.pv3 .qa-facts > div:first-child { padding-left: 0; box-shadow: none; }
 }
 @media (prefers-reduced-motion: reduce) { .pv-banner__art { animation: none; } }
+
+/* A follow that did not save says so plainly (2026-11-12). */
+main.pv3 #qco-profile .qco-note--err { color: var(--qa-sell); font-size: 14px; font-weight: 600; }
