@@ -62,3 +62,15 @@ body.qa.qxt #qtzl .qtx-fine { max-width: 68ch; margin: 0; padding: 6px 0 6px 16p
 body.qa.qxt #qtzl .qtx-fine:first-of-type { margin-top: 12px; padding-top: 0; }
 @media (max-width: 1099px) { body.qa.qxt #qtz .qtb-now { grid-template-columns: 1fr 1fr !important; } body.qa.qxt #qtz .qtb-now b { font-size: 20px; } body.qa.qxt :is(#qtz, #qtzl) .qtx-mini { flex: 1 1 auto; } }
 body.qa.qxt #qtz .qtx-actions:has(input) { margin-top: 14px; }
+
+/* stakev4b (2026-11-12, main): fixes on stakev4. (1) The staking terms are shown in full on phones (the bigger type had met a
+   3-line clamp: "…unstake…"). (2) Big figures never break inside a value: nowrap, and on phones one figure per row at full
+   width, label left, value right. */
+body.qa.qxt :is(#qtz, #qtzl) .qtb-note { display: block !important; -webkit-line-clamp: unset !important; line-clamp: unset !important; -webkit-box-orient: initial !important; overflow: visible !important; max-height: none !important; text-overflow: clip !important; white-space: normal !important; }
+body.qa.qxt #qtz .qtb-now b { white-space: nowrap; }
+@media (max-width: 1099px) {
+  body.qa.qxt #qtz .qtb-now { grid-template-columns: 1fr !important; }
+  body.qa.qxt #qtz .qtb-now > div { grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; padding: 14px 0; }
+  body.qa.qxt #qtz .qtb-now > div + div { box-shadow: 0 -1px 0 var(--qa-rule); }
+  body.qa.qxt #qtz .qtb-now b { font-size: clamp(20px, 6.4vw, 26px); text-align: right; }
+}

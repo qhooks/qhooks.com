@@ -1,0 +1,31 @@
+/* /lp-proof v4 (2026-11-12, overhaul polish): the lit set in the hero (lpproof-v4.mjs), the headline as one heavy line and one light line
+   (same words), section headings on the overhaul scale. Every id, flow and section of me.html stays. */
+.lp4 .pf-hero { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+.lp4 .lp4-stage { position: relative; order: -1; height: 280px; margin: 0 calc(var(--qa-pad) * -1) 8px; overflow: hidden; pointer-events: none; }
+.lp4 .lp4-stage--set::before { content: ''; position: absolute; inset: 0; background: #050505 url(/qx-a/set/set-create.webp) 50% 70% / cover no-repeat; }
+.lp4 .lp4-stage--set::before, .lp4 .lp4-stage .qs3 {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 82%, transparent 100%), linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%); -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 82%, transparent 100%), linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%); mask-composite: intersect; }
+.lp4 .lp4-tag { position: absolute; z-index: 2; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; gap: 8px; align-items: baseline; margin: 0; white-space: nowrap;
+  font-size: 12.5px; font-weight: 600; color: var(--qa-tx-3); text-shadow: 0 1px 10px #000, 0 0 2px #000; }
+.lp4 .lp4-tag b { color: var(--qa-tx); font-weight: 760; }
+body:has(main.lp4) .qa-ambient__art { filter: blur(56px) saturate(.5) brightness(.42) !important; }
+.lp4 .hl-h1 { font-size: clamp(48px, 12.5vw, 124px); line-height: .86; font-weight: 880; font-stretch: 125%; letter-spacing: -.035em; text-transform: uppercase; }
+.lp4 .hl-h1 .hl-gold { color: var(--qa-tx-2); background: none; -webkit-text-fill-color: currentColor; font-weight: 260; font-stretch: 112%; letter-spacing: -.02em; }
+[data-theme="light"] .lp4 .hl-h1 .hl-gold { color: var(--qa-tx-3); }
+@media (min-width: 1100px) {
+  .lp4 .pf-hero { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: end; min-height: 520px; }
+  .lp4 .lp4-stage { order: 0; grid-column: 2; grid-row: 1 / span 3; height: auto; min-height: 500px; align-self: stretch; margin: 0 calc(max(var(--qa-pad), (100vw - var(--qa-maxw)) / 2 + var(--qa-pad)) * -1) 0 0; }
+  .lp4 .pf-hero > div:first-child { grid-column: 1; }
+  .lp4 .pf-hero > :not(.lp4-stage):not(:first-child) { grid-column: 1; justify-self: start; align-self: start; margin-top: 22px; }
+  .lp4 .hl-h1 { font-size: clamp(64px, 6.6vw, 112px); }
+  .lp4 .lp4-tag { left: auto; right: 7%; top: 30%; bottom: auto; transform: none; flex-direction: column; align-items: flex-start; gap: 3px; padding: 2px 0 2px 14px; box-shadow: inset 1px 0 0 rgba(232, 200, 140, .55); }
+  .lp4 .lp4-tag b { font-size: 17px; }
+  .lp4 .lp4-tag::before { content: ''; position: absolute; right: 100%; top: 50%; width: 64px; height: 1px; background: linear-gradient(90deg, transparent, rgba(232, 200, 140, .7)); }
+  .lp4 .lp4-tag::after { content: ''; position: absolute; right: calc(100% + 64px); top: 50%; width: 5px; height: 5px; margin: -2px -2px 0 0; border-radius: 50%; background: var(--qa-gold); box-shadow: 0 0 10px rgba(232, 200, 140, .8); }
+}
+/* signed out or no launches on phones: a shorter band, so the headline and Connect stay high */
+@media (max-width: 1099px) { .lp4 .lp4-stage.is-empty { height: 150px; } }
+/* the pool's verdict heading on the overhaul scale (same words) */
+.lp4 .lpp-launch h2, .lp4 .lpp-h2 { font-size: clamp(28px, 3.6vw, 48px); line-height: .92; font-weight: 880; font-stretch: 125%; letter-spacing: -.025em; text-transform: uppercase; }
+.lp4 .lp4-tag span { color: var(--qa-tx-2); }
