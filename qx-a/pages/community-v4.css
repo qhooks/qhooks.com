@@ -38,3 +38,6 @@
   .cv4 .cv4-tag::before { content: ''; position: absolute; right: 100%; top: 50%; width: 64px; height: 1px; background: linear-gradient(90deg, transparent, rgba(232, 200, 140, .7)); }
   .cv4 .cv4-tag::after { content: ''; position: absolute; right: calc(100% + 64px); top: 50%; width: 5px; height: 5px; margin: -2px -2px 0 0; border-radius: 50%; background: var(--qa-gold); box-shadow: 0 0 10px rgba(232, 200, 140, .8); }
 }
+
+/* commfaces (Randall: no stacked circles): hide the overlapping caller avatars beside the counts line too */
+.cv4 #cx-kicker-faces, .cv4 .cx-hero .qa-ava-stack { display: none !important; }

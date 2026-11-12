@@ -1,0 +1,29 @@
+/* token terminal v4 polish (2026-11-12, overhaul): CSS only, scoped to the token stage and the section headings. No flow,
+   id, script or bundle changes (trade, ticket, chart, checks and tape untouched).
+   - The token's banner stays the token's own picture, graded into the page: near black behind the name and price and under the
+     header controls, softer colour, fine grain. The blurred colour wash under it is cut back so the page's blacks stay black.
+   - A hairline scale under the price (annotation detail, as on Portfolio).
+   - Traders / Callers / Holders / Builder headings on the overhaul scale (same words). */
+body.qa.qxt .ta-stage .qa-stage__glow { opacity: .2; filter: blur(52px) saturate(.7); }
+/* the shell's page-wide blurred copy of the banner (the blue/yellow wash behind the header and price): darker and calmer on the
+   terminal (filter only, so the shell's own fade keeps working) */
+body.qa.qxt .qa-ambient__art { filter: blur(56px) saturate(.5) brightness(.42) !important; }
+body.qa.qxt .ta-stage:not(.ta-noart) .qa-stage__img { filter: saturate(.82) contrast(1.06) brightness(.88); }
+body.qa.qxt .ta-stage .qa-stage__frame::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(5, 5, 5, .92) 0%, rgba(5, 5, 5, .72) 26%, rgba(5, 5, 5, .22) 58%, rgba(5, 5, 5, .12) 100%),
+              linear-gradient(180deg, rgba(5, 5, 5, .72) 0%, rgba(5, 5, 5, 0) 34%, rgba(5, 5, 5, 0) 62%, rgba(5, 5, 5, .85) 100%); }
+body.qa.qxt .ta-stage .qa-stage__frame::before { content: ''; position: absolute; inset: -40%; z-index: 1; pointer-events: none; opacity: .1; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.2'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E"); }
+/* phones: the banner sits under the back / star / share / wallet buttons: keep its top dark so they read */
+@media (max-width: 1099px) {
+  body.qa.qxt .ta-stage .qa-stage__frame::after { background: linear-gradient(180deg, rgba(5, 5, 5, .78) 0%, rgba(5, 5, 5, .25) 42%, rgba(5, 5, 5, .2) 70%, rgba(5, 5, 5, .9) 100%); }
+}
+
+/* the price: a hairline scale under it */
+body.qa.qxt .ta-quote .qa-price:not(.ta-quote-unit) { position: relative; display: inline-block; padding-bottom: 12px; font-variant-numeric: tabular-nums; }
+body.qa.qxt .ta-quote .qa-price:not(.ta-quote-unit)::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; pointer-events: none;
+  background: linear-gradient(var(--qa-gold), var(--qa-gold)) 0 100% / 28px 1px no-repeat, linear-gradient(var(--qa-rule-2), var(--qa-rule-2)) 0 100% / 100% 1px no-repeat,
+              repeating-linear-gradient(90deg, var(--qa-rule-2) 0 1px, transparent 1px 40px) 0 100% / 100% 6px no-repeat; }
+
+/* section headings: one scale with the rest of the site (same words) */
+body.qa.qxt :is(#traders-h, #callers-h, #holders-h, #builder-h) { font-size: clamp(32px, 4.2vw, 56px); line-height: .9; font-weight: 880; font-stretch: 125%; letter-spacing: -.03em; text-transform: uppercase; }
