@@ -36,8 +36,50 @@
 .hm-tag__px .is-down { color: var(--qa-sell); transition: none; }
 
 .hm-copy { position: relative; z-index: 1; }
-.hm-line .qa-line__text { min-height: calc(4 * 1.02em); max-width: 8.6em; font-size: 46px; text-shadow: 0 2px 30px rgba(0,0,0,.45); }
-.hm-line.is-rested .qa-line__text { transform: none; }
+
+/* The brand line is the hero (2026-11-12). "For the next generation" / "of token" / [word], looping. The word sits on its
+   own line in a clip of fixed height, so nothing below it ever moves. At rest the word line gives way to all four words. */
+.hm-brand { margin: 0; font-size: clamp(46px, 13.2vw, 128px); line-height: .9; font-weight: 860; font-stretch: var(--qa-wd-display); letter-spacing: -.045em; text-wrap: balance; text-shadow: 0 2px 30px rgba(0,0,0,.45); }
+.hm-brand__a { display: block; }
+.hm-brand__dot { opacity: 0; transition: opacity .45s var(--qa-ease); }
+.hm-brand__b { position: relative; display: block; }
+.hm-brand__of { display: block; color: var(--qa-tx-2); transition: opacity .45s var(--qa-ease); }
+.hm-slot { position: relative; display: block; height: 1.02em; overflow: hidden; }
+.hm-slot__w { position: absolute; left: 0; top: 0; white-space: nowrap; background: var(--qa-gold-metal); -webkit-background-clip: text; background-clip: text; color: transparent;
+  transform: translateY(104%); opacity: 0; transition: transform .56s var(--qa-ease-out), opacity .3s var(--qa-ease); }
+.hm-slot__w.is-on { transform: none; opacity: 1; }
+.hm-slot__w.is-off { transform: translateY(-104%); opacity: 0; transition: transform .5s var(--qa-ease-in), opacity .38s var(--qa-ease); }
+/* at rest: "For the next generation." and the four words, quiet, in the space the word line held */
+.hm-brand__all { position: absolute; left: 0; right: 0; bottom: .06em; display: flex; flex-wrap: wrap; gap: .1em .38em; font-size: .38em; line-height: 1.05; font-weight: 760; letter-spacing: -.02em; color: var(--qa-tx-3); opacity: 0; transform: translateY(.3em); transition: opacity .5s var(--qa-ease), transform .6s var(--qa-ease-out); pointer-events: none; }
+.hm-brand.is-rest .hm-brand__dot { opacity: 1; }
+.hm-brand.is-rest .hm-brand__of, .hm-brand.is-rest .hm-slot { opacity: 0; transition: opacity .4s var(--qa-ease); }
+.hm-brand.is-rest .hm-brand__all { opacity: 1; transform: none; transition-delay: .15s; }
+
+/* one live fact about the people the word names */
+.hm-proof { display: flex; align-items: center; gap: 10px; min-height: 30px; margin: 18px 0 0; font-size: 15px; font-weight: 600; line-height: 1.3; color: var(--qa-tx-2); transition: opacity .18s var(--qa-ease), transform .18s var(--qa-ease); }
+.hm-proof.is-out { opacity: 0; transform: translateY(4px); }
+.hm-proof__ico:empty { display: none; }
+.hm-proof__ico > * { width: 28px; height: 28px; flex: none; }
+.hm-proof__img { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; overflow: hidden; background: var(--qa-wash-2); font-size: 12px; font-weight: 760; color: var(--qa-tx); }
+.hm-proof__img img { width: 100%; height: 100%; object-fit: cover; }
+.hm-proof__t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* phone and tablet: the QHOOKS read is a plain row with its own coin; the hook is only drawn from 1100px */
+.hm-tag__coin { display: none; }
+@media (max-width: 1099px) {
+  .hm-rig { display: none; }
+  .hm-tag { display: flex; align-items: center; justify-items: start; gap: 12px; margin: 22px 0 0; padding: 12px 0 0; text-align: left; box-shadow: 0 -1px 0 var(--qa-rule); }
+  .hm-tag__coin { display: block; flex: none; width: 40px; height: 40px; border-radius: 50%; box-shadow: 0 0 0 2px var(--qa-gold-lo), 0 0 18px rgba(210,173,114,.25); }
+  .hm-tag__read { display: grid; gap: 1px; min-width: 0; }
+  .hm-tag__px [data-hv-qp] { font-size: 20px; }
+  .qx-drop-hero { margin-top: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* the word still changes: a crossfade instead of a roll (the system turns every other transition off) */
+  .qa .hm-slot__w, .qa .hm-slot__w.is-off { transform: none !important; transition: opacity .32s linear !important; }
+  .qa .hm-brand__dot, .qa .hm-brand__of, .qa .hm-slot, .qa .hm-brand__all { transform: none !important; transition: opacity .32s linear !important; }
+  .qa .hm-proof { transform: none !important; transition: opacity .18s linear !important; }
+}
 .hm-lede { max-width: 46ch; margin-top: 18px; font-size: 16px; line-height: 1.5; color: var(--qa-tx-2); }
 .hm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 22px; }
 .hm-actions .qa-btn { padding: 0 12px; }
@@ -221,7 +263,6 @@
 /* ---------- desktop ---------- */
 @media (min-width: 760px) {
   .hm-rig { width: 190px; right: 2%; }
-  .hm-line .qa-line__text { font-size: 64px; max-width: 9em; }
   .hm-actions { display: flex; }
   .hm-act__word { font-size: 96px; }
   .hm-hold-top { grid-template-columns: auto minmax(0, 1fr); align-items: end; column-gap: 48px; }
@@ -231,10 +272,10 @@
   .hm-rig { width: 300px; right: 7%; top: calc(-1 * (var(--qa-nav-h) + var(--qa-ribbon-h, 0px))); }
   .hm-bob .qa-coin { width: 78px; height: 78px; }
   .hm-copy { max-width: 1010px; }
-  .hm-line .qa-line__text { min-height: calc(3 * 1.02em); max-width: 11.5em; font-size: 92px; }
   .hm-lede { font-size: 18px; max-width: 50ch; margin-top: 22px; }
   .hm-actions { margin-top: 30px; }
   .hm-actions .qa-btn { padding: 0 26px; }
+  .hm-copy .qx-drop.qx-drop-hero { margin-top: 18px; }
   .hm-tag { position: absolute; top: var(--hm-tag-top, 520px); right: var(--hm-tag-right, 220px); margin: 0; padding: 0; }
   .hm-tag__px [data-hv-qp] { font-size: 30px; }
   .hm-pulse { margin: 0; }
@@ -309,4 +350,33 @@
 @media (prefers-reduced-motion: reduce) {
   .hm-sway { animation: none; }
   .hm-rig { transform: none; }
+}
+
+/* ---------- Proof: real pre-buy checks (2026-11-12). Open floor: hairlines, no boxes. ---------- */
+.hm-proofs { display: grid; }
+.hm-proof-card { display: grid; gap: 10px; padding: 16px 0 18px; box-shadow: 0 1px 0 var(--qa-rule); }
+.hm-proof-card:first-child { padding-top: 6px; }
+.hm-proof-card__id { display: flex; align-items: center; gap: 12px; color: var(--qa-tx); text-decoration: none; }
+.hm-proof-card__id .hm-icon { width: 36px; height: 36px; flex: none; }
+.hm-proof-card__id span { display: grid; gap: 1px; min-width: 0; }
+.hm-proof-card__id b { font-size: 17px; font-weight: 780; font-stretch: 112%; letter-spacing: -.01em; }
+.hm-proof-card__id small { font-size: 13px; color: var(--qa-tx-3); }
+.hm-proof-card__lv { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 9px; margin: 0; font-size: 15px; }
+.hm-proof-card__lv b { font-weight: 720; }
+.hm-proof-card__lv small { font-size: 13px; color: var(--qa-tx-3); }
+.hm-proof-card__dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+.hm-proof-card__lv.hm-warn { color: var(--qa-warn); }
+.hm-proof-card .qa-checks { margin: 0; }
+.hm-proof-card .hm-call-go { margin-top: 2px; }
+@media (min-width: 900px) {
+  .hm-proofs { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); column-gap: 28px; }
+  .hm-proof-card, .hm-proof-card:first-child { padding: 6px 0 18px; box-shadow: none; }
+}
+
+/* phone: the post-quantum hooks read as a tight list (kicker, name, Build); the descriptions show from 760px */
+@media (max-width: 759px) {
+  .hm-pq .pq-d { display: none; }
+  .hm-pq li a { padding-top: 13px; padding-bottom: 13px; }
+  .hm-pq .pq-go { grid-row: 1 / span 2; font-size: 13px; }
+  .hm-pq .pq-go::before { content: ""; }
 }

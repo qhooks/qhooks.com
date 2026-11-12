@@ -10,7 +10,7 @@
 //   /api/qhooks/buybacks                                 read by qx-burn-ticker.mjs (every 20 s); this page listens for its result
 // Every motion is a real event: a trade, a burn, a call, a launch, a new holder. Nothing is replayed or invented.
 import { mountShell } from '/qx-a/shell.mjs';
-import { h, icon, RM, fmt, setArt, coin, avatar, keeperAvatar, tokenChip, statStrip, tape, toast, liveLabel, liveChart, bigPrice, changeLine, post, callOutcome, supplyMap, countdown, state, skeletonRows, restart, inView } from '/qx-a/components.mjs';
+import { h, icon, RM, fmt, setArt, coin, avatar, keeperAvatar, tokenChip, statStrip, tape, toast, liveLabel, liveChart, bigPrice, changeLine, post, callOutcome, supplyMap, countdown, state, skeletonRows, restart, inView, checks } from '/qx-a/components.mjs';
 import '/qx-shell.mjs'; // legacy runtime: wallet copy, get-the-app, proof entry points (its old header code finds no header here)
 
 const QH = '0x20429af7ca3b0ce4d99edbaa0693f26c5df05195', QCHAIN = '4663', QLOGO = '/qhooks-logo.jpg';
@@ -39,22 +39,60 @@ addEventListener('qa:wallet', () => trigger?.click());
 }
 const ribbon = shell.ribbon;
 
-/* ================= brand line: builders, callers, holders, traders, then it rests ================= */
-{
-  const line = $('[data-hm-line]'), word = line && $('[data-hm-word]', line);
-  const WORDS = ['builders', 'callers', 'holders', 'traders'], hold = 1750;
-  const rest = () => { line.classList.add('is-rest'); setTimeout(() => line.classList.add('is-rested'), RM ? 0 : 460); };
-  const run = () => {
-    if (RM) return rest();
-    let k = 0;
-    const next = () => { k++; if (k >= WORDS.length) return setTimeout(rest, hold); restart(word, 'is-swap'); setTimeout(() => { word.textContent = WORDS[k]; word.classList.remove('is-swap'); setTimeout(next, hold); }, 230); };
-    setTimeout(next, hold);
+/* ================= the hero: the brand line, looping ================= */
+// "For the next generation of token builders / callers / holders / traders", resting on "For the next generation."
+// It loops so it is never missed (Randall, 2026-11-12). Each word brings one live fact about those people, read from the
+// same public data the page already loads; nothing is invented and an unknown fact says "Refreshing". The slot has a fixed
+// height, so the page never moves. Reduced motion crossfades each word instead of rolling it. It pauses while the tab
+// is hidden or the hero is scrolled away.
+const WORDS = ['builders', 'callers', 'holders', 'traders'];
+const FACTS = {}; // word (or 'rest') -> () => { text, icon } | null; filled in by the data loaders below
+const brand = (() => {
+  const line = $('[data-hm-line]'), slot = line && $('[data-hm-slot]', line);
+  const proof = $('[data-hm-proof]'), proofT = $('[data-hm-proof-t]'), proofIco = $('[data-hm-proof-ico]');
+  if (!line || !slot) return { refresh() {} };
+  const HOLD = 2300, REST = 2900, ROLL = RM ? 320 : 560;
+  let k = 0, timer = 0, running = false, inViewNow = true, key = 'builders';
+  const paintFact = (instant) => {
+    if (!proof) return;
+    const f = FACTS[key]?.() || null;
+    const apply = () => {
+      proofT.textContent = f?.text || 'Refreshing';
+      proofIco.replaceChildren(...(f?.icon ? [f.icon] : []));
+      proof.classList.toggle('has-ico', !!f?.icon);
+      proof.classList.remove('is-out');
+    };
+    if (instant) return apply();
+    proof.classList.add('is-out'); setTimeout(apply, 180);
   };
-  if (line && word) {
-    const go = () => (document.fonts?.ready || Promise.resolve()).then(run);
-    if (!document.hidden) go(); else document.addEventListener('visibilitychange', function seen() { if (!document.hidden) { document.removeEventListener('visibilitychange', seen); go(); } });
-  }
-}
+  const showWord = (w) => {
+    const old = $('.hm-slot__w.is-on', slot), next = h('span', { class: 'hm-slot__w' }, w + '.');
+    next.dataset.hmWord = '';
+    slot.append(next);
+    void next.offsetWidth;
+    next.classList.add('is-on');
+    if (old) { old.classList.remove('is-on'); old.classList.add('is-off'); old.removeAttribute('data-hm-word'); setTimeout(() => old.remove(), ROLL + 60); }
+  };
+  const step = () => {
+    k = (k + 1) % (WORDS.length + 1);
+    const resting = k === WORDS.length;
+    key = resting ? 'rest' : WORDS[k];
+    line.classList.toggle('is-rest', resting);
+    if (!resting) showWord(WORDS[k]);
+    paintFact(false);
+    timer = setTimeout(tick, resting ? REST : HOLD);
+  };
+  function tick() { if (running) step(); }
+  const sync = () => {
+    const want = !document.hidden && inViewNow;
+    if (want && !running) { running = true; clearTimeout(timer); timer = setTimeout(tick, HOLD); }
+    else if (!want && running) { running = false; clearTimeout(timer); }
+  };
+  document.addEventListener('visibilitychange', sync);
+  new IntersectionObserver(([e]) => { inViewNow = e.isIntersecting; sync(); }, { threshold: 0.15 }).observe(line);
+  (document.fonts?.ready || Promise.resolve()).then(() => { paintFact(true); sync(); });
+  return { refresh() { paintFact(true); } };
+})();
 
 /* ================= the hook: real trades tug the line ================= */
 const rig = $('[data-hm-rig]'), coinWrap = $('[data-hm-coin]'), coinPulse = coinWrap?.querySelector('.qa-coin__pulse');
@@ -62,6 +100,8 @@ const heroEl = $('.hm-hero'), tagEl = $('[data-hm-tag]');
 // The coin hangs from the bend of the hook: the cord is as long as it takes to reach the live read beside it.
 function hang() {
   if (!rig || !heroEl || !tagEl || !coinWrap) return;
+  // Below 1100px the hook is not drawn and the QHOOKS read is a plain row with its own coin.
+  if (innerWidth < 1100) { ['--hm-tag-pad', '--hm-tag-mt', '--hm-tag-top', '--hm-tag-right'].forEach((p) => tagEl.style.removeProperty(p)); return; }
   const coinEl = coinWrap.querySelector('.qa-coin'), cH = coinEl.offsetHeight || 56;
   const hr = heroEl.getBoundingClientRect(), rr = rig.getBoundingClientRect();
   const bx = rr.left + rr.width * .52 - hr.left, by = rr.top + rig.offsetHeight * .97 - hr.top;
@@ -216,6 +256,7 @@ async function loadFeed() {
   P.vol = live.reduce((a, m) => a + (num(m.summary?.volume24Usd) || 0), 0);
   const qm = markets.find((m) => lower(m.token) === QH); if (qm && P.holders == null) P.holders = num(qm.summary?.holders);
   pulse.update(!first); count('launches', live.length);
+  if (first) { brand.refresh(); loadProofs().catch(() => {}); }
   drawLaunches(fresh);
   if (!S.q && qm) paintTag(qm.summary);
   for (const k of fresh) { const m = markets.find((x) => key(x) === k); if (m) ribbon?.news({ kind: 'launch', label: 'New launch', text: `${m.symbol} on ${chainName(m.chainId)}`, img: logoOf(m.logo) ? abs(logoOf(m.logo)) : undefined }); }
@@ -445,17 +486,21 @@ function boardLogo(b) {
 }
 function callPost(c, enter) {
   const sym = c.board?.symbol || c.board?.name || 'token', isQ = lower(c.board?.address) === QH;
-  const nowP = () => (isQ ? qPrice() : null) ?? num(c.call?.priceNow) ?? num(c.call?.price);
-  const out = callOutcome({ callPrice: c.call.price, nowPrice: nowP() });
-  const p = post({ w: c.author, name: fmt.short(c.author), age: fmt.age((Date.now() - c.createdAt) / 1000), what: h('span', null, 'called', tokenChip('$' + sym, boardLogo(c.board))), text: c.text, media: [out], enter });
+  // The feed's priceNow can be in the pool's quote unit while the call price is in USD (a WETH price against a USD call
+  // reads as -100%). Show the outcome only for QHOOKS (live USD price) or when the two prices are plausibly the same unit.
+  const pn = num(c.call?.priceNow), sameUnit = pn != null && pn / c.call.price > 1e-3 && pn / c.call.price < 1e3;
+  const nowP = () => (isQ ? qPrice() : null) ?? (sameUnit ? pn : null);
+  const out = isQ || sameUnit ? callOutcome({ callPrice: c.call.price, nowPrice: nowP() ?? c.call.price }) : null;
+  const p = post({ w: c.author, name: fmt.short(c.author), age: fmt.age((Date.now() - c.createdAt) / 1000), what: h('span', null, 'called', tokenChip('$' + sym, boardLogo(c.board))), text: c.text, media: out ? [out] : [], enter });
   const href = c.links?.path || (c.id ? '/call/' + c.id : null);
   if (href) p.querySelector('.qa-post__body').append(h('a', { class: 'hm-call-go', href }, 'Open the call →'));
-  return { el: p, update: () => out.update(nowP()) };
+  return { el: p, update: () => { const v = nowP(); if (out && v != null) out.update(v); } };
 }
 async function loadCalls() {
   const body = await getJSON(CALLS);
   const list = (Array.isArray(body?.calls) ? body.calls : []).filter((c) => c?.kind === 'call' && !c.folded && num(c.call?.price) && c.author).sort((a, b) => b.createdAt - a.createdAt);
   const first = !S.callsLoaded; S.callsLoaded = true;
+  S.latestCall = list[0] || null; if (first) brand.refresh();
   count('calls', list.length);
   if (!callBox) return;
   if (!list.length) { callBox.replaceChildren(state('empty', { title: 'No calls yet', body: 'Make the first call on a token and build your record.', action: 'Make a call', onAction: () => location.assign('/community#make-a-call') })); return; }
@@ -475,6 +520,60 @@ async function loadCalls() {
     if (now) setTimeout(() => ribbon?.news({ kind: 'call', label: 'Latest call', text: `${fmt.short(c.author)} called $${c.board?.symbol || 'token'} · ${fmt.mult(now / c.call.price)} since`, w: c.author }), 9000);
   }
 }
+
+/* ================= Proof: the real pre-buy checks of the most traded launches ================= */
+// Cached RepoProof reports through /api/repoproof/check (GET reads the cache; it never starts a new run).
+const proofBox = $('[data-hm-proofs]');
+proofBox?.append(skeletonRows(3));
+const LEVEL = { clear: 'qa-up', caution: 'hm-warn', danger: 'qa-down' };
+const RANK = { danger: 0, caution: 1, unknown: 2, clear: 3 };
+const when = (v) => { const t = typeof v === 'number' ? v : Date.parse(v); return Number.isFinite(t) ? t : null; };
+function proofCard(m, r) {
+  const rep = r.report, c = rep.counts || {};
+  const total = ['danger', 'caution', 'clear', 'unknown'].reduce((a, k) => a + (num(c[k]) || 0), 0);
+  const top = [...rep.checks].filter((k) => k?.title).sort((a, b) => (RANK[a.status] ?? 2) - (RANK[b.status] ?? 2)).slice(0, 4);
+  const at = when(r.checkedAt);
+  const full = typeof rep.url === 'string' && /^https:\/\/repoproof\.online\//.test(rep.url) ? h('a', { class: 'hm-call-go', href: rep.url, target: '_blank', rel: 'noopener' }, 'Full report →') : null;
+  return h('article', { class: 'hm-proof-card' },
+    h('a', { class: 'hm-proof-card__id', href: launchHref(m) }, iconFor(m), h('span', null, h('b', null, m.symbol || m.name || 'Token'), h('small', null, chainName(m.chainId) + (at ? ' · checked ' + fmt.age((Date.now() - at) / 1000) + ' ago' : '')))),
+    h('p', { class: 'hm-proof-card__lv ' + (LEVEL[rep.level] || 'qa-muted') }, h('span', { class: 'hm-proof-card__dot', 'aria-hidden': 'true' }), h('b', null, rep.headline || 'Checked'), total ? h('small', null, `${num(c.clear) || 0} of ${total} clear`) : null),
+    checks(top.map((k) => ({ status: k.status, title: k.title }))),
+    full);
+}
+async function loadProofs() {
+  if (!proofBox || !S.markets.length) return;
+  const picks = S.markets.filter((m) => m.live && /^0x[0-9a-f]{40}$/i.test(String(m.token)) && /^\d+$/.test(String(m.chainId)))
+    .sort((a, b) => (num(b.summary?.trades24) || 0) - (num(a.summary?.trades24) || 0)).slice(0, 3);
+  const got = await Promise.all(picks.map((m) => getJSON('/api/repoproof/check?' + new URLSearchParams({ kind: 'token', chainId: String(m.chainId), address: lower(m.token) }))
+    .then((r) => ({ m, r }), () => ({ m, r: null }))));
+  const ready = got.filter((x) => x.r?.state === 'ready' && x.r.report && Array.isArray(x.r.report.checks));
+  if (!ready.length) { proofBox.replaceChildren(state('empty', { title: 'No checks to show yet', body: 'Open any token in the terminal to see its pre-buy check.', action: 'Open the terminal', onAction: () => location.assign('/terminal') })); return; }
+  proofBox.replaceChildren(h('div', { class: 'hm-live-h' }, h('b', null, 'Latest checks'), h('span', null, 'The most traded launches')), h('div', { class: 'hm-proofs' }, ready.map(({ m, r }) => proofCard(m, r))));
+}
+
+/* ================= hero facts: one live line per brand-line word ================= */
+const smallIcon = (src, label) => { const el = h('span', { class: 'hm-proof__img' }); if (src) { const img = h('img', { src, alt: '', decoding: 'async' }); img.addEventListener('error', () => { img.remove(); el.textContent = String(label || '?').slice(0, 1); }, { once: true }); el.append(img); } else el.textContent = String(label || '?').slice(0, 1).toUpperCase(); return el; };
+FACTS.builders = () => {
+  const m = S.markets.filter((x) => x.live).sort((a, b) => (b.listedAt || 0) - (a.listedAt || 0))[0];
+  if (!m) return null;
+  const at = num(m.launchedAt) || (num(m.listedAt) ? m.listedAt / 1000 : null);
+  return { text: `${m.symbol || m.name || 'A token'} launched on ${chainName(m.chainId)}${at ? ' ' + fmt.age(nowS() - at) + ' ago' : ''}`, icon: smallIcon(logoOf(m.logo) || (lower(m.token) === QH ? QLOGO : null), m.symbol) };
+};
+FACTS.callers = () => {
+  const c = S.latestCall; if (!c) return null;
+  const sym = c.board?.symbol || c.board?.name || 'token', isQ = lower(c.board?.address) === QH;
+  // A multiple only when both prices are USD for sure: QHOOKS calls against the live USD price. (The activity feed's
+  // priceNow can be in the pool's quote unit while the call price is in USD, which would read as a false -100%.)
+  const now = isQ && c.call?.quoteSymbol === 'USD' ? qPrice() : null, x = now && c.call?.price ? now / c.call.price : null;
+  const ago = num(c.createdAt) ? ' ' + fmt.age((Date.now() - c.createdAt) / 1000) + ' ago' : '';
+  return { text: `${fmt.short(c.author)} called $${sym}${x ? ' · ' + fmt.mult(x) + ' since' : ago}`, icon: avatar(c.author) };
+};
+FACTS.holders = () => (P.holders == null && P.burned == null ? null
+  : { text: [P.holders != null ? `${P.holders.toLocaleString('en-US')} QHOOKS holders` : null, P.burned != null ? `${fmt.tok(P.burned)} burned` : null].filter(Boolean).join(' · '), icon: smallIcon(QLOGO, 'Q') });
+FACTS.traders = () => (P.trades == null ? null
+  : { text: `${P.trades.toLocaleString('en-US')} trades${P.vol != null ? ' · ' + fmt.usd(P.vol) + ' volume' : ''} in the last 24h`, icon: null });
+FACTS.rest = () => (P.launches == null ? null
+  : { text: `${P.launches} live launches${P.trades != null ? ' · ' + P.trades.toLocaleString('en-US') + ' trades today' : ''}`, icon: null });
 
 /* ================= start ================= */
 poll(loadFeed, 60000);
