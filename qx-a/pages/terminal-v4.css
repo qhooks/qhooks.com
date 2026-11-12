@@ -41,3 +41,24 @@ body.qa.qxt .ta-stage:not(.ta-noart) .qa-stage__img { left: 0; top: 0; width: 10
   body.qa.qxt .ta-stage.qa-stage--wide:not(.ta-noart) .qa-stage__frame::after {
     background: linear-gradient(90deg, rgba(5, 5, 5, .85) 0%, rgba(5, 5, 5, .35) 18%, rgba(5, 5, 5, .08) 40%, rgba(5, 5, 5, .08) 100%),
                 linear-gradient(180deg, rgba(5, 5, 5, .25) 0%, rgba(5, 5, 5, 0) 25%, rgba(5, 5, 5, 0) 75%, rgba(5, 5, 5, .55) 100%); } }
+
+/* stakev4 (2026-11-12, overhaul polish): the staking tools (/stake opens the terminal on Builder › Staking): the same words and
+   controls, raised to the site's bar. Big figures on a hairline, the overhaul heading scale, full-size controls with the action
+   in gold, readable lock terms. CSS only; ids, buttons and flows untouched. */
+body.qa.qxt :is(#qtz, #qtzl) h2 { font-size: clamp(28px, 3.4vw, 44px); line-height: .92; font-weight: 880; font-stretch: 125%; letter-spacing: -.025em; text-transform: uppercase; margin-bottom: 12px; }
+body.qa.qxt :is(#qtz, #qtzl) > p:not(.qtx-status) { max-width: 68ch; font-size: 15px; line-height: 1.55; color: var(--qa-tx-2); }
+body.qa.qxt #qtz .qtb-now { gap: 0; margin: 22px 0 18px; box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+body.qa.qxt #qtz .qtb-now > div { padding: 16px 18px 16px 0; display: grid; gap: 6px; align-content: start; border: 0; box-shadow: none; }
+body.qa.qxt #qtz .qtb-now span { font-size: 12.5px; color: var(--qa-tx-3); }
+body.qa.qxt #qtz .qtb-now b { font-size: clamp(20px, 2.3vw, 30px); line-height: 1.05; font-weight: 860; font-stretch: 112%; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--qa-tx); }
+body.qa.qxt #qtz .qtb-now > div:first-child b { color: var(--qa-gold-hi, #e8c88c); }
+body.qa.qxt :is(#qtz, #qtzl) .qtx-actions { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+body.qa.qxt :is(#qtz, #qtzl) .qtx-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+body.qa.qxt :is(#qtz, #qtzl) :is(.qtx-row :is(input, select), .qtx-mini-input) { height: 48px; min-width: 0; flex: 1 1 180px; padding: 0 14px; font-size: 15px; border-radius: var(--qa-r-m); }
+body.qa.qxt :is(#qtz, #qtzl) .qtx-mini { height: 48px; padding: 0 22px; font-size: 14.5px; font-weight: 760; border-radius: var(--qa-r-m); }
+body.qa.qxt :is(#qtz, #qtzl) :is(.qtx-row, .qtx-actions:has(input)) .qtx-mini:first-of-type:not(:disabled) { background: var(--qa-gold-metal, linear-gradient(180deg, #f1dcae, #c99a52)); color: #1a1206; box-shadow: 0 10px 28px -14px rgba(232, 200, 140, .7); }
+/* the lock terms: one readable block, a hairline down its side */
+body.qa.qxt #qtzl .qtx-fine { max-width: 68ch; margin: 0; padding: 6px 0 6px 16px; font-size: 14px; line-height: 1.55; color: var(--qa-tx-2); box-shadow: inset 1px 0 0 var(--qa-rule-2); }
+body.qa.qxt #qtzl .qtx-fine:first-of-type { margin-top: 12px; padding-top: 0; }
+@media (max-width: 1099px) { body.qa.qxt #qtz .qtb-now { grid-template-columns: 1fr 1fr !important; } body.qa.qxt #qtz .qtb-now b { font-size: 20px; } body.qa.qxt :is(#qtz, #qtzl) .qtx-mini { flex: 1 1 auto; } }
+body.qa.qxt #qtz .qtx-actions:has(input) { margin-top: 14px; }
