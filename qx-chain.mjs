@@ -3,6 +3,7 @@ import { guardWalletChain, assertWalletChain, guardedSend, asTradeError } from '
 // public-RPC reads, a small ABI codec, the pool's live key, and wallet sends with chain switching.
 import { chainMap } from '/chains.mjs';
 import { silentActive } from '/qx-instant-bridge.mjs';
+import { getWalletHub } from '/wallet-hub.mjs';
 // Every built chain from the registry (chains.mjs); pages decide which ones to show.
 export const RPC = chainMap(c => c.rpc);
 export const CHAIN_NAME = chainMap(c => c.name);
@@ -120,20 +121,30 @@ try {
   window.addEventListener('eip6963:announceProvider', e => { const p = e.detail; if (p?.info?.uuid && p.provider) announced.set(p.info.uuid, p); });
   window.dispatchEvent(new Event('eip6963:requestProvider'));
 } catch {}
-// Trade shows its wallet in #qt-connection, Studio in #ql-connection ("Base · 0x…").
+// Wallet state comes from the site's wallet hub (2026-11-12). System A pages dropped the old status lines
+// (#qt-connection on Trade, #ql-connection on Studio), so every feature that read the address from them saw "no wallet"
+// even when one was connected: profile Follow, QDrops, callout inbox, market submit. The hub is the source; a page
+// whose line was written by its own connect flow (no hub wallet) keeps working through the line.
 const connectionLine = () => document.getElementById('qt-connection') || document.getElementById('ql-connection');
-/// The address the page connected, read from its status line.
+const hubNow = () => { try { return getWalletHub(window).snapshot?.().current || null; } catch { return null; } };
+/// The connected address: the wallet hub's, else the page's status line.
 export function connectedAddress() {
+  const owner = hubNow()?.owner;
+  if (/^0x[0-9a-fA-F]{40}$/.test(owner || '')) return owner.toLowerCase();
   const m = (connectionLine()?.textContent || '').match(/0x[0-9a-fA-F]{40}/);
   return m ? m[0].toLowerCase() : null;
 }
-/// Calls `cb` when the page's connected address changes.
+/// Calls `cb` when the connected address changes (hub changes and, where a page has one, its status line).
 export function onWalletChange(cb) {
   let last = connectedAddress();
+  const fire = () => { const now = connectedAddress(); if (now !== last) { last = now; cb(now); } };
+  try { getWalletHub(window).subscribe?.(fire); } catch {}
   const el = connectionLine(); if (!el) return;
-  new MutationObserver(() => { const now = connectedAddress(); if (now !== last) { last = now; cb(now); } }).observe(el, { childList: true, subtree: true, characterData: true });
+  new MutationObserver(fire).observe(el, { childList: true, subtree: true, characterData: true });
 }
 async function providerFor(address) {
+  const hub = hubNow();
+  if (hub?.owner?.toLowerCase() === address && hub.entry?.provider?.request) return hub.entry.provider;
   const list = [...announced.values()].map(p => p.provider);
   if (window.ethereum && !list.includes(window.ethereum)) list.push(window.ethereum);
   for (const p of list) {
