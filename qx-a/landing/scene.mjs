@@ -15,6 +15,8 @@ import { RenderPass } from '../vendor/three/addons/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from '../vendor/three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from '../vendor/three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from '../vendor/three/addons/postprocessing/OutputPass.js';
+import { Font } from '../vendor/three/addons/loaders/FontLoader.js';
+import { TextGeometry } from '../vendor/three/addons/geometries/TextGeometry.js';
 
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -218,30 +220,44 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     g.fillStyle = color; g.fillText(text, w / 2, h / 2);
     const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; tx.minFilter = THREE.LinearMipmapLinearFilter; tx.generateMipmaps = true; return tx;
   }
-  // extruded type: the same glyph texture on a stack of planes, the back ones darker. 40 planes over the depth, so the side
-  // walls read as a continuous extrusion at full resolution (the stepped look of 8 coarse planes is gone).
-  function extruded(w, h, depth = .45, planes = 40) {
-    const g = new THREE.Group(); const geo = new THREE.PlaneGeometry(w, h); g.userData.planes = [];
-    for (let i = planes; i >= 0; i--) { const front = i === 0; const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, color: front ? 0xffffff : new THREE.Color().setScalar(lerp(.16, .46, 1 - i / planes)), opacity: 1, toneMapped: false })); m.position.z = -i * depth / planes; m.renderOrder = 60 - i; g.add(m); g.userData.planes.push(m); }
-    g.userData.setMap = (tx) => g.userData.planes.forEach((m) => { m.material.map = tx; m.material.needsUpdate = true; });
-    g.userData.setOpacity = (o) => g.userData.planes.forEach((m) => { m.material.opacity = o; });
+  // solid type (2026-11-12, after figsolid on /lp-proof): a real three.js TextGeometry extrusion from the static Mona Sans
+  // ExtraBold Wide the film used (mona-figures.json, a subset: digits, . , + - − % $ K M B and the chain-word letters;
+  // SIL OFL), bevelOffset 0 so the counters stay open, one mesh with a flat face and darker metal sides. The text is scaled
+  // to fit the slot (w × h in world units), so the longest chain word never overruns its column.
+  const fontData = await (await fetch(new URL('./mona-figures.json', import.meta.url), { cache: 'force-cache' })).json();
+  const font = new Font(fontData);
+  const geoCache = new Map();
+  function textGeo(txt) {
+    if (geoCache.has(txt)) return geoCache.get(txt);
+    const g = new TextGeometry(txt, { font, size: 1, depth: .34, curveSegments: 10, bevelEnabled: true, bevelThickness: .025, bevelSize: .012, bevelOffset: 0, bevelSegments: 3 });
+    g.computeBoundingBox(); const bb = g.boundingBox; g.translate(-(bb.min.x + bb.max.x) / 2, -(bb.min.y + bb.max.y) / 2, -bb.max.z);
+    g.userData = { w: bb.max.x - bb.min.x, h: bb.max.y - bb.min.y };
+    if (geoCache.size > 80) { for (const v of geoCache.values()) v.dispose(); geoCache.clear(); }
+    geoCache.set(txt, g); return g;
+  }
+  function extruded(w, h) {
+    const face = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, toneMapped: false });
+    const side = new THREE.MeshStandardMaterial({ color: 0x2a2a28, metalness: .85, roughness: .4, transparent: true });
+    const mesh = new THREE.Mesh(new THREE.BufferGeometry(), [face, side]);
+    const g = new THREE.Group(); g.add(mesh); g.userData.mesh = mesh;
+    g.userData.setText = (txt, color, sideColor) => { const geo = textGeo(txt); mesh.geometry = geo; const sc = Math.min(w / Math.max(.01, geo.userData.w), h / Math.max(.01, geo.userData.h)); mesh.scale.setScalar(sc); if (color) face.color.set(color); side.color.set(sideColor || (color ? new THREE.Color(color).multiplyScalar(.42) : 0x2a2a28)); };
+    g.userData.setOpacity = (o) => { face.opacity = o; side.opacity = o; mesh.visible = o > .01; };
     g.visible = false; scene.add(g); return g;
   }
   /* ---------- builders: the hook alone in its light; the six block names live in the DOM chips (Randall: the slabs read as dominos) ---------- */
 
   /* ---------- callers: the latest call's outcome as extruded type ---------- */
-  const numberG = extruded(4.6, 1.44, .45);
+  const numberG = extruded(4.6, 1.44);
   const numberSub = new THREE.Mesh(new THREE.PlaneGeometry(4.6, .5), new THREE.MeshBasicMaterial({ transparent: true, toneMapped: false, depthWrite: false })); numberSub.visible = false; scene.add(numberSub);
-  let callData = { pct: null, label: '' }, callTexKey = '', callShown = 0;
+  let callData = { pct: null, label: '' }, callTexKey = '', callShown = 0, callEnter = null, burnEnter = null;
 
   /* ---------- holders: the hook alone, and the real QHOOKS-burned figure as extruded type in the burn colour ---------- */
-  const burnedG = extruded(4.6, 1.44, .45);
+  const burnedG = extruded(4.6, 1.44);
   let burnedData = { text: '', value: 0 }, burnedShown = -1, burnedKey = '';
 
   /* ---------- traders: the chain names slam in as type; one coin flips as each lands ---------- */
-  const nameG = extruded(5.8, 1.36, .35);
-  const nameTex = CHAIN_NAMES.map((n) => textTex({ text: n, w: 1536, h: 360, size: 236, weight: 900, color: '#F4F1E9', tracking: -.045 }));
-  let nameIdx = -1; // no chain coin in this scene: the 3D chain word carries it (a flat icon on a disc read as a broken image)
+  const nameG = extruded(5.8, 1.36);
+  let nameIdx = -1, forcedWord = null; // no chain coin in this scene: the 3D chain word carries it (a flat icon on a disc read as a broken image)
 
   /* ---------- layout ---------- */
   function resize() {
@@ -271,13 +287,28 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     const m = easeInOut(span(u, .65, 1)); // the hand-over happens in the last 35% of a chapter
     cam.x = lerp(a.c[0], b.c[0], m); cam.y = lerp(a.c[1], b.c[1], m); cam.z = lerp(a.c[2], b.c[2], m);
     let hx = lerp(a.h[0], b.h[0], m), hy = lerp(a.h[1], b.h[1], m), hs = lerp(a.h[2], b.h[2], m), bandY = null, bandH = 0;
+    let fig = null; // landscape: where the chapter's 3D figure or word goes (x, scale cap for a 4.6-wide and a 5.8-wide plane)
     if (PORT && bands) {
       const ba = bands[i] || bands[bands.length - 1], bb = bands[Math.min(i + 1, 5)] || ba;
       const top = lerp(ba.top, bb.top, m), bot = lerp(ba.bottom, bb.bottom, m), Hw = 2 * cam.z * Math.tan(25 * Math.PI / 180);
       bandY = .15 + (.5 - (top + bot) / 2) * Hw; bandH = Math.max(0, (bot - top) - 32 / Math.max(1, H)) * Hw;
       hs = Math.min(hs, bandH / 2.32); hy = bandY; // the hook's height per unit of scale
+    } else if (bands) {
+      // landscape: the DOM's right-column band, in world units at z 0 (through the camera as it stands). The hook keeps its
+      // own slice of the band and the figure or word takes the rest, so no words ever cross the hook (Randall's rule).
+      const ba = bands[i] || bands[bands.length - 1], bb = bands[Math.min(i + 1, 5)] || ba;
+      const f = { left: lerp(ba.left, bb.left, m), right: lerp(ba.right, bb.right, m), top: lerp(ba.top, bb.top, m), bottom: lerp(ba.bottom, bb.bottom, m) };
+      const toWorld = (fx, fy) => { const v = new THREE.Vector3(fx * 2 - 1, 1 - fy * 2, .5).unproject(camera); const d = v.sub(camera.position).normalize(); return camera.position.clone().add(d.multiplyScalar(-camera.position.z / d.z)); };
+      const tl = toWorld(f.left, f.top), br = toWorld(f.right, f.bottom);
+      const L = tl.x + .12, R = br.x - .12, T = tl.y - .12, Bm = br.y + .12, Bw = Math.max(.5, R - L), Bh = Math.max(.5, T - Bm);
+      const ch = CH[i], split = ch === 'callers' || ch === 'holders' || ch === 'traders';
+      if (split) {
+        const hw = .26 * Bw; // the hook's slice on the left of the band
+        hs = Math.min(hs, Bh / 2.32, hw / 1.5); hx = L + hw / 2; hy = (T + Bm) / 2;
+        const fw = Bw - hw - .32; fig = { x: L + hw + .32 + fw / 2, y: (T + Bm) / 2, scNum: Math.min(.7, fw / 4.6, Bh / 1.6), scWord: Math.min(.56, fw / 5.8, Bh / 1.5) }; // a clear gap between the hook's slice and the figure
+      } else { hs = Math.min(hs, Bh / 2.32, Bw / 1.5); hx = (L + R) / 2; hy = (T + Bm) / 2; }
     }
-    return { i, u, m, hx, hy, hs, bandY, bandH };
+    return { i, u, m, hx, hy, hs, bandY, bandH, fig };
   }
 
   /* ---------- real events ---------- */
@@ -298,7 +329,8 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     // the real QHOOKS-burned total (units); fmt renders it the way the DOM does
     setBurned(value, fmt) { if (!(value > 0)) return; const same = burnedData.value === value; burnedData = { value, fmt: fmt || ((v) => String(Math.round(v))), text: (fmt || String)(value), at: same ? burnedData.at : t }; },
     coin(i) { if (i === nameIdx) { flashV = Math.max(flashV, .1); zoomV = Math.max(zoomV, .03); } },
-    get version() { return 'audit4'; },
+    get version() { return 'solid6'; },
+    setWord(txt) { forcedWord = txt ? String(txt) : null; nameIdx = -1; }, // the glyph gate renders each letter alone (null restores the chain words)
     setCall({ pct, label }) { callData = { pct, label }; },
     setBands(arr) { bands = Array.isArray(arr) && arr.length ? arr : null; },
     setProgress(p) { Pt = clamp(p, 0, 5.999); if (!running) api.resume(); },
@@ -313,7 +345,9 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
       const nameBox = nameG.visible ? { left: corner(nameG, -2.9, 0).x, right: corner(nameG, 2.9, 0).x, top: corner(nameG, 0, .68).y, bottom: corner(nameG, 0, -.68).y } : null;
       const numBox = numberG.visible ? { left: corner(numberG, -2.3, 0).x, right: corner(numberG, 2.3, 0).x, top: corner(numberG, 0, .72).y, bottom: corner(numberG, 0, -.72).y } : null;
       const hookRightPx = px(new THREE.Vector3(.72, 0, 0).applyMatrix4(hookRoot.matrixWorld).project(camera)).x, hookLeftPx = px(new THREE.Vector3(-.72, 0, 0).applyMatrix4(hookRoot.matrixWorld).project(camera)).x;
-      return { version: 'audit4', nameBox, numBox, hookRightPx, hookLeftPx, P, forgeT, hook: { visible: hookRoot.visible, pos: hookRoot.position.toArray(), scale: hookRoot.scale.x, bottomPx: (1 - low.y) / 2 * H }, numberBottomPx: num ? (1 - num.y) / 2 * H : null, vaultBottomPx: Math.max(bn || 0, nm || 0) || null, cam: camera.position.toArray(), parts: model.children.length, dpr: DPR, bands }; },
+      const burnBox = burnedG.visible ? { left: corner(burnedG, -2.3, 0).x, right: corner(burnedG, 2.3, 0).x, top: corner(burnedG, 0, .72).y, bottom: corner(burnedG, 0, -.72).y } : null;
+      const hookBox = { left: hookLeftPx, right: hookRightPx, top: px(new THREE.Vector3(0, 1.18, 0).applyMatrix4(hookRoot.matrixWorld).project(camera)).y, bottom: px(new THREE.Vector3(0, -1.14, 0).applyMatrix4(hookRoot.matrixWorld).project(camera)).y };
+      return { version: 'solid6', nameBox, numBox, burnBox, hookBox, hookRightPx, hookLeftPx, P, forgeT, hook: { visible: hookRoot.visible, pos: hookRoot.position.toArray(), scale: hookRoot.scale.x, bottomPx: (1 - low.y) / 2 * H }, numberBottomPx: num ? (1 - num.y) / 2 * H : null, vaultBottomPx: Math.max(bn || 0, nm || 0) || null, cam: camera.position.toArray(), parts: model.children.length, dpr: DPR, bands }; },
   };
 
   /* ---------- the frame ---------- */
@@ -325,7 +359,7 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     resize();
     P += (Pt - P) * (1 - Math.exp(-dt * 7));
     pointer.x += (pointerT.x - pointer.x) * (1 - Math.exp(-dt * 3)); pointer.y += (pointerT.y - pointer.y) * (1 - Math.exp(-dt * 3));
-    const { i, u, hx, hy, hs, bandY, bandH } = layoutFor(P);
+    const { i, u, hx, hy, hs, bandY, bandH, fig } = layoutFor(P);
     const ch = CH[i];
     if (i !== lastChapter) { if (lastChapter >= 0) sweepT = 0; lastChapter = i; }
     forgeT = (now - mountedAt) / 1000;
@@ -369,15 +403,15 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     if (numberG.visible) {
       const cu = ch === 'callers' ? u : ch === 'builders' ? 0 : 1;
       const rise = easeOutQuint(span(cu, 0, .22)), leave = ch === 'callers' ? easeInOut(span(u, .82, .96)) : 0;
-      const target = callData.pct, shown = target * easeOut(span(cu, .08, .62));
+      if (ch === 'callers' && callEnter == null) callEnter = t; if (ch !== 'callers') callEnter = null;
+      const target = callData.pct, shown = target; // the card's exact value from the first frame: no count-up, so no frame ever disagrees with the card
       if (Math.abs(shown - callShown) > Math.max(.05, Math.abs(target) * .004) || callTexKey !== callData.label) {
         callShown = shown; callTexKey = callData.label;
         const pos = shown >= 0; const txt = (pos ? '+' : '') + (Math.abs(shown) >= 100 ? shown.toFixed(0) : shown.toFixed(1)) + '%';
-        numberG.userData.planes.forEach((pl) => pl.material.map?.dispose());
-        numberG.userData.setMap(textTex({ text: txt, w: 1536, h: 480, size: 380, weight: 900, color: pos ? '#3EDD8F' : '#FF5E64', tracking: -.06 }));
+        numberG.userData.setText(txt, pos ? '#3EDD8F' : '#FF5E64');
         numberSub.material.map?.dispose(); numberSub.material.map = textTex({ text: callData.label, w: 1536, h: 160, size: 50, weight: 680, color: 'rgba(244,241,233,.86)', stretch: 'normal', tracking: 0 }); numberSub.material.needsUpdate = true;
       }
-      const nx = PORT ? .45 : 1.75, ny = PORT ? (bandY != null ? bandY + .25 : 1.5) : .35, sc = PORT ? Math.min(.5, bandH ? bandH / 2.1 : .5) : .7;
+      const nx = PORT ? .45 : (fig ? fig.x : 1.75), ny = PORT ? (bandY != null ? bandY + .25 : 1.5) : (fig ? fig.y + .25 : .35), sc = PORT ? Math.min(.5, bandH ? bandH / 2.1 : .5) : (fig ? fig.scNum : .7);
       numberG.position.set(nx, ny + (1 - rise) * .5 + leave * .6, lerp(-1.5, .2, rise) - leave * 3); numberG.scale.setScalar(sc * lerp(.86, 1, rise));
       numberG.rotation.set(-.08 + pointer.y * .05, PORT ? 0 : -.22 + pointer.x * .08, 0);
       numberG.userData.setOpacity(rise * (1 - leave));
@@ -390,26 +424,26 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     if (burnedG.visible) {
       const vu = ch === 'holders' ? u : ch === 'callers' ? 0 : 1;
       const rise = easeOutQuint(span(vu, 0, .22)), leave = ch === 'holders' ? easeInOut(span(u, .82, .96)) : 0;
-      const shown = burnedData.value * easeOut(span(vu, .08, .62)) * easeOut(span(t - burnedData.at, 0, 1.2));
+      if (ch === 'holders' && burnEnter == null) burnEnter = t; if (ch !== 'holders') burnEnter = null;
+      const shown = burnedData.value; // exact, as the DOM figure under it
       if (Math.abs(shown - burnedShown) > Math.max(1, burnedData.value * .004) || burnedKey !== burnedData.text) {
         burnedShown = shown; burnedKey = burnedData.text;
-        burnedG.userData.planes.forEach((pl) => pl.material.map?.dispose());
-        burnedG.userData.setMap(textTex({ text: burnedData.fmt(shown), w: 1536, h: 480, size: 380, weight: 900, color: '#FF9A45', tracking: -.06 }));
+        burnedG.userData.setText(burnedData.fmt(shown), '#FF9A45');
       }
-      const nx = PORT ? .45 : 1.75, ny = PORT ? (bandY != null ? bandY + .25 : 1.5) : .35, sc = PORT ? Math.min(.5, bandH ? bandH / 2.1 : .5) : .7;
+      const nx = PORT ? .45 : (fig ? fig.x : 1.75), ny = PORT ? (bandY != null ? bandY + .25 : 1.5) : (fig ? fig.y : .35), sc = PORT ? Math.min(.5, bandH ? bandH / 2.1 : .5) : (fig ? fig.scNum : .7);
       burnedG.position.set(nx, ny + (1 - rise) * .5 + leave * .6, lerp(-1.5, .2, rise) - leave * 3); burnedG.scale.setScalar(sc * lerp(.86, 1, rise));
       burnedG.rotation.set(-.08 + pointer.y * .05, PORT ? 0 : -.22 + pointer.x * .08, 0);
       burnedG.userData.setOpacity(rise * (1 - leave));
     }
 
     // ---- traders: the chain names slam in as type, one after another, by scroll; the coin flips to each chain as it lands
-    const tOn = ch === 'traders' || (ch === 'holders' && u > .85) || (ch === 'close' && u < .2);
-    nameG.visible = tOn;
+    const tOn = ch === 'traders' || (ch === 'holders' && u > .85);
+    nameG.visible = tOn && !(ch === 'traders' && u >= .72); // gone before the hand-over, so nothing ever crosses the hook
     if (tOn) {
-      const tu = ch === 'traders' ? u : ch === 'holders' ? 0 : 1, leave = ch === 'close' ? easeInOut(span(u, 0, .2)) : 0;
-      const slot = .085, k = clamp(Math.floor((tu - .04) / slot), 0, CHAIN_NAMES.length - 1), at = .04 + k * slot, slam = easeOutQuint(span(tu, at, at + .05)), gone = ch === 'traders' ? easeInOut(span(u, .73, .86)) : 0;
-      if (k !== nameIdx) { nameIdx = k; nameG.userData.setMap(nameTex[k]); flashV = Math.max(flashV, .08); zoomV = Math.max(zoomV, .03); }
-      const sc = PORT ? Math.min(.48, bandH ? bandH / 2.9 : .48) : .56, nx = PORT ? .55 : 1.55, ny = PORT ? (bandY != null ? bandY - .15 * sc : 1.3) : .5;
+      const tu = ch === 'traders' ? u : 0, leave = 0;
+      const slot = .075, k = clamp(Math.floor((tu - .04) / slot), 0, CHAIN_NAMES.length - 1), at = .04 + k * slot, slam = easeOutQuint(span(tu, at, at + .05)), gone = ch === 'traders' ? easeInOut(span(u, .64, .72)) : 0;
+      if (k !== nameIdx) { nameIdx = k; nameG.userData.setText(forcedWord || CHAIN_NAMES[k], '#F4F1E9', 0x3a3a38); flashV = Math.max(flashV, .08); zoomV = Math.max(zoomV, .03); }
+      const sc = PORT ? Math.min(.48, bandH ? bandH / 2.9 : .48) : (fig ? fig.scWord : .56), nx = PORT ? .72 : (fig ? fig.x : 1.55), ny = PORT ? (bandY != null ? bandY - .15 * sc : 1.3) : (fig ? fig.y : .5);
       nameG.position.set(nx, ny, lerp(-.8, .3, slam) - leave * 3); nameG.scale.setScalar(sc * lerp(1.3, 1, slam)); nameG.userData.setOpacity(slam * (1 - leave) * (1 - gone) * (tu > .02 ? 1 : 0)); nameG.position.y += gone * .6;
       nameG.rotation.set(-.06 + pointer.y * .04, PORT ? 0 : -.18 + pointer.x * .06, 0);
     } else nameIdx = -1;

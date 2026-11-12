@@ -66,10 +66,13 @@ function measure() {
   });
   P = p;
   // portrait: each chapter's object band (the grid's free row above the words), relative to its pinned inner, for the scene
-  // (fractions of the canvas, which starts under the header and ribbon, not of the viewport)
-  if (scene && innerHeight > innerWidth) { const cr = glCanvas.getBoundingClientRect(), ch = Math.max(1, cr.height);
-    scene.setBands(chapters.map((sec) => { const inner = sec.querySelector('.l3-ch__in'), band = sec.querySelector('.l3-ch__band'); if (!inner || !band) return { top: .1, bottom: .4 };
-      const ir = inner.getBoundingClientRect(), br = band.getBoundingClientRect(); return { top: (br.top - ir.top - cr.top) / ch, bottom: (br.bottom - ir.top - cr.top) / ch }; })); }
+  // (fractions of the canvas, which starts under the header and ribbon, not of the viewport). Both orientations: on phones
+  // the band is the free row above the words; on desktop it is the right column, less any slab that sits in it (Traders).
+  if (scene) { const cr = glCanvas.getBoundingClientRect(), cw = Math.max(1, cr.width), ch = Math.max(1, cr.height);
+    scene.setBands(chapters.map((sec) => { const inner = sec.querySelector('.l3-ch__in'), band = sec.querySelector('.l3-ch__band'); if (!inner || !band) return { top: .1, bottom: .4, left: .5, right: 1 };
+      const ir = inner.getBoundingClientRect(), br = band.getBoundingClientRect(); let bottom = br.bottom;
+      for (const el of sec.querySelectorAll('.l3-ch__foot, .l3-close')) { const fr = el.getBoundingClientRect(); if (fr.height && fr.left < br.right - 8 && fr.right > br.left + 8 && fr.top > br.top) bottom = Math.min(bottom, fr.top); }
+      return { top: (br.top - ir.top - cr.top) / ch, bottom: (bottom - ir.top - cr.top) / ch, left: (br.left - cr.left) / cw, right: (br.right - cr.left) / cw }; })); }
   // the stage fades as the close chapter ends; the floor takes over
   const o = clamp(1 - (y - (endY - vh * 1.05)) / (vh * .45));
   stageEl?.style.setProperty('--l3-stage-o', o.toFixed(3));

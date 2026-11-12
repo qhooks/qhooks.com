@@ -213,9 +213,11 @@ body.l3-body { background: #070807; }
   .l3-figs b { font-size: 24px; }
   .l3-ch--traders .l3-ch__in { grid-template-columns: minmax(0, 40%) minmax(0, 60%); }
   .l3-ch--traders .l3-ch__foot { grid-column: 2; grid-row: 3; justify-self: end; width: 100%; max-width: 520px; }
-  .l3-ch--close .l3-ch__in { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
-  .l3-ch--close .l3-ch__band { grid-column: 1; grid-row: 1; }
-  .l3-close { grid-column: 1; grid-row: 2; max-width: 900px; align-self: end; }
+  /* the close keeps the two-column grid, the hook in the right column band, so the hand-over from Traders never crosses the words */
+  .l3-ch--close .l3-ch__in { grid-template-columns: minmax(0, 46%) minmax(0, 54%); grid-template-rows: minmax(0, 1fr) auto; }
+  .l3-ch--close .l3-ch__band { grid-column: 2; grid-row: 1 / -1; }
+  .l3-close h2 { font-size: clamp(72px, 6.6vw, 108px); }
+  .l3-close { grid-column: 1; grid-row: 2; max-width: 660px; align-self: end; }
   .l3-close h2 { font-size: clamp(96px, 9vw, 150px); }
   .l3-poster img { right: 16%; top: 4%; width: 320px; height: auto; max-width: none; }
   .l3-after { margin: 0; padding: 0; }
