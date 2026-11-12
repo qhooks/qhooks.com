@@ -154,8 +154,9 @@ function refreshOn() {
 }
 function markPicked() {
   const quick = $('qq-quick'), name = ($('qq-style-name')?.textContent || '').trim().toLowerCase(), open = quick && !quick.hidden;
+  const sale = $('qsf-root'), saleOpen = !open && sale && !sale.hidden;
   for (const c of cards?.querySelectorAll('.qq-card') || []) {
-    const on = !!open && !!name && c.querySelector('h3')?.textContent.trim().toLowerCase() === name;
+    const on = saleOpen ? c.dataset.card === 'sale-first' : !!open && !!name && c.querySelector('h3')?.textContent.trim().toLowerCase() === name;
     if (c.classList.contains('cr-picked') !== on) c.classList.toggle('cr-picked', on);
   }
 }
@@ -247,6 +248,7 @@ function paintDone() {
 }
 for (const inp of [nameIn, symIn]) inp?.addEventListener('input', () => { paintNames(); paintReady(); });
 watch($('qq-quick'), () => { paintIdea(); paintReady(); paintLaunch(); paintDone(); markPicked(); refreshOn(); }, { attributes: true, attributeFilter: ['hidden', 'src', 'disabled'], subtree: true, childList: true, characterData: true });
+if ($('qsf-root')) watch($('qsf-root'), () => { markPicked(); refreshOn(); }, { attributes: true, attributeFilter: ['hidden'] });
 watch($('qq-ideas'), () => { syncChains(); dressCards(); }, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'hidden'] });
 document.addEventListener('change', (e) => { if (e.target?.id === 'qq-chain') syncChains(); });
 document.addEventListener('visibilitychange', refreshOn);

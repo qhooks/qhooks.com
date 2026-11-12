@@ -198,9 +198,14 @@ function thumbnail(file) {
       el('label', {}, priceLabel, price, priceCap, floorCap), el('label', {}, raiseLabel, raise), multRow, el('label', {}, minLabel, minimum),
       el('label', {}, 'How long it runs', window_), el('label', {}, 'Wallet limit (optional)', walletCap)),
     summary, msg, el('div', {class: 'qxc-actions'}, go), done);
-  root.hidden = false;
-  // Telegram "/launch … sale" links: /create?sale=1&chain=…&sname=…&sticker=…#sale
+  // On /create the form shows only once Sale first is picked (qx-quick-launch.mjs sends 'qq:pick'), or when a sale link
+  // asks for it; picking another idea hides it again, so the panel under the ideas always matches the pick.
   const qp = new URLSearchParams(search);
+  const asked = qp.get('sale') === '1' || hash === '#sale';
+  const picks = !!document.getElementById('qq-cards');
+  root.hidden = picks ? !(asked || salePicked) : false;
+  if (picks) document.addEventListener('qq:pick', e => { salePicked = e.detail?.id === 'sale-first'; root.hidden = !salePicked; });
+  // Telegram "/launch … sale" links: /create?sale=1&chain=…&sname=…&sticker=…#sale
   if (qp.get('sale') === '1') {
     if (ready.some(c => c.id === qp.get('chain'))) chainSel.value = qp.get('chain');
     if (qp.get('sname')) name.value = qp.get('sname').slice(0, 64);
@@ -209,4 +214,7 @@ function thumbnail(file) {
   if (qp.get('sale') === '1' || hash === '#sale') globalThis.requestAnimationFrame?.(() => root.scrollIntoView({block: 'start'}));
   await refreshStart();
 }
+// A pick made before the form finished building still counts.
+let salePicked = false;
+if (typeof document !== 'undefined' && document.getElementById('qq-cards')) document.addEventListener('qq:pick', e => { salePicked = e.detail?.id === 'sale-first'; });
 if (typeof document !== 'undefined' && document.getElementById('qsf-root')) mountSaleCreate().catch(() => { const root = document.getElementById('qsf-root'); if (root) { root.hidden = true; root.replaceChildren(); } });

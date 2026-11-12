@@ -95,8 +95,8 @@ function renderIdeas(){chainId=currentChain();renderPicker();if(chainId==='solan
   const off=card.kit==='range'&&!rangeOn(offChain?QUICK_CHAIN:chainId);
   const btn=el('button',{type:'button',class:'qq-launch-card','data-launch':card.id,disabled:off},off?'Not on '+(c?.name||'this chain')+' yet':'Launch this');btn.addEventListener('click',()=>launchCard(card.id));
   const blocks=card.blocks.length?el('div',{class:'qq-blocks'},...card.blocks.map(icon)):el('div',{class:'qq-blocks qq-blocks-none'},el('span',{},'No extra rules'));
-  return el('article',{class:'qq-card','data-card':card.id,'data-group':card.group,hidden:group!=='all'&&card.group!==group},
-   el('h3',{},card.name),card.chip?el('span',{class:'qq-chip'},card.chip):null,el('p',{class:'qq-what'},card.what),el('p',{class:'qq-why'},card.why),blocks,off?el('p',{class:'qq-why qq-off-note'},'Auto-range liquidity isn’t set up on '+(c?.name||'this chain')+' yet.'):null,btn);
+  return tapCard(el('article',{class:'qq-card','data-card':card.id,'data-group':card.group,hidden:group!=='all'&&card.group!==group},
+   el('h3',{},card.name),card.chip?el('span',{class:'qq-chip'},card.chip):null,el('p',{class:'qq-what'},card.what),el('p',{class:'qq-why'},card.why),blocks,off?el('p',{class:'qq-why qq-off-note'},'Auto-range liquidity isn’t set up on '+(c?.name||'this chain')+' yet.'):null,btn),btn);
  }),saleKit(group));
  // Off Robinhood Chain the cards stay visible (lead, 2026-11-08); "Launch this" switches the chain first.
  $('none').hidden=!offChain;$('use-robinhood').hidden=true;$('open').hidden=false;
@@ -106,13 +106,17 @@ function renderIdeas(){chainId=currentChain();renderPicker();if(chainId==='solan
 
 // A card picked while another chain is selected: switch the page to Robinhood Chain, then open that card.
 // Sale first as a kit: only on chains where the Sale first card (qx-sale-create.mjs) found QSaleLaunch code.
+// Tapping anywhere on an idea picks it, like its button (Randall 2026-11-12: the panel under the ideas has to follow the pick).
+function tapCard(card,btn){card.addEventListener('click',e=>{if(e.target.closest('button,a,input,select,label,textarea')||btn.disabled)return;btn.click();});return card;}
+// One panel under the ideas follows the pick: Quick launch for an idea, the sale form (qx-sale-create.mjs) for Sale first.
+const announcePick=id=>document.dispatchEvent(new CustomEvent('qq:pick',{detail:{id}}));
 function saleKit(group){
  const ready=window.__qsfChains;if(!ready||!ready.includes(String(chainId)))return null;
  const btn=el('button',{type:'button',class:'qq-launch-card','data-launch':'sale-first'},'Set up the sale');
- btn.addEventListener('click',()=>{const r=document.getElementById('qsf-root'),s=document.getElementById('qsf-chain');if(s&&[...s.options].some(o=>o.value===String(chainId))){s.value=String(chainId);s.dispatchEvent(new Event('change',{bubbles:true}));}r?.scrollIntoView({block:'start'});document.getElementById('qsf-name')?.focus({preventScroll:true});});
- return el('article',{class:'qq-card','data-card':'sale-first','data-group':'kits',hidden:group!=='all'&&group!=='kits'},
+ btn.addEventListener('click',()=>{pick=null;$('quick').hidden=true;announcePick('sale-first');for(const a of document.querySelectorAll('#qq-cards [data-launch]'))a.setAttribute('aria-pressed',String(a.dataset.launch==='sale-first'));const r=document.getElementById('qsf-root'),s=document.getElementById('qsf-chain');if(s&&[...s.options].some(o=>o.value===String(chainId))){s.value=String(chainId);s.dispatchEvent(new Event('change',{bubbles:true}));}r?.scrollIntoView({block:'start'});document.getElementById('qsf-name')?.focus({preventScroll:true});});
+ return tapCard(el('article',{class:'qq-card','data-card':'sale-first','data-group':'kits',hidden:group!=='all'&&group!=='kits'},
   el('h3',{},'Sale first'),el('p',{class:'qq-what'},'A fair sale before trading opens, at a fixed or falling price. Under the minimum, everyone gets a full refund.'),
-  el('p',{class:'qq-why'},'Everyone pays the same price, so there is nothing to snipe, and the pool opens with the money raised on both sides.'),el('div',{class:'qq-blocks qq-blocks-none'},el('span',{},'1 transaction to open')),btn);
+  el('p',{class:'qq-why'},'Everyone pays the same price, so there is nothing to snipe, and the pool opens with the money raised on both sides.'),el('div',{class:'qq-blocks qq-blocks-none'},el('span',{},'1 transaction to open')),btn),btn);
 }
 document.addEventListener('qsf:ready',()=>{if(document.getElementById('qq-cards'))renderIdeas();});
 function launchCard(id){
@@ -302,7 +306,7 @@ function renderRangeShare(){
   el('p',{class:'qq-start-note'},rangeBps===10000?'All of your LP fees become liquidity around the price.':'The other '+(100-rangeBps/100)+'% of your LP fees comes to your wallet.'));
 }
 function openQuick(id,{scroll=false}={}){
- const card=ideaCard(chainId,id)||ideaCard(chainId,'fair');if(!card)return;pick=card;$('quick').hidden=false;
+ const card=ideaCard(chainId,id)||ideaCard(chainId,'fair');if(!card)return;pick=card;$('quick').hidden=false;announcePick(card.id);
  renderPair();customUsd='';startTier=card.startUsd?'custom':DEFAULT_TIER[chainId]||'standard';startSteps=0;if(startCapOn()){void readStartBase().then(()=>{if(card.startUsd&&startBase?.usd){startSteps=stepsForUsd(card.startUsd,startBase.usd);renderStart();renderQuick();costSoon();}});}renderStart();
  renderPq();$('style-name').textContent=card.name;$('style-line').textContent=card.what;
  $('style-blocks').replaceChildren(...card.blocks.map(icon));renderRangeShare();
