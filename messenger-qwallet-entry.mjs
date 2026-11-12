@@ -14,7 +14,7 @@ if(entry.status!=='blocked'){const controller=bindQWalletPage({
   ]);return {...deployment,...session,...assets,...amount};
  },
  loadWorkspace:()=>import('/qwallet-stack/prototypes/chain-wallet/wallet-workspace.mjs'),
- loadToolkit:async()=>{const r=await fetch('mainnet-toolkit.json',{redirect:'error',cache:'no-store'});if(!r.ok)throw Error('QWallet toolkit unavailable');const raw=await r.text();if(raw.length>1000000)throw Error('QWallet toolkit too large');return raw;}
+ loadToolkit:async()=>{const r=await fetch('mainnet-toolkit.json',{redirect:'error',cache:'no-store'});if(!r.ok)throw Error('Could not load the QWallet toolkit. Try again.');const raw=await r.text();if(raw.length>1000000)throw Error('QWallet toolkit too large');return raw;}
 });
  bindMessengerWallet({controller,allowedOrigins:ALLOWED_MESSENGER_ORIGINS});
 }

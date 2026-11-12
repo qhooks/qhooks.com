@@ -1,0 +1,4 @@
+@import url("./setup-base.css");
+.setup-jumps { display: flex; gap: 24px; overflow-x: auto; margin: 0 0 32px; white-space: nowrap; scrollbar-width: thin; }
+.setup-jumps a { flex: none; min-height: 44px; padding: 10px 0; color: var(--qa-tx-2); }
+.setup [id$="-heading"] { scroll-margin-top: calc(var(--qa-hdr-h) + 24px); }

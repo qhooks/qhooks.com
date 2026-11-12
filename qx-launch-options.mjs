@@ -39,7 +39,7 @@ export function utcInputToSeconds(value){const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2
 
 export function mountLaunchOptions({container,document=globalThis.document,store=createChainLaunchPackageStore(),compareRoutes=compareQHooksNativeRoutes,preparePackage=async(value,options)=>(await import('./qx-chain-launch-preparation.mjs')).prepareChainLaunchSourcePackage(value,options),clock=Date.now,onOpenCreate=null}={}){
  ensure(container&&document,'A package container is required.');let draft=copy(newChainLaunchPackage()),activePart=null,lastReview=null,lastPreparation=null,lastComparison=null,busy=false,dead=false,revision=0,abort=null,saved=[];const cache=new Map(),nodes={},inputs={},listeners=[],refreshers={basic:[],part:[]},helperErrors=new Map();
- const now=()=>{const t=clock();ensure(Number.isSafeInteger(t)&&t>=0,'Current review time is unavailable.');return String(Math.floor(t/1000));};
+ const now=()=>{const t=clock();ensure(Number.isSafeInteger(t)&&t>=0,'The current review time could not be read.');return String(Math.floor(t/1000));};
  const profile=()=>chainLaunchProfile(draft.chainId);
  function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
  function append(n,...children){n.append(...children);return n;}

@@ -82,7 +82,7 @@ export function mountLabCatalog({container,prepareBuild=fetchCatalogBuild,onPrep
     draftNote.hidden=false;draftNote.textContent=text;if(error)saveWarning=true;
   }
   const saveUnavailable=result=>{
-    draftHint(result?.message??'Device save unavailable. Your edits remain in this tab.',true);
+    draftHint(result?.message??'Device save could not finish. Your edits remain in this tab.',true);
     recoverDraft.hidden=typeof draftStore?.recoverRawText!=='function';
   };
   recoverDraft.addEventListener('click',()=>{
@@ -95,7 +95,7 @@ export function mountLabCatalog({container,prepareBuild=fetchCatalogBuild,onPrep
         drafts:{...st.drafts,[st.template]:collect()}}};
       url=URL.createObjectURL(new Blob([JSON.stringify(recovery,null,2)+'\n'],{type:'application/json'}));
       const download=el('a',{href:url,download:'qhooks-saved-form-text.json'});doc.body.append(download);download.click();download.remove();
-    }catch(error){draftHint(error.message||'Saved form text is unavailable. Your edits remain in this tab.',true);}
+    }catch(error){draftHint(error.message||'Saved form text could not be read. Your edits remain in this tab.',true);}
     finally{if(url)URL.revokeObjectURL(url);}
   });
   const select=el('select',{'aria-label':'Hook or revenue template','aria-describedby':filterNoteId,name:'template'});

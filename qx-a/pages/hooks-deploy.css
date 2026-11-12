@@ -1,0 +1,40 @@
+/* /deploy (System A): the QWallet workspace (qwallets.js). Panels become open sections on the floor; one sequence. */
+.qwd { padding-top: var(--qa-s8); }
+.qwd > .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 720; color: var(--qa-gold-hi); }
+.qwd > .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--qa-gold); box-shadow: var(--qa-glow-gold); }
+.qwd > h1 { margin: 14px 0 0; font-size: var(--qa-fs-hero); line-height: .92; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); }
+.qwd > p { max-width: 60ch; margin-top: 14px; font-size: 16px; line-height: 1.55; color: var(--qa-tx-2); }
+.qwd > p:nth-of-type(2) { font-size: 14px; font-weight: 680; color: var(--qa-gold-hi); }
+.qwd .qwallet-grid { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 56px; margin-top: var(--qa-s8); counter-reset: qw; }
+.qwd .qwallet-panel { counter-increment: qw; position: relative; min-width: 0; padding: 24px 0 26px; border: 0; border-radius: 0; background: none; box-shadow: 0 -1px 0 var(--qa-rule); }
+.qwd .qwallet-panel > h2 { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; font-size: var(--qa-fs-h3); font-weight: 800; font-stretch: 112%; letter-spacing: -.02em; }
+.qwd .qwallet-panel > h2::before { content: counter(qw); flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; font-size: 13.5px; font-weight: 800; color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); }
+.qwd .qwallet-panel p, .qwd .qwallet-panel small, .qwd .qhc-key-help { font-size: 13.5px; line-height: 1.55; color: var(--qa-tx-2); }
+.qwd .qwallet-panel small { display: block; color: var(--qa-tx-3); margin-top: 4px; }
+.qwd .lab-form { display: grid; gap: 0; }
+.qwd .lab-form label, .qwd .qwallet-panel > label, .qwd #qw-recovery label { display: block; padding-top: 12px; font-size: var(--qa-fs-small); font-weight: 650; color: var(--qa-tx-3); }
+.qa .qwd input:not([type="checkbox"]):not([type="file"]), .qa .qwd select, .qa .qwd textarea { width: 100%; min-width: 0; border: 0; border-radius: 0; background: transparent; color: var(--qa-tx); font: inherit; font-size: 16px; font-weight: 620; padding: 6px 0 10px; box-shadow: 0 1px 0 var(--qa-rule); outline: none; }
+.qa .qwd select option { background: var(--qa-floor-2); }
+.qa .qwd input:focus, .qa .qwd select:focus, .qa .qwd textarea:focus { box-shadow: 0 1px 0 var(--qa-gold); }
+.qa .qwd input[type="file"] { margin-top: 6px; font-size: 13px; color: var(--qa-tx-2); }
+.qa .qwd textarea { min-height: 70px; resize: vertical; }
+.qwd .lab-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.qa .qwd .workspace-button { display: inline-flex; align-items: center; height: 40px; padding: 0 14px; border: 0; border-radius: var(--qa-r-m); font: inherit; font-size: 14px; font-weight: 700; color: var(--qa-tx); background: var(--qa-wash-2); cursor: pointer; }
+.qa .qwd .workspace-button:not(:disabled):hover { background: var(--qa-rule-2); }
+.qa .qwd .workspace-button:disabled { opacity: .4; cursor: not-allowed; }
+.qa .qwd #qw-send:not(:disabled), .qa .qwd #qw-approve:not(:disabled) { color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); }
+.qwd pre { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.55; color: var(--qa-tx-2); }
+.qwd pre:empty { display: none; }
+.qwd details { margin-top: 10px; }
+.qwd details > summary { cursor: pointer; padding: 8px 0; font-size: 14px; font-weight: 700; color: var(--qa-tx-2); }
+.qwd .qwallet-consent { display: flex; align-items: flex-start; gap: 10px; margin-top: 12px; font-size: 14px; color: var(--qa-tx-2); }
+.qa .qwd .qwallet-consent input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--qa-gold); }
+.qwd [role="status"] { font-size: 13.5px; color: var(--qa-tx-2); }
+.qwd .technical-notes { margin-top: var(--qa-s8); max-width: 72ch; box-shadow: 0 -1px 0 var(--qa-rule); padding-top: 6px; }
+.qwd .technical-notes p { margin-top: 8px; font-size: 13.5px; line-height: 1.6; color: var(--qa-tx-2); }
+@media (min-width: 1100px) {
+  .qwd { padding-top: var(--qa-s12); }
+  .qwd > h1 { font-size: 84px; }
+  .qwd .qwallet-grid { grid-template-columns: 1fr 1fr; }
+  .qwd .qwallet-wide { grid-column: 1 / -1; }
+}

@@ -1,0 +1,3 @@
+/* QHOOKS floor setup (System A, money lane): the three parts and the Safe step from qx-floor-qhooks.mjs. */
+#qfq-root > p:not([class]) { margin: 14px 0; font-size: 15px; line-height: 1.5; color: var(--qa-tx-2); }
+#qfq-root > dl dd { font-size: 13.5px !important; }

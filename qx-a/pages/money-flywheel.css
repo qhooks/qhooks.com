@@ -1,0 +1,4 @@
+/* Flywheel setup (System A, money lane): the live checks, the one gold action, and QHOOKS buybacks beside it. */
+.mn-fw .mn-sign { padding-top: 30px; }
+.mn-fw .mn-sign > h2 { margin-bottom: 4px; color: var(--qa-tx-2); }
+.mn-sign__go { display: grid; gap: 4px; }

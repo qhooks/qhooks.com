@@ -1,19 +1,25 @@
 <!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Messenger request | QWallet</title><script src="theme.js"></script>
+<html lang="en" data-theme="dark"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Messenger request | QWallet</title>
 <link rel="icon" href="qhooks-logo.jpg" type="image/jpeg">
-<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="product.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="workspace.css"><link rel="stylesheet" href="qwallets.css">
-<link rel="stylesheet" href="chain-symbols.css">
-<link rel="stylesheet" href="crypto-product-ui.css">
-<link rel="stylesheet" href="/wallet-site.css"><link rel="stylesheet" href="/l167-quiet-product.css"><link rel="stylesheet" href="/l167-quiet.css"><link rel="stylesheet" href="/l170-product.css"><link rel="stylesheet" href="/l170-polish.css"><link rel="stylesheet" href="messenger-wallet.css"></head><body class="q167-quiet q170-desk">
+
+
+
+
+<link rel="preload" href="/qx-a/fonts/mona-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/qx-a/tokens.css">
+<link rel="stylesheet" href="/qx-a/components.css">
+<link rel="stylesheet" href="/qx-a/shell.css">
+<link rel="stylesheet" href="/qx-a/pages/setup-messenger-qwallet.css">
+</head><body class="qa setup q167-quiet q170-desk" data-a-shell data-setup-page="messenger-qwallet">
 <a class="skip-link" href="#qwallet-page">Skip to QWallet</a>
-<header class="site-header"><a class="brand" href="/" aria-label="QHooks home"><span class="mark" aria-hidden="true"><img src="qhooks-logo.jpg" alt="" width="784" height="1168"></span><span>QHooks</span></a><nav class="site-nav" aria-label="Main navigation"><a href="/launch">Launch</a><a href="/hooks">Hooks</a><a href="/lab">Lab</a><a href="/qwallets" aria-current="page">qWallets</a></nav><button type="button" id="qhc-trigger" class="qhc-trigger" aria-haspopup="dialog">Connect wallet</button><button class="theme-toggle" data-theme-toggle type="button" aria-pressed="false" hidden>Dark mode</button></header>
-<main class="guide qwallet-workspace" id="qwallet-page">
+<header class="site-header setup-fallback"><a class="brand" href="/" aria-label="QHooks home"><span class="mark" aria-hidden="true"><img src="qhooks-logo.jpg" alt="" width="784" height="1168"></span><span>QHooks</span></a><button type="button" id="qhc-trigger" class="qhc-trigger" aria-haspopup="dialog">Connect wallet</button><button class="theme-toggle" data-theme-toggle type="button" aria-pressed="false" hidden>Dark mode</button></header>
+<main class="guide qwallet-workspace qa-page setup-page" id="qwallet-page"><section class="setup-intro"><div class="setup-art" aria-hidden="true"><img src="/qx-a/img/qhooks-banner.jpg" width="1500" height="500" alt=""></div><div class="setup-intro-copy">
  <div class="eyebrow">QWallet / Cross-EVM</div><h1>A second key.<br>Your control.</h1>
  <p>Hold assets in a QWallet that requires both your connected wallet and a post-quantum signature to withdraw. Choose Base, Robinhood, Ethereum, Arbitrum, BNB or Arc.</p>
  <p>Connect → Set up → Back up your quantum key → Enroll → Deposit.</p>
- <div class="qwallet-grid"><section class="qwallet-panel qwallet-wide" aria-labelledby="mw-heading">
+ </div></section><nav class="setup-jumps qa-tabs" aria-label="QWallet sections"><a href="#mw-heading">Request</a><a href="#qw-connect-heading">Wallet</a><a href="#qw-key-heading">Key backup</a><a href="#qw-account-heading">Account</a><a href="#qw-review-heading">Review</a><a href="#qw-progress-heading">Recovery</a></nav><div class="setup-flow"><div class="qwallet-grid"><section class="qwallet-panel qwallet-wide" aria-labelledby="mw-heading">
   <h2 id="mw-heading">A payment from your messenger</h2>
   <p>Untrusted public request details only. This page never receives chat text,
   contact names, wallet secrets or reusable approvals. Check the address through
@@ -85,7 +91,7 @@
   </div><p>Public progress is separate from your encrypted quantum-key backup. Imported actions are recovery-only: they cannot sign or resend.</p>
  </section></div>
  <details class="technical-notes"><summary>How QWallet protection works</summary><p>QWallet uses SLH-DSA-SHA2-128s post-quantum signatures alongside your connected EVM wallet. Protection applies to withdrawals from this custody contract, not your ordinary wallet, token transfers, chain consensus or assets in bridge transit. QHooks cannot reset either key.</p><p>Contracts are not independently audited. Tokens can have issuer controls, upgrades, transfer fees or blocklists; unsupported token behavior can cause a transaction to revert. QWallet does not provide yield. Use the deposit action, not a direct transfer to the contract.</p><p>Reviews expire after two minutes. Account or network changes lock your quantum key and invalidate approvals. Keep both your encrypted backup and public setup progress before moving this workspace to another site.</p></details>
-</main><footer><a class="brand" href="/"><span>QHooks</span></a><p>For the next generation of token builders.</p><nav class="q167-footer-links" aria-label="More QHooks tools"><a href="/pool">Pools</a><a href="/trade">Trade</a><a href="/markets">Marketplace</a><a href="/integrate">Integrate</a><a href="/api">API</a><a href="/pricing">Pricing</a></nav></footer>
+</div><details class="setup-links"><summary>Explore QHooks</summary><nav class="site-nav" aria-label="Main navigation"><a href="/launch">Launch</a><a href="/hooks">Hooks</a><a href="/lab">Lab</a><a href="/qwallets" aria-current="page">qWallets</a></nav><footer><a class="brand" href="/"><span>QHooks</span></a><p>For the next generation of token builders.</p><nav class="q167-footer-links" aria-label="More QHooks tools"><a href="/pool">Pools</a><a href="/trade">Trade</a><a href="/markets">Marketplace</a><a href="/integrate">Integrate</a><a href="/api">API</a><a href="/pricing">Pricing</a></nav></footer></details></main>
 <script type="module" src="messenger-qwallet-entry.mjs"></script>
 <script type="module" src="chain-symbols.mjs"></script>
 <script type="module" src="crypto-product-ui.mjs"></script>
@@ -108,4 +114,5 @@
  <div id="qhc-email-network" hidden><label for="qhc-embedded-chain">Embedded wallet network</label><select id="qhc-embedded-chain"></select><button id="qhc-embedded-switch" type="button" class="qhc-secondary">Switch network</button></div><p id="qhc-status" role="status" aria-live="polite"></p>
  <p class="qhc-footnote">Connecting does not authorize spending. Every signature and transaction needs your approval. Never enter your recovery phrase here.</p>
 </dialog>
-<script type="module" src="/wallet-site.mjs"></script><script type="module" src="/wallet-page-resume.mjs"></script><script type="module" src="/wallet-login.mjs"></script><script type="module" src="/l121-mobile-login.mjs"></script></body></html>
+<script type="module" src="/wallet-site.mjs"></script><script type="module" src="/wallet-page-resume.mjs"></script><script type="module" src="/wallet-login.mjs"></script><script type="module" src="/l121-mobile-login.mjs"></script><script type="module" src="/qx-a/pages/setup-messenger-qwallet.mjs"></script>
+</body></html>

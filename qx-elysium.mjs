@@ -3,15 +3,15 @@ import {createElysiumTracker} from './qx-elysium-tracker.mjs';
 import {mountElysiumActivity} from './qx-elysium-activity.mjs';
 
 const ZERO='0x'+'0'.repeat(40),ADDRESS=/^0x[0-9a-f]{40}$/i,HASH=/^0x[0-9a-f]{64}$/i,QUANTITY=/^0x(?:0|[1-9a-f][0-9a-f]*)$/i;
-const short=value=>typeof value==='string'?value.slice(0,8)+'…'+value.slice(-6):'Unavailable';
-const decimal=value=>{try{if(typeof value==='string'&&QUANTITY.test(value))return BigInt(value).toLocaleString('en-US');if(Number.isSafeInteger(value)&&value>=0)return value.toLocaleString('en-US');}catch{}return 'Unavailable';};
-const observed=value=>{try{if(!Number.isSafeInteger(value)||value<0)return 'Observation time unavailable';return new Intl.DateTimeFormat('en',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'UTC'}).format(new Date(value))+' UTC';}catch{return 'Observation time unavailable';}};
+const short=value=>typeof value==='string'?value.slice(0,8)+'…'+value.slice(-6):'—';
+const decimal=value=>{try{if(typeof value==='string'&&QUANTITY.test(value))return BigInt(value).toLocaleString('en-US');if(Number.isSafeInteger(value)&&value>=0)return value.toLocaleString('en-US');}catch{}return '—';};
+const observed=value=>{try{if(!Number.isSafeInteger(value)||value<0)return 'Observation time refreshing';return new Intl.DateTimeFormat('en',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'UTC'}).format(new Date(value))+' UTC';}catch{return 'Observation time refreshing';}};
 const label=value=>String(value||'').replace(/([a-z])([A-Z])/g,'$1 $2');
 const generationLabel=venue=>({'kleos-v5-current':'v5 · current','kleos-v5-earlier':'v5 · earlier','kleos-classic-v3':'Classic · v3','boxa-v4':'v4 · HYPE','boxa-v4-pair-v2':'v4 · pair launches','boxa-v3-legacy':'Earlier · v3','elyspump-v3':'Launchpad v3 · v4 pools'})[venue.id]||venue.name;
 const groupLabel=group=>({kleos:'Kleos',boxa:'BOXA',elyspump:'ElysPump'})[group]||group;
-const providerLabel=data=>typeof data?.provider?.name==='string'?data.provider.name.slice(0,120):'Source unavailable';
+const providerLabel=data=>typeof data?.provider?.name==='string'?data.provider.name.slice(0,120):'Source refreshing';
 const sourceAddress=venue=>venue?.protocol==='uniswap-v4'?venue.manager:venue?.factory;
-const feeLabel=fee=>!Number.isInteger(fee)?'Unavailable':fee&0x800000?'Dynamic':(fee/10000).toLocaleString('en-US',{maximumFractionDigits:4})+'%';
+const feeLabel=fee=>!Number.isInteger(fee)?'—':fee&0x800000?'Dynamic':(fee/10000).toLocaleString('en-US',{maximumFractionDigits:4})+'%';
 const validTime=data=>Number.isSafeInteger(data?.observedAt)&&data.observedAt>=0;
 
 /** Actual page seams can be injected by local read-only fixtures; no signer or wallet is accepted. */
@@ -44,7 +44,7 @@ export function mountElysiumPage({document:doc=globalThis.document,
   cancel(ch);const mine=ch.revision,own=ch.controller=new AbortController();ch.loading=true;ch.error=null;render();
   const timer=ch.timer=setTimeout(()=>own.abort(),15000);
   try{const value=await readValue(own.signal);if(dead||mine!==ch.revision||own.signal.aborted)return;accept(value);ch.error=null;}
-  catch(error){if(dead||mine!==ch.revision)return;ch.error=error?.code==='provider_rate_limited'?'The data provider is rate limited. Give it a moment, then refresh.':own.signal.aborted?'This read timed out. Refresh to try again.':String(error?.message||'This read is unavailable. Refresh to retry.').slice(0,220);}
+  catch(error){if(dead||mine!==ch.revision)return;ch.error=error?.code==='provider_rate_limited'?'The data provider is rate limited. Give it a moment, then refresh.':own.signal.aborted?'This read timed out. Refresh to try again.':String(error?.message||'Refreshing. Refresh again in a moment.').slice(0,220);}
   finally{clearTimeout(timer);if(!dead&&mine===ch.revision){ch.loading=false;ch.controller=null;render();}}
  }
  function stale(ch){return !!ch.data&&(!!ch.error||ch.loading||now()-ch.data.observedAt>=60000);}
@@ -76,7 +76,7 @@ export function mountElysiumPage({document:doc=globalThis.document,
   },()=>{});
  }
  function fact(term,value){const item=make('div'),dt=make('dt',term),dd=make('dd',value);item.append(dt,dd);return item;}
- async function copy(value){try{await win.navigator.clipboard.writeText(value);text('copy-status','Copied '+value);return true;}catch{text('copy-status','Copy is unavailable. Select the address or hash to copy it.');return false;}}
+ async function copy(value){try{await win.navigator.clipboard.writeText(value);text('copy-status','Copied '+value);return true;}catch{text('copy-status','Copy did not work here. Select the address or hash to copy it.');return false;}}
  async function copyWindowLink(){
   const data=pools.data;if(!data)return;
   const where=win.location||globalThis.location;let url;
@@ -89,11 +89,11 @@ export function mountElysiumPage({document:doc=globalThis.document,
  function renderNetwork(){
   $('network-refresh').disabled=network.loading;
   if(network.data){const data=network.data;text('network-head',decimal(data.heads.latest?.number));$('network-detail').replaceChildren(make('p',providerLabel(data)+'. Parent settlement is not verified by these reads.'));
-   const dl=make('dl');for(const key of['latest','safe','finalized'])dl.append(fact('Provider-reported '+key+' head',data.heads[key]?'Block '+decimal(data.heads[key].number):'Unavailable'));
+   const dl=make('dl');for(const key of['latest','safe','finalized'])dl.append(fact('Provider-reported '+key+' head',data.heads[key]?'Block '+decimal(data.heads[key].number):'—'));
    $('network-detail').append(dl);
   }
   if(network.loading)state('network-status',network.data?'Refreshing · previous observation remains below.':'Reading the network…','loading');
-  else if(network.error)state('network-status',network.error+(network.data?' Last read '+observed(network.data.observedAt)+'.':' Network head is unavailable.'),'error');
+  else if(network.error)state('network-status',network.error+(network.data?' Last read '+observed(network.data.observedAt)+'.':' Network head is refreshing.'),'error');
   else if(network.data)state('network-status','Observed '+observed(network.data.observedAt)+' · '+providerLabel(network.data));
  }
  const refreshNetwork=()=>read(network,signal=>client.network({signal}),data=>{if(!validTime(data)||!data.heads?.latest||!QUANTITY.test(data.heads.latest.number))throw TypeError('The network response was incomplete. Refresh to retry.');network.data=data;},renderNetwork);
@@ -201,7 +201,7 @@ export function mountElysiumPage({document:doc=globalThis.document,
   if(view.stale)box.append(make('span','Previous observation',{class:'ey-stale'}));
   if(view.observedAt!==null)box.append(make('p','Observed '+observed(view.observedAt)));
   if(view.provider)box.append(make('p',view.provider.name+' · '+view.rpcFinality));
-  if(view.hash)box.append(make('p',view.storagePersistent?'Saved in this browser. Reload to return to this hash.':'Browser storage is unavailable. Keep a copy of this hash.'));
+  if(view.hash)box.append(make('p',view.storagePersistent?'Saved in this browser. Reload to return to this hash.':'This browser is not keeping saved hashes. Keep a copy of this hash.'));
   $('tx-refresh').disabled=!view.canRefresh;$('tx-clear').hidden=!view.hash;
   $('tx-history').hidden=!view.history.length;$('tx-history-list').replaceChildren(...view.history.map(item=>{const node=button(short(item.hash),()=>{$('tx-hash').value=item.hash;void watchTransaction(item.hash);},{'aria-label':'Check transaction '+item.hash});node.append(make('small',item.observedAt===null?'Ready to check':observed(item.observedAt)));return node;}));
  }
@@ -222,9 +222,12 @@ export function mountElysiumPage({document:doc=globalThis.document,
  on($('tx-form'),'submit',e=>{e.preventDefault();void watchTransaction($('tx-hash').value);});
  on($('tx-refresh'),'click',()=>void tracker.refresh());
  on($('tx-clear'),'click',()=>{$('tx-hash').value='';tracker.clear();});
- const closeMenu=()=>{$('menu').setAttribute('aria-expanded','false');doc.querySelector('.site-header')?.classList.remove('is-open');};
+ // The System A shell carries the site nav; the page's own menu button and nav are optional (kept when present).
+ const closeMenu=()=>{$('menu')?.setAttribute('aria-expanded','false');doc.querySelector('.site-header')?.classList.remove('is-open');};
+ if($('menu')&&$('nav')){
  on($('menu'),'click',()=>{const open=$('menu').getAttribute('aria-expanded')!=='true';$('menu').setAttribute('aria-expanded',String(open));$('menu').setAttribute('aria-label',open?'Close navigation':'Open navigation');doc.querySelector('.site-header')?.classList.toggle('is-open',open);});
  on($('nav'),'click',e=>{if(e.target.closest('a'))closeMenu();});on(doc,'keydown',e=>{if(e.key==='Escape'&&$('menu').getAttribute('aria-expanded')==='true'){closeMenu();$('menu').focus();}});
+ }
  function dispose(){if(dead)return;dead=true;for(const ch of[network,catalogue,pools,hook,metadata])cancel(ch);activity?.dispose();tracker.dispose();for(const remove of removers)remove();}
  if(win.addEventListener)on(win,'pagehide',event=>{if(!event.persisted)dispose();});
  void refreshNetwork();void loadVenues();if(linked.hook){$('hook-address').value=linked.hook;void inspectHook(linked.hook);}

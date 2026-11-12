@@ -45,7 +45,7 @@ async function load() {
   }
 }
 
-function show(...kids) { root.replaceChildren(...kids); }
+function show(...kids) { root.replaceChildren(...kids.filter(k => k != null && k !== false)); }
 const now = () => Math.floor(Date.now() / 1000) + offset;
 const coin = v => fromWei(v, 6) + ' ' + chain.native;
 

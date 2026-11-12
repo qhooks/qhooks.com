@@ -1,0 +1,3 @@
+@import url("./setup-base.css");
+.setup-flow #builder-copy + h2, .setup-flow #builder-ready { margin-top: 40px; }
+.setup-flow #builder-status { margin-top: 16px; }

@@ -204,7 +204,7 @@ function draw(){
 }
 async function start(){
  M=await fetch(SET?'/full-launch/chain-setup-'+SET+'-v1.json':'/full-launch/chain-setup-v1.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
- if(!M){root.textContent=SET?'This setup list is not available.':'Setup list unavailable. Refresh to try again.';return;}
+ if(!M){root.textContent=SET?'This setup list is not available.':'Could not load the setup list. Refresh to try again.';return;}
  draw();
  await Promise.all(chainIds().map(refresh));
 }

@@ -1,0 +1,42 @@
+/* QHooks System A: /partners. Four ways in (SDK, MCP, REST, link) side by side on hairlines, then the rewards lookup,
+   the directory and the optional listing form. */
+
+.hd--partners .partner-intro code { color: var(--qa-gold-hi); }
+.hd--partners #partner-terms { margin-top: 12px; font-size: 15px; color: var(--qa-tx-2); }
+.hd--partners .partner-methods { display: grid; margin-top: 22px; }
+.hd--partners .partner-methods article { display: grid; gap: 6px; align-content: start; padding: 22px 0; box-shadow: 0 -1px 0 var(--qa-rule); min-width: 0; }
+.hd--partners .partner-step { font-size: 13px; font-weight: 760; color: var(--qa-gold-hi); }
+.hd--partners .partner-methods h3 { margin: 0; font-size: 20px; }
+.hd--partners .partner-methods p { font-size: 15px; line-height: 1.55; color: var(--qa-tx-2); }
+.hd--partners .partner-methods pre { margin-top: 8px; }
+.hd--partners .partner-methods article > a { margin-top: 2px; font-size: 14px; font-weight: 700; color: var(--qa-tx); }
+.hd--partners .partner-methods article > a:hover { color: var(--qa-gold-hi); }
+
+.hd--partners .partner-lookup { margin-top: 18px; }
+.hd--partners .partner-input-row { display: flex; gap: 12px; align-items: flex-end; }
+.hd--partners .partner-input-row input { flex: 1; min-width: 0; }
+.hd--partners .partner-input-row button { flex: none; }
+.hd--partners #partner-rewards-status { margin-top: 12px; font-size: 14px; color: var(--qa-tx-3); }
+.hd--partners .hd-go { margin-top: 14px; color: var(--qa-gold-hi); font-weight: 700; }
+
+.hd--partners #partner-directory-status { margin-top: 12px; font-size: 14px; color: var(--qa-tx-3); }
+.hd--partners .partner-directory { display: grid; margin-top: 10px; }
+.hd--partners .partner-directory article { display: grid; gap: 2px; padding: 14px 0; box-shadow: 0 1px 0 var(--qa-rule-row); }
+.hd--partners .partner-directory article a { font-size: 17px; font-weight: 760; color: var(--qa-tx); }
+.hd--partners .partner-directory article p { font-size: 13.5px; color: var(--qa-tx-3); }
+.hd--partners .partner-directory article code { font-size: 13px; color: var(--qa-tx-2); }
+
+.hd--partners .partner-registration { display: grid; gap: 4px; margin-top: 18px; max-width: 560px; }
+.hd--partners .partner-registration label { margin-top: 14px; }
+.hd--partners .partner-registration input, .hd--partners .partner-registration textarea { margin-bottom: 4px; }
+.hd--partners #partner-wallet-status { margin-top: 14px; font-size: 14px; color: var(--qa-tx-3); }
+.hd--partners #partner-connect { justify-self: start; margin-top: 6px; }
+.hd--partners #partner-message { min-height: 150px; font-size: 13.5px; font-weight: 560; color: var(--qa-tx-2); }
+.hd--partners #partner-message-help { font-size: 13px; color: var(--qa-tx-3); }
+.hd--partners #partner-sign { justify-self: start; margin-top: 10px; }
+.hd--partners #partner-registration-status { margin-top: 8px; font-size: 14px; color: var(--qa-tx-2); }
+
+@media (min-width: 1100px) {
+  .hd--partners .partner-methods { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 48px; }
+  .hd--partners .partner-methods article { padding: 26px 0; }
+}

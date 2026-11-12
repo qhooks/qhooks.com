@@ -7,7 +7,7 @@ import {readGraduationLabDraft,graduationLabStorageKey,graduationBootstrapNames,
 const formNames=['asset','amount','mode','threshold','source-fee','source-spacing','dest-fee','dest-spacing','price','liquidity','lower','upper','salt','max0','max1','min0','min1','min-liquidity','recipient','eta'];
 const Z='0x'+'0'.repeat(40),Z32='0x'+'0'.repeat(64);
 export function bindGraduationActionsPage({document:d=document,target=window,loadModules,getArtifacts,downloadFile=null}){
- const $=id=>d.getElementById('ga-'+id),ensure=(ok,message='Graduation action unavailable')=>{if(!ok)throw Error(message);};
+ const $=id=>d.getElementById('ga-'+id),ensure=(ok,message='Graduation action could not be prepared')=>{if(!ok)throw Error(message);};
  let providers=[],modules=null,provider=null,session=null,setup=null,context=null,state=null,signer=null,active=null,busy=false,dead=false,revision=0,draftRevision=0,review=null,timer=null,resumeRequired=false;
  const feedback=(text,error=false)=>{$('feedback').textContent=text;$('feedback').dataset.error=String(error);};
  const readyKey=()=>!!signer&&!signer.locked&&signer.backupVerified&&signer.publicKeyHex===context?.plan.profile.publicKey;

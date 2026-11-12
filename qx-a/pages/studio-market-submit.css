@@ -1,0 +1,28 @@
+/* Submit a module: three fieldsets read as sections, fields on hairlines, one gold action. */
+.qst-submit .mk-hero { padding-top: 0; }
+.qst-submit .mk-lede a { color: var(--qa-gold-hi); font-weight: 680; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--qa-gold) 45%, transparent); text-underline-offset: 3px; }
+.qst-submit .mk-form { max-width: 980px; }
+.qst-submit fieldset { margin: 0; padding: var(--qa-section-gap) 0 0; border: 0; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+.qst-submit fieldset + fieldset { margin-top: var(--qa-section-gap); box-shadow: 0 -1px 0 var(--qa-rule); }
+.qst-submit legend { float: left; width: 100%; padding: 0; margin: 0 0 4px; font-size: var(--qa-fs-h2); line-height: .95; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); color: var(--qa-tx); }
+.qst-submit fieldset + fieldset legend { padding-top: 0; }
+.qst-submit fieldset > label > span:first-child { display: block; }
+.qst-submit .mk-row { display: flex; align-items: center; gap: 12px; }
+.qst-submit .mk-row > input { flex: 1; }
+.qst-submit .mk-row > i { font-style: normal; font-size: 18px; font-weight: 700; color: var(--qa-tx-3); }
+.qst-submit #mk-bps { max-width: 120px; flex: none; }
+.qst-submit .mk-mini { min-height: 38px; padding: 8px 14px; font-size: 13.5px; flex: none; }
+.qst-submit .mk-agree { display: flex; gap: 12px; margin-top: var(--qa-section-gap); padding-top: 22px; box-shadow: 0 -1px 0 var(--qa-rule); font-size: 14px; line-height: 1.5; color: var(--qa-tx-2); max-width: 760px; }
+.qst-submit .mk-agree input { margin-top: 2px; }
+.qst-submit .mk-actions { margin-top: 22px; gap: 16px; }
+.qst-submit #mk-send { min-height: 52px; padding: 0 24px; border-radius: var(--qa-r-btn); font-size: 16px; }
+.qst-submit .mk-receipt { margin-top: 28px; padding: 18px 0 18px 16px; box-shadow: inset 2px 0 0 var(--qa-buy); }
+.qst-submit .mk-receipt :is(h2, h3) { font-size: 22px; }
+.qst-submit .mk-lookup { margin-top: var(--qa-section-gap); padding-top: var(--qa-section-gap); box-shadow: 0 -1px 0 var(--qa-rule); max-width: 760px; }
+.qst-submit .mk-lookup h2 { font-size: var(--qa-fs-display-s); }
+.qst-submit #mk-lookup { margin-top: 14px; }
+.qst-submit #mk-summary-n { display: inline; }
+@media (min-width: 1100px) {
+  .qst-submit fieldset { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 32px; }
+  .qst-submit fieldset > .mk-wide, .qst-submit legend { grid-column: 1 / -1; }
+}

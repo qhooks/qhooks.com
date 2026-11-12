@@ -19,42 +19,96 @@ async function load() {
   try { const r = await fetch('/api/founding', {cache: 'no-store'}); data = r.ok ? await r.json() : null; } catch { data = null; }
   render(); mine();
 }
+// System A (2026-11-12): the counter is a seat map of the 50 spots, the launches are a leaderboard ranked by milestone
+// progress, and the prize figures read from the same /api/founding rules. A value that moved since the last read flashes.
+const prev = new Map(); let prevLeft = null;
+const clamp01 = v => Math.max(0, Math.min(1, Number.isFinite(v) ? v : 0));
+const usd0 = v => '$' + Math.round(Number(v) || 0).toLocaleString('en-US');
+const progress = l => { const g = data.rules.grant; return l.qualifiedAt ? 2 : (clamp01(l.holders / g.holders) + clamp01(Number(l.volumeUsd) / g.volumeUsd)) / 2; };
+const reduced = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const flashIf = (node, on) => { if (on && !reduced()) node.classList?.add('cx-flash'); return node; };
+const coinOf = l => {
+  const box = el('span', {class: 'fd-coin', 'aria-hidden': 'true'}, el('span', {}, String(l.symbol || '?').slice(0, 1).toUpperCase()));
+  if (/^\d+$/.test(String(l.chainId)) && /^0x[0-9a-f]{40}$/i.test(l.token || '')) { const img = el('img', {alt: '', width: '48', height: '48', loading: 'lazy', decoding: 'async', src: '/api/token-profiles/' + l.chainId + '/' + String(l.token).toLowerCase() + '/image'}); img.addEventListener?.('error', () => img.remove(), {once: true}); box.append(img); }
+  return box;
+};
+function prizes() {
+  const r = data.rules, set = (k, v) => document.querySelectorAll('[data-prize="' + k + '"]').forEach(n => { n.textContent = v; });
+  try { set('grant', Number(BigInt(r.grant.amount) / 10n ** 18n).toLocaleString('en-US')); } catch {}
+  if (r.bounty?.prizeUsd) set('bounty', usd0(r.bounty.prizeUsd));
+  if (r.bounty?.mcapUsd) set('bounty-cap', usd0(r.bounty.mcapUsd));
+  if (r.creatorShare?.bps) set('share', r.creatorShare.bps / 100 + '%');
+  if (r.creatorShare?.days) set('share-days', String(r.creatorShare.days));
+  if (r.boost?.days) set('boost-days', String(r.boost.days));
+}
+function seats(total, launches, open) {
+  const bySlot = new Map(launches.map(l => [Number(l.slot), l])), taken = open ? total - data.spotsLeft : 0;
+  return el('ol', {class: 'fd-seats', 'aria-label': taken + ' of ' + total + ' spots taken'}, ...Array.from({length: total}, (_, i) => {
+    const l = bySlot.get(i + 1), on = i < taken, fresh = on && prevLeft != null && i >= total - prevLeft;
+    const li = el('li', {class: 'fd-seat' + (on ? ' is-taken' : '') + (fresh && !reduced() ? ' is-new' : ''), title: l ? '#' + l.slot + ' ' + (l.symbol || '') : null});
+    if (on && l) li.append(coinOf(l));
+    return li;
+  }));
+}
 function render() {
   const count = $('qfd-count'), list = $('qfd-launches');
-  if (!data) { count.replaceChildren(el('p', {}, 'Refreshing…')); return; }
+  if (!data) { count.replaceChildren(el('p', {class: 'fd-count__note'}, 'Refreshing…')); return; }
   const g = data.rules.grant;
   document.querySelectorAll('[data-rule="holders"]').forEach(n => { n.textContent = String(g.holders); });
   document.querySelectorAll('[data-rule="volume"]').forEach(n => { n.textContent = '$' + Number(g.volumeUsd).toLocaleString('en-US'); });
+  prizes();
   const ch = $('qfd-chains'), list6 = data.rules.chains || [];
   if (ch && list6.length) ch.textContent = list6.map(c => c.name + (c.open ? '' : ' (opening soon)')).join(', ') + '. Launches on a chain marked opening soon count from the moment it opens.';
   const b = $('qfd-bounty'); if (b) b.textContent = data.bounty?.winner ? 'Won by ' + data.bounty.winner.symbol + '.' : 'Bounty: open.';
+  const spots = data.rules.spots;
   if (data.status === 'soon') {
     const at = data.opensAt || data.rules.start, left = at ? at - Math.floor(Date.now() / 1000) : null;
     const hm = left > 0 ? Math.floor(left / 3600) + 'h ' + String(Math.floor(left % 3600 / 60)).padStart(2, '0') + 'm' : null;
-    count.replaceChildren(el('p', {class: 'qfd-big'}, data.rules.spots + ' of ' + data.rules.spots + ' spots open'),
-      el('p', {}, 'Opens 5:00 PM CT (23:00 UTC) on November 10' + (hm ? ' · in ' + hm : '') + '. Launches before it don\'t count.'));
+    count.replaceChildren(el('div', {class: 'fd-count__num'}, el('b', {class: 'qfd-big'}, String(spots)), el('span', {}, 'of ' + spots + ' spots open')),
+      seats(spots, [], false),
+      el('p', {class: 'fd-count__note'}, 'Opens 5:00 PM CT (23:00 UTC) on November 10' + (hm ? ' · in ' + hm : '') + '. Launches before it don\'t count.'));
   }
-  else count.replaceChildren(
-    el('p', {class: 'qfd-big'}, data.spotsLeft + ' of ' + data.rules.spots + ' spots left'),
-    el('p', {}, data.status === 'full' ? 'All 50 founding spots are taken.' : 'Counting launches since ' + new Date(data.rules.start * 1000).toLocaleString('en-US', {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'}) + '.'),
-    data.status === 'full' ? null : el('p', {}, el('a', {class: 'qtx-mini', href: '/create'}, 'Launch a token')));
-  if (!data.launches.length) { list.replaceChildren(el('li', {}, data.status === 'soon' ? 'The list starts when the campaign opens.' : 'No founding launches yet. Be the first.')); return; }
-  list.replaceChildren(...data.launches.map(row));
+  else {
+    const moved = prevLeft != null && prevLeft !== data.spotsLeft;
+    count.replaceChildren(
+      el('div', {class: 'fd-count__num'}, flashIf(el('b', {class: 'qfd-big'}, String(data.spotsLeft)), moved), el('span', {}, 'of ' + spots + ' spots left')),
+      seats(spots, data.launches, true),
+      el('p', {class: 'fd-count__note'}, data.status === 'full' ? 'All 50 founding spots are taken.' : 'Counting launches since ' + new Date(data.rules.start * 1000).toLocaleString('en-US', {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'}) + '.'),
+      data.status === 'full' ? null : el('p', {class: 'fd-count__go'}, el('a', {class: 'qa-btn qa-btn--primary qa-btn--lg', href: '/create'}, 'Launch a token')));
+    prevLeft = data.spotsLeft;
+  }
+  const tc = $('fd-team-count'); if (tc) tc.textContent = data.launches.length ? String(data.launches.length) : '';
+  if (!data.launches.length) { list.replaceChildren(el('li', {class: 'fd-empty'}, data.status === 'soon' ? 'The list starts when the campaign opens.' : 'No founding launches yet. Be the first.')); return; }
+  const ranked = [...data.launches].sort((a, b) => progress(b) - progress(a) || Number(a.slot) - Number(b.slot));
+  list.replaceChildren(...ranked.map((l, i) => row(l, i + 1)));
+  for (const l of data.launches) prev.set(l.chainId + ':' + l.token, {holders: l.holders, volumeUsd: l.volumeUsd});
 }
-function row(l) {
+function bar(label, have, need, text, moved) {
+  const fill = el('span', {class: 'fd-bar__f'}); fill.style?.setProperty('--p', (clamp01(have / need) * 100).toFixed(1) + '%');
+  return el('div', {class: 'fd-bar' + (have >= need ? ' is-full' : '')}, el('span', {class: 'fd-bar__l'}, label), flashIf(el('b', {class: 'fd-bar__v'}, text), moved), el('span', {class: 'fd-bar__t', 'aria-hidden': 'true'}, fill));
+}
+function row(l, rank) {
   const chain = l.chainId === 'solana' ? 'Solana' : chainById(l.chainId)?.name || l.chainId, g = data.rules.grant;
+  const key = l.chainId + ':' + l.token, old = prev.get(key), fresh = prev.size > 0 && !old;
   const grant = l.qualifiedAt ? '50,000 QHOOKS milestone reached ' + day(l.qualifiedAt)
-    : l.grantOpen ? 'Milestone: ' + l.holders + ' of ' + g.holders + ' holders · $' + Number(l.volumeUsd).toLocaleString('en-US') + ' of $' + Number(g.volumeUsd).toLocaleString('en-US') + ' volume · until ' + day(l.grantBy)
+    : l.grantOpen ? 'Milestone open until ' + day(l.grantBy)
     : 'Milestone window closed';
   const trust = el('span', {class: 'qfd-trust'}, el('a', {href: '/verify'}, 'Verify launch'));
-  const li = el('li', {class: 'qfd-launch'},
-    el('p', {class: 'qfd-head'}, el('b', {}, '#' + l.slot + ' ' + (l.symbol || 'Token')), ' ', el('span', {}, (l.name || '') + ' · ' + chain + ' · ' + (l.chainId==='solana'?'Solana launch':l.kind === 'studio' ? 'Studio' : 'One-tap') + ' · launched ' + day(l.launchedAt))),
-    l.carriedFrom?.id === 'qwerty-relaunch-20261111' ? el('p', {}, 'Relaunch of QWERTY, spot held from ' + new Date(l.carriedFrom.launchedAt * 1000).toISOString().slice(11, 16) + ' UTC.') : null,
-    el('p', {}, 'Creator ', el('a', {href: profileUrl({wallet:l.creator})}, short(l.creator)),
-      l.chainId==='solana' ? (l.waitingForLink?' · waiting for a wallet link':' · rewards to '+short(l.payTo)) : l.creatorShareOpen ? ' · earns on volume until ' + day(l.creatorShareUntil) : ' · volume share ended',
-      l.boostOpen ? ' · 50% cashback for traders until ' + day(l.boostUntil) : ''),
-    el('p', {}, grant),
-    el('p', {}, el('a', {href: '/terminal#' + (l.chainId==='solana'?'t=':'m=') + l.chainId + ':' + l.token}, 'Trade'), ' · ', trust));
+  const li = el('li', {class: 'qfd-launch fd-team' + (rank === 1 ? ' is-top' : '') + (l.qualifiedAt ? ' is-qualified' : '') + (fresh && !reduced() ? ' is-new' : '')},
+    el('span', {class: 'qa-rank' + (rank <= 3 ? ' is-top' : '')}, String(rank)),
+    coinOf(l),
+    el('div', {class: 'fd-team__main'},
+      el('p', {class: 'qfd-head fd-team__name'}, el('b', {}, l.symbol || 'Token'), ' ', el('span', {}, l.name && l.name !== l.symbol ? l.name : '')),
+      el('p', {class: 'qa-meta fd-team__meta'}, el('span', {}, '#' + l.slot + ' spot'), el('span', {}, chain), el('span', {}, l.chainId==='solana'?'Solana launch':l.kind === 'studio' ? 'Studio' : 'One-tap'), el('span', {}, 'launched ' + day(l.launchedAt))),
+      l.carriedFrom?.id === 'qwerty-relaunch-20261111' ? el('p', {class: 'fd-team__note'}, 'Relaunch of QWERTY, spot held from ' + new Date(l.carriedFrom.launchedAt * 1000).toISOString().slice(11, 16) + ' UTC.') : null,
+      el('p', {class: 'fd-team__note'}, 'Creator ', el('a', {href: profileUrl({wallet:l.creator})}, short(l.creator)),
+        l.chainId==='solana' ? (l.waitingForLink?' · waiting for a wallet link':' · rewards to '+short(l.payTo)) : l.creatorShareOpen ? ' · earns on volume until ' + day(l.creatorShareUntil) : ' · volume share ended',
+        l.boostOpen ? ' · 50% cashback for traders until ' + day(l.boostUntil) : '')),
+    el('div', {class: 'fd-team__race'},
+      bar('Holders', Number(l.holders) || 0, g.holders, (Number(l.holders) || 0) + ' of ' + g.holders, !!old && old.holders !== l.holders),
+      bar('Volume', Number(l.volumeUsd) || 0, g.volumeUsd, usd0(l.volumeUsd) + ' of ' + usd0(g.volumeUsd), !!old && old.volumeUsd !== l.volumeUsd),
+      el('p', {class: 'fd-team__grant'}, grant)),
+    el('p', {class: 'fd-team__acts'}, el('a', {class: 'qa-btn qa-btn--secondary qa-btn--sm', href: '/terminal#' + (l.chainId==='solana'?'t=':'m=') + l.chainId + ':' + l.token}, 'Trade'), ' ', trust));
   if(l.chainId!=='solana')trustLinks(l, trust);
   return li;
 }
@@ -79,10 +133,10 @@ async function mine() {
   const any = a.launch || [a.creator.listed, a.creator.next, a.cashback.listed, a.cashback.next].some(v => v !== '0');
   if (!any) { box.hidden = true; return; }
   box.hidden = false;
-  box.replaceChildren(el('h2', {}, 'Your founding rewards'),
+  const fig = (label, listed, next) => el('div', {class: 'fd-fig'}, el('b', {}, weth(listed) + ' WETH'), el('span', {}, label + ': in drop lists · ' + weth(next) + ' WETH in the next one'));
+  box.replaceChildren(el('header', {class: 'qa-head'}, el('h2', {class: 'qa-head__t qa-head__t--s'}, 'Your founding rewards')),
     a.launch ? el('p', {}, 'Your founding launch: #' + a.launch.slot + ' ' + (a.launch.symbol || '') + (a.launch.qualifiedAt ? ' · milestone reached, the 50,000 QHOOKS grant goes out in the next weekly batch' : '')) : null,
-    el('p', {}, 'Volume share: ' + weth(a.creator.listed) + ' WETH in drop lists · ' + weth(a.creator.next) + ' WETH in the next one'),
-    el('p', {}, 'Extra cashback: ' + weth(a.cashback.listed) + ' WETH in drop lists · ' + weth(a.cashback.next) + ' WETH in the next one'),
+    el('div', {class: 'fd-figs'}, fig('Volume share', a.creator.listed, a.creator.next), fig('Extra cashback', a.cashback.listed, a.cashback.next)),
     el('p', {}, 'Claim from ', el('a', {href: '/me'}, 'My QHooks'), ' on Robinhood Chain.'));
 }
 // "Check my wallet": the connected wallet fills the field; any address can be checked.
@@ -102,7 +156,7 @@ form.addEventListener('submit', async e => {
         const select=el('select',{'aria-label':'Solana launch wallet',id:'qfd-sol-wallet'}),note=el('span',{});
         const update=()=>{const previous=select.value,ws=solLinkWallet.snapshot().wallets;select.replaceChildren(...ws.map(w=>el('option',{value:w.id},w.name)));if(ws.some(w=>w.id===previous))select.value=previous;select.hidden=ws.length<2;};
         const unsubscribe=solLinkWallet.subscribe(update);stopLinkWatch=unsubscribe;
-        result.replaceChildren(el('span',{},'Link the EVM wallet that holds your QHOOKS: sign one message with it and one with your Solana launch wallet. No transaction.'),select,button,note);
+        result.replaceChildren(el('span',{},'Link the EVM wallet your rewards go to: sign one message with it and one with your Solana launch wallet. No transaction.'),select,button,note);
         button.addEventListener('click',async()=>{button.disabled=true;note.textContent='';try{
           const conn=hub.snapshot().current;
           if(!conn){hub.open();button.textContent='Sign wallet link';return;}

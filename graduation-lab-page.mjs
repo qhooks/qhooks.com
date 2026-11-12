@@ -26,11 +26,11 @@ export function bindGraduationLabPage({document:d,target,fetch:request,downloadF
   if(!draft||pending||dead)return;const rev=revision,current=draft,controller=new AbortController();pending=controller;toolkit=null;render();feedback('Preparing your configuration and accepted developer toolkit…');
   try{
    const response=await request('/api/lab/graduation/source',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(current),signal:controller.signal});
-   if(!response.ok)throw Error('Toolkit unavailable');const text=await response.text();if(text.length>4*1024*1024)throw Error('Oversized toolkit');const result=JSON.parse(text);
+   if(!response.ok)throw Error('Toolkit could not be prepared');const text=await response.text();if(text.length>4*1024*1024)throw Error('Oversized toolkit');const result=JSON.parse(text);
    if(dead||revision!==rev||draft!==current)return;
    if(result.kind!=='qhooks-graduation-toolkit'||result.compiledTemplate!==true||result.configurationEvmTested!==false||result.deployed!==false||result.transactionSubmissionEnabled!==false||!/^[0-9a-f]{64}$/.test(result.toolkitId)||JSON.stringify(result.configuration)!==JSON.stringify(current)||Object.keys(result.contracts||{}).length!==7)throw Error('Toolkit identity mismatch');
    toolkit=text;feedback('Toolkit ready: configuration, compiled template, source snapshots, clients and notices.');
-  }catch(error){if(!dead&&rev===revision&&error.name!=='AbortError')feedback('Toolkit unavailable. Your validated draft is still available.',true);}
+  }catch(error){if(!dead&&rev===revision&&error.name!=='AbortError')feedback('Toolkit could not be prepared. Your validated draft is still available.',true);}
   finally{if(pending===controller)pending=null;if(!dead&&rev===revision)render();}
  });
  $('download-toolkit').addEventListener('click',()=>{if(toolkit)download(toolkit,'qhooks-graduation-toolkit.json');});

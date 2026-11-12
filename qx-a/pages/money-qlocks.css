@@ -1,0 +1,14 @@
+/* QLocks (System A, money lane). Free: the head says so. Locks, forms and grants come from qx-qlocks.mjs. */
+.mn-qlk__top { display: grid; justify-items: start; }
+.mn-qlk__mark { width: 64px; height: 64px; display: grid; place-items: center; margin-bottom: 18px; border-radius: 50%; color: var(--qa-gold-hi); background: radial-gradient(circle at 35% 30%, rgba(240,218,174,.22), rgba(210,173,114,.08) 70%); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--qa-gold) 55%, transparent), 0 0 34px -6px rgba(210,173,114,.45); }
+.mn-qlk__mark svg { width: 30px; height: 30px; }
+.mn-free { color: var(--qa-buy); font-weight: 760; }
+.mn-qlk__free { display: flex; align-items: baseline; gap: 10px; margin-top: 18px; font-size: 16px; color: var(--qa-tx-2); }
+.mn-qlk__free strong { font-size: 24px; font-weight: 830; font-stretch: 116%; letter-spacing: -.03em; color: var(--qa-buy); }
+#qlk-root { max-width: 980px; }
+.qlk-recent > li > a::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 10px; border-radius: 50%; background: var(--qa-gold); vertical-align: 2px; box-shadow: var(--qa-glow-gold); }
+.qlk-connect { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.qlk-connect .qtb-note { margin: 0; }
+.qlk-forms { display: grid; gap: 0; }
+.qlk-forms > * + * { margin-top: 18px !important; }
+@media (min-width: 1100px) { .mn-qlk .mn-top { max-width: 860px; } }

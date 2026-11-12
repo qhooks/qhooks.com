@@ -1,0 +1,3 @@
+/* Start drops (System A, money lane): one Safe transaction, two owners. Facts and the action come from qx-safe-drops.mjs. */
+#qsd-root > p:not([class]) { margin: 16px 0; font-size: 15px; line-height: 1.5; color: var(--qa-tx); }
+#qsd-root > dl dd { font-size: 13.5px !important; }

@@ -24,7 +24,7 @@ export function fundingAsset(chainId, asset) {
     (same(t.address, value) || same(t.symbol, value) || (t.native && ['native', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'].includes(String(value).toLowerCase()))));
   if (!token) throw error('unsupported_token', 'Cross-chain funding is not available for this pay asset.');
   const decimals = typeof asset === 'object' ? asset.decimals : token.decimals ?? (Number(chainId) === 56 ? 18 : 6);
-  if (!Number.isInteger(decimals) || decimals < 0 || decimals > 36) throw error('invalid_amount', 'Token decimals are unavailable.');
+  if (!Number.isInteger(decimals) || decimals < 0 || decimals > 36) throw error('invalid_amount', 'Token decimals could not be read.');
   return { ...token, decimals, chainId: Number(chainId) };
 }
 

@@ -1,0 +1,72 @@
+/* QHooks System A: shared floor for the token lane's smaller pages (trade, pool, the QHOOKS plan).
+   The pages keep their markup and scripts; their older stylesheets read System A through these variables. */
+body.qa.tp {
+  --qx-bg: var(--qa-floor); --qx-bg-2: var(--qa-floor-2); --qx-panel: transparent; --qx-panel-2: var(--qa-wash);
+  --qx-ink: var(--qa-tx); --qx-muted: var(--qa-tx-2); --qx-faint: var(--qa-tx-3); --qx-line: var(--qa-rule); --qx-line-2: var(--qa-rule-2);
+  --qx-brass: var(--qa-gold); --qx-on-brass: var(--qa-tx-on-gold); --qx-sage: var(--qa-buy); --qx-radius: 0px; --qx-wide: var(--qa-maxw); --qx-ease: var(--qa-ease);
+  --qx-sans: "Mona Sans", ui-sans-serif, system-ui, sans-serif; --qx-mono: var(--qx-sans); --qx-serif: var(--qx-sans);
+  --line: var(--qa-rule-2); --ink: var(--qa-tx); --paper: var(--qa-slab-a); --muted: var(--qa-tx-2); --accent: var(--qa-gold); --green: var(--qa-buy); --dark: var(--qa-floor); --sans: var(--qx-sans); --danger: var(--qa-sell);
+  --rm-surface: transparent;
+}
+body.qa.tp, body.qa.tp *:not(svg):not(svg *) { font-family: var(--qa-sans) !important; }
+body.qa.tp :is(em, i, cite, var, dfn, address) { font-style: normal; }
+body.qa.tp [hidden] { display: none !important; }
+body.qa.tp .skip-link { position: absolute; left: 12px; top: -60px; z-index: 100; padding: 10px 14px; border-radius: var(--qa-r-m); background: var(--qa-gold-metal); color: var(--qa-tx-on-gold); font-weight: 700; }
+body.qa.tp .skip-link:focus { top: 10px; }
+.ta-tg .qa-tabbar, .ta-tg .qa-foot { display: none !important; }
+
+/* the wallet button lives in the shell */
+body.qa .qa-wallet .qhc-trigger { display: inline-flex; align-items: center; justify-content: center; height: 38px; padding: 0 14px; border: 0; border-radius: var(--qa-r-m); font: inherit; font-size: 14px; font-weight: 740; white-space: nowrap; cursor: pointer;
+  color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 22px -10px rgba(210,173,114,.7); }
+@media (min-width: 1100px) { body.qa .qa-wallet .qhc-trigger { height: 40px; padding: 0 18px; } }
+body.qa .qa-wallet .theme-toggle { display: none !important; }
+
+/* the floor */
+body.qa.tp main { position: relative; z-index: 1; display: block; max-width: var(--qa-maxw); margin: 0 auto; padding: 30px var(--qa-pad) 0; background: none; border: 0; }
+@media (min-width: 1100px) { body.qa.tp main { padding-top: 56px; } }
+body.qa.tp main > .eyebrow, body.qa.tp .eyebrow, body.qa.tp .qx-eyebrow { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 0; border: 0; background: none; font-size: 13.5px; font-weight: 680; letter-spacing: 0; text-transform: none; color: var(--qa-gold-hi); }
+body.qa.tp main h1 { margin: 0; font-size: var(--qa-fs-hero); line-height: .98; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); color: var(--qa-tx); max-width: 16ch; }
+body.qa.tp main h1 + p, body.qa.tp main > p { margin: 14px 0 0; max-width: 62ch; font-size: 16px; line-height: 1.5; color: var(--qa-tx-2); }
+body.qa.tp main h2 { margin: 0; font-size: var(--qa-fs-display-s); line-height: 1.05; font-weight: 820; font-stretch: var(--qa-wd-head); letter-spacing: var(--qa-track-head); color: var(--qa-tx); }
+body.qa.tp main h3 { margin: 0; font-size: var(--qa-fs-title); font-weight: 760; color: var(--qa-tx); }
+body.qa.tp main a { color: var(--qa-tx); text-decoration: none; }
+body.qa.tp main p a, body.qa.tp main small a { color: var(--qa-gold-hi); font-weight: 650; }
+body.qa.tp main p a:hover { color: var(--qa-tx); }
+body.qa.tp main small { font-size: 12.5px; color: var(--qa-tx-3); }
+body.qa.tp main pre { margin: 6px 0; padding: 0; border: 0; background: none; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.5; color: var(--qa-tx-2); }
+body.qa.tp main pre:empty { display: none; }
+body.qa.tp main details { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: 0 1px 0 var(--qa-rule); }
+body.qa.tp main details > summary { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0; list-style: none; cursor: pointer; font-size: 14.5px; font-weight: 680; color: var(--qa-tx); }
+body.qa.tp main details > summary::-webkit-details-marker { display: none; }
+body.qa.tp main details > summary::after { content: ""; width: 7px; height: 7px; margin-left: auto; border-right: 1.6px solid var(--qa-tx-3); border-bottom: 1.6px solid var(--qa-tx-3); transform: rotate(45deg); transition: transform var(--qa-t-quick) var(--qa-ease); }
+body.qa.tp main details[open] > summary::after { transform: rotate(225deg); }
+body.qa.tp main details[open] { padding-bottom: 14px; }
+/* fields: labels small, values big, a hairline under each */
+body.qa.tp main label { display: block; font-size: var(--qa-fs-small); font-weight: 600; color: var(--qa-tx-3); }
+body.qa.tp main :is(input[type="text"], input:not([type]), input[type="number"], select) { width: 100%; height: auto; margin: 4px 0 14px; padding: 6px 0 10px; border: 0; border-radius: 0; background: transparent; box-shadow: 0 1px 0 var(--qa-rule-2); color: var(--qa-tx); font: inherit; font-size: 18px; font-weight: 680; letter-spacing: -.01em; outline: none; }
+body.qa.tp main select { appearance: none; padding-right: 22px; background: linear-gradient(45deg, transparent 50%, var(--qa-tx-3) 50%) right 6px center / 7px 7px no-repeat, linear-gradient(-45deg, transparent 50%, var(--qa-tx-3) 50%) right 0 center / 7px 7px no-repeat; }
+body.qa.tp main :is(input, select):focus { box-shadow: 0 2px 0 var(--qa-gold); }
+body.qa.tp main :is(input, select):disabled { opacity: .55; }
+body.qa.tp main input[type="file"] { margin: 6px 0 12px; font-size: 13.5px; color: var(--qa-tx-2); }
+body.qa.tp main input[type="checkbox"] { width: 18px; height: 18px; margin: 0 8px 0 0; accent-color: var(--qa-gold); vertical-align: -3px; }
+body.qa.tp main label:has(input[type="checkbox"]) { display: flex; align-items: center; margin: 10px 0; font-size: 14px; color: var(--qa-tx-2); }
+/* buttons: secondary by default; one gold action per view is set per page */
+body.qa.tp main :is(.workspace-button, .qx-btn) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; height: auto; padding: 0 18px; margin: 4px 8px 8px 0; border: 0; border-radius: var(--qa-r-m); background: var(--qa-wash-2); box-shadow: none; color: var(--qa-tx); font-size: 15px; font-weight: 720; text-decoration: none; cursor: pointer; transition: transform var(--qa-t-tap) var(--qa-ease), background-color var(--qa-t-quick) var(--qa-ease); }
+body.qa.tp main :is(.workspace-button, .qx-btn):hover { background: var(--qa-rule-2); }
+body.qa.tp main :is(.workspace-button, .qx-btn):active { transform: scale(.97); }
+body.qa.tp main :is(.workspace-button, .qx-btn):disabled, body.qa.tp main .workspace-button[aria-disabled="true"] { opacity: .45; cursor: not-allowed; transform: none; }
+body.qa.tp main .qx-btn-primary, body.qa.tp main .tp-primary { color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 22px -10px rgba(210,173,114,.7); }
+body.qa.tp main .qx-btn-primary:hover, body.qa.tp main .tp-primary:hover { background: var(--qa-gold-metal); filter: brightness(1.05); }
+body.qa.tp main [role="status"]:empty { display: none; }
+body.qa.tp main [role="status"] { font-size: 13.5px; color: var(--qa-tx-2); }
+/* the one raised surface on these pages */
+.tp-slab { position: relative; padding: 22px; border-radius: var(--qa-r-slab); background: var(--qa-slab); box-shadow: var(--qa-slab-edge), var(--qa-slab-shadow); }
+.tp-slab::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 140px; border-radius: var(--qa-r-slab) var(--qa-r-slab) 0 0; background: radial-gradient(70% 100% at 50% 0%, var(--qa-gold-wash), transparent); pointer-events: none; }
+body.qa.tp dialog { border: 0; border-radius: var(--qa-r-slab); background: var(--qa-slab); color: var(--qa-tx); box-shadow: var(--qa-slab-edge), var(--qa-slab-shadow); }
+body.qa.tp dialog::backdrop { background: rgba(0,0,0,.6); }
+body.qa.tp .qhc-login > .qhc-choice { background: var(--qa-gold-metal); border: 0; color: var(--qa-tx-on-gold); font-weight: 740; border-radius: var(--qa-r-m); }
+@media (prefers-reduced-motion: reduce) { body.qa.tp *, body.qa.tp *::before, body.qa.tp *::after { animation: none !important; transition: none !important; } }
+html:has(body.qa.tp) { overflow-x: clip; }
+body.qa.tp { overflow-x: clip; }
+body.qa.tp :is(input, select, textarea, button) { font-feature-settings: "zero" 0 !important; font-variant-numeric: tabular-nums; }
+body.qa.tp main :is(h1, h2, h3)[tabindex="-1"]:focus { outline: none; }

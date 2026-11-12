@@ -1,0 +1,143 @@
+/* Studio lane (launch tools) on System A. Shared by launch-day, launch-network, launch-workspace, qtoken-studio,
+   relaunch, list-market and market-submit. Requires /qx-a/tokens.css + components.css + shell.css.
+   The pages keep every id and class their scripts query; this sheet restyles the legacy form markup in place:
+   open floor, hairline fields, gold for the one primary action, no boxes, no pills, no monospace. */
+
+/* ---------- page frame ---------- */
+.qst { padding-bottom: var(--qa-s16); }
+/* Mona Sans draws a dotted zero in its tabular figures at UI weights; forms and records here use plain figures */
+.qst, .qst-dock, .qa-sheet { font-variant-numeric: proportional-nums; }
+.qst [hidden] { display: none !important; }
+.qst .sr-only, .qst-page .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.qst-page .skip-link { position: absolute; left: 12px; top: -60px; z-index: 90; padding: 10px 14px; border-radius: var(--qa-r-m); background: var(--qa-slab-a); color: var(--qa-tx); font-weight: 700; }
+.qst-page .skip-link:focus { top: 10px; }
+.qst code { font: inherit; font-weight: 620; overflow-wrap: anywhere; }
+
+/* top band: kicker, display title, lede */
+.qst-top { position: relative; padding-top: var(--qa-s8); max-width: 900px; }
+.qst-kicker, .qst .eyebrow, .qst .qx-eyebrow { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 13px; font-weight: 700; color: var(--qa-gold-hi); letter-spacing: 0; text-transform: none; }
+.qst-kicker::before, .qst .eyebrow::before, .qst .qx-eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--qa-gold); box-shadow: var(--qa-glow-gold); }
+.qst h1 { margin: 0; font-size: clamp(38px, 10.4vw, 72px); line-height: .96; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); text-wrap: balance; }
+.qst-lede, .qst-top > p:not(.qst-kicker):not(.eyebrow) { margin-top: 14px; max-width: 58ch; font-size: 16.5px; line-height: 1.45; color: var(--qa-tx-2); }
+.qst-back { display: flex; width: max-content; align-items: center; gap: 6px; margin-bottom: 18px; font-size: 14px; font-weight: 650; color: var(--qa-tx-2); }
+.qst-back:hover { color: var(--qa-tx); }
+
+/* section heads: big expanded type, space instead of boxes */
+.qst h2 { margin: 0 0 10px; font-size: var(--qa-fs-display-s); line-height: 1.04; font-weight: 820; font-stretch: var(--qa-wd-head); letter-spacing: var(--qa-track-head); }
+.qst h3 { margin: 0 0 6px; font-size: 18px; line-height: 1.15; font-weight: 780; font-stretch: 110%; letter-spacing: -.02em; }
+.qst h4 { margin: 0; font-size: 15px; font-weight: 700; }
+.qst p { line-height: 1.5; }
+.qst :where(p, small) + :where(p) { margin-top: 10px; }
+.qst-sec { padding-top: var(--qa-section-gap); }
+.qst-sec + .qst-sec { margin-top: var(--qa-section-gap); box-shadow: 0 -1px 0 var(--qa-rule); }
+
+/* ---------- links ---------- */
+.qst :where(a:not([class])), .qst .text-link, .qst .qx-link { color: var(--qa-gold-hi); font-weight: 650; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--qa-gold) 45%, transparent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.qst :where(a:not([class])):hover, .qst .text-link:hover, .qst .qx-link:hover { text-decoration-color: var(--qa-gold-hi); }
+
+/* ---------- fields: label over a big value on a hairline ---------- */
+.qst :where(label) { display: block; font-size: var(--qa-fs-small); font-weight: 620; color: var(--qa-tx-3); }
+.qst :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]), select, textarea) {
+  display: block; width: 100%; min-width: 0; margin-top: 4px; padding: 8px 0 10px; border: 0; border-radius: 0; background: transparent; color: var(--qa-tx);
+  font: inherit; font-size: 18px; font-weight: 660; letter-spacing: -.01em; outline: none; box-shadow: 0 1px 0 var(--qa-rule-2); transition: box-shadow var(--qa-t-quick) var(--qa-ease); }
+.qst :where(input, select, textarea):focus-visible { outline: none; box-shadow: 0 2px 0 var(--qa-gold); border-radius: 0; }
+.qst :where(input, textarea)::placeholder { color: var(--qa-tx-3); font-weight: 500; }
+.qst :where(textarea) { font-size: 15.5px; font-weight: 500; line-height: 1.45; resize: vertical; min-height: 84px; }
+.qst :where(select) { appearance: none; -webkit-appearance: none; padding-right: 22px; cursor: pointer; font-size: 16.5px;
+  background: linear-gradient(45deg, transparent 50%, var(--qa-tx-3) 50%) right 6px center / 7px 7px no-repeat, linear-gradient(-45deg, transparent 50%, var(--qa-tx-3) 50%) right 0 center / 7px 7px no-repeat; }
+.qst :where(select) option { background: var(--qa-slab-a); color: var(--qa-tx); }
+.qst :where(input, select, textarea):disabled { color: var(--qa-tx-3); cursor: not-allowed; box-shadow: 0 1px 0 var(--qa-rule); }
+.qst :where(input[readonly]) { color: var(--qa-tx-2); }
+.qst :where(input[type="checkbox"], input[type="radio"]) { width: 18px; height: 18px; margin: 0 10px 0 0; accent-color: var(--qa-gold); vertical-align: -3px; flex: none; }
+.qst :where(label):has(> input[type="checkbox"]) { display: flex; align-items: flex-start; gap: 0; font-size: 14px; line-height: 1.45; font-weight: 560; color: var(--qa-tx-2); padding: 10px 0; }
+.qst :where(input[type="file"]) { display: block; width: 100%; max-width: 100%; margin-top: 8px; font: inherit; font-size: 13.5px; color: var(--qa-tx-3); }
+.qst :where(input[type="file"])::file-selector-button { margin-right: 12px; height: 38px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--qa-wash-2); color: var(--qa-tx); font: inherit; font-size: 13.5px; font-weight: 720; cursor: pointer; }
+.qst :where(input[type="file"]):disabled::file-selector-button { opacity: .45; cursor: not-allowed; }
+.qst :where(input[type="range"]) { width: 100%; margin-top: 12px; accent-color: var(--qa-gold); }
+.qst :where(small) { display: block; margin-top: 6px; font-size: var(--qa-fs-small); line-height: 1.45; font-weight: 500; color: var(--qa-tx-3); }
+/* legacy .lab-form: label, control, label, control... read as stacked fields with air between them */
+.qst .lab-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+.qst .lab-form > :is(label, .lab-actions, button, .lab-form, details) { margin-top: 20px; }
+.qst .lab-form > :first-child { margin-top: 0; }
+.qst .lab-form > :is(p, [role="status"]) { margin-top: 12px; }
+.qst .lab-form > button { justify-self: start; }
+
+/* ---------- buttons: the legacy classes take the System A kinds ---------- */
+.qst :is(.workspace-button, .qtx-mini, .mk-mini, .qx-btn, .qhc-secondary) {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; height: auto; padding: 10px 18px; border: 0; border-radius: var(--qa-r-m); background: var(--qa-wash-2); color: var(--qa-tx);
+  font: inherit; font-size: 15px; font-weight: 740; line-height: 1.15; text-align: center; text-decoration: none; white-space: normal; cursor: pointer;
+  transition: transform var(--qa-t-tap) var(--qa-ease), filter var(--qa-t-tap) var(--qa-ease), background-color var(--qa-t-quick) var(--qa-ease); }
+.qst :is(.workspace-button, .qtx-mini, .mk-mini, .qx-btn):hover { background: var(--qa-rule-2); }
+.qst :is(.workspace-button, .qtx-mini, .mk-mini, .qx-btn):active { transform: scale(.97); }
+.qst :is(.qtd-primary, .qas-go, .qx-btn-primary, .qst-primary) { color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 22px -10px rgba(210,173,114,.7); }
+.qst :is(.qtd-primary, .qas-go, .qx-btn-primary, .qst-primary):hover { background: var(--qa-gold-metal); filter: brightness(1.05); }
+.qst :is(.workspace-button, .qtx-mini, .mk-mini, .qx-btn):is(:disabled, [aria-disabled="true"]) { opacity: .42; cursor: not-allowed; transform: none; filter: none; }
+.qst .qx-btn-dot { font-weight: 800; }
+.qst .lab-actions, .qst .qj-actions, .qst .qj-tools, .qst .qtd-actions, .qst .network-actions, .qst .mk-actions, .qst .qrl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+/* ---------- disclosure, status, records ---------- */
+.qst :where(details) { box-shadow: 0 -1px 0 var(--qa-rule); }
+.qst :where(details) > summary { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 12px 0; list-style: none; cursor: pointer; font-size: 15px; font-weight: 700; color: var(--qa-tx); }
+.qst :where(details) > summary::-webkit-details-marker { display: none; }
+.qst :where(details) > summary::after { content: ""; flex: none; width: 7px; height: 7px; margin-left: auto; margin-right: 4px; border-right: 1.8px solid var(--qa-tx-3); border-bottom: 1.8px solid var(--qa-tx-3); transform: translateY(-2px) rotate(45deg); transition: transform var(--qa-t-std) var(--qa-ease); }
+.qst :where(details[open]) > summary::after { transform: translateY(2px) rotate(-135deg); }
+.qst :where(details) > :not(summary) { margin-bottom: 14px; }
+.qst :where(details) > p { font-size: 14px; color: var(--qa-tx-2); max-width: 72ch; }
+.qst :where([role="status"], [role="alert"], output) { font-size: 14px; line-height: 1.45; color: var(--qa-tx-2); overflow-wrap: anywhere; }
+.qst :where(p[role="status"], p[role="alert"]):empty { display: none; }
+.qst :is([data-error="true"], [data-tone="bad"], .qx-tx-feedback) { color: var(--qa-sell); }
+.qst :is([data-tone="ok"], .qrl-ok) { color: var(--qa-buy); }
+.qst :where(pre) { margin: 10px 0 0; padding: 4px 0 4px 14px; max-height: 320px; overflow: auto; font: inherit; font-size: 13px; line-height: 1.5; font-weight: 520; color: var(--qa-tx-2); white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: inset 2px 0 0 var(--qa-rule-2); }
+.qst :where(pre):empty { display: none; }
+.qst :where(dl) { margin: 0; }
+.qst :where(dl):not(.qa-kv) > div, .qst-kv > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 12px 0; font-size: 14px; box-shadow: 0 -1px 0 var(--qa-rule); }
+.qst :where(dl) dt { color: var(--qa-tx-3); font-weight: 560; }
+.qst :where(dl) dd { margin: 0; min-width: 0; text-align: right; font-weight: 660; overflow-wrap: anywhere; }
+/* flat dt/dd pairs (no wrapping div) read as two-column rows */
+.qst-pairs { display: grid; grid-template-columns: auto minmax(0, 1fr); }
+.qst-pairs > dt, .qst-pairs > dd { padding: 12px 0; box-shadow: 0 -1px 0 var(--qa-rule); font-size: 14px; }
+.qst-pairs > dd { padding-left: 16px; }
+.qst :where(ol, ul) { margin: 0; padding: 0; list-style: none; }
+
+/* a real sequence: dots on a gold line (launch progress lists) */
+.qst .launch-progress { position: relative; margin: 16px 0 0; display: grid; gap: 0; counter-reset: qst-step; }
+.qst .launch-progress:empty { display: none; }
+.qst .launch-progress > li { position: relative; padding: 10px 0 10px 30px; font-size: 14px; line-height: 1.45; color: var(--qa-tx-2); counter-increment: qst-step; }
+.qst .launch-progress > li::before { content: counter(qst-step); position: absolute; left: 0; top: 10px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 760; color: var(--qa-tx-3); box-shadow: inset 0 0 0 1.5px var(--qa-rule-2); background: var(--qa-floor); z-index: 1; }
+.qst .launch-progress > li::after { content: ""; position: absolute; left: 9.5px; top: 30px; bottom: -10px; width: 1px; background: var(--qa-rule-2); }
+.qst .launch-progress > li:last-child::after { display: none; }
+.qst .launch-progress > li:is([data-state="done"], .done, [data-done="true"])::before { background: var(--qa-gold); color: var(--qa-tx-on-gold); box-shadow: var(--qa-glow-gold); }
+
+/* chain marks */
+.qst .chain-symbol { width: 22px; height: 22px; flex: none; border-radius: 50%; }
+/* the chain mark the product scripts add after a network select sits inside the select's line */
+.qst :where(select):has(+ .chain-select-symbol) { padding-left: 32px; }
+.qst .chain-select-symbol { position: relative; z-index: 1; display: block; width: 20px; height: 20px; margin: -33px 0 13px 2px; border-radius: 50%; pointer-events: none; }
+
+/* legacy workspace panels: sections on the floor, a hairline and air between them */
+.qst .qwallet-panel { margin-top: 36px; padding-top: 28px; box-shadow: 0 -1px 0 var(--qa-rule); min-width: 0; }
+.qst .qwallet-panel .qwallet-panel { margin-top: 0; padding-top: 0; box-shadow: none; }
+.qst .qwallet-panel > p, .qst .qwallet-panel > section > p { margin-top: 14px; font-size: 14px; color: var(--qa-tx-2); }
+.qst .qwallet-panel > h2 + p, .qst .qwallet-panel > section > h2 + p { margin-top: 0; margin-bottom: 16px; }
+.qst .technical-notes { margin-top: var(--qa-section-gap); }
+.qst .launch-footnote, .qst .qtd-muted { font-size: 13px; color: var(--qa-tx-3); }
+
+/* ---------- the one raised surface ---------- */
+.qst-slab { position: relative; border-radius: var(--qa-r-slab); padding: 22px; background: var(--qa-slab); box-shadow: var(--qa-slab-edge), var(--qa-slab-shadow); }
+.qst-slab::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 140px; border-radius: inherit; background: radial-gradient(70% 100% at 50% 0%, var(--qa-gold-wash), transparent); pointer-events: none; }
+.qst-slab > * { position: relative; }
+
+/* the wallet dialog (#qhc-dialog) is styled by studio-wallet.css */
+.qst .qhc-key-help { font-size: 14px; line-height: 1.5; color: var(--qa-tx-2); }
+.qst-page .qa-wallet .qhc-trigger { max-width: 46vw; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- desktop ---------- */
+@media (min-width: 1100px) {
+  .qst-top { padding-top: var(--qa-s12); }
+  .qst-lede, .qst-top > p:not(.qst-kicker):not(.eyebrow) { font-size: 18px; }
+  .qst h2 { font-size: 30px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qst *, .qst *::before, .qst *::after { animation: none !important; transition: none !important; }
+}

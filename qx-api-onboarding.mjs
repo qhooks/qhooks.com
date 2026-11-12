@@ -10,7 +10,7 @@ const me = YOUR_CONNECTED_EVM_WALLET;
 const pools = await q.pools({ chain: '${chain}' });
 const pool = pools.find(p => p.router?.routable === true && String(p.chainId) === '${chain}');
 if (!pool) throw new Error('No routable listed pool on ${CHAINS[chain]}. Choose another chain or list your launch.');
-if (pool.quote.decimals == null) throw new Error('Quote-token decimals are unavailable.');
+if (pool.quote.decimals == null) throw new Error('Quote-token decimals could not be read.');
 const amountIn = 20n * 10n ** BigInt(pool.quote.decimals);
 const zeroForOne = pool.key.currency0.toLowerCase() === pool.quote.address.toLowerCase();
 ${fee?`const routerFee = amountIn * 100n / 10000n;

@@ -44,6 +44,6 @@ export function filterDiscovery(rows,{tab='trending',window='h24',filters={},now
 const VIEW_KEY='qhooks:terminal:market-views:v1';
 export function createMarketViews(storage){
  const read=()=>{try{const v=JSON.parse(storage?.getItem(VIEW_KEY)||'[]');return Array.isArray(v)?v.slice(0,12).filter(x=>x&&typeof x.name==='string'&&x.name.length<=32&&DISCOVERY_TABS.some(([k])=>k===x.tab)&&WINDOWS.some(([k])=>k===x.window)).map(x=>({...x,filters:validateDiscoveryFilters(x.filters)})):[];}catch{return [];}};
- const write=rows=>{if(!storage?.setItem)throw Error('Saved views are unavailable on this device.');storage.setItem(VIEW_KEY,JSON.stringify(rows));return rows;};
+ const write=rows=>{if(!storage?.setItem)throw Error('This device cannot save views.');storage.setItem(VIEW_KEY,JSON.stringify(rows));return rows;};
  return {list:read,save(raw){const name=String(raw.name||'').trim();if(!name||name.length>32)throw Error('Name this view with 1–32 characters.');if(!DISCOVERY_TABS.some(([k])=>k===raw.tab)||!WINDOWS.some(([k])=>k===raw.window))throw Error('Choose a market view and time window.');const row={name,tab:raw.tab,window:raw.window,chain:String(raw.chain),filters:validateDiscoveryFilters(raw.filters)},rows=read(),i=rows.findIndex(x=>x.name.toLowerCase()===name.toLowerCase());if(i<0){if(rows.length>=12)throw Error('Keep at most twelve market views.');rows.push(row);}else rows[i]=row;return write(rows);},remove(name){return write(read().filter(x=>x.name!==name));}};
 }

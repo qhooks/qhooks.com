@@ -252,6 +252,10 @@ function updateRow(node, vm) {
     node.cells.price.classList.remove('qxfd-flash-up', 'qxfd-flash-down');
     node.cells.price.classList.add(p > before ? 'qxfd-flash-up' : 'qxfd-flash-down');
     node.cells.price.onanimationend = () => node.cells.price.classList.remove('qxfd-flash-up', 'qxfd-flash-down');
+    // System A: the whole row washes once in the move's colour (a real price change from the list's own refresh).
+    node.tr.classList.remove('qxfd-tick-up', 'qxfd-tick-down'); void node.tr.offsetWidth;
+    node.tr.classList.add(p > before ? 'qxfd-tick-up' : 'qxfd-tick-down');
+    clearTimeout(node.tickTimer); node.tickTimer = setTimeout(() => node.tr.classList.remove('qxfd-tick-up', 'qxfd-tick-down'), 1500);
   }
 }
 

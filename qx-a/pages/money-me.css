@@ -1,0 +1,164 @@
+/* My QHooks (System A, money lane). One account: rewards and drops, launches, holdings with art, callouts, keys.
+   Markup: me.html. Content comes from qx-me.mjs, qx-earnings.mjs, qx-your-rewards.mjs, qx-drops.mjs, qx-callouts.mjs,
+   qx-account-solana-rewards.mjs, qx-sol-launch-me.mjs and the quantum-key control; this file dresses what they render. */
+
+.mn-me [hidden] { display: none !important; }
+.mn-pair { position: relative; z-index: 2; display: flex; gap: 22px; padding-top: 18px; }
+.mn-pair a { position: relative; height: 40px; display: inline-flex; align-items: center; font-size: 19px; font-weight: 800; font-stretch: 114%; letter-spacing: -.02em; color: var(--qa-tx-3); transition: color var(--qa-t-quick) var(--qa-ease); }
+.mn-pair a:hover { color: var(--qa-tx-2); }
+.mn-pair a[aria-current="page"] { color: var(--qa-tx); }
+.mn-pair a[aria-current="page"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 2px; height: 2px; border-radius: 2px; background: var(--qa-gold); box-shadow: var(--qa-glow-gold); }
+
+/* ---------- hero ---------- */
+.mn-me-hero { display: grid; gap: 22px; padding-top: 14px; }
+.mn-me-hero .qwc-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.mn-me .mn-me-wallet { min-width: 180px; height: 48px; font-size: 15.5px; }
+.mn-me .qwc-group .qwc-inline { height: 48px; padding: 0 18px; }
+
+/* ---------- account stats: an open, ruled strip ---------- */
+.mn-me-tiles { display: flex; overflow-x: auto; scrollbar-width: none; margin: 30px calc(var(--qa-pad) * -1) 0; padding: 0 var(--qa-pad); box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); scroll-snap-type: x proximity; }
+.mn-me-tiles:empty { display: none; }
+.mn-me-tiles::-webkit-scrollbar { display: none; }
+.mn-me-tiles .qa-tile { flex: none; display: flex; flex-direction: column; min-width: 120px; padding: 13px 18px 14px; scroll-snap-align: start; box-shadow: -1px 0 0 var(--qa-rule); }
+.mn-me-tiles .qa-tile:first-child { padding-left: 0; box-shadow: none; }
+.mn-me-tiles .qa-tile > b { order: -1; font-size: 26px; line-height: 1.05; font-weight: 800; font-stretch: 112%; letter-spacing: -.03em; }
+.mn-me-tiles .qa-tile > span { margin-top: 3px; font-size: var(--qa-fs-small); font-weight: 650; color: var(--qa-tx-2); white-space: nowrap; }
+.mn-me-tiles .qa-tile > small { font-size: 11.5px; color: var(--qa-tx-3); white-space: nowrap; }
+
+/* ---------- the account nav: sticky underline tabs with a scroll-spy ink ---------- */
+.mn-me-nav { position: sticky; top: calc(var(--qa-hdr-h) + env(safe-area-inset-top)); z-index: 30; display: flex; gap: 22px; overflow-x: auto; scrollbar-width: none; margin: 18px calc(var(--qa-pad) * -1) 0; padding: 0 var(--qa-pad);
+  background: var(--qa-glass); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); box-shadow: 0 1px 0 var(--qa-rule); }
+.mn-me-nav::-webkit-scrollbar { display: none; }
+.mn-me-nav a { flex: none; height: 48px; display: inline-flex; align-items: center; font-size: 14.5px; font-weight: 700; color: var(--qa-tx-3); white-space: nowrap; transition: color var(--qa-t-quick) var(--qa-ease); }
+.mn-me-nav a:hover, .mn-me-nav a.is-on { color: var(--qa-tx); }
+.mn-me-nav__ink { position: absolute; left: 0; bottom: 0; height: 2px; width: var(--w, 0); transform: translateX(var(--x, 0)); background: var(--qa-gold); box-shadow: var(--qa-glow-gold); transition: transform var(--qa-t-std) var(--qa-ease), width var(--qa-t-std) var(--qa-ease); pointer-events: none; }
+@media (min-width: 1100px) { .mn-me-nav { top: var(--qa-nav-h); } }
+
+/* ---------- sections: brand-word kickers over the module headings ---------- */
+.mn-me .qa-section { padding-top: var(--qa-section-gap); scroll-margin-top: 120px; }
+.mn-me .qa-section-head { margin-bottom: 18px; }
+.mn-me .qa-section-head h2 { font-size: var(--qa-fs-h2); line-height: .98; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); text-wrap: balance; }
+.mn-me .qa-section-head p { max-width: 640px; margin-top: 10px; font-size: 15px; line-height: 1.5; color: var(--qa-tx-2); }
+.mn-me :is(#qa-rewards, #qa-launches, #qa-holdings, #qa-callouts) > .qa-section-head::before { display: block; margin-bottom: 8px; font-size: var(--qa-fs-meta); font-weight: 760; letter-spacing: .01em; color: var(--qa-gold-hi); }
+.mn-me #qa-rewards > .qa-section-head::before { content: "Traders"; }
+.mn-me #qa-launches > .qa-section-head::before { content: "Builders"; }
+.mn-me #qa-holdings > .qa-section-head::before { content: "Holders"; }
+.mn-me #qa-callouts > .qa-section-head::before { content: "Callers"; }
+.mn-me :is(#qa-launches, #qa-holdings, #qa-keys, #qa-callouts, #qa-wallet-checks) .qa-section-head h2 { font-size: var(--qa-fs-display-m); }
+.mn-me #qa-sol-launch-fees > h2, .mn-me .qa-section > h2 { font-size: var(--qa-fs-display-s); font-weight: 800; font-stretch: var(--qa-wd-head); letter-spacing: var(--qa-track-head); margin-bottom: 10px; }
+
+/* reward blocks sit on the floor, separated by hairlines, never boxed */
+.mn-me .qa-reward-card { padding: 22px 0 6px; box-shadow: 0 -1px 0 var(--qa-rule); }
+.mn-me .qa-reward-card > h3 { font-size: var(--qa-fs-h3); font-weight: 780; font-stretch: 108%; letter-spacing: -.015em; margin-bottom: 12px; }
+.mn-me .qa-reward-card > p { font-size: 14.5px; line-height: 1.5; color: var(--qa-tx-2); }
+.mn-me .qa-reward-grid { display: grid; gap: 0; }
+.mn-me .qa-reward-grid > .qa-section { padding-top: 22px; box-shadow: 0 -1px 0 var(--qa-rule); }
+
+/* your rewards (qx-your-rewards.mjs): three figures, a share card, the live line */
+.mn-me .qyr-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mn-me .qyr-tile { padding: 2px 12px 10px; box-shadow: -1px 0 0 var(--qa-rule); min-width: 0; }
+.mn-me .qyr-tile:first-child { padding-left: 0; box-shadow: none; }
+.mn-me .qyr-tile :is(p, span, small) { font-size: 12px; line-height: 1.4; color: var(--qa-tx-3); }
+.mn-me .qyr-tile :is(b, strong, .qyr-amt) { display: block; font-size: 20px; font-weight: 780; font-stretch: 108%; letter-spacing: -.02em; color: var(--qa-tx); }
+.mn-me .qyr-lines { display: grid; gap: 2px; margin: 4px 0; }
+.mn-me .qyr-share { display: grid; gap: 12px; margin-top: 18px; padding-top: 16px; box-shadow: 0 -1px 0 var(--qa-rule-row); }
+.mn-me .qyr-share-face { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.mn-me .qyr-share-face img { width: 36px; height: 36px; border-radius: 50%; }
+.mn-me .qyr-share-k { font-size: 14px; font-weight: 700; }
+.mn-me .qyr-share-link { width: 100%; font-size: 15px; font-weight: 700; color: var(--qa-gold-hi); overflow-wrap: anywhere; }
+.mn-me :is(.qyr-note, .qdr-note, .qyr-live) { font-size: 14px; color: var(--qa-tx-2); }
+.mn-me .qyr-live { margin-top: 12px; font-size: var(--qa-fs-small); color: var(--qa-tx-3); display: flex; align-items: center; gap: 7px; }
+.mn-me .qyr-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--qa-buy); box-shadow: var(--qa-glow-buy); }
+
+/* drops (qx-drops.mjs) */
+.mn-me #qdr-panel { display: grid; gap: 12px; justify-items: start; }
+.mn-me :is(.qdr-chain, .qdr-launch, .qdr-day) { width: 100%; padding: 12px 0; box-shadow: 0 1px 0 var(--qa-rule-row); }
+.mn-me .qdr-chain-h, .mn-me .qdr-k { font-size: var(--qa-fs-small); font-weight: 650; color: var(--qa-tx-3); }
+.mn-me .qdr-live { font-size: var(--qa-fs-small); color: var(--qa-tx-3); }
+.mn-me .qdr-link { color: var(--qa-gold-hi); font-weight: 680; }
+.mn-me .qdr-hist { width: 100%; }
+
+/* rows from qx-earnings.mjs and the reward readers */
+.mn-me .qa-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 14px; min-height: 0; padding: 14px 0; box-shadow: 0 1px 0 var(--qa-rule-row); }
+.mn-me .qa-row::before { display: none; }
+.mn-me .qa-row b { display: block; font-weight: 720; }
+.mn-me .qa-sub { display: block; font-size: var(--qa-fs-small); color: var(--qa-tx-3); }
+.mn-me .qa-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.mn-me .qa-actions .qa-btn, .mn-me .qa-launch-links .qa-btn { height: 38px; padding: 0 14px; font-size: 14px; }
+.mn-me :is(.qa-empty, .qa-loading, .qa-status, .qa-reward-owner) { font-size: 14px; line-height: 1.5; color: var(--qa-tx-2); overflow-wrap: anywhere; }
+.mn-me .qa-reward-coverage, .mn-me .qa-ref { margin-top: 10px; font-size: var(--qa-fs-small); color: var(--qa-tx-3); }
+.mn-me .qa-partial { display: grid; gap: 10px; justify-items: start; padding: 16px 0; color: var(--qa-warn); }
+.mn-me .qa-launch-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 0 8px; box-shadow: 0 -1px 0 var(--qa-rule); }
+.mn-me .qa-launch-head h3 { font-size: 20px; font-weight: 800; font-stretch: 110%; letter-spacing: -.02em; }
+.mn-me .qa-launch-head small { font-size: 13px; color: var(--qa-tx-3); font-weight: 600; }
+.mn-me .qa-launch-links { display: flex; gap: 8px; }
+.mn-me .qa-chain { font-size: 12.5px; color: var(--qa-tx-3); }
+.mn-me .qa-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; margin: 10px 0; }
+
+/* holdings: rows with token art; live value flashes (qx-me.mjs) */
+.mn-me .qa-table { margin: 0 calc(var(--qa-pad) * -1); }
+.mn-me .qa-tr { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; grid-template-areas: "tok val res" "chain hold hold"; gap: 2px 12px; align-items: center; padding: 12px var(--qa-pad); box-shadow: 0 1px 0 var(--qa-rule-row); transition: background-color var(--qa-t-quick) var(--qa-ease); }
+.mn-me a.qa-tr:hover { background: var(--qa-wash); }
+.mn-me .qa-tr > :nth-child(1) { grid-area: tok; }
+.mn-me .qa-tr > :nth-child(2) { grid-area: chain; padding-left: 46px; font-size: 12.5px; color: var(--qa-tx-3); }
+.mn-me .qa-tr > :nth-child(3) { grid-area: hold; font-size: 12.5px; color: var(--qa-tx-2); }
+.mn-me .qa-tr > :nth-child(4) { grid-area: val; text-align: right; font-weight: 740; }
+.mn-me .qa-tr > :nth-child(5) { grid-area: res; text-align: right; font-size: 13px; font-weight: 700; }
+.mn-me .qa-th { display: none; }
+.mn-me .qa-me-tok { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.mn-me .qa-me-tok b { font-size: 16px; font-weight: 780; overflow: hidden; text-overflow: ellipsis; }
+.mn-me .qa-tr.is-up .qa-me-value { animation: mn-flash-up var(--qa-t-flash) var(--qa-ease) both; }
+.mn-me .qa-tr.is-down .qa-me-value { animation: mn-flash-down var(--qa-t-flash) var(--qa-ease) both; }
+@keyframes mn-flash-up { from { color: var(--qa-buy); text-shadow: 0 0 18px rgba(62,221,143,.75); } }
+@keyframes mn-flash-down { from { color: var(--qa-sell); text-shadow: 0 0 18px rgba(255,94,100,.7); } }
+.qp-art { position: relative; flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 32% 28%, var(--qa-gold-hi), var(--qa-gold-lo) 78%); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+.qp-art::before { content: attr(data-letter); font-size: 13.5px; font-weight: 820; color: rgba(255,255,255,.92); }
+.qp-art > img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: var(--qa-floor-2); }
+
+/* callouts (qx-callouts.mjs inbox) */
+.mn-me .qco-inbox { display: grid; margin-top: 10px; }
+.mn-me .qco-item { padding: 14px 0; box-shadow: 0 1px 0 var(--qa-rule-row); }
+.mn-me .qco-item.is-unread { box-shadow: inset 2px 0 0 var(--qa-gold), 0 1px 0 var(--qa-rule-row); padding-left: 12px; }
+.mn-me .qco-empty { font-size: 14px; color: var(--qa-tx-2); }
+
+/* quantum key and wallet checks */
+.mn-me #qm-key-panel :is(h2, h3) { font-size: var(--qa-fs-display-s); font-weight: 800; font-stretch: var(--qa-wd-head); letter-spacing: var(--qa-track-head); margin-bottom: 8px; }
+.mn-me #qm-key-panel p { font-size: 14.5px; line-height: 1.5; color: var(--qa-tx-2); }
+.mn-me :is(.qaq-row, .qsr-row) { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 0; box-shadow: 0 1px 0 var(--qa-rule-row); }
+.mn-me :is(.qaq-status) { font-size: var(--qa-fs-small); color: var(--qa-tx-3); }
+.mn-me .qxc-key-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.mn-me #qa-wallet-checks > h2 { font-size: var(--qa-fs-display-m); font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); }
+
+@media (min-width: 760px) {
+  .mn-me .qa-tr { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: none; }
+  .mn-me .qa-tr > * { grid-area: auto !important; padding-left: 0 !important; }
+  .mn-me .qa-tr > :nth-child(n+3) { text-align: right; font-size: 14.5px; }
+  .mn-me .qa-th { display: grid; font-size: var(--qa-fs-small); font-weight: 650; color: var(--qa-tx-3); }
+  .mn-me .qa-th > :nth-child(n+3) { text-align: right; }
+  .mn-me .qa-row { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; align-items: center; }
+}
+@media (min-width: 1100px) {
+  .mn-pair { padding-top: 34px; }
+  .mn-pair a { font-size: 22px; }
+  .mn-me-hero { grid-template-columns: minmax(0, 1fr) auto; align-items: end; padding-top: 36px; }
+  .mn-me-tiles { margin: 40px 0 0; padding: 0; }
+  .mn-me-tiles .qa-tile { min-width: 220px; padding: 18px 26px 20px; }
+  .mn-me-tiles .qa-tile > b { font-size: 34px; }
+  .mn-me-nav { margin: 24px 0 0; padding: 0; }
+  .mn-me .qa-reward-home { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 64px; }
+  .mn-me .qa-reward-home > .qa-section-head { grid-column: 1 / -1; }
+  .mn-me .qa-reward-grid { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 64px; }
+  .mn-me .qa-reward-grid > #qa-sol-launch-fees { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mn-me *, .mn-me *::before, .mn-me *::after { animation: none !important; transition: none !important; }
+}
+
+/* wallet checks (qx-repoproof-entrypoints.mjs loads its own boxed styles; these lay them on the floor) */
+.mn-me .qre-account > h2 { font-family: var(--qa-sans); font-size: var(--qa-fs-display-m); font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); }
+.mn-me .qre-account > p { margin-top: 8px; font-size: 15px; color: var(--qa-tx-2); }
+.mn-me .qre-account .qre-wallet { margin: 0; padding: 18px 0; border: 0; border-radius: 0; background: none; box-shadow: 0 1px 0 var(--qa-rule-row); color: var(--qa-tx); }
+.mn-me .qre-account .qre-wallet h3 { font-size: var(--qa-fs-title); font-weight: 760; }
+.mn-me .qre-account .qre-wallet p { font-size: 14px; color: var(--qa-tx-2); }
+.mn-me-hero .qwc-group { margin-left: 0; }
+.mn-me .qre-account :is(code, pre, kbd, samp, span, p, button, a) { font-family: var(--qa-sans) !important; }

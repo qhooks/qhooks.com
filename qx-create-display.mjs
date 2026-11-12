@@ -11,7 +11,7 @@ export function createCostView(config,cost=null,prices={}){
  const gasKnown=gas!==null,total=liquidity!==null&&quoteRate!==null&&fee!==null&&rate!==null?liquidity*quoteRate+fee*rate+(gasKnown?gas*rate:0):null;
  return{
   total:Number.isFinite(total)?total:null,
-  headline:total!==null&&Number.isFinite(total)?'≈ '+dollars(total)+' total'+(gasKnown?'':' + network gas'):'Estimated $ total unavailable'+(gasKnown?'':' · + network gas'),
+  headline:total!==null&&Number.isFinite(total)?'≈ '+dollars(total)+' total'+(gasKnown?'':' + network gas'):'Refreshing the $ total'+(gasKnown?'':' · + network gas'),
   liquidity:String(config.liquidity)+' '+chain.quote.symbol+(liquidity!==null&&quoteRate!==null?' · ≈ '+dollars(liquidity*quoteRate):''),
   fee:chain.launchFee+' '+chain.native+(rate!==null?' · ≈ '+dollars(fee*rate):''),
   gas:gasKnown?human(cost.networkGasWei)+' '+chain.native+(rate!==null?' · ≈ '+dollars(gas*rate):''):'Unknown · + network gas',

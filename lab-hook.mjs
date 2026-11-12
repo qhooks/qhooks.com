@@ -20,7 +20,17 @@ const word = r => BigInt(r && r !== '0x' ? r.slice(0, 66) : '0x0');
 
 let m;
 try { m = decodeManifest(location.hash.slice(1)); if (m?.kind !== 'qhooks-hook-deployment' || m.schemaVersion !== 1) throw 0; }
-catch { $('lh-title').textContent = 'No deployment in this link'; $('lh-lede').textContent = 'Open the share link the Lab gave you after deploying.'; throw new Error('No manifest'); }
+catch {
+  m = null;
+  $('lh-title').textContent = 'No deployment in this link';
+  $('lh-lede').replaceChildren('Open the share link the Lab gave you after deploying. ', h('a', { href: '/lab' }, 'Open Hook Lab'));
+  $('lh-owner').hidden = true;
+  $('lh-rebuild').disabled = true;
+  $('lh-manifest').disabled = true;
+  status($('lh-live-note'), 'No deployment selected.');
+}
+
+if (m) {
 
 const keyless = !m.publicKey;
 const chainId = m.chainId, link = (kind, v) => h('a', { href: EXPLORER[chainId] + '/' + kind + '/' + v, target: '_blank', rel: 'noopener', class: 'ld-mono' }, short(v));
@@ -117,7 +127,7 @@ $('lh-rebuild').addEventListener('click', async () => {
     if (!m.buildRequest) throw new Error('This link has no build request');
     status(note, 'Rebuilding from the configuration in this link…');
     const post = await fetch('/api/lab/deploy/build', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(m.buildRequest) });
-    let job = await post.json(); if (!post.ok) throw new Error(job.error || 'Build unavailable');
+    let job = await post.json(); if (!post.ok) throw new Error(job.error || 'Build could not finish');
     while (job.status === 'building') { await new Promise(r => setTimeout(r, 900)); job = await (await fetch('/api/lab/deploy/build/' + job.id)).json(); }
     if (job.status !== 'ready') throw new Error(job.error || 'Build failed');
     const a = job.artifact, hash = await buildHash(a);
@@ -322,3 +332,5 @@ if (GOVERNED.includes(m.template)) {
     catch (e) { status(note, e.message || String(e), true); } finally { go.disabled = false; }
   });
 }
+
+} // A deployment manifest is required for chain checks and owner actions.

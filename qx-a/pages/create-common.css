@@ -1,0 +1,158 @@
+/* System A, create lane: shared page vocabulary for create, launch, launch-options, sale, founding and token-profile.
+   Needs /qx-a/tokens.css, components.css and shell.css first. Everything is scoped to main.cx, so the shell is untouched.
+   It also dresses the markup that the launch modules build at run time (labels, inputs, panels, details, option rows),
+   so those flows read as one product: open floor, hairlines, underline options, one gold action. No boxes, no pills. */
+
+.cx [hidden] { display: none !important; }
+/* sticky bottom CTAs sit directly above the shell's phone tab bar (its height token plus the safe-area inset) */
+.cx { --cx-dock-bottom: calc(var(--qa-tabbar-h) + env(safe-area-inset-bottom)); }
+.cx-skip { position: absolute; left: 12px; top: -60px; z-index: 100; padding: 10px 14px; border-radius: var(--qa-r-m); background: var(--qa-gold-metal); color: var(--qa-tx-on-gold); font-weight: 760; }
+.cx-skip:focus { top: 12px; }
+.qa > #qhc-trigger:not(.qa-wallet__btn) { position: absolute; left: -9999px; }
+
+/* ---------- type ---------- */
+.cx-kicker { font-size: var(--qa-fs-small); font-weight: 760; letter-spacing: .02em; color: var(--qa-gold); margin: 0 0 10px; }
+.cx-label { display: block; font-size: var(--qa-fs-small); font-weight: 620; color: var(--qa-tx-3); }
+.cx-display { font-size: 52px; line-height: .9; font-weight: 850; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); margin: 0; }
+.cx-display span { color: var(--qa-gold-hi); }
+.cx-h2 { font-size: var(--qa-fs-h2); line-height: .95; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); margin: 0; }
+.cx-lede { margin: 16px 0 0; max-width: 46ch; font-size: 17px; line-height: 1.45; color: var(--qa-tx-2); }
+.cx p { line-height: 1.5; }
+.cx a:not([class]) { color: var(--qa-gold-hi); text-decoration: underline; text-decoration-color: var(--qa-gold-lo); text-underline-offset: 3px; }
+.cx a:not([class]):hover { text-decoration-color: var(--qa-gold-hi); }
+.cx strong, .cx b { font-weight: 720; }
+.cx small { font-size: var(--qa-fs-small); color: var(--qa-tx-3); line-height: 1.4; }
+.cx code, .cx pre, .cx kbd, .cx samp { font-family: var(--qa-sans); }
+.cx :is(h2, h3) { margin: 0; }
+.cx h2 { font-size: var(--qa-fs-display-s); line-height: 1.05; font-weight: 820; font-stretch: var(--qa-wd-head); letter-spacing: var(--qa-track-head); }
+.cx h3 { font-size: var(--qa-fs-h3); line-height: 1.15; font-weight: 780; font-stretch: 112%; letter-spacing: -.02em; }
+.cx-flash { animation: cx-flash var(--qa-t-flash) var(--qa-ease) both; }
+@keyframes cx-flash { from { color: var(--qa-gold-hi); text-shadow: 0 0 14px rgba(240,218,174,.65); } }
+
+/* ---------- module-built forms: labels, inputs, selects, files ---------- */
+.cx label { display: grid; gap: 6px; font-size: var(--qa-fs-small); font-weight: 620; color: var(--qa-tx-3); min-width: 0; }
+.cx :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea) {
+  width: 100%; min-width: 0; min-height: 46px; margin: 0; padding: 8px 0; border: 0; border-radius: 0; background: transparent; color: var(--qa-tx);
+  font: inherit; font-size: 18px; font-weight: 660; letter-spacing: -.01em; outline: none; box-shadow: inset 0 -1px 0 var(--qa-rule-2);
+  transition: box-shadow var(--qa-t-quick) var(--qa-ease); }
+.cx textarea { font-size: 15.5px; font-weight: 500; line-height: 1.45; resize: vertical; min-height: 84px; }
+.cx :where(input, select, textarea)::placeholder { color: var(--qa-tx-3); font-weight: 500; opacity: 1; }
+.cx :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea):focus { box-shadow: inset 0 -2px 0 var(--qa-gold); }
+.cx :where(input, select, textarea):disabled { opacity: .55; cursor: not-allowed; }
+.cx select { appearance: none; -webkit-appearance: none; padding-right: 26px; cursor: pointer;
+  background: linear-gradient(45deg, transparent 50%, var(--qa-tx-3) 50%) right 8px center / 7px 7px no-repeat, linear-gradient(-45deg, transparent 50%, var(--qa-tx-3) 50%) right 2px center / 7px 7px no-repeat; }
+.cx select option { background: var(--qa-floor-2); color: var(--qa-tx); }
+.cx input[type="checkbox"], .cx input[type="radio"] { width: 18px; height: 18px; margin: 0; flex: none; accent-color: var(--qa-gold); }
+.cx input[type="range"] { width: 100%; accent-color: var(--qa-gold); }
+.cx input[type="file"] { max-width: 100%; font: inherit; font-size: 13.5px; color: var(--qa-tx-3); }
+.cx input[type="file"]::file-selector-button { margin-right: 12px; height: 38px; padding: 0 14px; border: 0; border-radius: var(--qa-r-m); background: var(--qa-wash-2); color: var(--qa-tx); font: inherit; font-weight: 700; cursor: pointer; }
+.cx input[type="file"]:hover::file-selector-button { background: var(--qa-rule-2); }
+.cx-file { position: absolute !important; width: 1px !important; height: 1px !important; opacity: 0; overflow: hidden; }
+.cx label:focus-within:has(.cx-file) { outline: 2px solid var(--qa-gold-hi); outline-offset: 3px; border-radius: 10px; }
+
+/* ---------- module-built buttons ---------- */
+.cx :where(button:not([class*="qa-"]):not(.qq-launch-card):not(.qq-start-opt):not(.cr-chain)), .cx .qtx-mini, .cx .qhc-secondary, .cx .qtp-remove, .cx .workspace-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 16px; border: 0; border-radius: var(--qa-r-m);
+  background: var(--qa-wash-2); color: var(--qa-tx); font: inherit; font-size: 14.5px; font-weight: 700; text-decoration: none; cursor: pointer; white-space: nowrap;
+  transition: background-color var(--qa-t-quick) var(--qa-ease), transform var(--qa-t-tap) var(--qa-ease); }
+.cx :where(button:not([class*="qa-"]):not(.qq-launch-card):not(.qq-start-opt):not(.cr-chain):hover), .cx .qtx-mini:hover, .cx .qtp-remove:hover { background: var(--qa-rule-2); }
+.cx button:active { transform: scale(.97); }
+.cx button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.cx .qxc-primary, .cx .qtd-primary, .cx button.qxc-primary, .cx a.qxc-primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 22px; border: 0; border-radius: var(--qa-r-btn);
+  color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 10px 26px -12px rgba(210,173,114,.75);
+  font: inherit; font-size: 15.5px; font-weight: 780; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.cx .qxc-primary:hover:not(:disabled) { filter: brightness(1.05); background: var(--qa-gold-metal); }
+.cx .qxc-primary:disabled { opacity: .42; }
+
+/* ---------- option rows (starting cap, pair, pools, tiers): underline text, never pills ---------- */
+.cx .qq-start-opts { display: flex; flex-wrap: wrap; gap: 2px 18px; margin-top: 6px; }
+.cx .qq-start-opt { position: relative; min-height: 40px; padding: 0; border: 0; background: none; color: var(--qa-tx-3); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: color var(--qa-t-quick) var(--qa-ease); }
+.cx .qq-start-opt:hover { color: var(--qa-tx-2); }
+.cx .qq-start-opt[aria-pressed="true"] { color: var(--qa-tx); }
+.cx .qq-start-opt[aria-pressed="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 4px; height: 2px; border-radius: 2px; background: var(--qa-gold); box-shadow: var(--qa-glow-gold); }
+.cx .qq-start-opt:disabled { opacity: .4; }
+.cx .qq-start-k { font-size: var(--qa-fs-small); font-weight: 680; color: var(--qa-tx-3); margin: 0; }
+.cx .qq-start-note { font-size: 13px; color: var(--qa-tx-3); margin: 6px 0 0; line-height: 1.45; }
+.cx .qq-start-sum { font-size: 14px; font-weight: 680; color: var(--qa-tx); margin: 8px 0 0; }
+.cx .qq-start-val { font-size: 15px; font-weight: 720; }
+.cx .qq-start-custom { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 8px; }
+.cx .qq-pair-risk { color: var(--qa-warn); }
+.cx .qq-startcap, .cx .qq-pq { padding: 14px 0; box-shadow: 0 -1px 0 var(--qa-rule); }
+.cx .qq-pool-chip { display: inline-grid; gap: 2px; }
+.cx .qq-pq-toggle, .cx .qxc-check { display: flex; align-items: center; gap: 10px; color: var(--qa-tx); font-size: 15px; font-weight: 680; }
+.cx .qq-pq-skip { margin-top: 10px; }
+
+/* ---------- panels, heads, messages, fine print ---------- */
+.cx .qxc-panel { position: relative; padding: 0; }
+.cx .qxc-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.cx .qxc-panel-head > span, .cx .qxc-panel-head > strong { font-size: var(--qa-fs-small); color: var(--qa-tx-3); font-weight: 680; white-space: nowrap; }
+.cx .qxc-kicker, .cx .qx-eyebrow, .cx .eyebrow { font-size: var(--qa-fs-small); font-weight: 760; color: var(--qa-gold); margin: 0 0 8px; letter-spacing: .02em; text-transform: none; }
+.cx .qxc-fine, .cx .qtp-status { font-size: 12.5px; line-height: 1.5; color: var(--qa-tx-3); margin: 10px 0 0; }
+.cx .qxc-message, .cx .qxc-error { font-size: 14px; line-height: 1.45; color: var(--qa-tx-2); margin: 10px 0 0; }
+.cx .qxc-message:empty, .cx .qxc-error:empty { display: none; }
+.cx .qxc-message[data-error="true"], .cx .qxc-error { color: var(--qa-sell); }
+.cx .qxc-number { font-variant-numeric: tabular-nums; font-feature-settings: "zero" 0; overflow-wrap: anywhere; }
+.cx .qxc-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px 14px; margin-top: 20px; }
+.cx .qxc-actions > .qxc-fine { margin: 0 auto 0 0; }
+.cx .qxc-key-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 14px; }
+.cx .qxc-key-actions > a:not(.qxc-primary) { color: var(--qa-tx-2); font-weight: 680; text-decoration: none; }
+.cx .qxc-key-actions > a:not(.qxc-primary):hover { color: var(--qa-tx); }
+.cx .qxc-summary-line { display: flex; justify-content: space-between; gap: 14px; padding: 10px 0; font-size: 14px; color: var(--qa-tx-3); box-shadow: 0 -1px 0 var(--qa-rule-row); }
+.cx .qxc-summary-line b { color: var(--qa-tx); font-weight: 700; text-align: right; }
+.cx dl { margin: 0; }
+.cx :where(dl:not([class*="qa-"])) > div { display: flex; justify-content: space-between; gap: 14px; padding: 10px 0; box-shadow: 0 -1px 0 var(--qa-rule-row); }
+.cx dt { color: var(--qa-tx-3); font-size: 14px; }
+.cx dd { margin: 0; font-size: 14px; font-weight: 640; color: var(--qa-tx); text-align: right; overflow-wrap: anywhere; }
+.cx :where(ol:not([class*="qa-"]), ul:not([class*="qa-"])) { margin: 0; padding: 0; list-style: none; }
+
+/* details: hairline rows with a turning chevron */
+.cx details > summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 12px 0; cursor: pointer;
+  font-size: 15.5px; font-weight: 700; color: var(--qa-tx); box-shadow: 0 -1px 0 var(--qa-rule); }
+.cx details > summary::-webkit-details-marker { display: none; }
+.cx details > summary::after { content: ""; flex: none; width: 8px; height: 8px; margin-right: 4px; border-right: 2px solid var(--qa-tx-3); border-bottom: 2px solid var(--qa-tx-3); transform: rotate(45deg); transition: transform var(--qa-t-std) var(--qa-ease); }
+.cx details[open] > summary::after { transform: rotate(225deg); }
+.cx details > summary > span { display: grid; gap: 2px; }
+.cx details > summary > span:not(:first-child), .cx details > summary span span { font-size: 13px; font-weight: 500; color: var(--qa-tx-3); }
+.cx details[open] { padding-bottom: 14px; }
+
+/* ---------- wallet button in the shell + the wallet dialog ---------- */
+.qa .qa-wallet .qhc-trigger { height: 38px; min-height: 0; padding: 0 14px; border: 0; border-radius: var(--qa-r-m); font: inherit; font-size: 14px; font-weight: 740; color: var(--qa-tx); background: var(--qa-wash-2); box-shadow: none; }
+.qa .qa-wallet .qhc-trigger:hover { background: var(--qa-rule-2); }
+/* the wallet dialog is styled globally by /qx-a/wallet.css */
+
+/* ---------- token profile editor (qx-token-profile.mjs): editor beside its live page header ---------- */
+.cx .qtp-editor { display: grid; gap: 18px; }
+.cx .qtp-head h3 { font-size: var(--qa-fs-display-s); font-stretch: var(--qa-wd-head); letter-spacing: var(--qa-track-head); font-weight: 820; }
+.cx .qtp-head p:not(.qx-eyebrow) { margin-top: 6px; font-size: 14.5px; color: var(--qa-tx-2); max-width: 56ch; }
+.cx .qtp-layout { display: flex; flex-direction: column-reverse; gap: 22px; }
+.cx .qtp-uploads { display: grid; gap: 0; }
+.cx .qtp-upload { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; box-shadow: 0 1px 0 var(--qa-rule); }
+.cx .qtp-upload label { flex: 1; color: var(--qa-tx); font-size: 15px; font-weight: 700; }
+.cx .qtp-upload label small { font-weight: 500; }
+.cx .qtp-upload .qtp-remove { min-height: 34px; padding: 0 12px; font-size: 13px; }
+.cx .qtp-fields { display: grid; gap: 4px; margin-top: 10px; }
+.cx .qtp-fields label { padding: 10px 0 0; }
+.cx .qtp-preview { position: relative; isolation: isolate; padding-bottom: 18px; }
+.cx .qtp-preview::before { content: ""; position: absolute; z-index: -1; inset: 10% -8% -10%; background: var(--cx-art, var(--qa-banner-blur)) center / cover; filter: blur(40px) saturate(1.6); opacity: .55; pointer-events: none; }
+.cx .qtp-preview-banner { display: block; width: 100%; aspect-ratio: 3 / 1; object-fit: cover; border-radius: 18px; background: repeating-linear-gradient(135deg, var(--qa-wash) 0 8px, transparent 8px 16px); box-shadow: 0 30px 60px -30px rgba(0,0,0,.9); }
+.cx .qtp-preview-banner[hidden] { display: block !important; visibility: hidden; }
+.cx .qtp-preview:has(.qtp-preview-banner[hidden])::after { content: ""; position: absolute; z-index: 0; left: 0; right: 0; top: 0; aspect-ratio: 3 / 1; border-radius: 18px; background: repeating-linear-gradient(135deg, var(--qa-wash) 0 8px, transparent 8px 16px); box-shadow: inset 0 0 0 1.5px var(--qa-rule-2); pointer-events: none; }
+.cx .qtp-preview-identity { position: relative; z-index: 1; display: flex; align-items: flex-end; gap: 14px; margin: -36px 0 0 18px; }
+.cx .qtp-preview-avatar { width: 76px; height: 76px; flex: none; border-radius: 50%; object-fit: cover; background: var(--qa-gold-metal); box-shadow: 0 0 0 3px var(--qa-floor), 0 0 0 5px var(--qa-gold), 0 14px 30px -10px rgba(0,0,0,.85); }
+.cx .qtp-preview-identity:has(> .qtp-preview-avatar[hidden])::before { content: ""; width: 76px; height: 76px; flex: none; border-radius: 50%; background: var(--qa-floor-2) repeating-linear-gradient(135deg, var(--qa-wash-2) 0 6px, transparent 6px 12px); box-shadow: 0 0 0 3px var(--qa-floor), 0 0 0 5px var(--qa-gold-lo); }
+.cx .qtp-preview-identity strong { display: block; font-size: 26px; line-height: 1; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: -.035em; overflow-wrap: anywhere; }
+.cx .qtp-preview-identity span { display: block; margin-top: 4px; font-size: 14px; font-weight: 680; color: var(--qa-gold-hi); }
+.cx .qtp-preview > p { margin: 14px 0 0; font-size: 14.5px; color: var(--qa-tx-2); max-width: 52ch; }
+.cx .qtp-backup { margin-top: 4px; }
+.cx .qtp-backup p { font-size: 13.5px; color: var(--qa-tx-3); margin: 0 0 10px; }
+.cx .qtp-backup label { margin-top: 12px; }
+@media (min-width: 900px) {
+  .cx .qtp-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); column-gap: 48px; align-items: start; }
+  .cx .qtp-preview { position: sticky; top: calc(var(--qa-nav-h) + 24px); order: 2; }
+}
+
+@media (min-width: 1100px) {
+  .cx-display { font-size: 92px; }
+}
+@media (prefers-reduced-motion: reduce) { .cx-flash { animation: none; } }

@@ -20,44 +20,75 @@ function launchChain(id) {
   return chain;
 }
 
-// apps/marketplace-preview/l131-market-cards.mjs
+// apps/marketplace-preview/l131-market-cards.mjs (System A, 2026-11-11: hairline rows with token art; live price, change,
+// market cap and last trade fill in from the launch feed by data-market. Open market keeps its button and flow.)
+function marketArt(row) {
+  for (const v of [row.logo, row.profileImage, row.logoURI, row.launchImage]) {
+    if (typeof v !== "string") continue;
+    if (/^\/api\/token-profiles\/[0-9]+\/0x[0-9a-f]{40}\/image(\?v=[0-9]+)?$/.test(v)) return v;
+    if (/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(v) && v.length <= 2e5) return v;
+    if (/^https:\/\/qhooks\.com\/[A-Za-z0-9._\/-]+$/.test(v)) return new URL(v).pathname;
+  }
+  return null;
+}
 function renderMarketCards({ document: d, container, rows, chainFor, onOpen }) {
   container.replaceChildren();
   const official = (rows || []).filter((r) => officialFor(r.chainId, r.token));
   for (const row of [...official, ...(rows || []).filter((r) => !official.includes(r))]) {
     const article = d.createElement("article");
-    article.className = "market-card";
+    article.className = "market-card mk-card" + (row.status === "unavailable" ? " is-off" : "");
+    article.dataset.market = row.chainId + ":" + row.controller;
     const chain = chainFor(row.chainId);
+    const coin = d.createElement("span");
+    coin.className = "mk-coin mk-card__coin";
+    coin.setAttribute("aria-hidden", "true");
+    const art = marketArt(row), letter = String(row.symbol || "?").slice(0, 1).toUpperCase();
+    if (art) {
+      const pic = d.createElement("img");
+      pic.src = art; pic.alt = ""; pic.loading = "lazy"; pic.decoding = "async";
+      pic.addEventListener("error", () => { pic.remove(); coin.textContent = letter; }, { once: true });
+      coin.append(pic);
+    } else coin.textContent = letter;
+    const id = d.createElement("div");
+    id.className = "mk-card__id";
+    const h2 = d.createElement("h2");
+    h2.textContent = row.tokenName;
+    if (row.tokenName.trim().toUpperCase() === String(row.symbol).trim().toUpperCase()) h2.className = "is-same";
+    const symbolP = d.createElement("p");
+    symbolP.className = "market-symbol";
+    symbolP.textContent = row.symbol;
+    const mark = rowMark(row.chainId, row.token, row.tokenName, row.symbol, d), fake = impostorOf(row.chainId, row.token, row.tokenName, row.symbol);
+    if (mark) symbolP.append(" ", mark);
     const chainPara = d.createElement("p");
     chainPara.className = "market-chain";
     const img = d.createElement("img");
     img.src = "/chain-symbol-icons/" + chain.slug + ".svg";
-    img.width = 20;
-    img.height = 20;
+    img.width = 14;
+    img.height = 14;
     img.alt = "";
     img.setAttribute("aria-hidden", "true");
     const span = d.createElement("span");
     span.textContent = chain.name;
     chainPara.append(img, span);
-    const h2 = d.createElement("h2");
-    h2.textContent = row.tokenName;
-    const symbolP = d.createElement("p");
-    symbolP.className = "market-symbol";
-    symbolP.textContent = row.symbol;
     const addressP = d.createElement("p");
     addressP.className = "market-address";
-    addressP.textContent = row.token;
+    addressP.textContent = row.token.slice(0, 6) + "\u2026" + row.token.slice(-4);
+    addressP.title = row.token;
+    id.append(h2, symbolP, chainPara, addressP);
+    const live = d.createElement("div");
+    live.className = "mk-card__live";
+    for (const cls of ["mk-card__px", "mk-card__chg", "mk-card__mc", "mk-card__age"]) { const n = d.createElement("span"); n.className = cls; live.append(n); }
     const statusP = d.createElement("p");
+    statusP.className = "mk-card__status";
     statusP.textContent = row.status === "unavailable" ? "Refreshing" : row.status === "observed" ? "Recently checked" : "Refreshes when you trade";
     const button = d.createElement("button");
     button.type = "button";
-    button.className = "workspace-button";
+    button.className = "workspace-button mk-card__open";
     button.textContent = "Open market";
+    button.setAttribute("aria-label", "Open " + row.symbol + " market");
     button.disabled = row.status === "unavailable";
     button.addEventListener("click", () => onOpen(row));
-    const mark = rowMark(row.chainId, row.token, row.tokenName, row.symbol, d), fake = impostorOf(row.chainId, row.token, row.tokenName, row.symbol);
-    if (mark) symbolP.append(" ", mark);
-    article.append(chainPara, h2, symbolP, addressP, statusP, ...(fake ? [impostorBanner(fake, d)] : []), button);
+    article.append(coin, id, live, statusP, ...(fake ? [impostorBanner(fake, d)] : []), button);
     container.append(article);
   }
 }
@@ -429,7 +460,7 @@ export function bindMarketBrowser({ document: d = document, target = window, cli
     fallback.hide();
     $("results").replaceChildren();
     $("count").textContent = "";
-    note("Loading markets\u2026");
+    note("Refreshing\u2026");
     try {
       const found = await client.list(next, { signal });
       if (!current(ticket)) return;

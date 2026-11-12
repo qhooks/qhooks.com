@@ -81,7 +81,7 @@ export function saleCapText(price, paymentUsd, totalSupply = SUPPLY) {
     const cap = impliedSaleCap(price, paymentUsd, totalSupply);
     if (!Number.isFinite(cap) || !(cap > 0)) throw Error();
     return '≈ $' + new Intl.NumberFormat('en-US', {maximumFractionDigits: 2}).format(cap) + ' market cap at this price';
-  } catch { return 'Market cap unavailable.'; }
+  } catch { return 'No market cap to show yet.'; }
 }
 // Read the price that will actually be signed, not just the form's plan.
 export function assertSaleStart({data, selectedCapUsd, paymentUsd}) {

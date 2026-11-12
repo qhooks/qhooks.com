@@ -1,0 +1,5 @@
+/* QHOOKS staking (System A, money lane): /stake opens the terminal's staking tab at once; this is what shows on the way. */
+.mn-stake { display: grid; justify-items: start; padding-top: 44px; padding-bottom: 40px; }
+.mn-stake .mn-coin { margin-bottom: 22px; }
+.mn-stake .mn-h1 { margin-top: 12px; }
+.mn-stake__go { margin-top: 26px; }

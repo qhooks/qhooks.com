@@ -113,7 +113,7 @@ function thumbnail(file) {
     priceLabel.textContent = (style() === 'falling' ? 'Start price' : 'Fixed price') + ' per 1M tokens (' + unit() + ')';
     const on = live.get(chainSel.value) === true;
     let p = null, err = '', priceOk = false;
-    priceCap.textContent = 'Market cap unavailable.'; floorCap.hidden = style() !== 'falling'; floorCap.textContent = '';
+    priceCap.textContent = 'No market cap to show yet.'; floorCap.hidden = style() !== 'falling'; floorCap.textContent = '';
     try {
       const quoted = prices();
       priceCap.textContent = saleCapText(quoted.price, pricing?.paymentUsd);

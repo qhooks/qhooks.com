@@ -1,0 +1,22 @@
+/* Pool fee share (System A, money lane): a two-step Safe flow, then the live share. Steps come from qx-pool-fee-share.mjs. */
+#qpfs-root > .qpfs-address:first-child { margin-top: 26px; padding: 14px 0; font-size: 13.5px; color: var(--qa-tx-2); box-shadow: 0 -1px 0 var(--qa-rule); }
+.qpfs-step { position: relative; }
+.qpfs-step > h2 { font-size: 22px !important; }
+.qpfs-step > ul:not(.qpfs-approvals) { margin: 4px 0 10px; padding: 0; list-style: none; }
+.qpfs-step > ul:not(.qpfs-approvals) > li { position: relative; padding: 6px 0 6px 18px; font-size: 15px; color: var(--qa-tx); }
+.qpfs-step > ul:not(.qpfs-approvals) > li::before { content: ""; position: absolute; left: 1px; top: 14px; width: 6px; height: 6px; border-radius: 50%; background: var(--qa-gold); }
+.qpfs-step > p:not([class]) { font-size: 14.5px; color: var(--qa-tx-2); }
+.qpfs-state { display: inline-flex; align-items: center; gap: 8px; margin: 10px 0 4px; font-size: 14px; font-weight: 720; color: var(--qa-gold-hi); }
+.qpfs-state::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: var(--qa-glow-gold); }
+.qpfs-address { font-size: 12.5px; line-height: 1.6; color: var(--qa-tx-3); overflow-wrap: anywhere; }
+.qpfs-approvals { margin: 6px 0 14px; padding: 0; list-style: none; }
+.qpfs-approvals li { padding: 8px 0; font-size: 12.5px; line-height: 1.5; color: var(--qa-tx-2); overflow-wrap: anywhere; box-shadow: 0 1px 0 var(--qa-rule-row); }
+/* the live share: plain lines read as rows */
+.qpfs-step:nth-of-type(3) > p:not([class]) { display: flex; justify-content: space-between; gap: 12px; margin: 0; padding: 11px 0; font-size: 14.5px; color: var(--qa-tx); box-shadow: 0 1px 0 var(--qa-rule-row); }
+/* Stop is the quiet way out, never the gold action */
+.mn main .qpfs-stop .qas-go, .mn main #qpfs-root > .qas-go { color: var(--qa-tx); background: var(--qa-wash-2); box-shadow: none; }
+.qpfs-stop > h2 { color: var(--qa-tx-2); }
+.mn main #qpfs-root > .qas-go { min-height: 44px; margin-top: 18px; font-size: 14.5px; }
+.qpfs a:focus-visible, .qpfs button:focus-visible { outline: 2px solid var(--qa-gold-hi); outline-offset: 4px; }
+.mn main .qpfs .qas-go, .mn main .qpfs .qtx-mini { min-height:44px; }
+@media (prefers-reduced-motion: reduce) { .qpfs *, .qpfs *::before { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

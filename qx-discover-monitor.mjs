@@ -48,7 +48,7 @@ export function upgradeableLabel(record={}){
 export function changeCoverageText(body={}){
   const c=body.coverage;
   if(!c||typeof c!=='object')return '';
-  if(c.status==='unavailable')return `Watched-set coverage unavailable${c.reason?` · ${c.reason}`:''}.`;
+  if(c.status==='unavailable')return `Watched-set coverage could not be read${c.reason?` · ${c.reason}`:''}.`;
   const labels=[];
   const set=c.watchedSet??c.watched_set??c.scope??c.sources;
   if(typeof set==='string')labels.push(set);
@@ -84,8 +84,8 @@ function hookWatchButton(body,options){
 }
 export function renderChangeLog(body={}, options={}){
   const {recent=false}=options,source=monitorSource(body),sourceNote=source?note(source):'';
-  if(body.status==='unavailable'||body.error)return `<div class="qd-monitor">${note(`Change records unavailable · ${body.reason||body.error||'read not completed'}`)}${sourceNote}</div>`;
-  if(!Array.isArray(body.changes)&&!Array.isArray(body.events))return `<div class="qd-monitor">${note('Change records are unavailable. Try again to read this hook’s watch status.')}${sourceNote}</div>`;
+  if(body.status==='unavailable'||body.error)return `<div class="qd-monitor">${note(`Change records could not be read · ${body.reason||body.error||'read not completed'}`)}${sourceNote}</div>`;
+  if(!Array.isArray(body.changes)&&!Array.isArray(body.events))return `<div class="qd-monitor">${note('Change records could not be read. Try again to read this hook’s watch status.')}${sourceNote}</div>`;
   const changes=Array.isArray(body.changes)?body.changes:body.events;
   const badge=upgradeableLabel(body),coverage=recent?changeCoverageText(body):'';
   const since=monitorTime(watchingSince(body));
@@ -122,7 +122,7 @@ function mountChanges(el,path,{recent=false,fetcher=globalThis.fetch,timeoutMs=1
   let state=createChangesState(),busy=false,destroyed=false,error='',failedCursor=null,activeRequest=null;
   function draw(){
     if(destroyed)return;
-    el.innerHTML=`${state.loaded?renderChangeLog({...state.body,changes:state.changes},{recent,chainId,hook,watched}):note(busy?'Reading monitored changes…':'Change records are unavailable.')}<p class="qd-note" role="status" aria-live="polite">${escapeHTML(error?`Could not read changes · ${error}.${state.loaded?' Saved records remain visible.':''}`:state.paginationStopped?'No new cursor was returned. Refresh to check for more changes.':busy?'Reading change records…':'')}</p><div class="qd-actions">${state.nextCursor?`<button class="qd-button" data-change-more type="button"${busy?' disabled':''}>Load more changes ↓</button>`:''}${error?`<button class="qd-button" data-change-retry type="button"${busy?' disabled':''}>Retry changes</button>`:''}</div>`;
+    el.innerHTML=`${state.loaded?renderChangeLog({...state.body,changes:state.changes},{recent,chainId,hook,watched}):note(busy?'Reading monitored changes…':'Change records could not be read.')}<p class="qd-note" role="status" aria-live="polite">${escapeHTML(error?`Could not read changes · ${error}.${state.loaded?' Saved records remain visible.':''}`:state.paginationStopped?'No new cursor was returned. Refresh to check for more changes.':busy?'Reading change records…':'')}</p><div class="qd-actions">${state.nextCursor?`<button class="qd-button" data-change-more type="button"${busy?' disabled':''}>Load more changes ↓</button>`:''}${error?`<button class="qd-button" data-change-retry type="button"${busy?' disabled':''}>Retry changes</button>`:''}</div>`;
     const more=el.querySelector('[data-change-more]'),retry=el.querySelector('[data-change-retry]');
     if(more)more.onclick=()=>void load(state.nextCursor);
     if(retry)retry.onclick=()=>void load(failedCursor);
@@ -142,7 +142,7 @@ function mountChanges(el,path,{recent=false,fetcher=globalThis.fetch,timeoutMs=1
       const body=await Promise.race([readChanges(`${path}?${query}`,fetcher,request.signal),ended]);
       if(destroyed)return;
       state=applyChangesPage(state,body,cursor);
-    }catch(cause){if(!destroyed){error=cause?.message||'Read unavailable';failedCursor=cursor;}}
+    }catch(cause){if(!destroyed){error=cause?.message||'The read did not finish';failedCursor=cursor;}}
     finally{clearTimeout(ceiling);request.signal.removeEventListener('abort',onAbort);if(activeRequest===request)activeRequest=null;busy=false;draw();}
   }
   const ready=load();

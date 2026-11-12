@@ -1,0 +1,32 @@
+/* QHooks System A: /trade (token lane). The trade page keeps its markup and scripts; the ticket is the one slab. */
+@import url("/qx-a/pages/token-base.css");
+body.qa.tp-trade main > p:nth-of-type(2) { margin-top: 10px; font-size: 14.5px; }
+body.qa.tp-trade main > p:nth-of-type(2) a { color: var(--qa-gold-hi); }
+body.qa.tp-trade .trade-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; margin-top: var(--qa-section-gap); }
+body.qa.tp-trade .trade-layout > div { display: grid; gap: 0; min-width: 0; }
+body.qa.tp-trade .trade-card { position: relative; margin: 0; padding: 26px 0; border: 0; border-radius: 0; background: none; box-shadow: 0 -1px 0 var(--qa-rule); min-width: 0; }
+body.qa.tp-trade .trade-layout > div > .trade-card:first-child { padding-top: 0; box-shadow: none; }
+body.qa.tp-trade .trade-card > h2 { margin-bottom: 12px; }
+body.qa.tp-trade .trade-chip { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 0; border: 0; border-radius: 0; background: none; font-size: 14px; font-weight: 620; color: var(--qa-tx-2); }
+body.qa.tp-trade .trade-chip img { width: 18px; height: 18px; }
+body.qa.tp-trade #qt-token-name { font-size: var(--qa-fs-display-m); font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); }
+body.qa.tp-trade #qt-symbol { margin: 4px 0 0; font-size: 15px; font-weight: 650; color: var(--qa-tx-2); }
+body.qa.tp-trade .trade-address { margin: 6px 0 14px; font-size: 13.5px; color: var(--qa-tx-3); overflow-wrap: anywhere; }
+body.qa.tp-trade .trade-fields { display: block; margin-top: 12px; }
+body.qa.tp-trade .trade-actions { display: flex; flex-wrap: wrap; gap: 0 8px; }
+body.qa.tp-trade #qt-connect, body.qa.tp-trade #qs-send { color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 22px -10px rgba(210,173,114,.7); }
+body.qa.tp-trade .trade-layout > section.trade-card { margin-top: 26px; padding: 22px; border-radius: var(--qa-r-slab); background: var(--qa-slab); box-shadow: var(--qa-slab-edge), var(--qa-slab-shadow); }
+body.qa.tp-trade .trade-layout > section.trade-card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 140px; border-radius: var(--qa-r-slab) var(--qa-r-slab) 0 0; background: radial-gradient(70% 100% at 50% 0%, var(--qa-gold-wash), transparent); pointer-events: none; }
+body.qa.tp-trade .trade-layout > section.trade-card > * { position: relative; }
+body.qa.tp-trade .trade-layout > section.trade-card > h2 { font-size: 26px; font-weight: 820; font-stretch: 114%; }
+body.qa.tp-trade #qs-amount { font-size: 38px; font-weight: 820; font-stretch: 116%; letter-spacing: -.045em; }
+body.qa.tp-trade #qs-send, body.qa.tp-trade #qs-prepare, body.qa.tp-trade #qs-review { width: 100%; margin-right: 0; }
+body.qa.tp-trade #qs-send { min-height: 56px; border-radius: var(--qa-r-btn); font-size: 18px; font-weight: 790; font-stretch: 114%; }
+body.qa.tp-trade #qs-summary { font-size: 14.5px; color: var(--qa-tx); }
+body.qa.tp-trade :is(.qtb, .qtx) { font-size: 14px; color: var(--qa-tx-2); }
+body.qa.tp-trade :is(.qtb, .qtx) :is([class*="card"], [class*="chip"], [class*="pill"]) { border: 0; border-radius: 0; background: none; box-shadow: none; }
+body.qa.tp-trade #qt-share { font-size: 14px; font-weight: 600; color: var(--qa-tx-2); }
+@media (min-width: 1100px) {
+  body.qa.tp-trade .trade-layout { grid-template-columns: minmax(0, 1fr) 420px; column-gap: 48px; align-items: start; }
+  body.qa.tp-trade .trade-layout > section.trade-card { position: sticky; top: calc(var(--qa-nav-h) + 18px); margin-top: 0; }
+}

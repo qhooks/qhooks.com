@@ -8,6 +8,80 @@ import { loadPerpsConfig } from "./qx-perps-config.mjs";
 const $ = (id) => document.getElementById(id), hub = getWalletHub(window), wallet = createPerpsWallet({ hub }), confirm = createConfirmation();
 let config = null, country = null, markets = [], selected = "BTC", tf = "1h", buy = true, positions = [], orders = [], accountOwner = null, accountSeq = 0, chartView = null, marketRequests = 0, socketStatus = "Refreshing", busy = false, dead = false, feed, accountLoading = false;
 const owner = () => hub.snapshot().current?.owner || null, market = () => markets.find((m) => m.name === selected);
+// System A (2026-11-11): the price hangs on changed digits, the band of markets scrolls, rows carry a coin mark. Data and flows unchanged.
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const compactUsd = (v) => { const n = Number(v); if (!Number.isFinite(n)) return "\u2014"; const a = Math.abs(n); return a >= 1e9 ? "$" + (n / 1e9).toFixed(2) + "B" : a >= 1e6 ? "$" + (n / 1e6).toFixed(2) + "M" : a >= 1e3 ? "$" + (n / 1e3).toFixed(1) + "K" : usd(n); };
+const coinMark = (name, cls = "pp-coin") => el("span", (name || "?").replace(/^k/, "").slice(0, 1).toUpperCase(), { class: cls, "aria-hidden": "true" });
+let shownPrice = "", shownCoin = "";
+function paintPrice(text, coin) {
+  if (text === shownPrice && coin === shownCoin) return;
+  const box = $("price"), num2 = (t) => Number(String(t).replace(/[^0-9.]/g, ""));
+  const dir = coin === shownCoin && shownPrice && text !== "\u2014" ? Math.sign(num2(text) - num2(shownPrice)) : 0;
+  let diff = -1;
+  if (dir) for (let k = 0; k < text.length; k++) if (text[k] !== shownPrice[k]) { diff = k; break; }
+  box.replaceChildren(...[...text].map((c, k) => el("span", c, { class: "qa-dg" + (dir && !RM && diff >= 0 && k >= diff ? (dir > 0 ? " is-up" : " is-down") : "") })));
+  if (dir && !RM) requestAnimationFrame(() => requestAnimationFrame(() => box.querySelectorAll(".is-up,.is-down").forEach((d) => d.classList.remove("is-up", "is-down"))));
+  shownPrice = text; shownCoin = coin;
+}
+function flash(node, dir) {
+  if (RM || !dir || !node) return;
+  node.classList.remove("is-up", "is-down"); void node.offsetWidth; node.classList.add("mk-tick", dir > 0 ? "is-up" : "is-down");
+  requestAnimationFrame(() => requestAnimationFrame(() => node.classList.remove("is-up", "is-down")));
+}
+function announce() {
+  const m = market();
+  dispatchEvent(new CustomEvent("qx:perps-market", { detail: { coin: selected, mid: m?.mid ?? null, maxLeverage: m?.maxLeverage ?? null } }));
+}
+// The band: the busiest markets by open interest, scrolling; prices tick in place as allMids arrive.
+let bandCoins = [];
+function renderBand() {
+  const band = $("pp-band");
+  if (!band) return;
+  const top = [...markets].filter((m) => m.mid > 0).sort((a, b) => b.openInterest * (b.mark || b.mid) - a.openInterest * (a.mark || a.mid)).slice(0, 14);
+  const key = top.map((m) => m.name).join(",");
+  if (key === bandCoins.join(",") && band.childElementCount) return updateBand();
+  bandCoins = top.map((m) => m.name);
+  const track = el("div", void 0, { class: "pp-band__track" });
+  for (let copy = 0; copy < 2; copy++) for (const m of top) {
+    const b = el("button", void 0, { type: "button", class: "pp-band__item", "data-band": m.name, ...(copy ? { "aria-hidden": "true", tabindex: "-1" } : {}) });
+    b.append(coinMark(m.name, "pp-band__coin"), el("b", m.name), el("span", usd(m.mid), { class: "pp-band__px" }), el("span", pct(m.change), { class: "pp-band__chg " + (m.change >= 0 ? "qa-up" : "qa-down") }), el("small", "F " + pct(m.funding * 100, 4), { class: "pp-band__f" }));
+    b.addEventListener("click", () => select(m.name));
+    track.append(b);
+  }
+  band.replaceChildren(track);
+}
+function updateBand() {
+  for (const b of document.querySelectorAll("#pp-band [data-band]")) {
+    const m = markets.find((x) => x.name === b.dataset.band);
+    if (!m) continue;
+    const px = b.querySelector(".pp-band__px"), next = usd(m.mid);
+    if (px.textContent !== next) { const dir = Math.sign(m.mid - Number(px.dataset.v || m.mid)); px.textContent = next; if (!b.hasAttribute("aria-hidden")) flash(px, dir); }
+    px.dataset.v = m.mid;
+    const c = b.querySelector(".pp-band__chg");
+    c.textContent = pct(m.change); c.className = "pp-band__chg " + (m.change >= 0 ? "qa-up" : "qa-down");
+  }
+}
+// Leverage presets under the slider, up to this market's maximum.
+function renderLevPresets() {
+  const box = $("pp-lev-presets"), input = $("leverage");
+  if (!box) return;
+  const max = Number(input.max) || 1, base = [1, 2, 3, 5, 10, 20, 25, 40, 50].filter((v) => v < max);
+  const pick = base.length <= 4 ? base : [base[0], base[Math.floor(base.length / 3)], base[Math.floor(base.length * 2 / 3)], base[base.length - 1]];
+  const list = [...new Set([...pick, max])];
+  if (box.dataset.list === list.join(",")) return markLev();
+  box.dataset.list = list.join(",");
+  box.replaceChildren(...list.map((v) => {
+    const b = el("button", v + "\xD7", { type: "button", "data-lev": v, "aria-pressed": "false" });
+    b.addEventListener("click", () => { input.value = v; input.dispatchEvent(new Event("input", { bubbles: true })); });
+    return b;
+  }));
+  markLev();
+}
+function markLev() {
+  const input = $("leverage"), v = Number(input.value), max = Number(input.max) || 1;
+  input.style.setProperty("--pp-fill", ((v - 1) / Math.max(1, max - 1) * 100).toFixed(1) + "%");
+  for (const b of document.querySelectorAll("#pp-lev-presets [data-lev]")) b.setAttribute("aria-pressed", String(Number(b.dataset.lev) === v));
+}
 function note(text) {
   $("action-status").textContent = text;
 }
@@ -50,25 +124,29 @@ function renderMarkets() {
   const query = $("market-search").value.trim().toLowerCase(), box = $("markets");
   box.replaceChildren();
   for (const m of markets.filter((m2) => m2.name.toLowerCase().includes(query))) {
-    const button = el("button", void 0, { type: "button", class: "qxp-market", "aria-pressed": m.name === selected, "data-market": m.name });
-    button.append(el("b", m.name), el("span", usd(m.mid), { class: "qxp-market-price" }), el("small", m.maxLeverage + "\xD7 max"), el("span", pct(m.change), { class: "qxp-market-change " + (m.change >= 0 ? "up" : "down") }));
-    const meta = el("span", void 0, { class: "qxp-market-meta" });
-    meta.append(el("small", "Funding " + pct(m.funding * 100, 4)), el("small", "OI " + usd(m.openInterest * (m.mark || m.mid))));
-    button.append(meta);
+    const button = el("button", void 0, { type: "button", class: "qxp-market pp-mrow", "aria-pressed": m.name === selected, "data-market": m.name });
+    const main = el("span", void 0, { class: "pp-mrow__main" }), meta = el("span", void 0, { class: "qxp-market-meta" });
+    meta.append(el("small", m.maxLeverage + "\xD7 max"), el("small", "Funding " + pct(m.funding * 100, 4)), el("small", "OI " + compactUsd(m.openInterest * (m.mark || m.mid))));
+    main.append(el("b", m.name), meta);
+    const value = el("span", void 0, { class: "pp-mrow__v" });
+    value.append(el("span", usd(m.mid), { class: "qxp-market-price" }), el("span", pct(m.change), { class: "qxp-market-change " + (m.change >= 0 ? "up" : "down") }));
+    button.append(coinMark(m.name, "pp-mrow__coin"), main, value);
     button.addEventListener("click", () => select(m.name));
     box.append(button);
   }
-  if (!box.childElementCount) box.append(el("p", markets.length ? "No matching markets." : "Refreshing", { class: "qxt-muted" }));
+  if (!box.childElementCount) box.append(el("p", markets.length ? "No matching markets." : "Refreshing", { class: "qa-muted" }));
 }
 function renderPrice() {
   const m = market();
   if (!m) return;
   $("coin").textContent = m.name;
-  $("price").textContent = usd(m.mid);
+  const mark = $("pp-coin");
+  if (mark) mark.textContent = coinMark(m.name).textContent;
+  paintPrice(usd(m.mid), m.name);
   $("change").textContent = pct(m.change);
-  $("change").className = m.change >= 0 ? "up" : "down";
+  $("change").className = "pp-change " + (m.change >= 0 ? "up" : "down");
   $("funding").textContent = pct(m.funding * 100, 4);
-  $("interest").textContent = usd(m.openInterest * (m.mark || m.mid));
+  $("interest").textContent = compactUsd(m.openInterest * (m.mark || m.mid));
   $("max-leverage").textContent = m.maxLeverage + "\xD7";
   $("mark").textContent = usd(m.mark);
   $("chart").setAttribute("aria-label", m.name + " " + tf + " price candles");
@@ -77,6 +155,7 @@ function renderPrice() {
 function estimates() {
   const m = market(), leverage = Number($("leverage").value), amount = Number($("amount").value), reference = $("order-kind").value === "limit" ? Number($("limit-price").value) : m?.mid, notional = amount * ($("size-unit").value === "coin" ? reference : 1);
   $("leverage-value").textContent = leverage + "\xD7";
+  markLev();
   $("margin-estimate").textContent = notional > 0 ? usd(notional / leverage) : "\u2014";
   $("liq-estimate").textContent = m && $("margin-mode").value === "isolated" && !$("reduce-only").checked ? usd(estimatedLiquidation({ mid: reference, buy, leverage, maxLeverage: m.maxLeverage })) : "\u2014";
   $("review-order").textContent = "Review " + (buy ? "Long" : "Short");
@@ -94,10 +173,13 @@ function select(coin) {
   }
   $("tp").value = "";
   $("sl").value = "";
+  $("markets-disclosure").open = false;
   renderMarkets();
   renderPrice();
+  renderLevPresets();
   renderControls();
   loadCandles();
+  announce();
 }
 function renderFeedStatus() {
   $("feed-status").textContent = feedStatus(marketRequests, socketStatus);
@@ -119,10 +201,13 @@ async function refreshMarkets() {
     }
     renderMarkets();
     renderPrice();
+    renderBand();
+    renderLevPresets();
     renderControls();
+    announce();
     if (chartView && !chartView.lastBar) loadCandles();
   } catch {
-    if (!markets.length) $("markets").replaceChildren(el("p", "Could not load markets. Retry shortly.", { class: "qxt-muted" }));
+    if (!markets.length) $("markets").replaceChildren(el("p", "Could not load markets. Retry shortly.", { class: "qa-muted" }));
   } finally {
     marketRequests--;
     renderFeedStatus();
@@ -133,6 +218,7 @@ async function loadChart() {
     const lib = await import("./vendor/lightweight-charts/lightweight-charts.standalone.production.mjs");
     if (dead) return;
     chartView = createPerpsChart({ lib, container: $("chart"), color, onStatus: text => { $("chart-status").textContent = text; } });
+    chartView.chart.applyOptions({ layout: { fontFamily: getComputedStyle(document.body).fontFamily, fontSize: 11 }, crosshair: { vertLine: { color: color("--qxt-cross") || void 0, labelBackgroundColor: color("--qxt-label") || void 0 }, horzLine: { color: color("--qxt-cross") || void 0, labelBackgroundColor: color("--qxt-label") || void 0 } } });
     new MutationObserver(() => {
       if (chartView) {
         chartView.chart.applyOptions({ layout: { textColor: color("--qx-muted") }, grid: { horzLines: { color: color("--qxt-grid") } } });
@@ -196,7 +282,7 @@ async function refreshAccount() {
   }
 }
 function accountButton(label, handler) {
-  const b = el("button", label, { type: "button", "data-account-action": "" });
+  const b = el("button", label, { type: "button", "data-account-action": "", class: "qa-btn qa-btn--secondary qa-btn--sm" });
   b.addEventListener("click", () => run(handler));
   return b;
 }
@@ -206,8 +292,8 @@ function renderAccount() {
   $("position-count").textContent = positions.length;
   $("order-count").textContent = orders.length;
   for (const p of positions) {
-    const row = el("article", void 0, { class: "qxp-position" }), long = Number(p.szi) > 0, title = el("div", void 0, { class: "qxp-row-title" }), pnl = el("span", usd(p.unrealizedPnl) + " (" + pct(Number(p.returnOnEquity) * 100) + ")", { class: Number(p.unrealizedPnl) >= 0 ? "up" : "down" }), m = markets.find((m2) => m2.name === p.coin);
-    title.append(el("b", p.coin + " \xB7 " + (long ? "Long" : "Short")), pnl);
+    const long = Number(p.szi) > 0, row = el("article", void 0, { class: "qxp-position pp-pos " + (long ? "is-long" : "is-short") }), title = el("div", void 0, { class: "qxp-row-title" }), pnl = el("span", usd(p.unrealizedPnl) + " (" + pct(Number(p.returnOnEquity) * 100) + ")", { class: "pp-pos__pnl " + (Number(p.unrealizedPnl) >= 0 ? "up" : "down") }), m = markets.find((m2) => m2.name === p.coin);
+    title.append(coinMark(p.coin, "pp-mrow__coin"), el("b", p.coin + " \xB7 " + (long ? "Long" : "Short")), pnl);
     row.append(title, detailList([["Size", num(Math.abs(Number(p.szi)))], ["Entry", usd(p.entryPx)], ["Mark", usd(m?.mark || m?.mid)], ["Liq price", usd(p.liquidationPx)], ["Margin", usd(p.marginUsed)], ["Leverage", (p.leverage?.value || "\u2014") + "\xD7 " + (p.leverage?.type || "")]]));
     const actions = el("div", void 0, { class: "qxp-row-actions" });
     actions.append(accountButton("Close", () => closePositions([p])), accountButton("Set TP/SL", () => setTpsl(p)));
@@ -215,12 +301,12 @@ function renderAccount() {
     $("positions").append(row);
   }
   for (const o of orders) {
-    const row = el("article", void 0, { class: "qxp-order" });
+    const row = el("article", void 0, { class: "qxp-order pp-pos " + (o.side === "B" ? "is-long" : "is-short") });
     row.append(el("b", o.coin + " \xB7 " + (o.side === "B" ? "Buy" : "Sell") + " \xB7 " + (o.orderType || "Limit")), detailList([["Size", num(o.sz)], ["Limit", usd(o.limitPx)], ["Trigger", usd(o.triggerPx)], ["Reduce only", o.reduceOnly ? "Yes" : "No"]]), accountButton("Cancel order", () => cancelOrder(o)));
     $("orders").append(row);
   }
-  if (!positions.length) $("positions").append(el("p", "No open positions.", { class: "qxt-muted" }));
-  if (!orders.length) $("orders").append(el("p", "No open orders.", { class: "qxt-muted" }));
+  if (!positions.length) $("positions").append(el("p", "No open positions.", { class: "qa-muted" }));
+  if (!orders.length) $("orders").append(el("p", "No open orders.", { class: "qa-muted" }));
   if (!owner()) $("account-status").textContent = "Connect your wallet to see positions.";
   renderControls();
 }
@@ -389,10 +475,14 @@ feed = liveFeed({ onMids(mids) {
   }
   if (touched) {
     renderPrice();
+    updateBand();
     for (const b of $("markets").children) {
       const m = markets.find((x) => x.name === b.dataset.market);
       if (m) {
-        b.querySelector(".qxp-market-price").textContent = usd(m.mid);
+        const px = b.querySelector(".qxp-market-price"), next = usd(m.mid);
+        if (px.textContent !== next && $("markets-disclosure").open) flash(px, Math.sign(m.mid - Number(px.dataset.v || m.mid)));
+        px.dataset.v = m.mid;
+        px.textContent = next;
         const change = b.querySelector(".qxp-market-change");
         change.textContent = pct(m.change);
         change.className = "qxp-market-change " + (m.change >= 0 ? "up" : "down");

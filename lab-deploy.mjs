@@ -61,7 +61,7 @@ async function tokenInfo(chainId, address) {
   return { symbol, decimals: Number(BigInt(d)) };
 }
 async function dependencies() {
-  const r = await fetch('/full-launch/dependencies.json'); if (!r.ok) throw new Error('Chain dependency list unavailable');
+  const r = await fetch('/full-launch/dependencies.json'); if (!r.ok) throw new Error('Chain dependencies could not be read');
   return (await r.json()).chains;
 }
 /// The PoolManager on the wallet's network must be the canonical one the build is bound to, with the runtime hash
@@ -203,7 +203,7 @@ export function mountLabDeploy({ container, template, readConfig, ownerFromConfi
     while (job.status === 'building') {
       if (Date.now() > deadline) throw new Error('The build is taking too long. Try again to collect the cached result.');
       await sleep(900);
-      const r = await fetch('/api/lab/deploy/build/' + job.id); job = await r.json(); if (!r.ok) throw new Error(job.error || 'Build status unavailable');
+      const r = await fetch('/api/lab/deploy/build/' + job.id); job = await r.json(); if (!r.ok) throw new Error(job.error || 'Build status could not be read');
     }
     if (job.status !== 'ready' || !job.artifact) throw new Error(job.error || 'The build failed');
     const a = job.artifact, hash = await buildHash(a);

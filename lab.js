@@ -195,7 +195,7 @@ buildBtn.addEventListener('click',async()=>{
       if(Date.now()>deadline)throw new Error('Build is taking too long. Try again to check the cached result.');
       await nextPoll(controller.signal);
       const poll=await fetch(base+'/build/'+id,{signal:controller.signal});
-      job=await poll.json();if(!poll.ok)throw new Error(job.error||'Build status unavailable');
+      job=await poll.json();if(!poll.ok)throw new Error(job.error||'Build status could not be read');
       if(job.id!==id||job.projectInputSha256!==ticket.inputSha256)throw new Error('Build identity changed');
     }
     if(job.status!=='ready')throw new Error(job.error||'Build failed');
@@ -206,7 +206,7 @@ buildBtn.addEventListener('click',async()=>{
     feedback.textContent='Build ready. Download the contracts, ABI and bytecode to integrate.';
   }catch(error){
     if(revision!==generation||error.name==='AbortError')return;
-    compilation.fail(ticket);feedback.textContent='Build unavailable: '+error.message;feedback.dataset.error='true';
+    compilation.fail(ticket);feedback.textContent='Build could not finish: '+error.message;feedback.dataset.error='true';
   }finally{
     if(pending===controller)pending=null;
     if(revision===generation){sourceBtn.disabled=false;buildBtn.disabled=!project;}

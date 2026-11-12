@@ -1,0 +1,144 @@
+/* Community lane (System A): shared pieces for community, board, profile, creator and the call page.
+   No boxes around sections, no pills, no monospace, no italics. Space and hairlines group things; faces and token art carry the page. */
+
+/* ---------- legacy colour and type slots, mapped onto System A (shared modules read these) ---------- */
+.qa { --qx-ink: var(--qa-tx); --qx-muted: var(--qa-tx-2); --qx-faint: var(--qa-tx-3); --qx-line: var(--qa-rule); --qx-line-2: var(--qa-rule-2); --qx-brass: var(--qa-gold); --qx-on-brass: var(--qa-tx-on-gold);
+  --qx-panel: var(--qa-slab-a); --qx-panel-2: var(--qa-slab-b); --qx-bg: var(--qa-floor); --qx-bg-2: var(--qa-floor-2); --qx-sage: var(--qa-buy); --qx-sans: var(--qa-sans); --qx-mono: var(--qa-sans); --qx-serif: var(--qa-sans);
+  --q-text: var(--qa-tx); --q-text-2: var(--qa-tx-2); --q-text-3: var(--qa-tx-3); --q-line: var(--qa-rule); --q-line-2: var(--qa-rule-2); --q-up: var(--qa-buy); --q-down: var(--qa-sell); --q-sans: var(--qa-sans); --q-mono: var(--qa-sans);
+  --q-gold-metal: var(--qa-gold-metal); --q-on-gold: var(--qa-tx-on-gold); --q-raised: var(--qa-wash); --q-raised-2: var(--qa-wash-2); }
+.qa .qx-serif { font-family: inherit; font-style: normal; }
+
+/* ---------- page frame ---------- */
+.cx-skip { position: absolute; left: 12px; top: -60px; z-index: 90; padding: 10px 14px; border-radius: var(--qa-r-m); background: var(--qa-gold-metal); color: var(--qa-tx-on-gold); font-weight: 740; }
+.cx-skip:focus { top: 10px; }
+/* the wallet control waits in the header's spot until the shell takes it */
+.cx-wallet-home { position: fixed; z-index: calc(var(--qa-z-nav) + 1); top: calc(env(safe-area-inset-top) + 9px); right: 12px; }
+@media (min-width: 1100px) { .cx-wallet-home { top: 12px; right: max(var(--qa-pad), calc((100vw - var(--qa-maxw)) / 2 + var(--qa-pad))); } }
+.cx-wallet-home:empty { display: none; }
+#qa-wallet .qhc-trigger { border: 0; border-radius: var(--qa-r-m); min-height: 0; font: inherit; font-size: 14px; font-weight: 740; }
+#qa-wallet .qhc-trigger.qa-btn--primary { color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 22px -10px rgba(210,173,114,.7); }
+#qa-wallet .qhc-trigger.qa-btn--secondary { color: var(--qa-tx); background: var(--qa-wash-2); box-shadow: none; }
+.qa [hidden] { display: none !important; }
+.qa h1, .qa h2, .qa h3, .qa h4 { font-style: normal; }
+.qa code, .qa kbd, .qa samp, .qa pre { font-family: var(--qa-sans); font-size: inherit; }
+
+/* the wallet dialog in System A colours (logic unchanged: wallet-site.mjs) */
+.qa .qhc-dialog { border: 0; border-radius: var(--qa-r-slab); background: var(--qa-slab); color: var(--qa-tx); box-shadow: var(--qa-slab-edge), var(--qa-slab-shadow); font-family: var(--qa-sans); }
+.qa .qhc-dialog::backdrop { background: rgba(0, 0, 0, .58); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.qa .qhc-heading h2 { font-size: 22px; font-weight: 800; font-stretch: 116%; letter-spacing: -.02em; }
+.qa .qhc-heading button, .qa .qhc-choice, .qa .qhc-secondary { border: 0; background: var(--qa-wash-2); color: var(--qa-tx); border-radius: var(--qa-r-m); }
+.qa .qhc-choice:hover, .qa .qhc-secondary:hover { background: var(--qa-rule-2); }
+.qa .qhc-dialog p { color: var(--qa-tx-2); }
+.qa .qhc-dialog select { width: 100%; min-height: 44px; border: 0; border-radius: var(--qa-r-m); background: var(--qa-wash-2); color: var(--qa-tx); font: inherit; padding: 0 12px; }
+
+/* ---------- legacy controls drawn by shared modules, in System A terms ---------- */
+/* buttons: a bare .qa-btn reads as secondary; the old primary classes read as the gold primary */
+.qa :where(.qa-btn:not([class*="qa-btn--"]):not(.qa-btn-primary):not(.qx-btn-primary)) { color: var(--qa-tx); background: var(--qa-wash-2); border: 0; border-radius: var(--qa-r-m); height: auto; min-height: 40px; padding: 0 14px; font-size: 14px; font-weight: 700; }
+.qa :where(.qa-btn:not([class*="qa-btn--"]):not(.qa-btn-primary):not(.qx-btn-primary)):hover { background: var(--qa-rule-2); }
+.qa .qa-btn-primary, .qa .qx-btn-primary { color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); border: 0; border-radius: var(--qa-r-m); min-height: 44px; height: auto; padding: 0 18px; font-size: 15px; font-weight: 740; box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 22px -10px rgba(210,173,114,.7); text-decoration: none; }
+.qa .qx-btn-ghost, .qa .qx-link, .qa .qmp-thanks-link { display: inline-flex; align-items: center; gap: 5px; background: none; border: 0; padding: 0; min-height: 0; color: var(--qa-tx-2); font-weight: 650; font-size: 14px; text-decoration: none; cursor: pointer; }
+.qa .qx-btn-ghost:hover, .qa .qx-link:hover, .qa .qmp-thanks-link:hover { color: var(--qa-tx); }
+.qa .qa-empty, .qa .qb-empty, .qa .qa-loading, .cx-quiet { margin: 0; padding: 14px 0; font-size: 14.5px; color: var(--qa-tx-3); }
+.qa .qb-status, .qa .qco-note, .qa .qcf-device-note { font-size: var(--qa-fs-small); color: var(--qa-tx-3); }
+.qa .qb-status:empty, .qa .qcf-device-note:empty { display: none; }
+.qa .qx-eyebrow { margin: 0; font-size: 13px; font-weight: 650; color: var(--qa-gold); letter-spacing: 0; text-transform: none; }
+/* the old chain chips and code marks are plain text with a chain dot */
+.qa .qa-chain { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--qa-tx-2); background: none; border: 0; padding: 0; }
+.qa .qa-chain::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--qa-chain-rh); }
+
+/* follow (the one follow store): a compact secondary button */
+.qa .qcf-control { display: inline-flex; align-items: center; gap: 8px; }
+.qa .qcf-button { display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--qa-wash-2); color: var(--qa-tx); font: inherit; font-size: 13.5px; font-weight: 720; cursor: pointer; transition: background-color var(--qa-t-quick) var(--qa-ease), color var(--qa-t-quick) var(--qa-ease); white-space: nowrap; }
+.qa .qcf-button:hover { background: var(--qa-rule-2); }
+.qa .qcf-button[aria-pressed="true"] { background: transparent; color: var(--qa-gold-hi); box-shadow: inset 0 0 0 1px var(--qa-rule-2); }
+
+/* ---------- people ---------- */
+.cx-face { display: block; flex: none; align-self: start; border-radius: 50%; }
+.cx-face:focus-visible { outline-offset: 2px; }
+.cx-who { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: 2px 8px; min-width: 0; }
+.cx-who .qa-xbadge { align-self: center; }
+a.qa-post__name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.qa-ava { background-size: cover; background-position: center; }
+
+/* token marks: the token's logo when there is one, its first letter on gold when not */
+.cx-tok { --s: 20px; display: inline-grid; place-items: center; width: var(--s); height: var(--s); flex: none; border-radius: 50%; background: var(--qa-gold-metal) center / cover; color: var(--qa-tx-on-gold); font-size: calc(var(--s) * .48); font-weight: 820; font-style: normal; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+.cx-chip { gap: 6px; color: var(--qa-tx); }
+.cx-chip:hover { color: var(--qa-gold-hi); }
+.cx-sym { color: var(--qa-tx-3); font-weight: 600; }
+
+/* ---------- a call as a post ---------- */
+.cx-post .qa-post__head { align-items: center; row-gap: 3px; }
+.cx-post .qa-post__head time { font-size: 13px; color: var(--qa-tx-3); }
+.cx-post .qa-post__what { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.cx-post .qa-post__text { white-space: pre-line; overflow-wrap: anywhere; }
+.cx-media { display: block; color: inherit; border-radius: 6px; }
+.cx-media:hover .qa-outcome__col b { color: var(--qa-gold-hi); }
+.cx-outcome { padding-top: 12px; }
+.cx-outcome .qa-outcome__col b, .cx-outcome .qa-outcome__x b { transition: color var(--qa-t-flash) var(--qa-ease), text-shadow var(--qa-t-flash) var(--qa-ease); }
+.cx-outcome .cx-tick, .cx-tick { color: var(--qa-gold-hi) !important; text-shadow: 0 0 18px rgba(240,218,174,.65); transition: none !important; }
+.qa-stat__v, .qcall-outcome b { transition: color var(--qa-t-flash) var(--qa-ease), text-shadow var(--qa-t-flash) var(--qa-ease); }
+.cx-checks { display: flex; flex-wrap: wrap; gap: 4px 0; margin-top: 8px; font-size: 13px; color: var(--qa-tx-3); }
+.cx-checks > span { padding: 0 12px; }
+.cx-checks > span:first-child { padding-left: 0; }
+.cx-checks > span + span { box-shadow: -1px 0 0 var(--qa-rule-2); }
+.cx-checks b { font-weight: 720; }
+.cx-pos { margin-top: 16px; padding-top: 12px; box-shadow: 0 -1px 0 var(--qa-rule); }
+.cx-pos__t { font-size: 12.5px; font-weight: 650; color: var(--qa-tx-3); }
+.cx-pos .qa-posbars { margin-top: 10px; }
+.cx-actions { margin-top: 6px; }
+.cx-reacts { flex-wrap: wrap; row-gap: 2px; }
+.cx-unit { margin-left: .28em; font-size: .56em; font-weight: 700; letter-spacing: 0; color: var(--qa-tx-3); }
+.cx-outcome .qa-outcome__col b { white-space: nowrap; }
+.cx-q { width: 17px; height: 17px; display: inline-grid; place-items: center; font-size: 15px; font-weight: 820; line-height: 1; }
+.cx-react.is-on { color: var(--qa-gold-hi); }
+.cx-react[data-react="doubt"].is-on { color: var(--qa-warn); }
+.cx-react-status { font-size: var(--qa-fs-small); color: var(--qa-tx-3); margin-top: 2px; }
+.cx-react-status:empty { display: none; }
+/* Thank caller (qx-community-thanks.mjs) sits in the reactions row */
+.cx-thanks, .qb-thanks-wrap { display: inline-flex; align-items: center; gap: 6px; }
+.qa .qb-thanks { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 13.5px; font-weight: 680; color: var(--qa-gold); cursor: pointer; white-space: nowrap; transition: background-color var(--qa-t-quick) var(--qa-ease), color var(--qa-t-quick) var(--qa-ease); }
+.qa .qb-thanks:hover:not(:disabled) { background: var(--qa-gold-wash); color: var(--qa-gold-hi); }
+.qa .qb-thanks[aria-pressed="true"] { color: var(--qa-gold-hi); }
+.qa .qb-thanks:disabled { color: var(--qa-tx-3); cursor: default; }
+.qa .qb-thanks-status { font-size: 12px; color: var(--qa-tx-3); }
+.qa .qb-thanks-status:empty { display: none; }
+
+/* ---------- caller rows ---------- */
+.cx-caller { grid-template-columns: 46px minmax(0, 1fr) auto; }
+.cx-caller__main { min-width: 0; }
+.cx-caller__n { font-size: 15.5px; font-weight: 720; letter-spacing: -.01em; color: var(--qa-tx); }
+.cx-caller .qa-caller__sub { gap: 2px 10px; }
+.cx-held { color: var(--qa-buy); font-weight: 650; }
+.cx-caller__end { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.cx-caller__x { font-size: 15px; font-weight: 780; white-space: nowrap; }
+
+/* ---------- the feed's controls ---------- */
+.cx-feed-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 1px 0 var(--qa-rule); }
+.cx-chain { width: auto; max-width: 48%; padding-right: 18px; font-size: 14px; font-weight: 650; color: var(--qa-tx-2); }
+.cx-chain option { color: #111; }
+.cx-feed-note { margin: 0; font-size: var(--qa-fs-small); color: var(--qa-gold); }
+.cx-feed-note:empty { display: none; }
+.cx-more { margin-top: 14px; }
+
+/* ---------- forms drawn by shared modules ---------- */
+.qa .qb-picker { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+.qa .qb-picker label, .qa .qt-account label { display: grid; gap: 4px; padding: 12px 0; font-size: var(--qa-fs-small); font-weight: 600; color: var(--qa-tx-3); box-shadow: 0 1px 0 var(--qa-rule); }
+.qa .qb-picker label:focus-within { box-shadow: 0 2px 0 var(--qa-gold); }
+.qa .qb-picker input, .qa .qb-picker select, .qa .qt-account select { width: 100%; min-width: 0; min-height: 36px; border: 0; padding: 2px 0; background: transparent; color: var(--qa-tx); font: inherit; font-size: 18px; font-weight: 650; outline: none; appearance: none; }
+.qa .qb-picker select option, .qa .qt-account select option { color: #111; }
+.qa .qb-picker input::placeholder { color: var(--qa-tx-3); font-weight: 500; }
+.qa .qb-picker button[type="submit"] { margin-top: 14px; justify-self: start; }
+.qa .qb-picker-results { display: grid; margin-top: 8px; }
+.qa .qb-picker-hit { display: grid; gap: 10px; padding: 14px 0; box-shadow: 0 1px 0 var(--qa-rule); }
+.qa .qb-picker-hit strong { display: block; font-size: 17px; font-weight: 760; }
+.qa .qb-picker-hit span { display: block; font-size: 13px; color: var(--qa-tx-3); }
+.qa .qb-picker-hit code { display: block; font-size: 12.5px; color: var(--qa-tx-3); overflow-wrap: anywhere; }
+.qa .qb-picker-hit .qa-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.qa .qb-draft-resume { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px; }
+.qa .qb-draft-resume p { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--qa-tx-3); }
+@media (min-width: 700px) { .qa .qb-picker { grid-template-columns: minmax(150px, .6fr) minmax(200px, 1.4fr) auto; column-gap: 18px; align-items: end; } .qa .qb-picker button[type="submit"] { margin: 0 0 6px; } }
+
+/* ---------- small helpers ---------- */
+.cx-flash { animation: cx-flash 1.1s var(--qa-ease) both; }
+@keyframes cx-flash { from { color: var(--qa-gold-hi); text-shadow: 0 0 18px rgba(240,218,174,.65); } }
+@media (prefers-reduced-motion: reduce) { .cx-flash, .cx-tick { animation: none !important; } }

@@ -37,7 +37,7 @@ export function hookLabel(h,{capability=false}={}){
   const cap=(h.capabilities||[])[0]?.title;
   return capability&&cap?'Unnamed hook · '+cap.replace(/^Can /,'can '):'Unnamed hook';
 }
-export const short = (s, n = 8) => s ? String(s).length > n * 2 + 1 ? String(s).slice(0,n) + '…' + String(s).slice(-n) : String(s) : 'Unavailable';
+export const short = (s, n = 8) => s ? String(s).length > n * 2 + 1 ? String(s).slice(0,n) + '…' + String(s).slice(-n) : String(s) : 'Not reported';
 export const chainName = id => CHAIN_NAMES[id] || `Chain ${id}`;
 export function filterState(query = '') {
   const p = query instanceof URLSearchParams ? query : new URLSearchParams(query);
@@ -53,14 +53,14 @@ export function filterQuery(state) {
 }
 export const boardURL = state => `${API}?${filterQuery(state)}`;
 export function formatNumber(value, reason = '') {
-  const missing=reason?`Unavailable · ${reason}`:'Unavailable';
+  const missing=reason?`Not reported · ${reason}`:'Not reported';
   if (value === null || value === undefined || value === '' || (typeof value !== 'number' && typeof value !== 'bigint' && !/^-?\d+(\.\d+)?$/.test(String(value))) || !Number.isFinite(Number(value))) return missing;
   try { return new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(typeof value === 'bigint' ? value : /^-?\d+$/.test(String(value)) ? BigInt(value) : Number(value)); } catch { return missing; }
 }
 export function formatTime(value) {
-  if (value == null || value === '') return 'Time unavailable';
+  if (value == null || value === '') return 'Time not reported';
   const d = new Date(value);
-  if (Number.isNaN(+d)) return 'Time unavailable';
+  if (Number.isNaN(+d)) return 'Time not reported';
   const date=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',timeZone:'UTC'});
   const time=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'UTC',hour12:false});
   return `${date}, ${time} UTC`;
@@ -71,16 +71,16 @@ export function formatEvidenceText(value) {
 }
 export function relativeTime(value, now=Date.now()) {
   const time=Date.parse(value);
-  if (!Number.isFinite(time)) return 'Time unavailable';
+  if (!Number.isFinite(time)) return 'Time not reported';
   const seconds=Math.max(0,Math.floor((Number(now)-time)/1000));
   if (seconds<60) return 'just now';
   const [amount,unit]=seconds<3600?[Math.floor(seconds/60),'minute']:seconds<86400?[Math.floor(seconds/3600),'hour']:[Math.floor(seconds/86400),'day'];
   return `${formatNumber(amount)} ${unit}${amount===1?'':'s'} ago`;
 }
-export function sourceText(record = {}, fallback = 'Source unavailable') {
+export function sourceText(record = {}, fallback = 'Source not reported') {
   const source = record.source || record.sources;
   const label = Array.isArray(source) ? source.map(x => typeof x === 'string' ? x : x.label).filter(Boolean).join(', ') : typeof source === 'object' ? source?.label || source?.used || source?.name : source;
-  const at = record.snapshotAt ? `snapshot ${formatTime(record.snapshotAt)}` : record.observedAt || record.generatedAt ? formatTime(record.observedAt || record.generatedAt) : 'Time unavailable';
+  const at = record.snapshotAt ? `snapshot ${formatTime(record.snapshotAt)}` : record.observedAt || record.generatedAt ? formatTime(record.observedAt || record.generatedAt) : 'Time not reported';
   const named = label && /v4\.xyz/i.test(label) && !/indexed/i.test(label) ? 'Indexed by '+label : label || fallback;
   return `${named} · ${at}${record.block != null ? ` · block ${formatNumber(record.block)}` : ''}`;
 }
@@ -88,7 +88,7 @@ export function safeURL(value, localOnly = false) {
   if (typeof value !== 'string' || !value.trim()) return '';
   try { const u = new URL(value, 'https://qhooks.com/'); if (!['https:','http:'].includes(u.protocol) || u.username || u.password || (localOnly && u.origin !== 'https://qhooks.com')) return ''; return u.origin === 'https://qhooks.com' ? u.pathname + u.search + u.hash : u.href; } catch { return ''; }
 }
-const link = (url, label, cls = '') => { const href = safeURL(url); return href ? `<a class="${esc(cls)}" href="${esc(href)}"${href.startsWith('http') ? ' target="_blank" rel="noopener noreferrer"' : ''}>${esc(label)}</a>` : `<span>${esc(label)} · link unavailable</span>`; };
+const link = (url, label, cls = '') => { const href = safeURL(url); return href ? `<a class="${esc(cls)}" href="${esc(href)}"${href.startsWith('http') ? ' target="_blank" rel="noopener noreferrer"' : ''}>${esc(label)}</a>` : `<span>${esc(label)} · no link</span>`; };
 export function capabilityChips(capabilities) {
   if (!Array.isArray(capabilities) || !capabilities.length) return '<span class="qd-note">No capabilities reported from permission bits.</span>';
   return capabilities.map(c => `<span class="qd-chip" title="${esc(c.detail)}">${esc(c.title)}</span>`).join('');
@@ -103,18 +103,29 @@ export function capabilityMarks(capabilities=[]) {
 }
 export function renderBoard(body,{watch=[],tray=[]}={}) {
   if (!body.hooks?.length) return empty('No hooks match these filters. Clear a filter or try another address.');
-  return `<div class="qd-table-wrap"><table class="qd-table qd-board-table"><thead><tr><th>Hook</th><th>Capabilities</th><th>Swaps · pools</th><th>Watch / compare</th></tr></thead><tbody>${body.hooks.map(h=>{
+  return `<div class="qd-rows qd-board-rows" role="list">${body.hooks.map(h=>{
     const id=hookId(h), name=hookLabel(h), chain=h.chainName || chainName(h.chainId);
-    return `<tr data-hook-row><td class="qd-board-identity"><a class="qd-record-name${name==='Unnamed hook'?' is-unnamed':''}" href="${profileURL(h)}" title="${esc(name)}">${esc(name)}</a><span class="qd-board-meta"><span title="${esc(chain)}">${esc(chain)}</span><code title="${esc(h.address)}">${esc(short(h.address,4))}</code>${h.qhooks?'<span class="qd-board-qhooks">QHooks</span>':''}</span></td><td class="qd-board-capabilities"><div class="qd-marks" aria-label="Capabilities">${capabilityMarks(h.capabilities)}</div></td><td class="qd-board-activity" aria-label="${esc(formatNumber(h.swaps))} swaps · ${esc(formatNumber(h.pools))} pools" title="${esc(formatNumber(h.swaps))} swaps · ${esc(formatNumber(h.pools))} pools"><span class="qd-number">${esc(formatNumber(h.swaps))} <i>·</i> ${esc(formatNumber(h.pools))}</span></td><td class="qd-board-keep"><div class="qd-row-actions"><button type="button" class="qd-button qd-star" data-star="${id}" aria-label="${watch.includes(id)?'Unwatch':'Watch'} ${esc(name)}" title="Watch hook" aria-pressed="${watch.includes(id)}">${watch.includes(id)?'★':'☆'}</button><label class="qd-check" title="Compare ${esc(name)}"><input type="checkbox" data-compare="${id}" aria-label="Compare ${esc(name)}"${tray.includes(id)?' checked':''}><span>Compare</span></label></div></td></tr>`;
-  }).join('')}</tbody></table></div>`;
+    return `<div class="qd-row qd-brow" role="listitem" data-hook-row>${groupGlyph(h)}<div class="qd-row__main"><a class="qd-record-name${name==='Unnamed hook'?' is-unnamed':''}" href="${profileURL(h)}" title="${esc(name)}">${esc(name)}</a><span class="qd-board-meta"><span>${esc(chain)}</span><span class="hl-addr" title="${esc(h.address)}">${esc(short(h.address,4))}</span>${h.qhooks?'<span class="qd-board-qhooks">QHooks</span>':''}</span></div><div class="qd-marks" aria-label="Capabilities">${capabilityMarks(h.capabilities)}</div><div class="qd-row__v" title="${esc(formatNumber(h.swaps))} swaps · ${esc(formatNumber(h.pools))} pools"><b>${esc(compactNumber(h.swaps))}</b><small>swaps · ${esc(compactNumber(h.pools))} pools</small></div><div class="qd-row-actions"><button type="button" class="qd-star" data-star="${id}" aria-label="${watch.includes(id)?'Unwatch':'Watch'} ${esc(name)}" title="Watch hook" aria-pressed="${watch.includes(id)}">${watch.includes(id)?'★':'☆'}</button><label class="qd-check" title="Compare ${esc(name)}"><input type="checkbox" data-compare="${id}" aria-label="Compare ${esc(name)}"${tray.includes(id)?' checked':''}><span>Compare</span></label></div></div>`;
+  }).join('')}</div>`;
+}
+
+// System A marks: one glyph per capability group (sprite from /qx-a/pages/hooks-glyphs.mjs), compact numbers, relative ages.
+const GROUP_GLYPH=['directional','impactFee','pool2','circuit','hook'];
+export const groupGlyph=hook=>`<span class="hl-gt hl-gt--sm qd-g" aria-hidden="true"><svg class="hl-g" viewBox="0 0 24 24"><use href="#hl-g-${GROUP_GLYPH[capabilityGroup(hook)]}"/></svg></span>`;
+export function compactNumber(value){const n=Number(value);if(!Number.isFinite(n))return '–';const a=Math.abs(n);return a>=1e9?(n/1e9).toFixed(2)+'B':a>=1e6?(n/1e6).toFixed(2)+'M':a>=1e4?(n/1e3).toFixed(1)+'K':n.toLocaleString('en-US');}
+export function tokenAmount(value,token){
+  try{if(value==null||String(value).trim()==='')return '–';const n=BigInt(value),neg=n<0n,abs=neg?-n:n;
+    if(!token||!Number.isInteger(token.decimals)){const x=Number(abs);return (neg?'−':'+')+(x>=1e12?x.toExponential(2).replace('e+','e'):compactNumber(x))+' raw';}
+    const v=Number(abs)/10**token.decimals;return (neg?'−':'+')+(v>=1?compactNumber(Math.round(v*100)/100):v.toPrecision(3))+(token.symbol?' '+token.symbol:'');
+  }catch{return '–';}
 }
 export function renderStats(body, directory = body) {
   const view=discoveryCoverage(body,directory),date=new Date(view.snapshotAt || NaN);
   const at=Number.isNaN(+date)?'date not reported':date.toLocaleDateString('en-GB',{day:'2-digit',month:'short',timeZone:'UTC'});
-  return [['Hooks in directory',view.hooks,view.includesTape?'Snapshot + newly observed Tape hooks':'Snapshot records'],['Snapshot chains',view.chains,'Activity snapshot · '+at],['Pools at snapshot',view.pools,'v4.xyz index · '+at],['Swaps at snapshot',view.swaps,'v4.xyz index · '+at]].map(([label,value,source])=>`<div><p>${label}</p><strong class="qd-number">${esc(formatNumber(value))}</strong><small>${esc(source)}</small></div>`).join('');
+  return `<div class="qa-stats__track">${[['Hooks in directory',view.hooks,view.includesTape?'Snapshot + newly observed Tape hooks':'Snapshot records'],['Snapshot chains',view.chains,'Activity snapshot · '+at],['Pools at snapshot',view.pools,'v4.xyz index · '+at],['Swaps at snapshot',view.swaps,'v4.xyz index · '+at]].map(([label,value,source])=>`<div class="qa-stat" title="${esc(formatNumber(value))} · ${esc(source)}"><b class="qa-stat__v">${esc(compactNumber(value))}</b><span class="qa-stat__l">${label}</span><small class="qd-stat-src">${esc(source)}</small></div>`).join('')}</div>`;
 }
 export function renderNewHooks(body,now=Date.now()) {
-  return body.hooks?.length?body.hooks.slice(0,6).map(h=>`<article class="qd-mini qd-new-card"><h3>${link(profileURL(h),hookLabel(h))}</h3><p>${esc(h.chainName || chainName(h.chainId))}</p><p class="qd-note" title="${esc(formatTime(h.firstSeen?.at))}">first seen block ${esc(formatNumber(h.firstSeen?.block))} · ${esc(relativeTime(h.firstSeen?.at,now))}</p></article>`).join(''):note('No first-seen hooks were returned by the Tape.');
+  return body.hooks?.length?`<div class="qd-rows" role="list">${body.hooks.slice(0,6).map(h=>`<div class="qd-row qd-new-card" role="listitem">${groupGlyph(h)}<div class="qd-row__main">${link(profileURL(h),hookLabel(h),'qd-record-name')}<span class="qd-board-meta"><span>${esc(h.chainName || chainName(h.chainId))}</span><span>first seen block ${esc(formatNumber(h.firstSeen?.block))}</span></span></div><div class="qd-row__v" title="${esc(formatTime(h.firstSeen?.at))}"><b>${esc(relativeTime(h.firstSeen?.at,now))}</b><small>first seen</small></div></div>`).join('')}</div>`:note('No first-seen hooks were returned by the Tape.');
 }
 export function renderMapLabels(nodes) {
   const centers=[[175,38],[500,38],[825,38],[330,260],[670,260]];
@@ -168,15 +179,15 @@ export async function syncWatchlist(list, host = globalThis.window) {
 }
 export function rawAmount(value, token) {
   try {
-    if (value == null || String(value).trim() === '') return 'Unavailable · amount missing';
+    if (value == null || String(value).trim() === '') return 'Not reported · amount missing';
     const n=BigInt(value), raw=n.toString();
     if (!token || !Number.isInteger(token.decimals) || token.decimals < 0 || token.decimals > 36) return `${raw} raw · token decimals unknown`;
     const negative=n<0n, abs=(negative?-n:n).toString().padStart(token.decimals+1,'0');
     const display=token.decimals ? `${abs.slice(0,-token.decimals)}.${abs.slice(-token.decimals)}` : abs;
     return `${raw} raw · ${negative?'-':''}${display}${token.symbol ? ' '+token.symbol : ''}`;
-  } catch { return 'Unavailable · amount missing'; }
+  } catch { return 'Not reported · amount missing'; }
 }
-const unavailable = reason => `Unavailable · ${reason || 'value unavailable'}`;
+const unavailable = reason => `Not reported · ${reason || 'value not reported'}`;
 const goodEvidence = h => h.evidence?.status === 'ok';
 const liveValue = (h,key,suffix='') => goodEvidence(h) && h.evidence[key] != null ? `${['block','latencyMs','codeBytes'].includes(key) ? formatNumber(h.evidence[key]) : h.evidence[key]}${suffix}` : unavailable(h.evidence?.reason || 'live read did not report this value');
 const livePermissions = h => goodEvidence(h) && Array.isArray(h.evidence.permissions?.names) ? h.evidence.permissions.names : null;
@@ -184,7 +195,7 @@ export const COMPARE_ROWS = Object.freeze([
  ['Identity','Name',h=>h.board?.name || 'Unnamed hook'],['Identity','Chain',h=>chainName(h.chainId)],['Identity','Address',h=>h.hook],['Identity','Project',h=>h.project?.name || 'No project linked'],['Identity','QHooks kind',h=>h.kind || (h.qhooks?.kind) || (h.qhooks === true ? 'QHooks' : '—')],
  ['Capabilities','Permission names',h=>livePermissions(h)?.slice().sort().join(', ') || (livePermissions(h) ? 'No permission bits set' : unavailable(h.evidence?.reason))],['Capabilities','Can do',h=>h.capabilities?.map(c=>c.title).sort().join(' · ') || 'No capabilities reported'],
  ['Evidence','Read status',h=>h.evidence?.status === 'ok' ? 'Read succeeded' : unavailable(h.evidence?.reason)],['Evidence','Block',h=>liveValue(h,'block')],['Evidence','Observed',h=>goodEvidence(h)?formatTime(h.evidence.observedAt):unavailable(h.evidence?.reason)],['Evidence','Read source',h=>`QHooks chain read · ${chainName(h.chainId)}`],['Evidence','Latency',h=>liveValue(h,'latencyMs',' ms')],['Evidence','Code size',h=>liveValue(h,'codeBytes',' bytes')],['Evidence','Fingerprint',h=>liveValue(h,'fingerprint')],['Evidence','Owner probe',h=>ownerText(h.evidence?.owner)],
- ['Activity','Indexed pools',h=>formatNumber(h.board?.pools,'no board snapshot for this hook')],['Activity','Indexed swaps',h=>formatNumber(h.board?.swaps,'no board snapshot for this hook')],['Activity','Snapshot source / time',h=>h.board?sourceText(h.board,'Indexed by v4.xyz'):unavailable('no board snapshot for this hook')],['Activity','Tape pools',h=>formatNumber(h.tape?.pools,'Tape coverage unavailable')],['Activity','Tape swaps, 24h',h=>formatNumber(h.tape?.swaps24h,'Tape coverage unavailable')],['Activity','Tape through block',h=>formatNumber(h.tape?.lastSwapBlock,'Tape boundary unavailable')]
+ ['Activity','Indexed pools',h=>formatNumber(h.board?.pools,'no board snapshot for this hook')],['Activity','Indexed swaps',h=>formatNumber(h.board?.swaps,'no board snapshot for this hook')],['Activity','Snapshot source / time',h=>h.board?sourceText(h.board,'Indexed by v4.xyz'):unavailable('no board snapshot for this hook')],['Activity','Tape pools',h=>formatNumber(h.tape?.pools,'Tape coverage not reported')],['Activity','Tape swaps, 24h',h=>formatNumber(h.tape?.swaps24h,'Tape coverage not reported')],['Activity','Tape through block',h=>formatNumber(h.tape?.lastSwapBlock,'Tape boundary not reported')]
 ]);
 export function normalizeCompareRecord(h) {
   const parsed=parseHookHash(h.id || `${h.chainId ?? h.evidence?.chainId}:${h.hook || h.address}`);
@@ -192,12 +203,12 @@ export function normalizeCompareRecord(h) {
 }
 export function compareDiff(hooks) {
   hooks=hooks.map(normalizeCompareRecord);
-  return COMPARE_ROWS.map(([group,label,read]) => {const values=hooks.map(h=>String(read(h) ?? unavailable('value unavailable'))); return {group,label,values,differs:new Set(values).size>1};});
+  return COMPARE_ROWS.map(([group,label,read]) => {const values=hooks.map(h=>String(read(h) ?? unavailable('value not reported'))); return {group,label,values,differs:new Set(values).size>1};});
 }
 export function ownerText(owner) {
-  if (!owner) return unavailable('owner probe unavailable');
-  if (owner.status === 'ok') return owner.address || unavailable('owner address unavailable');
-  return {none:'No owner returned',reverted:'Owner probe reverted',unavailable:'Unavailable · owner probe failed'}[owner.status] || unavailable('owner probe status unknown');
+  if (!owner) return unavailable('owner probe not reported');
+  if (owner.status === 'ok') return owner.address || unavailable('owner address not reported');
+  return {none:'No owner returned',reverted:'Owner probe reverted',unavailable:'Not reported · owner probe failed'}[owner.status] || unavailable('owner probe status unknown');
 }
 const fact = (name,value) => `<div><dt>${esc(name)}</dt><dd>${esc(formatEvidenceText(value))}</dd></div>`;
 const panel = (title,body,id='') => `<section class="qd-panel"${id ? ` id="${id}"` : ''}><h2>${esc(title)}</h2>${body}</section>`;
@@ -257,7 +268,7 @@ export function renderProfile(h, watched = false) {
     : note('No Tape coverage was returned for this hook.');
   const activity=panel('Activity',`<dl class="qd-facts">${fact('Indexed pools',formatNumber(h.board?.pools,'no snapshot for this hook'))}${fact('Indexed swaps',formatNumber(h.board?.swaps,'no snapshot for this hook'))}</dl>`+note(boardNote)+tapeActivity);
   const build=panel('Build one like this',`<div class="qd-build">${(h.buildLike || []).map(b=>`<article><p class="qd-kicker">${esc(b.kind)}</p><h3>${link(safeURL(b.url,true),b.title)}</h3><p>${esc(b.why)}</p></article>`).join('') || note('No matching Lab template, launch block or module was returned.')}</div>`);
-  const trust=h.trust?panel('Trust',note('Labels come from the trust layer’s records, not a code audit.')+`<dl class="qd-facts">${fact('Verified creator',trustText(h.trust.verifiedCreator))}${fact('RepoProof',trustText(h.trust.repoproof))}</dl>`):h.launch?panel('Trust',note('Unavailable · the trust layer did not return labels for this launch.')):'';
+  const trust=h.trust?panel('Trust',note('Labels come from the trust layer’s records, not a code audit.')+`<dl class="qd-facts">${fact('Verified creator',trustText(h.trust.verifiedCreator))}${fact('RepoProof',trustText(h.trust.repoproof))}</dl>`):h.launch?panel('Trust',note('Not reported · the trust layer did not return labels for this launch.')):'';
   const follow=panel('Follow',`<div class="qd-actions"><button type="button" class="qd-button" data-star="${id}" aria-pressed="${watched}">${watched?'★ Watching':'☆ Watch hook'}</button><button type="button" class="qd-button" data-follow="${id}">Follow on Telegram ↗</button></div><p class="qd-note">Stars stay in this browser. Telegram opens a bot link where you can choose to follow.</p><p id="qd-follow-status" class="qd-note" role="status"></p>`);
   const lists=panel('Measured / Planned',`<div class="qd-two"><div><h3>Measured</h3>${stringList(h.measured,'No measurements listed in the response.')}</div><div><h3>Planned</h3>${stringList(h.planned,'No planned items listed in the response.')}</div></div>`);
   const changes=panel('Change log','<div id="qd-hook-changes"><p class="qd-note">Reading watched hook changes…</p></div>','qd-change-log');
@@ -280,11 +291,11 @@ export function renderComparison(body) {
   return sharedNote+table+`<div class="qd-compare qd-compare-${hooks.length}">${hooks.map((h,i)=>`<article class="qd-compare-card qd-panel"><h2>${link(profileURL(h),h.board?.name || short(h.hook))}</h2>${['Identity','Capabilities','Evidence','Activity'].map(group=>`<section><h3>${group}</h3><dl>${rows.filter(r=>r.group===group).map(r=>`<div class="${r.differs?'qd-diff':''}"><dt>${esc(r.label)}${r.differs?' <span class="qd-note">· differs</span>':''}</dt><dd>${esc(r.values[i])}</dd></div>`).join('')}</dl></section>`).join('')}</article>`).join('')}</div>`;
 }
 export function renderProjectCards(projects) {
-  return projects.map(p=>`<article class="qd-panel qd-project-card"><p class="qd-kicker">${esc(p.qhooks?'QHooks · '+p.category:p.category)}</p><h2>${link('/discover-projects#'+encodeURIComponent(p.id),p.name)}</h2><p>${esc(projectSummary(p))}</p><p class="qd-note">${esc(p.provenance || 'Provenance unavailable')}</p><div class="qd-project-links">${projectLabURL(p)?link(projectLabURL(p),'Open in the Lab →','qx-link'):''}${link('/discover-projects#'+encodeURIComponent(p.id),'Sources & deployments →','qx-link')}</div></article>`).join('') || empty('No projects match this search.');
+  return projects.length?`<div class="qd-rows" role="list">${projects.map(p=>`<div class="qd-row qd-project-card" role="listitem"><span class="hl-gt hl-gt--sm qd-g" aria-hidden="true"><svg class="hl-g" viewBox="0 0 24 24"><use href="#hl-g-${p.qhooks?'hook':'module'}"/></svg></span><div class="qd-row__main"><span class="qd-kicker">${esc(p.qhooks?'QHooks · '+p.category:p.category)}</span>${link('/discover-projects#'+encodeURIComponent(p.id),p.name,'qd-record-name')}<p>${esc(projectSummary(p))}</p><span class="qd-board-meta"><span>${esc(p.provenance || 'Provenance not reported')}</span></span><div class="qd-project-links">${projectLabURL(p)?link(projectLabURL(p),'Open in the Lab →','qx-link'):''}${link('/discover-projects#'+encodeURIComponent(p.id),'Sources & deployments →','qx-link')}</div></div></div>`).join('')}</div>`:empty('No projects match this search.');
 }
 export function renderProjectDetail(p) {
   const observations=p.observations || [];
-  return panel(p.name,`<p>${esc(projectSummary(p))}</p><p>${esc(p.provenance || 'Provenance unavailable')}</p><div class="qd-actions">${(p.sources || []).map(s=>link(s.url,s.label+' ↗')).join('')}${p.website?link(p.website,'Project website ↗'):''}${link(`${API}/projects/${encodeURIComponent(p.id)}`,'Raw JSON ↗')}</div><h3 class="qd-section-label">Deployments & live observations</h3>${(p.deployments || []).map(d=>{const o=observations.find(o=>Number(o.chainId)===Number(d.chainId) && o.address?.toLowerCase()===d.address?.toLowerCase()); return `<article class="qd-deployment"><h4>${link(profileURL(d),chainName(d.chainId)+' · '+short(d.address))}</h4><p>${esc(d.role || 'Deployment')}</p>${note(typeof d.source === 'object'? d.source.label || 'Source label unavailable':d.source || 'Deployment source unavailable')}${note(o?`QHooks chain read · ${chainName(o.chainId)} · ${o.status} · block ${formatNumber(o.block)} · ${formatNumber(o.codeBytes)} bytes · fingerprint ${o.fingerprint || 'unavailable'} · owner: ${ownerText(o.owner)}`:'Unavailable · no observation returned; live reads are bounded to eight deployments per request.')}</article>`;}).join('') || note('No deployments are registered.')}`,'qd-selected-project');
+  return panel(p.name,`<p>${esc(projectSummary(p))}</p><p>${esc(p.provenance || 'Provenance not reported')}</p><div class="qd-actions">${(p.sources || []).map(s=>link(s.url,s.label+' ↗')).join('')}${p.website?link(p.website,'Project website ↗'):''}${link(`${API}/projects/${encodeURIComponent(p.id)}`,'Raw JSON ↗')}</div><h3 class="qd-section-label">Deployments & live observations</h3>${(p.deployments || []).map(d=>{const o=observations.find(o=>Number(o.chainId)===Number(d.chainId) && o.address?.toLowerCase()===d.address?.toLowerCase()); return `<article class="qd-deployment"><h4>${link(profileURL(d),chainName(d.chainId)+' · '+short(d.address))}</h4><p>${esc(d.role || 'Deployment')}</p>${note(typeof d.source === 'object'? d.source.label || 'Source label not reported':d.source || 'Deployment source not reported')}${note(o?`QHooks chain read · ${chainName(o.chainId)} · ${o.status} · block ${formatNumber(o.block)} · ${formatNumber(o.codeBytes)} bytes · fingerprint ${o.fingerprint || 'not reported'} · owner: ${ownerText(o.owner)}`:'Not reported · no observation returned; live reads are bounded to eight deployments per request.')}</article>`;}).join('') || note('No deployments are registered.')}`,'qd-selected-project');
 }
 export function tapeStatuses(body) {
   if (Array.isArray(body.chains)) return body.chains;
@@ -307,13 +318,16 @@ const tapeName=(row,names)=>names?.get(hookId({chainId:row.chainId,address:row.h
 export function renderTapeRows(body, kind, knownPools=[], names=new Map()) {
   const rows=body[kind] || [];
   if (!rows.length) return empty(`No ${kind} returned for this scope.`);
-  return `<div class="qd-table-wrap"><table class="qd-table"><thead><tr><th>Hook / chain</th><th>Pool</th><th>${kind==='swaps'?'Pool deltas / LP fee':'Currencies / LP fee'}</th><th>Evidence</th></tr></thead><tbody>${rows.map(row=>{
+  return `<div class="qd-tape" role="list">${rows.map(row=>{
     const r=normalizeTapeRow(row), pool=knownPools.find(p=>Number(p.chainId)===Number(r.chainId) && p.poolId===r.poolId), tokens=pool?.tokens;
     const currencies=r.currencies.length?r.currencies:(pool?normalizeTapeRow(pool).currencies:[]);
     const fee=r.feeMode==='dynamic'?'Dynamic LP fee':r.feeRaw!=null?formatNumber(Number(r.feeRaw)/10000)+'% LP fee':row.poolFee?.percent!=null?formatNumber(row.poolFee.percent)+'% LP fee':'LP fee not recorded';
-    const amounts=kind==='swaps'?`<span title="${esc(currencies[0] || '')}">Δ0 ${esc(short(currencies[0],5))} · ${esc(rawAmount(r.amount0,tokens?.[0]))}</span><span title="${esc(currencies[1] || '')}">Δ1 ${esc(short(currencies[1],5))} · ${esc(rawAmount(r.amount1,tokens?.[1]))}</span>`:currencies.map(c=>`<code title="${esc(c)}">${esc(short(c))}</code>`).join(' / ');
-    return `<tr><td data-label="Hook / chain">${/^0x0{40}$/i.test(r.hookAddress||'')?'<b class="qd-nohook">No hook</b>':link(profileURL({chainId:r.chainId,address:r.hookAddress}),tapeName(r,names))}<span>${esc(chainName(r.chainId))}</span></td><td data-label="Pool"><code title="${esc(r.poolId)}">${esc(short(r.poolId))}</code></td><td data-label="${kind==='swaps'?'Pool deltas / LP fee':'Currencies / LP fee'}" class="qd-amount">${amounts}<span>${esc(fee)}</span></td><td data-label="Evidence"><span>Block ${esc(formatNumber(r.blockNumber))} · log ${esc(formatNumber(r.logIndex))}</span><code title="${esc(r.transactionHash)}">tx ${esc(short(r.transactionHash))}</code><small>${esc(sourceText({source:'PoolManager logs'+(r.evidence?.source?' · '+r.evidence.source:''),observedAt:r.observedAt,block:r.evidence?.finalizedAtBlock}))} · finalized</small></td></tr>`;
-  }).join('')}</tbody></table></div>`;
+    const sym=i=>tokens?.[i]?.symbol || short(currencies[i],4);
+    const what=kind==='swaps'?`<span class="qd-trow__amt"><span title="${esc(rawAmount(r.amount0,tokens?.[0]))}">${esc(tokenAmount(r.amount0,tokens?.[0]))}${tokens?.[0]?.symbol?'':' '+esc(sym(0))}</span><span title="${esc(rawAmount(r.amount1,tokens?.[1]))}">${esc(tokenAmount(r.amount1,tokens?.[1]))}${tokens?.[1]?.symbol?'':' '+esc(sym(1))}</span></span>`:`<span class="qd-trow__amt"><span title="${esc(currencies.join(' / '))}">${currencies.map((c,i)=>esc(sym(i))).join(' / ') || 'Currencies not recorded'}</span></span>`;
+    const when=r.blockAt||row.blockAt||r.observedAt;
+    const hookCell=/^0x0{40}$/i.test(r.hookAddress||'')?'<b class="qd-nohook">No hook</b>':link(profileURL({chainId:r.chainId,address:r.hookAddress}),tapeName(r,names),'qd-record-name');
+    return `<div class="qd-trow${kind==='pools'?' is-pool':''}" role="listitem" data-event="${esc(r.eventId || r.transactionHash+':'+r.logIndex)}"><span class="qd-trow__k" aria-hidden="true"></span><div class="qd-trow__main">${hookCell}<span class="qd-board-meta"><span>${esc(chainName(r.chainId))}</span><span title="${esc(r.poolId)}">Pool ${esc(short(r.poolId,4))}</span><span>${esc(fee)}</span></span></div>${what}<div class="qd-trow__ev"><b title="${esc(formatTime(when))}">${esc(relativeTime(when))}</b><span title="${esc(r.transactionHash)}">Block ${esc(formatNumber(r.blockNumber))} · tx ${esc(short(r.transactionHash,4))}</span></div></div>`;
+  }).join('')}</div>`;
 }
 export function tapeActivityGroups(body) {
   if (Array.isArray(body.windows)) return body.windows.map(window=>({chainId:window.chainId,window,summary:body.summaries?.find(s=>Number(s.chainId)===Number(window.chainId)),generatedAt:body.generatedAt}));
@@ -332,8 +346,8 @@ export function renderTapeWindow(body) {
   return parts.join(' · ')+` · finalized PoolManager logs, ${formatTime(body.generatedAt)}`;
 }
 export function renderTapeActivity(body,names=new Map()) {
-  const hooks=tapeActivityRows(body).slice().sort((a,b)=>b.swaps-a.swaps);
-  return hooks.length?`<div class="qd-strip">${hooks.map(h=>`<article class="qd-mini"><h3>${link(profileURL({chainId:h.chainId,address:h.hookAddress}),tapeName(h,names))}</h3><p>${esc(chainName(h.chainId))} · <b class="qd-number">${esc(formatNumber(h.swaps))}</b> swaps</p>${note(`${formatNumber(h.pools)} pools · source and block window above`)}</article>`).join('')}</div>`:empty('No hook activity returned in this block window.');
+  const hooks=tapeActivityRows(body).slice().sort((a,b)=>b.swaps-a.swaps), top=Math.max(1,...hooks.map(h=>Number(h.swaps)||0));
+  return hooks.length?`<div class="qd-rows" role="list">${hooks.map((h,i)=>`<div class="qd-row qd-act" role="listitem" data-w="${Math.round((Number(h.swaps)||0)/top*100)}"><span class="qa-rank${i<3?' is-top':''}">${i+1}</span><div class="qd-row__main">${link(profileURL({chainId:h.chainId,address:h.hookAddress}),tapeName(h,names),'qd-record-name')}<span class="qd-board-meta"><span>${esc(chainName(h.chainId))}</span><span>${esc(formatNumber(h.pools))} pools</span></span></div><div class="qd-row__v"><b>${esc(compactNumber(h.swaps))}</b><small>swaps</small></div></div>`).join('')}</div>`:empty('No hook activity returned in this block window.');
 }
 export function createHookNameResolver(fetcher=requestJSON,limit=20) {
   const names=new Map(),requests=new Map(),cap=Math.min(20,Math.max(0,limit));
@@ -354,19 +368,26 @@ export function createHookNameResolver(fetcher=requestJSON,limit=20) {
     await Promise.all(pending);return names;
   }};
 }
+// Server error codes are shown as plain words; a temporary outage reads as refreshing.
+export const plainError=v=>v==null?'':String(v).replace(/_/g,' ').replace(/\bunavailable\b/gi,'refreshing').replace(/\bstale\b/gi,'refreshing');
 export async function requestJSON(path, options = {}, fetcher = globalThis.fetch) {
   const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),12000);
-  try { const r=await fetcher(path,{...options,signal:controller.signal,headers:{Accept:'application/json',...options.headers}});const body=await r.json();if (!r.ok) {const e=new Error(body.error || `HTTP ${r.status}`); e.status=r.status; e.body=body; throw e;}return body; } finally {clearTimeout(timer);}
+  try { const r=await fetcher(path,{...options,signal:controller.signal,headers:{Accept:'application/json',...options.headers}}).catch(e=>{throw e?.name==='AbortError'?new Error('the read took longer than 12 seconds'):e;});const body=await r.json();if (!r.ok) {const e=new Error(plainError(body.error) || `HTTP ${r.status}`); e.status=r.status; e.body=body; throw e;}return body; } finally {clearTimeout(timer);}
 }
 
 // DOM controllers run only in a page; exported render helpers remain usable in Node.
+// Details open in place: long fact lists sit behind a quiet disclosure so the verdict reads first.
+function disclose(target,label,cls){if(!target||target.closest('details'))return;const d=document.createElement('details');d.className='hl-more '+cls;const s=document.createElement('summary');s.textContent=label;d.append(s);target.replaceWith(d);d.append(target);let n=d.nextSibling;while(n&&cls==='qd-cov-more'){const next=n.nextSibling;d.append(n);n=next;}}
 function boot() {
   const main=document.querySelector('[data-discover]'); if (!main) return;
+  // Shared helpers (change monitor, contract report, token pools) still print "unavailable"; say it plainly here until they are updated.
+  const plain=root=>{const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);for(let n=w.nextNode();n;n=w.nextNode())if(/unavailable/i.test(n.nodeValue))n.nodeValue=n.nodeValue.replace(/\bUnavailable\b/g,'Not reported').replace(/\bunavailable\b/gi,'refreshing');};
+  new MutationObserver(ms=>{for(const m of ms)plain(m.target.nodeType===3?m.target.parentNode||main:m.target);}).observe(main,{subtree:true,childList:true,characterData:true});
   const $=id=>document.getElementById(id), status=text=>{if($('qd-status')) $('qd-status').textContent=text;};
   for(const select of main.querySelectorAll('select[name="chain"],select[name="chainId"]'))addDiscoveryChains(select);
   let watch=[];try {watch=normalizeWatchlist(JSON.parse(localStorage.getItem(WATCH_KEY) || '[]'));}catch{}
   const watched=id=>watch.includes(id);
-  const saveWatch=(id)=>{const next=toggleWatchlist(watch,id);try{localStorage.setItem(WATCH_KEY,JSON.stringify(next));watch=next;}catch{throw new Error('Browser storage is unavailable. This hook could not be saved.');} document.querySelectorAll('[data-star]').forEach(b=>{const yes=watched(b.dataset.star);b.setAttribute('aria-pressed',String(yes));b.textContent=b.classList.contains('qd-star')?(yes?'★':'☆'):(yes?'★ Watching':'☆ Watch');});renderWatch();};
+  const saveWatch=(id)=>{const next=toggleWatchlist(watch,id);try{localStorage.setItem(WATCH_KEY,JSON.stringify(next));watch=next;}catch{throw new Error('Browser storage is off. This hook could not be saved.');} document.querySelectorAll('[data-star]').forEach(b=>{const yes=watched(b.dataset.star);b.setAttribute('aria-pressed',String(yes));b.textContent=b.classList.contains('qd-star')?(yes?'★':'☆'):(yes?'★ Watching':'☆ Watch');});renderWatch();};
   function renderWatch(){if($('qd-watchlist')) $('qd-watchlist').innerHTML=watch.length?watch.map(id=>`<article class="qd-mini">${link(profileURL(id),short(id))}<button class="qd-button" data-star="${id}" aria-pressed="true" type="button">★ Remove</button></article>`).join(''):note('Star a hook to keep its profile here.');}
   const syncButton=$('qd-sync-watchlist'),syncStatus=$('qd-sync-status');
   if(syncButton){
@@ -394,12 +415,12 @@ function boot() {
         const p=parseHookHash(b.dataset.follow); b.disabled=true;
         const target=$('qd-follow-status'); target.textContent='Preparing your Telegram link…';
         try {const out=await requestJSON('/api/alerts/hook-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chainId:p.chainId,hook:p.address})});const u=new URL(out.url); if(u.protocol!=='https:' || u.hostname!=='t.me' || u.username || u.password) throw new Error('Alert link was not a valid Telegram URL.');target.innerHTML=link(u.href,'Open Telegram to follow →','qx-link');}
-        catch(e){target.textContent=e.status===503 && e.body?.error==='alerts_off'?'Alerts are off for now. You can still star this hook in your browser.':`Telegram link unavailable · ${e.message}`;}
+        catch(e){target.textContent=e.status===503 && e.body?.error==='alerts_off'?'Alerts are off for now. You can still star this hook in your browser.':`No Telegram link · ${e.message}`;}
         finally{b.disabled=false;}
       }
     } catch(e){status(e.message);}
   });
-  const fail=(e,target)=>{status(`Could not refresh · ${e.message}. Last loaded records remain visible.`);if(target && !target.children.length)target.innerHTML=empty('Data is unavailable. Try Refresh or reload this page.');};
+  const fail=(e,target)=>{status(`Could not refresh · ${e.message}. Last loaded records remain visible.`);if(target && !target.children.length)target.innerHTML=empty('No records loaded yet. Try Refresh or reload this page.');};
   const formState=form=>Object.fromEntries(new FormData(form));
   const updateURL=state=>history.replaceState(null,'',location.pathname+'?'+filterQuery(state)+location.hash);
   if(main.dataset.discover==='board') {
@@ -424,9 +445,19 @@ function boot() {
     form.addEventListener('submit',e=>{e.preventDefault();state=filterState(new URLSearchParams({...formState(form),offset:'0'}));updateURL(state);void load();});
     $('qd-prev').onclick=()=>{state.offset=Math.max(0,state.offset-state.limit);updateURL(state);void load();};$('qd-next').onclick=()=>{state.offset+=state.limit;updateURL(state);void load();};
     addEventListener('popstate',()=>{state=filterState(location.search);fillForm();void load();});
-    void requestJSON(API+'/projects').then(body=>{for(const p of body.projects || [])if(![...form.elements.project.options].some(o=>o.value===p.id))form.elements.project.add(new Option(p.name,p.id));fillForm();}).catch(e=>status('Project filter unavailable · '+e.message));
-    void requestJSON(API+'?new=1&limit=12').then(body=>{$('qd-new').innerHTML=renderNewHooks(body);}).catch(e=>{$('qd-new').innerHTML=note('First-seen records unavailable · '+e.message);});
+    void requestJSON(API+'/projects').then(body=>{for(const p of body.projects || [])if(![...form.elements.project.options].some(o=>o.value===p.id))form.elements.project.add(new Option(p.name,p.id));fillForm();}).catch(e=>status('Project filter did not load · '+e.message));
+    void requestJSON(API+'?new=1&limit=12').then(body=>{$('qd-new').innerHTML=renderNewHooks(body);}).catch(e=>{$('qd-new').innerHTML=note('First-seen records did not load · '+e.message);});
     $('qd-refresh')?.addEventListener('click',()=>void load());refresh=load;void load();
+    // The newest finalized swaps on the Tape, refreshed every 30 seconds while the page is visible.
+    const liveHost=$('qd-live-swaps');
+    if(liveHost){
+      const seenLive=new Set(),names=createHookNameResolver();let primed=false,liveAt=0,rows=[];
+      const draw=()=>{liveHost.innerHTML=renderTapeRows({swaps:rows},'swaps',[],names.names);for(const el of liveHost.querySelectorAll('[data-event]')){if(!seenLive.has(el.dataset.event)){if(primed)el.classList.add('is-enter');seenLive.add(el.dataset.event);}}primed=primed||rows.length>0;};
+      const loadLive=async()=>{if(document.hidden)return;try{const body=await requestJSON(API+'/tape/swaps?limit=6');rows=Array.isArray(body.swaps)?body.swaps:[];draw();liveAt=Date.now();void names.resolve(rows).then(draw);}catch{if(!liveHost.querySelector('[data-event]'))liveHost.innerHTML=note('The Tape is refreshing. Open it for coverage by chain.');}};
+      setInterval(()=>void loadLive(),30000);
+      setInterval(()=>{const l=$('qd-live');if(l&&liveAt){const s=Math.round((Date.now()-liveAt)/1000);l.textContent=s<2?'Refreshed just now':`Refreshed ${s}s ago`;}},1000);
+      document.addEventListener('visibilitychange',()=>{if(!document.hidden)void loadLive();});void loadLive();
+    }
   }
   if(main.dataset.discover==='hook') {
     const form=$('qd-inspect');let changesController=null,proofController=null,tokenControllers=new Set();
@@ -446,7 +477,7 @@ function boot() {
             if(serial!==loadSerial || !host.isConnected)return;
             host.setAttribute('data-token-hooks','');
             const controller=renderTokenHooks(host,{chainId:Number(host.dataset.chain),token:host.dataset.token});tokenControllers.add(controller);host.dataset.tokenMounted='ready';
-          }catch(e){delete host.dataset.tokenMounted;host.innerHTML=note('Token pools unavailable · '+e.message+'. Close and reopen to retry.');}
+          }catch(e){delete host.dataset.tokenMounted;host.innerHTML=note('Token pools did not load · '+e.message+'. Close and reopen to retry.');}
         });
       }};
       if(!list || !more)return;wireDetails(list);
@@ -477,10 +508,10 @@ function boot() {
       try{
         const h=await requestJSON(`${API}/${p.chainId}/${p.address}`,{cache:'no-store'});if(serial!==loadSerial||parseHookHash(location.hash)?.id!==p.id)return;
         if(!inspectorProfileMatches(h,p))throw new Error('The returned hook record did not match the requested chain and address');
-        $('qd-profile').innerHTML=renderProfile(h,watched(p.id));
+        $('qd-profile').innerHTML=renderProfile(h,watched(p.id));disclose($('qd-profile').querySelector('.qd-permissions'),'All 14 permission bits','qd-perm-more');
         proofController=mountInspectorRepoProof($('qd-repoproof-host'),{profile:h,selection:p,revision:serial,getSelection:()=>({...parseHookHash(location.hash),revision:loadSerial})});
         changesController=mountHookChanges($('qd-hook-changes'),{chainId:p.chainId,hook:p.address,watched:watched(p.id)});wireTrade(p,h,serial);
-        status(h.evidence?.status==='ok'?'Live evidence loaded. Each section keeps its own source.':`Live read unavailable · ${h.evidence?.reason || 'reason not returned'}. Snapshot records remain visible.`);
+        status(h.evidence?.status==='ok'?'Live evidence loaded. Each section keeps its own source.':`Live read did not answer · ${h.evidence?.reason || 'reason not returned'}. Snapshot records remain visible.`);
       }catch(e){if(serial===loadSerial){$('qd-profile').innerHTML=empty('Could not read this hook · '+e.message+'. Refresh or try another address.');status('Hook read failed. The address above identifies the requested hook.');}}
     }
     form.addEventListener('submit',e=>{e.preventDefault();const p=parseHookHash(form.elements.chainId.value+':'+form.elements.address.value);if(!p){status('Enter a full 20-byte hook address.');return;}const hash=`#${p.chainId}:${p.address}`;if(location.hash===hash)void load();else location.hash=hash;});addEventListener('hashchange',()=>void load());refresh=load;void load();
@@ -488,12 +519,12 @@ function boot() {
   if(main.dataset.discover==='projects') {
     const form=$('qd-project-filters');let registry=[];const initial=new URLSearchParams(location.search);form.elements.q.value=initial.get('q') || '';form.elements.category.value=initial.get('category') || '';
     function draw(){const q=form.elements.q.value.toLowerCase(),category=form.elements.category.value;const items=registry.filter(p=>(!category || p.category===category)&&(!q || [p.name,p.summary,...(p.tags || [])].join(' ').toLowerCase().includes(q))).sort((a,b)=>Number(b.qhooks)-Number(a.qhooks)||a.name.localeCompare(b.name));$('qd-projects').innerHTML=renderProjectCards(items);status(`${items.length} projects shown. QHooks entries come first.`);}
-    async function detail(){const serial=++loadSerial;let id;try{id=decodeURIComponent(location.hash.slice(1));}catch{status('Project link is invalid.');return;}if(!id){$('qd-project-detail').innerHTML='';return;}status('Reading project deployments…');try{const p=await requestJSON(`${API}/projects/${encodeURIComponent(id)}`);if(serial!==loadSerial)return;$('qd-project-detail').innerHTML=renderProjectDetail(p);status('Project sources and returned live observations loaded.');}catch(e){if(serial===loadSerial){$('qd-project-detail').innerHTML=empty('Project unavailable · '+e.message);status('The selected project could not be read. Choose another project or retry.');}}}
+    async function detail(){const serial=++loadSerial;let id;try{id=decodeURIComponent(location.hash.slice(1));}catch{status('Project link is invalid.');return;}if(!id){$('qd-project-detail').innerHTML='';return;}status('Reading project deployments…');try{const p=await requestJSON(`${API}/projects/${encodeURIComponent(id)}`);if(serial!==loadSerial)return;$('qd-project-detail').innerHTML=renderProjectDetail(p);status('Project sources and returned live observations loaded.');}catch(e){if(serial===loadSerial){$('qd-project-detail').innerHTML=empty('Project did not load · '+e.message);status('The selected project could not be read. Choose another project or retry.');}}}
     form.onsubmit=e=>{e.preventDefault();const p=new URLSearchParams(formState(form));history.replaceState(null,'',location.pathname+'?'+p+location.hash);draw();};form.elements.q.oninput=draw;form.elements.category.onchange=()=>form.requestSubmit();addEventListener('hashchange',()=>void detail());
     void requestJSON(API+'/projects').then(p=>{registry=p.projects || [];for(const c of [...new Set(registry.map(p=>p.category))].filter(Boolean).sort())form.elements.category.add(new Option(c,c));form.elements.category.value=initial.get('category') || '';draw();void detail();}).catch(e=>fail(e,$('qd-projects')));refresh=detail;
   }
   if(main.dataset.discover==='compare') {
-    const form=$('qd-compare-form');async function load(){const serial=++loadSerial,ids=parseCompareHash(location.hash);if(!ids.length){$('qd-comparison').innerHTML='';status(location.hash?'Enter two to four different valid hook IDs.':'Choose two to four hooks on the board, or enter their IDs above.');return;}form.elements.ids.value=ids.join(',');status('Reading each hook…');try{const b=await requestJSON(API+'/compare?ids='+encodeURIComponent(ids.join(',')));if(serial!==loadSerial)return;$('qd-comparison').innerHTML=renderComparison(b);status('Comparison loaded. Differing rows are highlighted.');}catch(e){if(serial===loadSerial){$('qd-comparison').innerHTML=empty('Comparison unavailable · '+e.message);status('The requested hooks could not be compared. Try again or change the IDs.');}}}
+    const form=$('qd-compare-form');async function load(){const serial=++loadSerial,ids=parseCompareHash(location.hash);if(!ids.length){$('qd-comparison').innerHTML='';status(location.hash?'Enter two to four different valid hook IDs.':'Choose two to four hooks on the board, or enter their IDs above.');return;}form.elements.ids.value=ids.join(',');status('Reading each hook…');try{const b=await requestJSON(API+'/compare?ids='+encodeURIComponent(ids.join(',')));if(serial!==loadSerial)return;$('qd-comparison').innerHTML=renderComparison(b);status('Comparison loaded. Differing rows are highlighted.');}catch(e){if(serial===loadSerial){$('qd-comparison').innerHTML=empty('Comparison did not load · '+e.message);status('The requested hooks could not be compared. Try again or change the IDs.');}}}
     form.onsubmit=e=>{e.preventDefault();const ids=parseCompareHash(form.elements.ids.value);if(!ids.length){status('Use two to four different IDs: chainId_0xaddress, separated by commas.');return;}const hash='#'+ids.join(',');if(location.hash===hash)void load();else location.hash=hash;};addEventListener('hashchange',()=>void load());refresh=load;void load();
   }
   if(main.dataset.discover==='tape') {
@@ -503,16 +534,24 @@ function boot() {
     let busy=false, cursors={},generation=0,records={pools:[],swaps:[],activity:null};
     const resolver=createHookNameResolver();
     const params=()=>new URLSearchParams({chain:form.elements.chain.value,blocks:form.elements.blocks.value});
+    // New finalized records drop in with a flash; rows already shown stay still.
+    const seen={pools:new Set(),swaps:new Set()},primed={pools:false,swaps:false};
     function drawRows(){
-      for(const kind of ['pools','swaps'])$('qd-'+kind).innerHTML=renderTapeRows({[kind]:records[kind]},kind,records.pools,resolver.names);
-      if(records.activity){$('qd-window').textContent=renderTapeWindow(records.activity);$('qd-activity').innerHTML=renderTapeActivity(records.activity,resolver.names);}
+      for(const kind of ['pools','swaps']){
+        $('qd-'+kind).innerHTML=renderTapeRows({[kind]:records[kind]},kind,records.pools,resolver.names);
+        for(const el of $('qd-'+kind).querySelectorAll('[data-event]')){const id=el.dataset.event;if(!seen[kind].has(id)){if(primed[kind])el.classList.add('is-enter');seen[kind].add(id);}}
+        if(records[kind].length)primed[kind]=true;
+      }
+      if(records.activity){$('qd-window').textContent=renderTapeWindow(records.activity);$('qd-activity').innerHTML=renderTapeActivity(records.activity,resolver.names);for(const el of $('qd-activity').querySelectorAll('[data-w]'))el.style.setProperty('--w',el.dataset.w+'%');}
     }
+    let refreshedAt=0;const liveEl=$('qd-live');
+    if(liveEl)setInterval(()=>{if(!refreshedAt||busy)return;const s=Math.round((Date.now()-refreshedAt)/1000);liveEl.textContent=s<2?'Refreshed just now':`Refreshed ${s}s ago`;},1000);
     function resolveNames(current){
       void resolver.resolve([...records.pools,...records.swaps,...(records.activity?tapeActivityRows(records.activity):[])]).then(()=>{if(current===generation)drawRows();});
     }
     async function load(){
       if(busy)return;busy=true;const current=++generation;
-      status('Refreshing finalized records…');$('qd-refresh').disabled=true;for(const el of form.elements)el.disabled=true;
+      status('Refreshing finalized records…');if(liveEl)liveEl.textContent='Refreshing…';$('qd-refresh').disabled=true;for(const el of form.elements)el.disabled=true;
       try{
         const p=params(),kinds=['status','pools','swaps','activity'];
         const results=await Promise.allSettled(kinds.map(kind=>requestJSON(API+'/tape/'+kind+'?'+(kind==='activity'?p:new URLSearchParams(kind==='status'?{}:{chain:p.get('chain'),limit:'25'})))));
@@ -522,8 +561,8 @@ function boot() {
           const kind=kinds[i],result=results[i];
           if(result.status==='rejected'){failures.push(kind+': '+result.reason.message);continue;}
           const body=result.value;
-          if(body.error||body.status==='unavailable'){failures.push(kind+': '+(body.reason||body.error||'read unavailable'));continue;}
-          if(kind==='status')$('qd-coverage').innerHTML=renderTapeStatusCards(body);
+          if(body.error||body.status==='unavailable'){failures.push(kind+': '+plainError(body.reason||body.error||'no answer'));continue;}
+          if(kind==='status'){$('qd-coverage').innerHTML=renderTapeStatusCards(body);for(const f of $('qd-coverage').querySelectorAll('.qd-tape-status .qd-facts'))disclose(f,'Coverage details','qd-cov-more');}
           if(kind==='pools'||kind==='swaps'){
             records[kind]=body[kind] || [];cursors[kind]=body.nextCursor;
             $('qd-more-'+kind).hidden=!body.nextCursor;
@@ -531,7 +570,7 @@ function boot() {
           }
           if(kind==='activity'){records.activity=body;$('qd-activity-json').href=API+'/tape/activity?'+p;}
         }
-        drawRows();resolveNames(current);
+        drawRows();resolveNames(current);refreshedAt=Date.now();liveEl?.classList.add('is-on');
         status(failures.length?'Some records could not refresh · '+failures.join('; ')+'. Last loaded records remain visible.':'Finalized records refreshed · '+formatTime(new Date().toISOString()));
       }catch(e){fail(e);}
       finally{busy=false;$('qd-refresh').disabled=false;for(const el of form.elements)el.disabled=false;}

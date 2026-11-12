@@ -1,0 +1,7 @@
+/* Rising floor (System A, money lane): the QHOOKS floor against its price, the burns, then the floor setup for any launch. */
+.mn-qft > h2 { display: none; }
+.mn-qft .qft-note { margin-top: 10px; font-size: 13px; color: var(--qa-tx-3); }
+.mn-qft { margin-top: 26px; }
+.mn-floorpg #qfl-key { margin-top: var(--qa-section-gap); }
+.mn-floor-setup { margin-top: var(--qa-section-gap); }
+.mn-floorpg .mn-floor-setup + #qfl-root { margin-top: 14px; }

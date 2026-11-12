@@ -1,0 +1,65 @@
+/* QHooks System A: /roadmap. A gold line runs through the five phases; the current one is lit. */
+
+/* the rail: phases as beads on one line, sideways on a phone */
+.hd--roadmap .rp-rail { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); margin: 34px calc(var(--qa-pad) * -1) 0; padding: 0 var(--qa-pad); overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: var(--qa-pad); scrollbar-width: none; }
+.hd--roadmap .rp-rail::-webkit-scrollbar { display: none; }
+.hd--roadmap .rp-rail li { position: relative; scroll-snap-align: start; padding-top: 26px; }
+.hd--roadmap .rp-rail li::before { content: ""; position: absolute; left: 0; right: 0; top: 7px; height: 2px; background: var(--qa-rule-2); }
+.hd--roadmap .rp-rail li.is-now::before { background: linear-gradient(90deg, var(--qa-gold-hi), var(--qa-rule-2)); }
+.hd--roadmap .rp-rail li::after { content: ""; position: absolute; left: 0; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--qa-floor); box-shadow: inset 0 0 0 2px var(--qa-tx-3); }
+.hd--roadmap .rp-rail li.is-now::after { background: #FFF3DA; box-shadow: 0 0 0 2px var(--qa-gold), 0 0 16px rgba(240,218,174,.9); }
+.hd--roadmap .rp-rail a { display: grid; gap: 3px; padding-right: 18px; font-size: 16px; font-weight: 760; font-stretch: 112%; letter-spacing: -.01em; color: var(--qa-tx-2); }
+.hd--roadmap .rp-rail a:hover { color: var(--qa-tx); }
+.hd--roadmap .rp-rail li.is-now a { color: var(--qa-tx); }
+.hd--roadmap .rp-rail a span { font-size: 12.5px; font-weight: 650; font-stretch: 100%; letter-spacing: 0; color: var(--qa-tx-3); }
+.hd--roadmap .rp-rail .rp-now-t { color: var(--qa-gold-hi); font-weight: 760; }
+
+/* the token: three columns, Live / Next / Planned, set apart by hairlines */
+.hd--roadmap .rp-tok-head p { margin-top: 10px; max-width: 52ch; color: var(--qa-tx-2); }
+.hd--roadmap .rp-tok-head .qa-link { color: var(--qa-gold-hi); font-weight: 700; }
+.hd--roadmap .rp-tok-grid { display: grid; margin-top: 26px; }
+.hd--roadmap .rp-tok-col { padding: 22px 0; box-shadow: 0 -1px 0 var(--qa-rule); }
+.hd--roadmap .rp-tok-col h3 { margin-top: 6px; font-size: 22px; }
+.hd--roadmap .rp-tok-col ul { display: grid; gap: 9px; margin-top: 12px; }
+.hd--roadmap .rp-tok-col li { position: relative; padding-left: 18px; font-size: 15.5px; line-height: 1.5; color: var(--qa-tx-2); }
+.hd--roadmap .rp-tok-col li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: var(--qa-rule-2); }
+.hd--roadmap .rp-tok-col.is-live li::before { background: var(--qa-gold); }
+.hd--roadmap .rp-tok-col li a { color: var(--qa-tx); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--qa-gold) 45%, transparent); text-underline-offset: 3px; }
+.hd--roadmap .rp-tok-col li a:hover { color: var(--qa-gold-hi); }
+.hd--roadmap .rp-tag { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 720; color: var(--qa-tx-3); }
+.hd--roadmap .rp-tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.hd--roadmap .rp-tag-live { color: var(--qa-gold-hi); }
+.hd--roadmap .rp-tag-live::before { box-shadow: var(--qa-glow-gold); }
+.hd--roadmap .rp-tag-next { color: var(--qa-gold); }
+.hd--roadmap .rp-tag-planned::before { background: transparent; box-shadow: inset 0 0 0 1.5px currentColor; }
+
+/* phases: a number and a when on the left, the work on the right */
+.hd--roadmap .rp-phases { display: grid; margin-top: 18px; }
+.hd--roadmap .rp-phase { display: grid; grid-template-columns: 64px minmax(0, 1fr); column-gap: 14px; padding: 26px 0; box-shadow: 0 -1px 0 var(--qa-rule); scroll-margin-top: 120px; }
+.hd--roadmap .rp-phase .rp-head { grid-row: 1 / span 2; display: grid; align-content: start; gap: 4px; }
+.hd--roadmap .rp-n { font-size: 34px; line-height: .9; font-weight: 850; font-stretch: 122%; letter-spacing: -.05em; color: var(--qa-tx-3); }
+.hd--roadmap .rp-phase.is-now .rp-n { background: var(--qa-gold-metal); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hd--roadmap .rp-when { font-size: 12.5px; font-weight: 650; color: var(--qa-tx-3); }
+.hd--roadmap .rp-now { font-size: 12.5px; font-weight: 760; color: var(--qa-gold-hi); }
+.hd--roadmap .rp-phase h3 { font-size: 22px; }
+.hd--roadmap .rp-phase ul { display: grid; gap: 8px; margin-top: 10px; }
+.hd--roadmap .rp-phase li { position: relative; padding-left: 18px; font-size: 15.5px; line-height: 1.5; color: var(--qa-tx-2); }
+.hd--roadmap .rp-phase li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: var(--qa-rule-2); }
+.hd--roadmap .rp-phase.is-now li::before { background: var(--qa-gold); }
+.hd--roadmap .rp-phase li a { color: var(--qa-tx); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--qa-gold) 45%, transparent); text-underline-offset: 3px; }
+.hd--roadmap .rp-phase li a:hover { color: var(--qa-gold-hi); }
+
+@media (min-width: 1100px) {
+  .hd--roadmap .rp-rail { margin: 48px 0 0; padding: 0; overflow: visible; }
+  .hd--roadmap .rp-rail a { font-size: 19px; }
+  .hd--roadmap .rp-tok { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); column-gap: 64px; }
+  .hd--roadmap .rp-tok-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 0; }
+  .hd--roadmap .rp-tok-col { padding: 0 28px; box-shadow: -1px 0 0 var(--qa-rule); }
+  .hd--roadmap .rp-tok-col:first-child { padding-left: 0; box-shadow: none; }
+  .hd--roadmap .rp-phases { margin-top: 28px; }
+  .hd--roadmap .rp-phase { grid-template-columns: 220px minmax(0, 1fr); column-gap: 40px; padding: 34px 0; }
+  .hd--roadmap .rp-phase .rp-head { grid-template-columns: auto 1fr; align-items: baseline; column-gap: 14px; }
+  .hd--roadmap .rp-n { grid-row: 1 / span 2; font-size: 56px; }
+  .hd--roadmap .rp-phase h3 { font-size: 28px; }
+  .hd--roadmap .rp-phase ul { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; }
+}

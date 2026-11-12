@@ -1,5 +1,5 @@
 import {LAUNCH_BLOCKS} from '../../../full-launch/packages/multichain-launch/artifact.mjs';
-export function readLaunchForm(document, parseAmount, owner = '0x0000000000000000000000000000000000000001') {
+export function readLaunchForm(document, parseAmount, owner = '0x0000000000000000000000000000000000000001', {includeBlocks = LAUNCH_BLOCKS} = {}) {
   const read = (id) => {
     const el = document.getElementById('ql-' + id);
     if (!el || typeof el.value !== 'string') throw new TypeError('Missing launch input: ' + id);
@@ -17,6 +17,6 @@ export function readLaunchForm(document, parseAmount, owner = '0x000000000000000
     ...(document.getElementById('ql-start-tier')?{startTier:read('start-tier'),startSteps:read('start-steps'),...(document.getElementById('ql-start-usd')?{startUsd:read('start-usd')}:{})}:{ }),
     graduationMode: mode, threshold: mode === '0' ? read('threshold') : '0',
     destinationFeePpm: parseAmount(read('destination-fee'), 4),
-    ...(LAUNCH_BLOCKS ? { blocks: (document.getElementById('ql-blocks')?.value ?? '').replaceAll('"@owner"', JSON.stringify(owner)) } : {})
+    ...(includeBlocks ? { blocks: (document.getElementById('ql-blocks')?.value ?? '').replaceAll('"@owner"', JSON.stringify(owner)) } : {})
   };
 }

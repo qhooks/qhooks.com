@@ -11,7 +11,7 @@ export function bindGraduationStudio({document:d=document,target=window,download
  const note=(message,error=false)=>{$('feedback').textContent=message;$('feedback').dataset.error=String(error);};
  function listen(node,event,fn){node.addEventListener(event,fn);listeners.push([node,event,fn]);}
  function hint(){const c=recipeChain($('chain').value);$('quote-unit').textContent='Liquidity uses '+c.quoteSymbol+' ('+c.quoteDecimals+' decimals). Keep '+c.nativeSymbol+' for network fees.';$('threshold-label').hidden=$('mode').value!=='0';}
- function read(){return createLaunchRecipe($('chain').value,readLaunchForm(d,parseDecimalAmount));}
+ function read(){return createLaunchRecipe($('chain').value,readLaunchForm(d,parseDecimalAmount,undefined,{includeBlocks:false}));}
  function show(recipe){renderRecipeSummary(d,$('summary'),recipe);$('result').hidden=false;}
  function changed(){revision++;$('result').hidden=true;hint();note('Settings changed. Preview to check your recipe.');}
  function applyForm(recipe){fillRecipeForm(d,recipe);$('chain').dispatchEvent(new (target.Event||Event)('change',{bubbles:true}));}

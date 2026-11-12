@@ -1,0 +1,57 @@
+/* System A, /launch: choose a chain. Each chain is a row on the open floor with its mark, its pitch and its pool,
+   not a card. Rows you can launch on lead to /create on that chain; planned chains sit quieter. */
+.ln { padding-bottom: 32px; }
+.ln-hero { padding-top: 34px; }
+.ln .lc-lede { max-width: 40ch; }
+.ln-steps { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 22px 0 0; }
+.ln-steps li { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--qa-tx-2); }
+.ln-steps li b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-size: 11.5px; font-weight: 800; color: var(--qa-gold); box-shadow: inset 0 0 0 1.5px var(--qa-gold-lo); }
+.ln .lc-grid { margin: 36px calc(var(--qa-pad) * -1) 0; }
+.ln .lc-grid > li { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); padding: 0 var(--qa-pad) 14px; box-shadow: 0 1px 0 var(--qa-rule); }
+.ln .lc-card { position: relative; display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; grid-template-areas: "icon aud go" "icon name go" "icon pitch pitch" "desc desc desc" "pair pair pair"; column-gap: 14px; row-gap: 3px; align-items: center; padding: 18px 0 8px; color: var(--qa-tx); text-decoration: none; }
+.ln .lc-top { display: contents; }
+.ln .lc-top img { grid-area: icon; align-self: start; width: 52px; height: 52px; padding: 10px; border-radius: 50%; background: var(--qa-wash); box-shadow: inset 0 0 0 1px var(--qa-rule-2); transition: transform var(--qa-t-std) var(--qa-ease), box-shadow var(--qa-t-std) var(--qa-ease); }
+.ln .lc-go { grid-area: go; justify-self: end; font-size: 20px; color: var(--qa-gold); transition: transform var(--qa-t-quick) var(--qa-ease); }
+.ln .lc-badge { grid-area: go; justify-self: end; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--qa-tx-3); }
+.ln .lc-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--qa-tx-3); }
+.ln .lc-audience { grid-area: aud; font-size: 12.5px; font-weight: 700; color: var(--qa-gold); }
+.ln .lc-card strong { grid-area: name; font-size: 23px; line-height: 1.05; font-weight: 840; font-stretch: var(--qa-wd-head); letter-spacing: -.03em; }
+.ln .lc-pitch { grid-area: pitch; font-size: 15px; font-weight: 600; color: var(--qa-tx-2); }
+.ln .lc-description { grid-area: desc; margin-top: 8px; font-size: 14px; line-height: 1.5; color: var(--qa-tx-3); max-width: 62ch; }
+.ln .lc-pair { grid-area: pair; margin-top: 6px; font-size: 12.5px; font-weight: 700; color: var(--qa-tx-2); }
+.ln a.lc-card:hover .lc-top img { transform: scale(1.06); box-shadow: inset 0 0 0 1px var(--qa-gold-lo), 0 0 22px -4px rgba(210,173,114,.5); }
+.ln a.lc-card:hover .lc-go { transform: translateX(4px); }
+.ln a.lc-card:hover strong { color: var(--qa-gold-hi); }
+.ln .lc-soon { opacity: .6; }
+.ln .lc-soon .lc-top img { filter: grayscale(1); }
+.ln .lc-package-link { justify-self: start; margin-top: 2px; font-size: 13.5px; font-weight: 700; color: var(--qa-tx-2); text-decoration: none; }
+.ln .lc-package-link:hover { color: var(--qa-gold-hi); }
+.ln .lc-foot { margin: 22px 0 0; font-size: 13.5px; color: var(--qa-tx-3); line-height: 1.6; }
+.ln .lc-foot a { color: var(--qa-tx-2); font-weight: 680; }
+.ln #launch-existing-tools { margin-top: var(--qa-section-gap); }
+.ln #launch-existing-tools p, .ln #launch-existing-tools section p { font-size: 14px; color: var(--qa-tx-2); max-width: 72ch; }
+.ln .protection-choice, .ln #launch-existing-tools section { padding: 18px 0; box-shadow: 0 -1px 0 var(--qa-rule-row); }
+.ln .protection-choice h2, .ln #launch-existing-tools h2 { font-size: var(--qa-fs-h3); margin: 6px 0 8px; }
+.ln .lab-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+.ln .lab-form { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 24px; row-gap: 8px; }
+.ln .lab-form .wide { grid-column: 1 / -1; }
+.ln .cost-consent { display: flex; gap: 10px; align-items: flex-start; color: var(--qa-tx-2); font-size: 14px; }
+.ln pre.lab-output { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--qa-sans); font-size: 13px; color: var(--qa-tx-3); }
+.ln .text-link { color: var(--qa-gold-hi); font-weight: 700; }
+.ln .staging-layout-note { color: var(--qa-warn); }
+@media (min-width: 760px) { .ln .lab-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) {
+  .ln-hero .lc-head { padding-top: 22px; }
+  .ln .lc-grid { margin: 48px 0 0; }
+  .ln .lc-grid > li { grid-template-columns: minmax(0, 1fr) 240px; grid-template-rows: 1fr auto auto 1fr; column-gap: 28px; padding: 0 6px; }
+  .ln .lc-grid > li > .lc-card { grid-column: 1; grid-row: 1 / 5; }
+  .ln .lc-grid > li > .lc-package-link { grid-row: 2; }
+  .ln .lc-grid > li > .lc-package-link + .lc-package-link { grid-row: 3; }
+  .ln .lc-card { grid-template-columns: 64px minmax(0, 300px) minmax(0, 1fr) 160px 40px; grid-template-areas: "icon aud desc pair go" "icon name desc pair go" "icon pitch desc pair go"; column-gap: 24px; padding: 22px 0; }
+  .ln .lc-top img { width: 64px; height: 64px; padding: 13px; }
+  .ln .lc-card strong { font-size: 27px; align-self: end; }
+  .ln .lc-pitch { align-self: start; }
+  .ln .lc-description { margin: 0; align-self: center; }
+  .ln .lc-pair { grid-area: pair; margin: 0; align-self: center; }
+  .ln .lc-package-link { grid-column: 2; justify-self: end; text-align: right; margin: 0; }
+}

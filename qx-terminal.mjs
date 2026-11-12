@@ -816,6 +816,7 @@ function clearMarketView(message='Choose a token') {
   try{if(entryLine){candles?.removePriceLine(entryLine);entryLine=null;}candles?.setData([]);volume?.setData([]);candles?.setMarkers([]);}catch{}
   $('qxt-chart-empty').hidden=false;$('qxt-chart-empty').textContent=state.loading?(state.sel&&!state.sel.ext?COLD_CHART_MESSAGE:'Loading this token’s chart…'):'Choose a token to see its chart.';
   renderPane();renderWorkspace();
+  document.dispatchEvent(new CustomEvent('qxt:clear'));
 }
 function paintMarket() {
   void marketPosition.refresh();
@@ -824,6 +825,8 @@ function paintMarket() {
   renderHead();renderLaunchActions();if(state.pane!=='positions')renderPane();
   // A chart failure must not strand the correct trades or actionable token view.
   try{$('qxt-chart').hidden=false;renderChart();}catch{providerChart.clear();chartUnits.hidden=false;$('qxt-chart').hidden=true;$('qxt-chart-empty').hidden=false;$('qxt-chart-empty').textContent='Refreshing chart…';}
+  // System A page layer (qx-a/pages/token-terminal.mjs) repaints its art, price, stats and tape from the same data.
+  document.dispatchEvent(new CustomEvent('qxt:paint'));
 }
 async function loadMarket({signal,strict=false}={}) {
   if(!state.sel)return false;
@@ -1156,7 +1159,7 @@ for(const type of ['click','keydown'])document.addEventListener(type,event=>{
  if(!back)return;if(!backToTokens()){event.preventDefault();event.stopImmediatePropagation();}
 },true);
 document.addEventListener('qxt:discover',event=>{if(!backToTokens()){event.preventDefault();event.stopImmediatePropagation();}},true);
-window.qxTerminal = { selectExternal, select, quickBuyExternal, backToTokens, get state() { return state; }, onMarkets(fn) { marketListeners.add(fn); fn(state.markets); return () => marketListeners.delete(fn); } };
+window.qxTerminal = { selectExternal, select, quickBuyExternal, backToTokens, get state() { return state; }, display: () => marketDisplay(), chart: () => chart ? { chart, candles, volume, element: $('qxt-chart') } : null, onMarkets(fn) { marketListeners.add(fn); fn(state.markets); return () => marketListeners.delete(fn); } };
 document.dispatchEvent(new CustomEvent('qxt:ready'));
 loadActivity(true);
 renderTools(); renderPane();

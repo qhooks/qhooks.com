@@ -3,7 +3,7 @@ export function renderIntegration(document,root,model){
  function text(tag,value,className){if(typeof value!=='string')throw new TypeError('Display string required');const el=document.createElement(tag);if(className)el.className=className;el.textContent=value;return el;}
  function link(spec,className){
   const href=spec?.href;
-  if(typeof href!=='string'||!/^[a-z0-9][a-z0-9./?=&_-]*$/.test(href)||href.includes('//')||href.includes('..')||href.includes(':')||href.includes('\\')||href.startsWith('/'))throw new TypeError('Same-site relative link required');
+  if(typeof href!=='string'||!/^\/?[a-z0-9][a-z0-9./?=&_-]*$/.test(href)||href.includes('//')||href.includes('..')||href.includes(':')||href.includes('\\'))throw new TypeError('Same-site link required');
   const el=text('a',spec.label,className);el.href=href;return el;
  }
  const category=text('p',model.category,'eyebrow'),name=text('h1',model.name),summary=text('p',model.summary,'lead');

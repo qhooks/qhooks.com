@@ -1,0 +1,35 @@
+/* QHooks System A: /integrate, the integration guide. The original document flow, set as one reading column:
+   the opening as a page head, three jobs on hairlines, the code as Mona Sans on a wash, every section ruled above. */
+
+.hd--integrate .hd-int { max-width: 860px; }
+.hd--integrate .platform-entry { padding-top: 30px; }
+.hd--integrate .platform-entry > h1 { margin-top: 0; }
+.hd--integrate .platform-entry > p:not(.hd-kick):not(.hd-lede) { margin-top: 14px; font-size: 16px; line-height: 1.62; color: var(--qa-tx-2); max-width: 66ch; }
+.hd--integrate .platform-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; margin-top: 22px; }
+.hd--integrate .platform-grid { display: grid; margin-top: var(--qa-s10); }
+.hd--integrate .platform-grid article { display: grid; gap: 6px; align-content: start; padding: 22px 0; box-shadow: 0 -1px 0 var(--qa-rule); }
+.hd--integrate .platform-grid h2 { font-size: 22px; }
+.hd--integrate .platform-grid p { font-size: 15px; line-height: 1.55; color: var(--qa-tx-2); }
+.hd--integrate .platform-grid a { font-size: 14px; font-weight: 700; color: var(--qa-gold-hi); }
+.hd--integrate .hd-sec-h { margin-top: var(--qa-s12); padding-top: var(--qa-s8); box-shadow: 0 -1px 0 var(--qa-rule); }
+.hd--integrate .hd-int p:not(.hd-kick):not(.hd-lede) { font-size: 16px; line-height: 1.62; color: var(--qa-tx-2); }
+.hd--integrate .hd-int p + p, .hd--integrate .hd-int pre + p { margin-top: 14px; }
+.hd--integrate .hd-int h2 + p { margin-top: 14px; }
+.hd--integrate .hd-int strong { color: var(--qa-tx); }
+.hd--integrate .hd-int p a:not(.qa-btn):not(.qa-link) { color: var(--qa-tx); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--qa-gold) 55%, transparent); text-underline-offset: 3px; }
+.hd--integrate .hd-int p a:not(.qa-btn):not(.qa-link):hover { color: var(--qa-gold-hi); }
+.hd--integrate .platform-pilot ol { display: grid; gap: 14px; margin-top: 16px; padding-left: 24px; list-style: decimal; }
+.hd--integrate .platform-pilot li { font-size: 16px; line-height: 1.55; color: var(--qa-tx-2); }
+.hd--integrate .platform-pilot li::marker { color: var(--qa-gold); font-weight: 760; }
+.hd--integrate .platform-pilot strong { display: block; color: var(--qa-tx); font-size: 17px; }
+.hd--integrate .technical-notes, .hd--integrate details { margin-top: 18px; }
+.hd--integrate .inspection-entry p:last-child { display: flex; flex-wrap: wrap; gap: 4px 0; }
+
+@media (min-width: 1100px) {
+  .hd--integrate .platform-entry { padding-top: 72px; }
+  .hd--integrate .platform-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); width: min(1240px, calc(100vw - 2 * var(--qa-pad))); box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+  .hd--integrate .platform-grid article { padding: 30px 30px 34px; box-shadow: -1px 0 0 var(--qa-rule); }
+  .hd--integrate .platform-grid article:first-child { padding-left: 0; box-shadow: none; }
+  .hd--integrate .platform-grid h2 { font-size: 26px; }
+  .hd--integrate .hd-int p:not(.hd-kick):not(.hd-lede) { font-size: 17px; }
+}

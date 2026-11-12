@@ -40,7 +40,7 @@ export const TOKEN_CANDIDATES = Object.freeze(MOVE_CHAINS.flatMap(chain => [
 ]).map(Object.freeze));
 
 export function parseAmount(text, decimals) {
-  if (!Number.isInteger(decimals) || decimals < 0 || decimals > 36) throw fail('invalid_amount', 'Token decimals are unavailable.');
+  if (!Number.isInteger(decimals) || decimals < 0 || decimals > 36) throw fail('invalid_amount', 'Token decimals could not be read.');
   const s = String(text).trim();
   if (s.length > 100 || !/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(s)) throw fail('invalid_amount', 'Enter an amount using numbers and a decimal point.');
   const [whole, fraction = ''] = s.split('.');

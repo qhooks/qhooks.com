@@ -1,0 +1,13 @@
+/* /profile/<handle> in System A: page frame and the owner's editor. The profile itself is styled in /qx-profile-v3.css. */
+.qx-community .qa-page { padding-bottom: 8px; }
+/* the owner's editor is the page's one raised slab */
+.qa .qmp-editor { position: relative; margin: 22px 0 0; padding: 20px; border: 0; border-radius: var(--qa-r-slab); background: var(--qa-slab); box-shadow: var(--qa-slab-edge), var(--qa-slab-shadow); color: var(--qa-tx); }
+.qa .qmp-editor summary { cursor: pointer; font-weight: 720; color: var(--qa-tx); }
+.qa .qmp-editor label { font-size: 12.5px; font-weight: 600; color: var(--qa-tx-3); }
+.qa .qmp-editor :is(input[type="text"], input[type="url"], input:not([type]), textarea, select) { width: 100%; min-height: 44px; border: 0; border-radius: 0; padding: 6px 0; background: transparent; color: var(--qa-tx); font: inherit; font-size: 16px; box-shadow: 0 1px 0 var(--qa-rule-2); outline: none; }
+.qa .qmp-editor :is(input, textarea, select):focus { box-shadow: 0 2px 0 var(--qa-gold); }
+.qa .qmp-editor fieldset.qmp-plain-links { border: 0; padding: 0; }
+.qa .qmp-help { font-size: 13px; color: var(--qa-tx-3); }
+.qa .qmp-privacy-state { border: 0; box-shadow: inset 2px 0 0 var(--qa-gold); background: var(--qa-gold-wash); color: var(--qa-tx); border-radius: 0 var(--qa-r-s) var(--qa-r-s) 0; }
+.qa .qmp-linked { border-top: 0; box-shadow: 0 -1px 0 var(--qa-rule); }
+.qa .qmp-linked-code { font-family: var(--qa-sans); background: var(--qa-wash-2); }

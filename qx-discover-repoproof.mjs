@@ -16,8 +16,8 @@ export function inspectorProofSubject(profile,selection){
  if(!inspectorProfileMatches(profile,selection))return null;
  const value=identity(selection);return CHAINS.has(value.chainId)?{kind:'contract',...value}:null;
 }
-const text=value=>value==null||value===''?'Unavailable':String(value);
-const at=value=>typeof value==='string'&&Number.isFinite(Date.parse(value))?new Date(value).toISOString().replace('T',' ').replace(/Z$/,' UTC'):'Unavailable';
+const text=value=>value==null||value===''?'Not reported':String(value);
+const at=value=>typeof value==='string'&&Number.isFinite(Date.parse(value))?new Date(value).toISOString().replace('T',' ').replace(/Z$/,' UTC'):'Not reported';
 const el=(doc,tag,value,attrs={})=>{const node=doc.createElement(tag);if(value!=null)node.textContent=value;for(const[key,v]of Object.entries(attrs))node.setAttribute(key,String(v));return node;};
 export function inspectorDiscoveryContext(profile,selection){
  if(!inspectorProfileMatches(profile,selection))return{matches:false,knownNoCode:false,rows:[]};
@@ -25,16 +25,16 @@ export function inspectorDiscoveryContext(profile,selection){
  const knownNoCode=known&&(evidence.deployed===false||evidence.codeBytes===0);
  const runtime=knownNoCode?'No deployed code at this block':known&&evidence.deployed===true?'Deployed code observed':'Deployment unavailable';
  return{matches:true,knownNoCode,rows:[
-  ['Discovery read',known?'Read succeeded':'Unavailable'+(evidence.reason?' · '+evidence.reason:'')],
+  ['Discovery read',known?'Read succeeded':'Not reported'+(evidence.reason?' · '+evidence.reason:'')],
   ['Chain / block',(NAMES[String(profile.chainId)]||'Chain '+profile.chainId)+' · '+(known&&evidence.block!=null?'block '+evidence.block:'block unavailable')],
-  ['Block hash',known?text(evidence.blockHash):'Unavailable'],
-  ['Read source',known?text(evidence.source):'Unavailable'],
-  ['Observed',known?at(evidence.observedAt):'Unavailable'],
+  ['Block hash',known?text(evidence.blockHash):'Not reported'],
+  ['Read source',known?text(evidence.source):'Not reported'],
+  ['Observed',known?at(evidence.observedAt):'Not reported'],
   ['Runtime',runtime+(known&&Number.isSafeInteger(evidence.codeBytes)&&evidence.codeBytes>=0?' · '+evidence.codeBytes+' bytes':'')],
-  ['Runtime fingerprint',known?text(evidence.fingerprint):'Unavailable'],
-  ['Permission bits',permissions?permissions.length?permissions.join(', '):'No enabled permission bits':'Unavailable'],
-  ['Permission flags',known&&evidence.permissions?.flags!=null?text(evidence.permissions.flags):'Unavailable'],
-  ['Source record',[profile.verified?.name,profile.verified?.provenance].filter(value=>typeof value==='string'&&value).join(' · ')||'Unavailable']
+  ['Runtime fingerprint',known?text(evidence.fingerprint):'Not reported'],
+  ['Permission bits',permissions?permissions.length?permissions.join(', '):'No enabled permission bits':'Not reported'],
+  ['Permission flags',known&&evidence.permissions?.flags!=null?text(evidence.permissions.flags):'Not reported'],
+  ['Source record',[profile.verified?.name,profile.verified?.provenance].filter(value=>typeof value==='string'&&value).join(' · ')||'Not reported']
  ]};
 }
 export function mountInspectorRepoProof(container,{profile,selection,getSelection=()=>selection,revision=selection?.revision??0,document:doc=container?.ownerDocument||globalThis.document,fetcher,mount=mountRepoProofCheck}={}){

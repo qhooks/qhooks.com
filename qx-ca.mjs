@@ -5,7 +5,8 @@ const css = `.qx-ca{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;
 .qx-ca-v{font-family:var(--qx-mono,ui-monospace,monospace);font-size:14px;overflow-wrap:anywhere;min-width:0;flex:1 1 280px}
 .qx-ca-copy{font:inherit;font-size:13px;font-weight:600;padding:6px 14px;border-radius:99px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer;min-height:36px}
 .qx-ca-go{font-size:13px;font-weight:600;color:inherit}`;
-if (!document.getElementById('qx-ca-style')) { const s = document.createElement('style'); s.id = 'qx-ca-style'; s.textContent = css; document.head.append(s); }
+// System A pages (body.qa) style the strip in their own page CSS: no pill, no box, no monospace.
+if (!document.body?.classList.contains('qa') && !document.getElementById('qx-ca-style')) { const s = document.createElement('style'); s.id = 'qx-ca-style'; s.textContent = css; document.head.append(s); }
 for (const b of document.querySelectorAll('.qx-ca-copy[data-copy]')) b.addEventListener('click', async () => {
   try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Copied'; } catch { b.textContent = 'Select and copy'; }
   setTimeout(() => { b.textContent = 'Copy'; }, 1600);

@@ -1,0 +1,312 @@
+/* QHooks System A: the home page (index.html). The ecosystem front door.
+   Hero: the gold hook hangs from the top of the screen; the live QHOOKS coin hangs from the hook and every real trade
+   tugs the line. The brand line is the spine. Then four acts, Builders, Callers, Holders, Traders, each the live product.
+   Phone first. Every motion is a real event or one of the system's subtle ambient loops; reduced motion turns them off. */
+
+.hm { padding-bottom: 0; }
+
+/* ---------- hero ---------- */
+.hm-hero { position: relative; z-index: 1; padding: 26px 0 30px; }
+/* the hook hangs from the top edge of the screen; the coin hangs from its bend on a gold cord.
+   The rig turns on real trades (--hm-swing); the sway inside it is the one ambient loop. */
+.hm-rig { position: absolute; z-index: 0; top: calc(-1 * (var(--qa-hdr-h) + var(--qa-ribbon-h, 0px) + env(safe-area-inset-top))); right: -22px; width: 136px; pointer-events: none;
+  transform-origin: 50% 0; transform: rotate(var(--hm-swing, 0deg)); }
+.hm-rig::before { content: ""; position: absolute; left: 50%; top: 30%; width: 300%; height: 70%; transform: translateX(-50%); background: radial-gradient(closest-side, rgba(226,190,128,.20), transparent 70%); pointer-events: none; }
+.hm-sway { position: relative; transform-origin: 66% 0; animation: hm-sway 7.5s ease-in-out infinite alternate; }
+.hm-hook { position: relative; display: block; width: 100%; height: auto; filter: drop-shadow(0 24px 30px rgba(0,0,0,.55)); }
+@keyframes hm-sway { from { transform: rotate(-.7deg); } to { transform: rotate(.7deg); } }
+.hm-bob { position: absolute; left: 52%; top: 97%; display: flex; flex-direction: column; align-items: center; transform: translateX(-50%); }
+.hm-cord { display: block; width: 1.5px; height: calc(var(--hm-cord, 40px) + var(--hm-tug, 0px)); background: linear-gradient(180deg, rgba(240,218,174,.15), var(--qa-gold-hi)); }
+.hm-bob .qa-coin { display: block; margin-top: -2px; }
+/* the live QHOOKS read sits beside the coin */
+.hm-tag { position: relative; z-index: 2; display: grid; justify-items: end; gap: 2px; margin: var(--hm-tag-mt, 18px) 0 0; padding-right: var(--hm-tag-pad, 84px); text-align: right; }
+.hm-tag__read { display: contents; }
+.hm-tag__who { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 640; color: var(--qa-tx-2); }
+.hm-tag__who b { color: var(--qa-tx); font-weight: 780; font-stretch: 112%; }
+.hm-tag__who .qa-chain-dot { width: 7px; height: 7px; }
+.hm-tag__px { display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.hm-tag__px [data-hv-qp] { font-size: 22px; font-weight: 820; font-stretch: 114%; letter-spacing: -.03em; }
+.hm-tag__px [data-hv-qc] { font-size: 14px; font-weight: 760; color: var(--qa-tx-3); }
+.hm-tag__px [data-hv-qc][data-dir="1"] { color: var(--qa-buy); }
+.hm-tag__px [data-hv-qc][data-dir="-1"] { color: var(--qa-sell); }
+.hm-tag__go { font-size: 13px; font-weight: 700; color: var(--qa-gold-hi); }
+.hm-tag:hover .hm-tag__go { text-decoration: underline; text-underline-offset: 3px; }
+.hm-tag__px .qa-dg { transition: color var(--qa-t-flash) var(--qa-ease); }
+.hm-tag__px .is-up { color: var(--qa-buy); transition: none; }
+.hm-tag__px .is-down { color: var(--qa-sell); transition: none; }
+
+.hm-copy { position: relative; z-index: 1; }
+.hm-line .qa-line__text { min-height: calc(4 * 1.02em); max-width: 8.6em; font-size: 46px; text-shadow: 0 2px 30px rgba(0,0,0,.45); }
+.hm-line.is-rested .qa-line__text { transform: none; }
+.hm-lede { max-width: 46ch; margin-top: 18px; font-size: 16px; line-height: 1.5; color: var(--qa-tx-2); }
+.hm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 22px; }
+.hm-actions .qa-btn { padding: 0 12px; }
+.hm-call { margin-top: 14px; font-size: 14.5px; }
+.hm-call b { color: var(--qa-gold-hi); font-weight: 700; }
+.hm-chains { display: flex; align-items: center; gap: 12px; margin-top: 22px; font-size: 13px; font-weight: 600; color: var(--qa-tx-3); }
+.hm-chains div { display: flex; gap: 6px; }
+.hm-chain { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: var(--qa-wash-2); }
+.hm-chain img { width: 15px; height: 15px; }
+
+/* ---------- pulse: the ecosystem in numbers, live ---------- */
+.hm-pulse { margin: 0 calc(var(--qa-pad) * -1); }
+.hm-pulse .qa-stat__v { font-size: 20px; }
+.hm-ca { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0; padding: 14px 0; box-shadow: 0 1px 0 var(--qa-rule); }
+.hm-ca .qx-ca-k { width: 100%; font-size: var(--qa-fs-small); font-weight: 600; color: var(--qa-tx-3); }
+.hm-ca .qx-ca-v { flex: 1 1 220px; min-width: 0; font-family: var(--qa-sans); font-size: 14.5px; font-weight: 640; color: var(--qa-tx); overflow-wrap: anywhere; }
+.hm-ca .qx-ca-copy { flex: none; }
+.hm-ca .qx-ca-go { width: 100%; font-size: 14px; font-weight: 700; color: var(--qa-gold-hi); }
+.qa .qx-home-burn.qx-burn-ticker { display: flex; margin: 12px 0 0; font-size: 13.5px; color: var(--qa-tx-2); }
+.qa .qx-home-burn[hidden] { display: none; }
+.qa .qx-home-burn .qbt-main { display: inline-flex; align-items: baseline; gap: 8px; color: var(--qa-tx); font-weight: 680; }
+.qa .qx-home-burn .qbt-main::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--qa-fire); box-shadow: 0 0 10px var(--qa-fire); transform: translateY(-1px); }
+.qa .qx-home-burn .qbt-live { color: var(--qa-tx-3); }
+
+/* ---------- the four acts ---------- */
+.hm-acts { padding-top: 8px; }
+.hm-act { position: relative; padding-top: var(--qa-s16); scroll-margin-top: 100px; }
+.hm-act__head { position: relative; }
+.hm-act__head .qa-line__hook { margin-bottom: 14px; }
+.hm-act__word { display: flex; align-items: flex-start; gap: 6px; font-size: 64px; line-height: .9; font-weight: 850; font-stretch: var(--qa-wd-display); letter-spacing: -.05em; }
+.hm-act__word sup { font-size: 16px; font-weight: 780; color: var(--qa-gold); letter-spacing: 0; line-height: 1; padding-top: 4px; }
+.hm-act__say { margin-top: 14px; max-width: 18em; font-size: 23px; line-height: 1.12; font-weight: 780; font-stretch: var(--qa-wd-head); letter-spacing: -.025em; }
+.hm-act__sub { margin-top: 10px; max-width: 44ch; font-size: 15.5px; line-height: 1.5; color: var(--qa-tx-2); }
+.hm-act__sub a { color: var(--qa-tx); text-decoration: underline; text-decoration-color: var(--qa-rule-2); text-underline-offset: 3px; }
+.hm-act__do { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 20px; }
+.hm-act__live { position: relative; margin-top: var(--qa-s8); }
+.hm-live-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; font-size: 13px; font-weight: 640; color: var(--qa-tx-3); }
+.hm-live-h b { font-size: 15px; font-weight: 760; color: var(--qa-tx); }
+
+/* builders: chain picker, launch blocks, the newest launch on its art, then the board */
+.hm-chainpick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.hm-chainpick a { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: var(--qa-wash-2); transition: background-color var(--qa-t-quick) var(--qa-ease), transform var(--qa-t-tap) var(--qa-ease); }
+.hm-chainpick a:hover { background: var(--qa-rule-2); }
+.hm-chainpick a:active { transform: scale(.94); }
+.hm-chainpick img { width: 21px; height: 21px; }
+.hm-blocks { margin-top: 18px; max-width: 34em; font-size: 14px; line-height: 1.7; }
+.hm-blocks span { display: block; font-size: 12.5px; font-weight: 650; color: var(--qa-tx-3); }
+.hm-blocks p { display: flex; flex-wrap: wrap; row-gap: 2px; }
+.hm-blocks p > span { width: 100%; }
+.hm-blocks a { font-weight: 650; color: var(--qa-tx); white-space: nowrap; }
+.hm-blocks a:hover { color: var(--qa-gold-hi); }
+.hm-blocks a:not(:last-child)::after { content: "·"; margin: 0 9px; color: var(--qa-tx-3); font-weight: 500; }
+.hm-feature { position: relative; display: block; margin: 0 calc(var(--qa-pad) * -1); }
+.hm-feature__art { position: relative; aspect-ratio: 3 / 1; overflow: hidden; }
+.hm-feature__art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent); mask-image: linear-gradient(180deg, #000 55%, transparent); transition: transform 1.2s var(--qa-ease); }
+.hm-feature:hover .hm-feature__art img { transform: scale(1.03); }
+.hm-feature__glow { position: absolute; inset: 20% 0 -40%; background: var(--hm-art) center / cover; filter: blur(40px) saturate(1.6); opacity: .45; pointer-events: none; }
+.hm-feature--plain .hm-feature__id { margin-top: 0; }
+.hm-feature__id { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: end; gap: 12px; margin-top: -30px; padding: 0 var(--qa-pad); }
+.hm-feature__sym { font-size: 26px; line-height: 1; font-weight: 830; font-stretch: 122%; letter-spacing: -.035em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-feature__kick { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 700; color: var(--qa-gold-hi); }
+.hm-feature__v { text-align: right; white-space: nowrap; }
+.hm-feature__v b { display: block; font-size: 20px; font-weight: 780; font-stretch: 108%; letter-spacing: -.02em; }
+.hm-feature__v small { font-size: 13px; font-weight: 700; }
+.hm-feature__meta { margin-top: 12px; padding: 0 var(--qa-pad); font-size: 13.5px; font-weight: 580; color: var(--qa-tx-2); }
+.hm-feature__meta { display: flex; flex-wrap: wrap; row-gap: 2px; }
+.hm-feature__meta > span { display: inline-flex; align-items: center; gap: 7px; margin-right: 7px; white-space: nowrap; }
+.hm-feature__meta > span:not(:last-child)::after { content: "·"; color: var(--qa-tx-3); }
+.hm-feature + .hm-live-h { margin-top: 26px; }
+.hm-launches { margin-top: 16px; }
+.hm-launch-row { grid-template-columns: 40px minmax(0, 1fr) auto; }
+.hm-launch-row .qa-row__v small { font-size: 12.5px; }
+.hm-launch-row.is-enter { animation: qa-row-in .6s var(--qa-ease-out) both; }
+.hm-icon { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; background: var(--qa-gold-metal); color: var(--qa-tx-on-gold); font-weight: 820; font-size: 15px; box-shadow: 0 6px 16px -8px rgba(0,0,0,.8); }
+.hm-icon img { width: 100%; height: 100%; object-fit: cover; }
+.hm-tick { transition: color .9s var(--qa-ease), text-shadow .9s var(--qa-ease); }
+.hm-tick.is-tick { color: var(--qa-gold-hi); text-shadow: 0 0 18px rgba(240,218,174,.65); transition: none; }
+
+/* callers: the fee split, then the calls themselves */
+.hm-split { display: grid; grid-template-columns: auto auto; justify-content: start; gap: 0; margin-top: 22px; }
+.hm-split > div { padding: 0 22px; box-shadow: -1px 0 0 var(--qa-rule-2); }
+.hm-split > div:first-child { padding-left: 0; box-shadow: none; }
+.hm-split b { display: block; font-size: 44px; line-height: .95; font-weight: 850; font-stretch: 122%; letter-spacing: -.05em; background: var(--qa-gold-metal); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hm-split span { display: block; margin-top: 6px; font-size: 13.5px; font-weight: 600; color: var(--qa-tx-2); }
+.hm-calls .qa-post__what .qa-token-chip { margin-left: 4px; }
+.hm-calls .qa-outcome__x b { font-size: 30px; }
+.hm-call-go { display: inline-flex; margin-top: 12px; font-size: 13.5px; font-weight: 700; color: var(--qa-gold-hi); }
+.hm-call-go:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* holders: the fuse, the numbers, the map, the burns */
+.hm-hold-top { display: grid; gap: 26px; }
+.hm-hold-top .qa-countdown b { font-size: 76px; }
+.hm-hold-top .qa-figures { grid-template-columns: repeat(3, minmax(0, auto)); justify-content: start; }
+.hm-hold-top .qa-figures > div { padding: 0 18px; }
+.hm-hold-top .qa-figures > div:first-child { padding-left: 0; }
+.hm-supply { margin-top: var(--qa-s8); }
+.hm-burns { margin-top: var(--qa-s8); }
+.hm-burns .qa-trow__usd { color: var(--qa-fire); }
+.hm-burns .qa-trow__amt { color: var(--qa-tx-2); }
+.hm-burns .qa-trow__who span:not(.qa-ava) { color: var(--qa-tx-3); }
+.hm-hold-top .qa-countdown span { text-transform: none; }
+
+/* traders: QHOOKS live */
+.hm-trade-id { display: flex; align-items: center; gap: 10px; }
+.hm-trade-id b { font-size: 17px; font-weight: 800; font-stretch: 116%; letter-spacing: -.02em; }
+.hm-trade-id .qa-meta { font-size: 13px; }
+.hm-trade-px { margin-top: 14px; }
+.hm-trade-px .qa-price { font-size: 46px; }
+.hm-trade-chart { position: relative; margin: 14px calc(var(--qa-pad) * -1) 0; }
+.hm-trade-chart .qa-chart__wrap { height: 280px; }
+.hm-trade-chart .qa-live { position: absolute; z-index: 3; top: 10px; left: var(--qa-pad); }
+.hm-trade-stats { margin: 0 calc(var(--qa-pad) * -1); }
+.hm-trade-side { margin-top: var(--qa-s8); }
+.hm-trade-chart .qa-state { padding: 90px var(--qa-pad); }
+
+/* ---------- more of QHooks ---------- */
+.hm-places { margin-top: var(--qa-s16); }
+.hm-places nav { display: grid; margin: 0 calc(var(--qa-pad) * -1); }
+.hm-places a { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 16px var(--qa-pad); box-shadow: 0 1px 0 var(--qa-rule); transition: background-color var(--qa-t-quick) var(--qa-ease); }
+.hm-places a:first-child { box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+.hm-places a:hover { background: var(--qa-wash); }
+.hm-places svg { width: 28px; height: 30px; fill: none; stroke: var(--qa-gold); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.hm-places b { display: block; font-size: 20px; font-weight: 800; font-stretch: 116%; letter-spacing: -.02em; }
+.hm-places span { display: block; font-size: 14px; color: var(--qa-tx-2); }
+.hm-places a::after { content: ""; width: 8px; height: 8px; border-top: 1.8px solid var(--qa-tx-3); border-right: 1.8px solid var(--qa-tx-3); transform: rotate(45deg); }
+
+/* ---------- the two-key model: a real sequence ---------- */
+.hm-keys { margin-top: var(--qa-s16); scroll-margin-top: 100px; }
+.hm-kick { display: block; margin-bottom: 12px; font-size: 13.5px; font-weight: 700; color: var(--qa-gold-hi); }
+.hm-h2 { font-size: 38px; line-height: .98; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); max-width: 15em; }
+.hm-gold { background: var(--qa-gold-metal); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hm-seq { position: relative; display: grid; gap: 0; margin-top: var(--qa-s8); }
+.hm-seq::before { content: ""; position: absolute; left: 6px; top: 8px; bottom: 8px; width: 2px; background: linear-gradient(180deg, var(--qa-gold-hi), var(--qa-gold-lo) 80%, transparent); }
+.hm-seq li { position: relative; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 4px 14px; padding: 0 0 26px; }
+.hm-seq li::before { content: ""; position: relative; z-index: 1; width: 14px; height: 14px; margin-top: 5px; border-radius: 50%; background: #FFF3DA; box-shadow: 0 0 0 2px var(--qa-gold), 0 0 14px rgba(240,218,174,.7); }
+.hm-seq h3 { font-size: 21px; font-weight: 800; font-stretch: 116%; letter-spacing: -.02em; }
+.hm-seq h3 span { margin-right: 8px; font-size: 13px; font-weight: 760; color: var(--qa-gold); letter-spacing: 0; vertical-align: .2em; }
+.hm-seq p { grid-column: 2; font-size: 15px; line-height: 1.5; color: var(--qa-tx-2); max-width: 46ch; }
+.hm-seal { display: grid; gap: 0; margin-top: 26px; }
+.hm-seal div { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 14px 0; box-shadow: 0 1px 0 var(--qa-rule); }
+.hm-seal div:first-child { box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+.hm-seal strong { font-size: 15.5px; font-weight: 720; }
+.hm-seal small { display: block; font-size: 13px; color: var(--qa-tx-3); }
+.hm-seal .chk { width: 22px; height: 22px; border-radius: 50%; background: var(--qa-buy) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M5 9.3l2.6 2.6L13 6.5' fill='none' stroke='%2306180e' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 22px no-repeat; }
+.hm-seal .alg { font-size: 12.5px; font-weight: 680; color: var(--qa-tx-3); }
+
+/* ---------- hooks: rules on every trade, keys on every control ---------- */
+.hm-hooks { margin-top: var(--qa-s16); scroll-margin-top: 100px; }
+.hm-hooks-head .qa-meta { margin-bottom: 14px; font-size: 13.5px; }
+.hm-hooks-head .qa-link { margin-top: 16px; color: var(--qa-gold-hi); font-weight: 700; }
+.hm-pq { margin-top: var(--qa-s10); scroll-margin-top: 100px; }
+.hm-pq-head h3 { font-size: 24px; font-weight: 820; font-stretch: 118%; letter-spacing: -.03em; }
+.hm-pq-head p { margin-top: 6px; font-size: 15px; color: var(--qa-tx-2); max-width: 52ch; }
+.hm-pq ul { display: grid; margin: 18px calc(var(--qa-pad) * -1) 0; }
+.hm-pq li a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; padding: 16px var(--qa-pad); box-shadow: 0 1px 0 var(--qa-rule-row); transition: background-color var(--qa-t-quick) var(--qa-ease); }
+.hm-pq li:first-child a { box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule-row); }
+.hm-pq li a:hover { background: var(--qa-wash); }
+.hm-pq .pq-k { grid-column: 1; font-size: 12.5px; font-weight: 650; color: var(--qa-gold); }
+.hm-pq strong { grid-column: 1; font-size: 18px; font-weight: 780; font-stretch: 112%; letter-spacing: -.015em; }
+.hm-pq .pq-d { grid-column: 1; font-size: 14px; line-height: 1.45; color: var(--qa-tx-2); }
+.hm-pq .pq-go { grid-column: 2; grid-row: 1 / span 3; align-self: center; font-size: 13.5px; font-weight: 700; color: var(--qa-tx-3); white-space: nowrap; }
+.hm-pq li a:hover .pq-go { color: var(--qa-gold-hi); }
+.hm-mk { display: grid; gap: 10px; margin-top: var(--qa-s10); padding: 26px 0; box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+.hm-mk .mk-k { font-size: 13.5px; font-weight: 700; color: var(--qa-gold-hi); }
+.hm-mk strong { font-size: 26px; line-height: 1.1; font-weight: 800; font-stretch: 116%; letter-spacing: -.03em; max-width: 22em; }
+.hm-mk .mk-go { font-size: 14.5px; font-weight: 700; color: var(--qa-tx-2); }
+.hm-mk:hover .mk-go { color: var(--qa-gold-hi); }
+
+/* ---------- closing ---------- */
+.hm-close { position: relative; margin-top: var(--qa-s16); padding: var(--qa-s12) 0 0; text-align: left; }
+.hm-close::before { content: ""; position: absolute; left: 50%; top: 0; width: 120%; height: 70%; transform: translateX(-50%); background: radial-gradient(50% 60% at 30% 40%, var(--qa-gold-wash), transparent 72%); pointer-events: none; }
+.hm-close h2 { position: relative; font-size: 46px; line-height: .96; font-weight: 850; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); }
+.hm-close .hm-actions { position: relative; }
+.hm-close .qa-link { position: relative; margin-top: 16px; }
+.hm-phone { position: relative; margin-top: var(--qa-s8); scroll-margin-top: 100px; }
+.hm-phone__a { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 2px 14px; align-items: start; padding: 16px 0; box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); font-size: 14.5px; color: var(--qa-tx-2); }
+.hm-phone img { grid-row: 1 / span 2; width: 34px; height: 34px; border-radius: 9px; }
+.hm-phone b { display: block; font-size: 16px; font-weight: 760; color: var(--qa-tx); }
+.hm-phone-alt { display: inline-flex; margin-top: 12px; font-size: 14px; font-weight: 700; color: var(--qa-gold-hi); }
+
+/* ---------- desktop ---------- */
+@media (min-width: 760px) {
+  .hm-rig { width: 190px; right: 2%; }
+  .hm-line .qa-line__text { font-size: 64px; max-width: 9em; }
+  .hm-actions { display: flex; }
+  .hm-act__word { font-size: 96px; }
+  .hm-hold-top { grid-template-columns: auto minmax(0, 1fr); align-items: end; column-gap: 48px; }
+}
+@media (min-width: 1100px) {
+  .hm-hero { min-height: 660px; padding: 64px 0 56px; }
+  .hm-rig { width: 300px; right: 7%; top: calc(-1 * (var(--qa-nav-h) + var(--qa-ribbon-h, 0px))); }
+  .hm-bob .qa-coin { width: 78px; height: 78px; }
+  .hm-copy { max-width: 1010px; }
+  .hm-line .qa-line__text { min-height: calc(3 * 1.02em); max-width: 11.5em; font-size: 92px; }
+  .hm-lede { font-size: 18px; max-width: 50ch; margin-top: 22px; }
+  .hm-actions { margin-top: 30px; }
+  .hm-actions .qa-btn { padding: 0 26px; }
+  .hm-tag { position: absolute; top: var(--hm-tag-top, 520px); right: var(--hm-tag-right, 220px); margin: 0; padding: 0; }
+  .hm-tag__px [data-hv-qp] { font-size: 30px; }
+  .hm-pulse { margin: 0; }
+  .hm-pulse .qa-stats { box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+  .hm-pulse .qa-stat { padding: 16px 22px 18px; }
+  .hm-pulse .qa-stat:first-child { padding-left: 0; }
+  .hm-pulse .qa-stat__v { font-size: 30px; font-weight: 780; letter-spacing: -.03em; }
+  .hm-ca { flex-wrap: nowrap; padding: 16px 0; }
+  .hm-ca .qx-ca-k { width: auto; flex: none; }
+  .hm-ca .qx-ca-v { flex: 0 1 auto; }
+  .hm-ca .qx-ca-go { width: auto; margin-left: auto; }
+
+  .hm-act { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: 64px; align-items: start; padding-top: 120px; }
+  .hm-act__head { position: sticky; top: calc(var(--qa-nav-h) + var(--qa-ribbon-h, 0px) + 36px); }
+  .hm-act__word { font-size: 128px; }
+  .hm-act__word sup { font-size: 20px; padding-top: 10px; }
+  .hm-act__say { font-size: 30px; }
+  .hm-act__sub { font-size: 17px; }
+  .hm-act__live { margin-top: 0; padding-top: 70px; }
+  .hm-feature { margin: 0; }
+  .hm-feature__art { border-radius: 18px; }
+  .hm-feature__id, .hm-feature__meta { padding: 0 22px; }
+  .hm-feature__sym { font-size: 34px; }
+  .hm-launch-row { padding-left: 6px; padding-right: 6px; }
+  .hm-split b { font-size: 60px; }
+
+  .hm-act--traders { grid-template-columns: minmax(0, 1fr) 380px; }
+  .hm-act--traders .hm-act__head { position: relative; top: 0; grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: end; column-gap: 48px; }
+  .hm-act--traders .hm-act__head .qa-line__hook { grid-column: 1 / -1; }
+  .hm-act--traders .hm-act__say { margin: 0 0 6px; }
+  .hm-act--traders .hm-act__sub { grid-column: 2; margin: 0 0 8px; }
+  .hm-act--traders .hm-act__say, .hm-act--traders .hm-act__sub { grid-column: 2; }
+  .hm-act--traders .hm-act__word { grid-row: 2 / span 2; }
+  .hm-act--traders .hm-act__do { grid-column: 3; grid-row: 2 / span 2; margin: 0 0 8px; justify-content: flex-end; }
+  .hm-act--traders .hm-act__live { grid-column: 1; padding-top: 40px; }
+  .hm-act--traders .hm-trade-side { grid-column: 2; margin-top: 0; padding-top: 40px; }
+  .hm-trade-px .qa-price { font-size: 68px; }
+  .hm-trade-chart { margin: 14px 0 0; }
+  .hm-trade-chart .qa-chart__wrap { height: 420px; }
+  .hm-trade-chart .qa-live { left: 0; }
+  .hm-trade-stats { margin: 0; }
+
+  .hm-places nav { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; }
+  .hm-places a, .hm-places a:first-child { grid-template-columns: minmax(0, 1fr); padding: 26px 26px 30px; box-shadow: -1px 0 0 var(--qa-rule); align-content: start; }
+  .hm-places a:first-child { padding-left: 0; box-shadow: none; }
+  .hm-places a::after { display: none; }
+  .hm-places b { margin-top: 18px; font-size: 26px; }
+
+  .hm-keys { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: 64px; margin-top: 140px; }
+  .hm-h2 { font-size: 64px; }
+  .hm-seq { grid-column: 2; grid-row: 1 / span 2; margin-top: 0; }
+  .hm-seq::before { left: 7px; }
+  .hm-seq li { padding-bottom: 34px; }
+  .hm-seq h3 { font-size: 26px; }
+  .hm-seq p { font-size: 16.5px; }
+  .hm-seal { margin-top: 36px; max-width: 460px; }
+
+  .hm-hooks { margin-top: 140px; }
+  .hm-pq ul { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 56px; margin: 22px 0 0; }
+  .hm-pq li a, .hm-pq li:first-child a { padding: 18px 4px; box-shadow: 0 1px 0 var(--qa-rule-row); }
+  .hm-pq li:nth-child(-n+2) a { box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule-row); }
+  .hm-mk { grid-template-columns: minmax(0, 1fr) auto; align-items: end; padding: 40px 0; }
+  .hm-mk .mk-k { grid-column: 1 / -1; }
+  .hm-mk strong { font-size: 40px; }
+
+  .hm-close { margin-top: 140px; padding: 80px 0 40px; }
+  .hm-close h2 { font-size: 96px; }
+  .hm-phone { max-width: 620px; }
+}
+
+/* ---------- reduced motion: the line rests, the hook hangs still ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .hm-sway { animation: none; }
+  .hm-rig { transform: none; }
+}

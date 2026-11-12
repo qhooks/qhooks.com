@@ -1,0 +1,24 @@
+/* Relaunch: chain and old token on the floor; the relaunch script fills the rest step by step. */
+.qst-relaunch #qrl-root { max-width: 860px; }
+.qst-relaunch .qrl-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: end; margin-top: 18px; }
+.qst-relaunch .qrl-row:first-child { margin-top: 0; }
+.qst-relaunch .qrl-row:has(> button) { display: flex; flex-wrap: wrap; gap: 10px; }
+.qst-relaunch .qrl-field > span { display: block; }
+.qst-relaunch .qrl-field input, .qst-relaunch .qrl-field select { font-size: 20px; font-weight: 720; }
+.qst-relaunch .qrl-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; margin-top: 18px; }
+.qst-relaunch .qrl-note { margin-top: 14px; font-size: 14px; color: var(--qa-tx-2); max-width: 66ch; }
+.qst-relaunch .qrl-ok { margin-top: 14px; font-size: 15px; font-weight: 700; }
+.qst-relaunch .qrl-why { margin-top: 18px; padding-left: 14px; box-shadow: inset 2px 0 0 var(--qa-warn); font-size: 14px; color: var(--qa-tx-2); }
+.qst-relaunch .qrl-why ul { margin-top: 8px; display: grid; gap: 6px; }
+.qst-relaunch .qrl-why li::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 9px; border-radius: 50%; background: var(--qa-warn); vertical-align: 2px; }
+.qst-relaunch .qrl-preview, .qst-relaunch #qrl-root > dl { display: grid; grid-template-columns: auto minmax(0, 1fr); margin-top: 18px; }
+.qst-relaunch .qrl-preview > :is(dt, dd), .qst-relaunch #qrl-root > dl > :is(dt, dd) { padding: 12px 0; box-shadow: 0 -1px 0 var(--qa-rule); font-size: 14.5px; }
+.qst-relaunch .qrl-preview > dd, .qst-relaunch #qrl-root > dl > dd { padding-left: 18px; }
+.qst-relaunch .qrl-migrate { margin-top: 18px; }
+.qst-relaunch #qrl-root > h2 { margin-top: 28px; font-size: clamp(30px, 8vw, 44px); line-height: .98; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); }
+.qst-relaunch .qas-status { margin-top: 16px; font-weight: 620; }
+.qst-relaunch textarea { margin-top: 10px; }
+@media (min-width: 1100px) {
+  .qst-relaunch .qrl-row:not(:has(> button)) { grid-template-columns: 260px minmax(0, 1fr); gap: 28px; }
+  .qst-relaunch .qrl-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 28px; }
+}

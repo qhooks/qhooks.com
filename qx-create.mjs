@@ -54,7 +54,7 @@ function restoreDraft(){let hadDraft=false;try{const text=localStorage.getItem(D
  if(hadDraft&&handoff.changedChain){saveDraft();note('Selected '+requested.name+'. Check starting liquidity in '+requested.quote.symbol+'; your other draft settings were kept.');}
  if(!chains.some(c=>c.id===config.chainId)&&!record)config.chainId=chains[0].id;
 }
-function saveDraft(){try{localStorage.setItem(DRAFT,JSON.stringify({version:1,screen,config,profileScope,liquidityState}));}catch{note('Browser storage is full or unavailable. Free space before launching.',true);}}
+function saveDraft(){try{localStorage.setItem(DRAFT,JSON.stringify({version:1,screen,config,profileScope,liquidityState}));}catch{note('Browser storage is full or blocked. Free space before launching.',true);}}
 async function saveRecord(){saveLaunchRecord(localStorage,record);localStorage.setItem(ACTIVE,record.id);if(localStorage.getItem(ACTIVE)!==record.id)throw Error('Could not remember the active launch.');}
 let quantumControl=null,quantumReady=false;
 function download(text,name){const url=URL.createObjectURL(new Blob([text],{type:'application/json'})),a=el('a',{href:url,download:name});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
@@ -189,7 +189,7 @@ async function rpcRead(method,params,chainId=config.chainId){const r=await fetch
 async function refreshCost({refreshBalances=true}={}){if(solCreate?.active)return;const identity=liquidityIdentity();await refreshLiquidity({force:refreshBalances});if(!sameLiquidityIdentity(identity,liquidityIdentity()))return;clearTimeout(costTimer);refreshDollarPrices();reviewGate.invalidate();const rev=++costRevision,chain=chainById(config.chainId);cost=null;render();try{const price=BigInt(await rpcRead('eth_gasPrice',[],chain.id));if(price<=0n)throw Error('Network gas estimate is unavailable.');let wrapNeeded=true,locksSetupNeeded=true,wrapAmount=null;const c=hub.snapshot().current;
  if(config.allocations.length){const r=await fetch('/full-launch/extras.json');if(!r.ok)throw Error('Could not estimate QLocks setup.');const extras=await r.json();locksSetupNeeded=await rpcRead('eth_getCode',[extras.contracts.locks.address,'latest'],chain.id)==='0x';}
  if(rev!==costRevision)return;liquidityGasCost=costSummary(config,{gasPriceWei:price,locksSetupNeeded});applyAffordableLiquidity(liquidityGasCost);
- if(c&&chain.quote.wrapNative){const bal=currentLiquidityBalances()?.quoteBalance;if(bal==null)throw Error('Balance unavailable.');const need=units(config.liquidity,chain.quote.decimals);wrapNeeded=BigInt(bal)<need;wrapAmount=need>BigInt(bal)?need-BigInt(bal):0n;}
+ if(c&&chain.quote.wrapNative){const bal=currentLiquidityBalances()?.quoteBalance;if(bal==null)throw Error('Refreshing your balance. Try again in a moment.');const need=units(config.liquidity,chain.quote.decimals);wrapNeeded=BigInt(bal)<need;wrapAmount=need>BigInt(bal)?need-BigInt(bal):0n;}
  cost=costSummary(config,{gasPriceWei:price,wrapNeeded,locksSetupNeeded});
  if(wrapAmount!==null)cost.totalNativeWei=(BigInt(cost.totalNativeWei)-(wrapNeeded?units(config.liquidity,chain.quote.decimals):0n)+wrapAmount).toString();
  render();

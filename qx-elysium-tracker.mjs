@@ -63,7 +63,7 @@ export function elysiumTransactionView(observation, { now = Date.now(), hash = n
   if (!observation) return base;
   let data;
   try { data = normalize(observation, selected, time); }
-  catch { return { ...base, status: 'unavailable', headline: 'Transaction check unavailable', detail: 'The response did not match the selected Elysium transaction. Refresh to retry.' }; }
+  catch { return { ...base, status: 'unavailable', headline: 'Transaction check refreshing', detail: 'The response did not match the selected Elysium transaction. Refresh to retry.' }; }
   const common = { ...base, hash: data.hash, observedAt: data.observedAt, stale: time - data.observedAt >= staleAfterMs,
     parentHash: data.parentHash ?? null, canRefresh: true, rpcFinality: finalityOf(data), provider: data.provider, rpcHeads: data.heads };
   if (!data.receipt) return { ...common, status: 'pending', headline: 'Waiting for an execution receipt',
@@ -112,7 +112,7 @@ export function createElysiumTracker({ fetcher = (...args) => globalThis.fetch(.
       history: entries.map(row => ({ hash: row.hash, observedAt: row.observation?.observedAt ?? null,
         status: elysiumTransactionView(row.observation, { now: clockValue(now), hash: row.hash, staleAfterMs }).status })),
       canRefresh: !!selected && !loading && !disposed };
-    if (error) return { ...current, status: 'unavailable', headline: observation ? 'Refresh unavailable · last observation retained' : 'Transaction check unavailable',
+    if (error) return { ...current, status: 'unavailable', headline: observation ? 'Refreshing · last observation retained' : 'Transaction check refreshing',
       detail: observation ? 'Could not refresh. Last observation: ' + view.headline + '. ' + view.detail : 'Could not read the public Elysium receipt. Refresh to retry.', stale: !!observation };
     return current;
   }
@@ -140,7 +140,7 @@ export function createElysiumTracker({ fetcher = (...args) => globalThis.fetch(.
     try {
       const data = await Promise.race([(async () => {
         const response = await fetcher('/api/elysium/transaction/' + hash, { method: 'GET', credentials: 'omit', redirect: 'manual', cache: 'no-store', signal: own.signal });
-        if (!response.ok) throw new Error('Read unavailable');
+        if (!response.ok) throw new Error('Refreshing');
         return normalize(await response.json(), hash, clockValue(now));
       })(), aborted]);
       if (disposed || mine !== revision || own.signal.aborted || hash !== selected) return snapshot();

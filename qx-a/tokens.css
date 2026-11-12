@@ -1,0 +1,178 @@
+/* QHooks System A: design tokens. Dark is the default; light maps the same slots.
+   Theme: <html data-theme="dark|light">. Everything else reads these variables, never raw values. */
+@font-face { font-family: "Mona Sans"; src: url("fonts/mona-sans-latin.woff2") format("woff2"); font-weight: 200 900; font-stretch: 75% 125%; font-display: block; }
+
+:root, [data-theme="dark"] {
+  color-scheme: dark;
+
+  /* surfaces: floor (page), slab (the one raised surface type), sheet (phone bottom sheet) */
+  --qa-floor: #090B0A;
+  --qa-floor-2: #0D100F;
+  --qa-slab-a: #151A18;
+  --qa-slab-b: #0F1311;
+  --qa-slab: linear-gradient(180deg, var(--qa-slab-a), var(--qa-slab-b));
+  --qa-slab-edge: inset 0 1px 0 rgba(255, 255, 255, .08);
+  --qa-slab-shadow: 0 50px 90px -40px rgba(0, 0, 0, .95), 0 0 0 1px rgba(0, 0, 0, .35);
+  --qa-glass: rgba(9, 11, 10, .84);
+  --qa-glass-2: rgba(6, 8, 7, .46);
+  --qa-wash: rgba(255, 255, 255, .05);
+  --qa-wash-2: rgba(255, 255, 255, .08);
+
+  /* lines: hairlines only, never boxes */
+  --qa-rule: rgba(255, 255, 255, .07);
+  --qa-rule-2: rgba(255, 255, 255, .12);
+  --qa-rule-row: rgba(255, 255, 255, .04);
+
+  /* text */
+  --qa-tx: #F4F1E9;
+  --qa-tx-2: rgba(244, 241, 233, .70);
+  --qa-tx-3: rgba(244, 241, 233, .52);
+  --qa-tx-on-gold: #211505;
+  --qa-tx-on-buy: #03170B;
+
+  /* brand: one gold, pushed to metal for the primary action */
+  --qa-gold: #D2AD72;
+  --qa-gold-hi: #F0DAAE;
+  --qa-gold-lo: #8E6C3A;
+  --qa-gold-metal: linear-gradient(180deg, #F5E2B9 0%, #D9B57A 46%, #B38A4B 100%);
+  --qa-gold-wash: rgba(210, 173, 114, .14);
+
+  /* meaning: green/red only for buy/sell and up/down, amber for real warnings, fire for burns */
+  --qa-buy: #3EDD8F;
+  --qa-buy-deep: #17A867;
+  --qa-buy-wash: rgba(62, 221, 143, .14);
+  --qa-buy-btn: linear-gradient(180deg, #6DF2AE, #20BE75);
+  --qa-sell: #FF5E64;
+  --qa-sell-deep: #DA3E45;
+  --qa-sell-wash: rgba(255, 94, 100, .14);
+  --qa-sell-btn: linear-gradient(180deg, #FF7A7F, #D43840);
+  --qa-warn: #F4B470;
+  --qa-fire: #FF9A45;
+  --qa-fire-text: linear-gradient(180deg, #FFE2B0, #FF9A45 60%, #E8571F);
+  --qa-info: #8FB8FF;
+  --qa-chain-rh: #CCFF00;
+
+  /* glow */
+  --qa-glow-gold: 0 0 10px rgba(210, 173, 114, .8);
+  --qa-glow-buy: 0 0 22px rgba(62, 221, 143, .45);
+  --qa-glow-sell: 0 0 22px rgba(255, 94, 100, .4);
+  --qa-art-opacity: .8;
+  --qa-grain-opacity: .05;
+  --qa-shadow-pop: 0 22px 44px -18px rgba(0, 0, 0, .85);
+
+  /* art: set per page/token by components.mjs (artStage) */
+  --qa-banner-blur: none;
+  --qa-icon: none;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --qa-floor: #F2F3F1;
+  --qa-floor-2: #E9EBE8;
+  --qa-slab-a: #FFFFFF;
+  --qa-slab-b: #F8F9F7;
+  --qa-slab-edge: inset 0 1px 0 rgba(255, 255, 255, .9);
+  --qa-slab-shadow: 0 40px 80px -40px rgba(20, 28, 24, .35), 0 0 0 1px rgba(20, 28, 24, .06);
+  --qa-glass: rgba(242, 243, 241, .86);
+  --qa-glass-2: rgba(255, 255, 255, .62);
+  --qa-wash: rgba(15, 20, 18, .045);
+  --qa-wash-2: rgba(15, 20, 18, .07);
+  --qa-rule: rgba(15, 20, 18, .09);
+  --qa-rule-2: rgba(15, 20, 18, .15);
+  --qa-rule-row: rgba(15, 20, 18, .055);
+  --qa-tx: #0D100F;
+  --qa-tx-2: rgba(13, 16, 15, .72);
+  --qa-tx-3: rgba(13, 16, 15, .56);
+  --qa-gold: #8B6631;
+  --qa-gold-hi: #7A5726;
+  --qa-gold-lo: #C9A262;
+  --qa-gold-metal: linear-gradient(180deg, #E9CF9C 0%, #CFA662 50%, #A9803F 100%);
+  --qa-gold-wash: rgba(139, 102, 49, .1);
+  --qa-buy: #0E9F5C;
+  --qa-buy-deep: #0B8A4F;
+  --qa-buy-wash: rgba(14, 159, 92, .1);
+  --qa-buy-btn: linear-gradient(180deg, #34D88A, #12A863);
+  --qa-sell: #D93A41;
+  --qa-sell-deep: #C02F36;
+  --qa-sell-wash: rgba(217, 58, 65, .09);
+  --qa-sell-btn: linear-gradient(180deg, #F0636A, #D0353D);
+  --qa-warn: #B4661A;
+  --qa-fire: #E06A18;
+  --qa-fire-text: linear-gradient(180deg, #F29A3D, #E06A18 60%, #B8410F);
+  --qa-info: #2F6BD8;
+  --qa-chain-rh: #7FA300;
+  --qa-glow-gold: 0 0 8px rgba(139, 102, 49, .35);
+  --qa-glow-buy: none;
+  --qa-glow-sell: none;
+  --qa-art-opacity: .38;
+  --qa-grain-opacity: 0;
+  --qa-shadow-pop: 0 18px 40px -16px rgba(20, 28, 24, .35);
+}
+
+:root {
+  /* type: Mona Sans only. Width carries hierarchy: UI 100, headings 118, display 122. Tabular figures, zero without slash. */
+  --qa-sans: "Mona Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --qa-fs-micro: 11px;
+  --qa-fs-small: 12.5px;
+  --qa-fs-meta: 13.5px;
+  --qa-fs-body: 15px;
+  --qa-fs-title: 17px;
+  --qa-fs-h3: 20px;
+  --qa-fs-stat: 18px;
+  --qa-fs-display-s: 24px;
+  --qa-fs-display-m: 34px;
+  --qa-fs-h2: 38px;
+  --qa-fs-price: 52px;
+  --qa-fs-hero: 44px;
+  --qa-w-body: 460;
+  --qa-w-ui: 620;
+  --qa-w-strong: 720;
+  --qa-w-display: 830;
+  --qa-wd-ui: 100%;
+  --qa-wd-head: 118%;
+  --qa-wd-display: 122%;
+  --qa-track-display: -.045em;
+  --qa-track-head: -.03em;
+
+  /* space: 4px grid */
+  --qa-s1: 4px; --qa-s2: 8px; --qa-s3: 12px; --qa-s4: 16px; --qa-s5: 20px; --qa-s6: 24px; --qa-s8: 32px; --qa-s10: 40px; --qa-s12: 48px; --qa-s16: 64px; --qa-s24: 96px;
+  --qa-pad: 18px;            /* page gutter on phone */
+  --qa-section-gap: 40px;    /* space between sections replaces boxes */
+  --qa-maxw: 1440px;
+
+  /* radii: only these */
+  --qa-r-s: 8px;     /* small controls, tooltips */
+  --qa-r-m: 12px;    /* inputs, icon buttons */
+  --qa-r-btn: 15px;  /* big action buttons */
+  --qa-r-toast: 18px;
+  --qa-r-slab: 26px; /* the slab and the sheet */
+
+  /* motion: one signature curve, three speeds, flashes that fade */
+  --qa-ease: cubic-bezier(.2, 0, 0, 1);
+  --qa-ease-out: cubic-bezier(.05, .7, .1, 1);
+  --qa-ease-in: cubic-bezier(.3, 0, 1, 1);
+  --qa-t-tap: 140ms;
+  --qa-t-quick: 200ms;
+  --qa-t-std: 320ms;
+  --qa-t-enter: 450ms;
+  --qa-t-flash: 1100ms;
+  --qa-t-ambient: 14s;
+
+  /* shell */
+  --qa-hdr-h: 56px;
+  --qa-nav-h: 64px;
+  --qa-tabbar-h: 64px;
+  --qa-dock-h: 86px;
+  --qa-z-nav: 40; --qa-z-dock: 45; --qa-z-toast: 60; --qa-z-sheet: 70;
+}
+
+@media (min-width: 1100px) {
+  :root {
+    --qa-pad: 40px;
+    --qa-fs-h2: 44px;
+    --qa-fs-price: 68px;
+    --qa-fs-hero: 72px;
+    --qa-fs-stat: 22px;
+    --qa-section-gap: 56px;
+  }
+}

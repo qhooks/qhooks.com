@@ -1,0 +1,4 @@
+/* /board in System A: page frame only. The room itself is styled in /qx-board.css. */
+.qx-boardpage .qa-page { padding-bottom: 8px; }
+.qx-boardpage .qa-loading { padding: 40px 0; }
+@media (max-width: 1099px) { .qb-actions-top .qcf-control { flex: 0 0 auto; } }

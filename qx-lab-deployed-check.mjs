@@ -24,7 +24,7 @@ async function publicRead(chainId,method,params,{signal,fetcher=globalThis.fetch
 export async function verifyPreparedDeployment(prepared,{rpc,fetcher=globalThis.fetch,signal,now=Date.now}={}){
   const{roles,target,address,chainId,chainName}=validate(prepared),read=(method,params)=>{if(signal?.aborted)throw abort();return rpc?rpc(method,params,{signal}):publicRead(chainId,method,params,{signal,fetcher});};
   ensure(await read('eth_chainId',[])==='0x'+BigInt(chainId).toString(16),'The read endpoint did not confirm '+chainName+'.');
-  const block=await read('eth_getBlockByNumber',['latest',false]);ensure(/^0x[0-9a-f]+$/i.test(block?.number||'')&&HASH.test(block?.hash||''),'A canonical '+chainName+' block is unavailable.');
+  const block=await read('eth_getBlockByNumber',['latest',false]);ensure(/^0x[0-9a-f]+$/i.test(block?.number||'')&&HASH.test(block?.hash||''),'A canonical '+chainName+' block could not be read.');
   const tag=block.number,contracts=await Promise.all(roles.map(async role=>{
     const to=prepared.plan.addresses[role];ensure(ADDRESS.test(to||''),'A prepared contract address is missing.');
     try{const code=await read('eth_getCode',[to,tag]);ensure(typeof code==='string'&&HEX.test(code),'Invalid deployed code response.');
@@ -54,7 +54,7 @@ export function mountPreparedDeploymentCheck(container,prepared,{document:doc=co
     try{
       const value=await verifyPreparedDeployment(prepared,{rpc,fetcher,signal:ownedController.signal});if(dead||mine!==sequence)return;result=value;
       const block=identity.chainName+' block '+BigInt(value.block.number).toString()+' · '+value.block.hash;
-      status.textContent=block+'. '+(value.complete?'Runtime and every prepared getter match this build.':value.deployed?'Deployed code found. Some build comparisons differ or are unavailable.':'No deployed target was confirmed. The address remains a prediction.');
+      status.textContent=block+'. '+(value.complete?'Runtime and every prepared getter match this build.':value.deployed?'Deployed code found. Some build comparisons differ or could not be read.':'No deployed target was confirmed. The address remains a prediction.');
       for(const contract of value.contracts)list.append(el(doc,'li',contract.role+' runtime: '+({matches:'matches the build',mismatch:'differs from the build',not_deployed:'no deployed code',unavailable:'read unavailable'}[contract.state]),{'data-state':contract.state}));
       for(const check of value.checks)list.append(el(doc,'li',check.read+(check.arguments?.length?' ['+check.arguments.join(', ')+']':'')+': '+({matches:'exact return matches',mismatch:'return differs',unavailable:'read unavailable'}[check.state]),{'data-state':check.state}));
       if(value.deployed){proofHost.append(el(doc,'p','RepoProof findings describe this public deployed address separately from the build comparison.'));const target=el(doc,'div');proofHost.append(target);proof=mount(target,{subject:{kind:'contract',chainId:identity.chainId,address:identity.address,revision:mine},getSubject:()=>!dead&&mine===sequence&&result?.deployed?{kind:'contract',chainId:identity.chainId,address:identity.address,revision:mine}:null,document:doc,fetcher});}

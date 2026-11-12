@@ -35,7 +35,14 @@ export function mountBurnTicker(el, {href = '/qhooks-token#qx-buybacks'} = {}) {
   let data = null, fetchedAt = 0, timer = 0, dead = false;
   const paint = () => { const t = burnTickerText(data, fetchedAt); if (!t) return; main.textContent = t.main; live.textContent = t.live; el.hidden = false; };
   async function load() {
-    try { const r = await fetch(API, {cache: 'no-store'}); if (!r.ok) throw Error(); data = await r.json(); fetchedAt = Math.min(Date.now(), data.observedAt || Date.now()); }
+    // A hidden tab makes no request; the next visible tick reads again.
+    if (typeof document !== 'undefined' && document.hidden) { if (!dead) timer = setTimeout(load, REFRESH); return; }
+    try {
+      const r = await fetch(API, {cache: 'no-store'}); if (!r.ok) throw Error(); data = await r.json(); fetchedAt = Math.min(Date.now(), data.observedAt || Date.now());
+      // System A home: the Holders act shows the same read (countdown, burns), so it is handed over instead of fetched twice.
+      const detail = {data, fetchedAt}; globalThis.__qxBuybacks = detail;
+      if (typeof document !== 'undefined') document.dispatchEvent(new CustomEvent('qx:buybacks', {detail}));
+    }
     catch { live.textContent = 'Refreshing'; }
     paint(); if (!dead) timer = setTimeout(load, REFRESH);
   }

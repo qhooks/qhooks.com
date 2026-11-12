@@ -1,0 +1,64 @@
+/* Launch workspace: the same studio language as the Expert Studio. crypto-product-ui.mjs injects the step strip
+   (.studio-steps), the draft preview (.studio-preview) and the step panels; this sheet lays them out. */
+.qst-ws .l162-qtoken-link { margin: 0 0 18px; font-size: 14.5px; }
+.qst-ws .qst-top h1 { font-size: clamp(38px, 10.4vw, 68px); }
+.qst-ws .qst-top .qst-lede + .qst-lede { margin-top: 6px; }
+
+/* draft preview: the token so far, as a coin and a name */
+.qst-ws .studio-preview { display: grid; grid-template-columns: 52px minmax(0, 1fr); column-gap: 14px; row-gap: 2px; align-items: center; margin-top: 28px; padding: 16px 0; box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+.qst-ws .studio-token-mark { grid-row: 1 / span 2; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: var(--qa-gold-metal); color: var(--qa-tx-on-gold); font-size: 22px; font-weight: 800;
+  box-shadow: 0 0 0 3px var(--qa-floor), 0 0 0 4.5px var(--qa-gold), 0 12px 28px -10px rgba(0,0,0,.8); }
+.qst-ws .studio-token-identity { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; min-width: 0; }
+.qst-ws .studio-token-identity strong { font-size: 22px; line-height: 1.05; font-weight: 830; font-stretch: 118%; letter-spacing: -.035em; }
+.qst-ws .studio-ticker { font-size: 14px; font-weight: 700; color: var(--qa-tx-2); }
+.qst-ws .studio-network { font-size: 13px; font-weight: 640; color: var(--qa-tx-2); }
+.qst-ws .studio-preview > p { grid-column: 1 / -1; margin-top: 10px; font-size: 12.5px; color: var(--qa-tx-3); }
+
+/* step strip: sticky on phone, underline tabs on desktop */
+.qst-ws .studio-steps { position: sticky; top: calc(var(--qa-hdr-h) + env(safe-area-inset-top)); z-index: 30; display: flex; margin: 22px calc(var(--qa-pad) * -1) 0; padding: 0 var(--qa-pad); overflow-x: auto; scrollbar-width: none;
+  scroll-padding-inline: var(--qa-pad); background: var(--qa-glass); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); box-shadow: 0 1px 0 var(--qa-rule), 0 -1px 0 var(--qa-rule); }
+.qst-ws .studio-steps::-webkit-scrollbar { display: none; }
+.qst-ws .studio-step { position: relative; flex: none; display: inline-flex; align-items: center; gap: 9px; height: 52px; padding: 0 16px 0 0; margin-right: 6px; font-size: 14.5px; font-weight: 700; color: var(--qa-tx-3); white-space: nowrap; }
+.qst-ws .studio-step-number { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-size: 11.5px; font-weight: 780; box-shadow: inset 0 0 0 1.5px var(--qa-rule-2); }
+.qst-ws .studio-step.is-done { color: var(--qa-tx-2); }
+.qst-ws .studio-step.is-done .studio-step-number { color: var(--qa-gold-hi); box-shadow: inset 0 0 0 1.5px var(--qa-gold); }
+.qst-ws .studio-step[aria-current="step"] { color: var(--qa-tx); }
+.qst-ws .studio-step[aria-current="step"] .studio-step-number { color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); box-shadow: 0 0 0 4px var(--qa-gold-wash), var(--qa-glow-gold); }
+.qst-ws .studio-step[aria-current="step"]::after { content: ""; position: absolute; left: 0; right: 16px; bottom: 0; height: 2px; background: var(--qa-gold); box-shadow: var(--qa-glow-gold); }
+
+/* panels */
+.qst-ws .launch-studio-grid, .qst-ws .qwallet-grid { display: block; }
+.qst-ws .studio-panel { padding-top: 8px; outline: none; }
+.qst-ws .studio-panel > .qwallet-panel:first-child, .qst-ws .studio-panel > section.qwallet-panel:first-child { margin-top: 28px; padding-top: 0; box-shadow: none; }
+.qst-ws .qwallet-panel h2 { font-size: clamp(28px, 8vw, 40px); line-height: 1; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); }
+.qst-ws .studio-navigation { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; padding-top: 20px; box-shadow: 0 -1px 0 var(--qa-rule); }
+.qst-ws .studio-navigation .workspace-button:last-child:not(.studio-back) { color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 22px -10px rgba(210,173,114,.7); }
+.qst-ws .studio-included { margin-top: 32px; }
+.qst-ws .studio-included > p { margin-top: 10px; font-size: 14.5px; color: var(--qa-tx-2); }
+.qst-ws .studio-protections { display: grid; grid-template-columns: minmax(0, 1fr); margin-top: 18px; box-shadow: 0 -1px 0 var(--qa-rule); }
+.qst-ws .studio-protections article { padding: 16px 0; box-shadow: 0 1px 0 var(--qa-rule-row); }
+.qst-ws .studio-included-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 720; color: var(--qa-buy); }
+.qst-ws .studio-included-label::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.qst-ws .studio-protections h3 { margin-top: 6px; }
+.qst-ws .studio-protections p { font-size: 13.5px; color: var(--qa-tx-2); }
+.qst-ws .studio-note { margin-top: 14px; font-size: 13px; color: var(--qa-tx-3); }
+.qst-ws #ql-begin:not(:disabled) { color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 22px -10px rgba(210,173,114,.7); }
+.qst-ws #ql-review-panel section > :is(button, label, div, details) { margin-top: 12px; }
+.qst-ws #ql-review-panel section > button { margin-right: 6px; }
+.qst-ws #qh-trade-panel h2 { background: var(--qa-gold-metal); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.qst-ws #qh-trade-ready > * + * { margin-top: 12px; }
+
+@media (min-width: 1100px) {
+  /* content | draft preview (the one slab), sticky */
+  .qst-ws { display: grid; grid-template-columns: minmax(0, 1fr) 340px; column-gap: 52px; align-content: start; }
+  .qst-ws > * { grid-column: 1; min-width: 0; }
+  .qst-ws > .studio-preview { grid-column: 2; grid-row: 2 / span 8; align-self: start; position: sticky; top: calc(var(--qa-nav-h) + 28px); margin-top: 44px; padding: 22px;
+    border-radius: var(--qa-r-slab); background: var(--qa-slab); box-shadow: var(--qa-slab-edge), var(--qa-slab-shadow); grid-template-columns: 60px minmax(0, 1fr); }
+  .qst-ws .studio-token-mark { width: 60px; height: 60px; font-size: 26px; }
+  .qst-ws .studio-steps { top: var(--qa-nav-h); margin: 44px 0 0; padding: 0; }
+  .qst-ws .studio-panel { max-width: 780px; }
+  .qst-ws .studio-protections { grid-template-columns: repeat(3, minmax(0, 1fr)); box-shadow: none; }
+  .qst-ws .studio-protections article { padding: 0 20px; box-shadow: -1px 0 0 var(--qa-rule); }
+  .qst-ws .studio-protections article:first-child { padding-left: 0; box-shadow: none; }
+  .qst-ws .technical-notes { max-width: 780px; }
+}

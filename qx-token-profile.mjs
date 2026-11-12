@@ -118,7 +118,7 @@ export function profilePublicationControl({chain=()=>document.getElementById('ql
   let running=false;
   const saved=()=>{try{return !!recordId&&storage().getItem(PUBLISHED+recordId)==='published';}catch{return false;}};
   const showPublished=pool=>status.replaceChildren('Token profile published. ',h('a',{href:'/terminal#m='+pool.chainId+':'+pool.controller},'View your token →'));
-  const request=async(...args)=>{try{return await fetcher(...args);}catch(e){throw Object.assign(Error(e?.message||'Network unavailable.'),{retryable:!declined(e)&&e?.name!=='AbortError'});}};
+  const request=async(...args)=>{try{return await fetcher(...args);}catch(e){throw Object.assign(Error(e?.message||'The network did not answer. Try again.'),{retryable:!declined(e)&&e?.name!=='AbortError'});}};
   const failure=async(response,message)=>{const j=await response.json().catch(()=>({}));return Object.assign(Error(message||errorMessage(j)),{retryable:j.error!=='not_the_creator'&&(response.status>=500||transient(j))});};
   async function publish(automatic=false){
     if(running)return;running=true;button.disabled=true;
@@ -131,7 +131,7 @@ export function profilePublicationControl({chain=()=>document.getElementById('ql
       await connection?.check();status.textContent='Checking your launch…';
       const listed=await request('/api/markets/'+pool.chainId+'/'+pool.controller,{cache:'no-store'});
       await connection?.check();if(listed.status===404){const added=await request('/api/markets',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(pool)});if(!added.ok)throw await failure(added,'The launch could not be listed yet. Your profile draft is saved; try again.');}
-      else if(!listed.ok)throw await failure(listed,'The launch directory is unavailable. Try again in a moment.');
+      else if(!listed.ok)throw await failure(listed,'Refreshing the launch directory. Try again in a moment.');
       if(!auth.boardSession()){status.textContent='Sign in with your creator wallet. This free signature moves no funds.';await auth.signIn(connection||undefined);}
       await connection?.check();const headers=auth.authHeaders();if(!headers.authorization)throw Error('Sign in with your current creator wallet again.');connection?.assertCurrent();
       status.textContent='Publishing your token profile…';

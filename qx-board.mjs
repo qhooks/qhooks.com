@@ -16,6 +16,16 @@ import { boardRow, boardTabs, num, ago, callRecord, addressMark, boardIcon, chai
 import {memberIdentity} from './qx-member-identity.mjs';
 import {communityCapabilities,isElysiumDiscussion,discussionPath,elysiumContractUrl} from './qx-community-capabilities.mjs';
 import {firstCallPrompt,boardHasNoCalls} from './qx-community-empty.mjs';
+// System A presentation loads beside the board, never in front of it: if it cannot load, the board still reads and posts.
+let A = null;
+const sysA = Promise.all([import('/qx-a/components.mjs'), import('/qx-a/pages/community-common.mjs')]).then(([c, x]) => {
+  A = { ...c, ...x };
+  A.laneShell({ active: 'community' }); document.body.prepend(A.ambient()); A.setArt({ blur: A.QHOOKS_ART.blur });
+  // a trade that moves this token's price updates the strip and every call's result on the board
+  A.onMarkets(() => { heroStrip?.strip.update(true); heroStrip?.tone(); for (const o of [...outcomes]) { if (!o.el.isConnected) { outcomes.delete(o); continue; } const p = liveFor(o.b, o.q); if (p) o.out.update(p, { flash: true }); } });
+  A.visiblePoll(() => A.readMarkets(true), 20000);
+  return A;
+}).catch(() => null);
 
 const $ = id => document.getElementById(id);
 const root = $('qb-root');
@@ -113,7 +123,7 @@ function postCard(p, { reply = false } = {}) {
     if (creator && p.hidden === 'creator') card.append(h('div', { class: 'qb-actions' }, actBtn('Unhide', () => moderate(p, 'hide', { hidden: false }))));
     return card;
   }
-  const body = h('div', { class: 'qb-post-body' }, p.kind === 'call' && p.call ? callRecord({ ...p.call, boardKind: b.kind }) : null, (p.kind === 'call' ? clampInto(h('div', { class: 'qb-text' }), p.text || '', { render: richText }) : h('div', { class: 'qb-text' }, ...richText(p.text || ''))));
+  const body = h('div', { class: 'qb-post-body' }, (p.kind === 'call' ? clampInto(h('div', { class: 'qb-text' }), p.text || '', { render: richText }) : h('div', { class: 'qb-text' }, ...richText(p.text || ''))), p.kind === 'call' && p.call ? (A ? callBlock(p, b) : callRecord({ ...p.call, boardKind: b.kind })) : null);
   if (p.hidden === 'creator' || p.hidden === 'review' || p.folded) {
     card.classList.add('is-hidden');
     const show = h('button', { type: 'button', class: 'qb-link' }, 'Show post');
@@ -143,6 +153,27 @@ function postCard(p, { reply = false } = {}) {
   if (!reply && p.replies?.length) card.append(h('div', { class: 'qb-replies' }, ...p.replies.map(r => postCard(r, { reply: true }))));
   return card;
 }
+function callBlock(p, b) {
+  const c = p.call || {}, live = liveFor(b, c.quoteSymbol);
+  const out = A.outcome(c, { live }), wrap = h('section', { class: 'qb-call', 'aria-label': 'Call record' });
+  if (out) { wrap.append(out); outcomes.add({ out, b, q: c.quoteSymbol, el: wrap }); }
+  const cp = A.checkpoints(c); if (cp) wrap.append(cp);
+  const pos = A.positionBars(p.position, c.at || p.createdAt); if (pos) wrap.append(pos);
+  const proof = ['day', 'week'].map(k => [k === 'day' ? '24h' : '7d', c.scoreV2?.checkpoints?.[k]]).filter(([, x]) => x?.status === 'observed' && x.provenance);
+  if (proof.length) wrap.append(h('details', { class: 'qb-call-proof' }, h('summary', {}, 'Indexed quote sources'), ...proof.map(([label, x]) => h('p', {}, label + ' · observed ' + new Date(x.observedAt).toLocaleString() + ' · block ' + x.provenance.block + ' · ' + A.fmt.short(x.provenance.transaction)))));
+  const ref = safeRef(c.ref); if (ref) wrap.append(h('a', { class: 'qb-call-ref', href: ref, rel: 'nofollow ugc noopener' }, 'Trade via this call'));
+  return wrap;
+}
+const outcomes = new Set();
+// The same referral-link check the board has always used: qhooks.com, a launch or token trade path, and a wallet referrer.
+function safeRef(ref) {
+  try {
+    const u = new URL(ref), launch = /^\/l\/\d+\/0x[0-9a-f]{40}$/.test(u.pathname);
+    const token = ['/terminal', '/terminal.html'].includes(u.pathname) && /^#t=(?:(?:8453|1|42161|56|4663):0x[0-9a-f]{40}|solana:[1-9A-HJ-NP-Za-km-z]{32,44})$/.test(u.hash);
+    return u.origin === 'https://qhooks.com' && (launch || token) && /^0x[0-9a-f]{40}$/.test(u.searchParams.get('ref') || '') ? u.href : null;
+  } catch { return null; }
+}
+function liveFor(b, q) { const m = A?.marketFor(b); if (!m) return null; if (!q || q === 'USD') return m.s.priceUsd > 0 ? m.s.priceUsd : null; return q === m.quote && m.s.price > 0 ? m.s.price : null; }
 const actBtn = (label, fn) => { const b = h('button', { type: 'button', class: 'qb-act' }, label); b.addEventListener('click', fn); return b; };
 function reportMenu(p) {
   const d = h('details', { class: 'qb-report' }, h('summary', { class: 'qb-act' }, 'Report'));
@@ -196,7 +227,7 @@ function composer({ replyTo = null, placeholder, small = false, onDone }) {
   };
   callToggle?.addEventListener('click', () => { draft[callMode ? 'call' : 'post'] = ta.value; callMode = !callMode; mode(); check.hidden=!callMode||!draft.attemptAt; ta.focus(); });
   ta.addEventListener('input', () => { draft[callMode ? 'call' : 'post'] = ta.value; persist(); countText(); });
-  mode(); if(!drafts.persistent())status.textContent='Browser storage is unavailable. Keep this tab open to preserve your draft.'; if (viewer && !viewer.canPost) send.disabled = true;
+  mode(); if(!drafts.persistent())status.textContent='This browser is not saving drafts. Keep this tab open to preserve your draft.'; if (viewer && !viewer.canPost) send.disabled = true;
   const retryHolding = viewer?.reason === 'chain' ? actBtn('Check holding again', () => load({ keep: true })) : null;
   const check = actBtn('Check previous publication', async () => {
     check.disabled = true; status.textContent = 'Checking your public call record…';
@@ -276,7 +307,7 @@ function side() {
       h('li', {}, h('b', {}, b.gate ? 'Holders post. ' : 'Open to every wallet. '), b.gate ? 'Posting needs ' + num(b.gate.min) + ' $' + b.gate.symbol + ' in the wallet or staked, checked when you post. Anyone can read.' : b.kind === 'token' ? 'Anyone can read and post. This token board has no creator controls or minimum holding.' : 'Anyone can read; any wallet can post. The creator can ask for a minimum holding.'),
       h('li', {}, h('b', {}, 'Badges are facts. '), isElysiumDiscussion(b)?'Elysium holder and creator badges are not read here.':b.kind === 'token' ? (b.chainId === 'solana' ? "Holder badges aren't read on Solana yet." : 'Holder badges are read live from the chain when each post is written.') : 'Creator, verified X account, early buyer, staker and holder are read from the chain when each post is written.'),
       h('li', {}, h('b', {}, 'Moderated in the open. '), b.kind === 'token' ? 'Reports and QHooks moderation only. Five reports hide a post until QHooks reviews it. Links from new wallets without a holder badge are held for review for their first 24 hours; only the author can see them until cleared.' : 'The creator can hide posts here; hidden posts stay openable. Five reports hide a post until QHooks reviews it.'),
-      h('li', {}, h('b', {}, 'Never advice. '), isElysiumDiscussion(b)?'Posts are people’s opinions. Scored calls and trading are unavailable for Elysium here.':b.kind === 'token' ? 'Posts are people’s opinions. Read the token’s safety information before you trade.' : 'Posts are people’s opinions. Read the launch terms before you trade.')));
+      h('li', {}, h('b', {}, 'Never advice. '), isElysiumDiscussion(b)?'Posts are people’s opinions. Scored calls and trading are not offered for Elysium here.':b.kind === 'token' ? 'Posts are people’s opinions. Read the token’s safety information before you trade.' : 'Posts are people’s opinions. Read the launch terms before you trade.')));
   const out = [how];
   if (b.kind !== 'token' && viewer?.creator) {
     const input = h('input', { type: 'text', inputMode: 'decimal', id: 'qb-gate-min', placeholder: 'No minimum', value: b.gate?.min || '', autocomplete: 'off', 'aria-describedby': 'qb-gate-help' });
@@ -294,24 +325,50 @@ function side() {
 
 // ---- The page ----
 function hero() {
-  const b = data.board, token = b.kind === 'token', key = boardIdentity(b);
-  const meta = h('p', { class: 'qb-meta' }, h('span', { class: 'qa-chain' }, chainName(b.chainId)), h('code', {}, isElysiumDiscussion(b)&&!b.symbol?'Contract discussion':'$' + b.symbol), token ? h('span', { class: 'qb-outside' }, 'Not a QHooks launch') : h('span', { class: 'qb-ours' }, 'QHooks launch'), token ? null : h('span', { id: 'qb-trust' }),
-    token ? null : h('span', { class: 'qb-gate-chip' + (b.gate ? ' is-gated' : '') }, b.gate ? 'Holders of ' + num(b.gate.min) + ' $' + b.gate.symbol + ' post' : 'Open to every wallet'));
-  const links = h('div', { class: 'qa-launch-links' }, h('span',{id:'qb-follow-topic'}),isElysiumDiscussion(b)?h('a',{class:'qa-btn qa-btn-primary',href:'/elysium'},'Explore Elysium pools →'):h('a', { class: 'qa-btn qa-btn-primary', href: '/terminal#' + (token ? 't=' : 'm=') + key }, 'Trade $' + b.symbol),
-    isElysiumDiscussion(b)?h('a',{class:'qa-btn',href:elysiumContractUrl(b),target:'_blank',rel:'noopener noreferrer'},'View contract on ElysScan'):null,
-    !token && b.creators?.[0] ? h('a', { class: 'qa-btn', href: profileUrl({wallet:b.creators[0]}) }, 'Creator profile') : null);
-  const tiles = h('div', { class: 'qa-tiles qb-tiles' },
-    h('div', { class: 'qa-tile' }, h('span', {}, 'Posts'), h('b', {}, num(b.posts))), h('div', { class: 'qa-tile' }, h('span', {}, 'Replies'), h('b', {}, num(b.replies))),
-    h('div', { class: 'qa-tile' }, h('span', {}, 'Latest'), h('b', {}, b.lastPostAt ? ago(b.lastPostAt) : '—')));
+  const b = data.board, token = b.kind === 'token', key = boardIdentity(b), art = A ? A.tokenArt(b, b.logo) : {}, m = A?.marketFor(b);
+  A?.setArt({ blur: art.blur || art.banner || art.logo || A.QHOOKS_ART.blur });
+  const mark = A && art.logo ? A.coin(art.logo, { size: 'md', alt: (b.symbol || b.name || 'Token') + ' icon' }) : h('span', { class: 'qb-coin-fallback' }, boardIcon(b));
+  const meta = h('p', { class: 'qa-meta qb-meta' }, h('span', {}, h('i', { class: 'qa-chain-dot', 'aria-hidden': 'true' }), chainName(b.chainId)),
+    h('span', {}, token ? 'Token board' : 'QHooks launch'), token ? null : h('span', { id: 'qb-trust' }),
+    token ? null : h('span', { class: 'qb-gate-chip' + (b.gate ? ' is-gated' : '') }, b.gate ? 'Holders of ' + num(b.gate.min) + ' $' + b.gate.symbol + ' post' : 'Open to every wallet'),
+    token ? h('span', { class: 'qb-safety', 'aria-label': 'Token safety' }, ...(b.safety?.available ? ((b.safety.flags || []).length ? b.safety.flags.slice(0, 8).map(flag => h('span', { class: 'qb-flag' }, flag)) : [h('span', { class: 'qb-flag is-clear' }, 'No flags returned')]) : [h('span', { class: 'qb-flag' }, 'Safety scan refreshing')])) : null);
+  const links = h('div', { class: 'qa-launch-links qb-actions-top' }, isElysiumDiscussion(b)?h('a',{class:'qa-btn qa-btn--primary',href:'/elysium'},'Explore Elysium pools →'):h('a', { class: 'qa-btn qa-btn--primary', href: '/terminal#' + (token ? 't=' : 'm=') + key }, 'Trade $' + b.symbol),
+    h('span',{id:'qb-follow-topic'}),
+    isElysiumDiscussion(b)?h('a',{class:'qa-btn qa-btn--secondary',href:elysiumContractUrl(b),target:'_blank',rel:'noopener noreferrer'},'View contract on ElysScan'):null,
+    !token && b.creators?.[0] ? h('a', { class: 'qa-btn qa-btn--secondary', href: profileUrl({wallet:b.creators[0]}) }, 'Creator profile') : null);
+  // who is in the room: everyone who posted or replied here, newest first
+  const seen = new Set(); for (const p of [...(data.pinned || []), ...(data.posts || [])]) for (const x of [p, ...(p.replies || [])]) if (x.author && !x.hidden) seen.add(x.author);
+  const people = [...seen];
+  const room = h('div', { class: 'qb-room' }, people.length ? h('span', { class: 'qa-ava-stack' }, people.slice(0, 7).map(w => A ? A.face(w, 'md') : addressMark(w))) : null,
+    h('p', { class: 'qb-room-t' }, h('b', {}, people.length ? people.length + (people.length === 1 ? ' person' : ' people') + ' in the room' : 'Nobody has posted yet'),
+      h('span', {}, num(b.posts) + ' post' + (b.posts === 1 ? '' : 's') + (b.replies ? ' · ' + num(b.replies) + ' repl' + (b.replies === 1 ? 'y' : 'ies') : '') + (b.lastPostAt ? ' · latest ' + ago(b.lastPostAt) : ''))));
+  let strip = null;
+  if (A && m) {
+    const s1 = () => A.marketFor(b)?.s || {}, afmt = A.fmt;
+    strip = A.statStrip([
+      { label: 'Price', value: () => s1().priceUsd > 0 ? afmt.price(s1().priceUsd) : '—' },
+      { label: '24h', value: () => Number.isFinite(s1().change24) ? afmt.pct(s1().change24) : '—' },
+      { label: 'Market cap', value: () => s1().mcapUsd > 0 ? afmt.usd(s1().mcapUsd) : '—' },
+      { label: 'Holders', value: () => Number.isFinite(s1().holders) ? Number(s1().holders).toLocaleString('en-US') : '—' },
+      { label: 'Volume 24h', value: () => s1().volume24Usd > 0 ? afmt.usd(s1().volume24Usd) : '—' }]);
+    strip.el.classList.add('qb-stats');
+    const tone = () => { const v = strip.el.querySelectorAll('.qa-stat__v')[1]; const c = s1().change24; if (v) v.className = 'qa-stat__v' + (c > 0 ? ' qa-up' : c < 0 ? ' qa-down' : ''); };
+    tone(); heroStrip = { strip, tone };
+  } else heroStrip = null;
   const sec = h('section', { class: 'qb-hero', 'aria-labelledby': 'qb-title' },
-    h('div', { class: 'qb-hero-main' }, h('p', { class: 'qx-eyebrow' }, 'Community board'), h('h1', { id: 'qb-title' }, token ? boardIcon(b) : null, b.name + ' ', h('span', { class: 'qx-serif' }, 'board.')), meta, token ? h('div', { class: 'qb-safety', 'aria-label': 'Token safety' }, ...(b.safety?.available ? ((b.safety.flags || []).length ? b.safety.flags.slice(0, 8).map(flag => h('span', { class: 'qb-flag' }, flag)) : [h('span', { class: 'qb-flag is-clear' }, 'Available checks: no flags returned')]) : [h('span', { class: 'qb-flag' }, 'Safety scan unavailable')])) : null, links), tiles);
+    art.banner ? h('div', { class: 'qb-banner', 'aria-hidden': 'true' }, h('div', { class: 'qa-stage__glow' }), h('div', { class: 'qa-stage__frame' }, h('img', { class: 'qa-stage__img', src: art.banner, alt: '' }), h('span', { class: 'qa-stage__sheen' }))) : null,
+    h('div', { class: 'qb-hero-main' + (art.banner ? ' has-banner' : '') },
+      h('div', { class: 'qb-ident' }, mark, h('div', { class: 'qb-ident-t' }, h('p', { class: 'qb-kicker' }, 'Board'), h('h1', { id: 'qb-title' }, isElysiumDiscussion(b) && !b.symbol ? (b.name || 'Contract discussion') : '$' + b.symbol), h('p', { class: 'qb-name' }, b.name || ''))),
+      meta, links),
+    strip ? strip.el : null, room);
   if (!token) import('/qx-trust.mjs').then(t => t.trustOf(b.chainId, b.controller).then(v => { const el = $('qb-trust'); if (el && v?.verified) el.replaceChildren(t.badge(v.verified)); if (el && v?.copyOf) el.prepend(t.copyLabel(v.copyOf)); })).catch(() => {});
   if(isElysiumDiscussion(b)){
     sec.querySelector('.qb-safety')?.remove();
-    sec.querySelector('.qb-hero-main').append(h('code',{class:'qb-token-contract'},b.address),h('p',{class:'qb-help'},'Elysium · 99901. Discuss this exact address. '+(!b.symbol?'The token label is unavailable. ':'')+'Pool exploration opens the read-only tools; it does not select this token. Calls and trading are unavailable here.'));
+    sec.querySelector('.qb-hero-main').append(h('p',{class:'qb-token-contract'},b.address),h('p',{class:'qb-help'},'Elysium · 99901. Discuss this exact address. '+(!b.symbol?'The token label is not known yet. ':'')+'Pool exploration opens the read-only tools; it does not select this token. Calls and trading are not offered here.'));
   }
   return sec;
 }
+let heroStrip = null;
 function render({ focus } = {}) {
   for(const binding of followBindings.splice(0))binding.dispose();
   const pinned = data.pinned || [], posts = data.posts || [];
@@ -371,7 +428,7 @@ async function load({ keep = false, focus } = {}) {
   if(isElysiumDiscussion(target))order='latest';
   if (!keep) root.replaceChildren(h('p', { class: 'qa-loading' }, 'Opening the board…'));
   try {
-    const j = await api(boardApi(target) + '?order=' + order);
+    const [j] = await Promise.all([api(boardApi(target) + '?order=' + order), sysA.then(a => a?.readMarkets()).catch(() => null)]);
     if (mine !== seq) return;
     if (j.redirect) {
       const next={kind:'launch',chainId:String(j.redirect.chainId),controller:String(j.redirect.controller).toLowerCase()},owner=session()?.wallet||'guest',previous=drafts.read(target,owner);
@@ -387,7 +444,7 @@ async function load({ keep = false, focus } = {}) {
     if(/^p[0-9a-v]{12}$/.test(call||'')&&/^0x[0-9a-f]{40}$/.test(caller||'')){
       const loaded=[...(j.posts||[]),...(j.pinned||[])].find(post=>post.id===call);
       if(loaded)focus=call;
-      else try{const record=await api('/caller/'+caller),shared=(record.calls||[]).find(post=>post.id===call&&post.board&&communityKey(post.board)===communityKey(j.board));if(mine!==seq)return;j.linkedCall=shared||null;if(!shared)j.linkedCallError='That call is unavailable or under review. You can still read this token’s board.';}
+      else try{const record=await api('/caller/'+caller),shared=(record.calls||[]).find(post=>post.id===call&&post.board&&communityKey(post.board)===communityKey(j.board));if(mine!==seq)return;j.linkedCall=shared||null;if(!shared)j.linkedCallError='That call is under review or no longer public. You can still read this token’s board.';}
       catch{j.linkedCallError='The shared call did not load. Refresh this board to try again.';}
     }
     if(mine!==seq)return;

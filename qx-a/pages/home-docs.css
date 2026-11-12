@@ -1,0 +1,122 @@
+/* QHooks System A: editorial type for the story and docs pages (roadmap, changelog, pricing, partners, terms, privacy,
+   integrate, api, contribute, launch-story). One reading column, big display heads, hairlines between sections,
+   no boxes. The markup keeps every id and class the page scripts use; this sheet re-sets them. */
+
+.hd { padding-bottom: var(--qa-s12); }
+.hd :where(p, li, dd, td) { overflow-wrap: break-word; }
+
+/* ---------- page head ---------- */
+.hd-head { position: relative; padding: 30px 0 8px; }
+.hd .hd-kick, .hd .eyebrow, .hd .qx-eyebrow { display: block; margin: 0 0 12px; font-size: 13.5px; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--qa-gold-hi); }
+.hd h1 { font-size: 46px; line-height: .96; font-weight: 850; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); max-width: 14em; }
+.hd .hd-lede { margin-top: 16px; max-width: 42ch; font-size: 17.5px; line-height: 1.5; color: var(--qa-tx-2); }
+.hd .hd-updated { margin-top: 12px; font-size: 13.5px; font-weight: 600; color: var(--qa-tx-3); }
+.hd .hd-gold { background: var(--qa-gold-metal); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* ---------- reading column ---------- */
+.hd-col { max-width: 760px; }
+.hd-prose { font-size: 16.5px; line-height: 1.62; color: var(--qa-tx-2); }
+.hd-prose > * + * { margin-top: 16px; }
+.hd :where(.hd-prose, .hd-sec) :where(p) { color: var(--qa-tx-2); }
+.hd :where(.hd-prose, .hd-sec) :where(strong, b) { color: var(--qa-tx); font-weight: 700; }
+.hd :where(.hd-prose, .hd-sec, .hd-head) :where(p, li, td, dd, summary) a:not(.qa-btn):not(.qa-link) { color: var(--qa-tx); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--qa-gold) 55%, transparent); text-decoration-thickness: 1.5px; text-underline-offset: 3px; transition: color var(--qa-t-quick) var(--qa-ease); }
+.hd :where(.hd-prose, .hd-sec, .hd-head) :where(p, li, td, dd, summary) a:not(.qa-btn):not(.qa-link):hover { color: var(--qa-gold-hi); }
+
+/* sections: a hairline above, a big head, more space between sections than inside them */
+.hd-sec { margin-top: var(--qa-s12); padding-top: var(--qa-s8); box-shadow: 0 -1px 0 var(--qa-rule); scroll-margin-top: 120px; }
+.hd-sec--flush { margin-top: var(--qa-s8); padding-top: 0; box-shadow: none; }
+.hd h2, .hd .hd-h2 { font-size: 30px; line-height: 1.02; font-weight: 830; font-stretch: var(--qa-wd-head); letter-spacing: var(--qa-track-head); color: var(--qa-tx); scroll-margin-top: 120px; }
+.hd h3 { font-size: 19px; line-height: 1.2; font-weight: 780; font-stretch: 112%; letter-spacing: -.015em; color: var(--qa-tx); scroll-margin-top: 120px; }
+.hd h2 + *, .hd .hd-h2 + * { margin-top: 14px; }
+.hd h3 + * { margin-top: 8px; }
+.hd-sec p, .hd-sec li { font-size: 16px; line-height: 1.62; }
+.hd-sec p + p { margin-top: 12px; }
+.hd-sec > h3 { margin-top: 28px; }
+
+/* lists: gold dots; numbered lists only where the order is real */
+.hd :where(.hd-prose, .hd-sec) ul:not([class]) { display: grid; gap: 8px; margin-top: 12px; }
+.hd :where(.hd-prose, .hd-sec) ul:not([class]) > li { position: relative; padding-left: 20px; color: var(--qa-tx-2); }
+.hd :where(.hd-prose, .hd-sec) ul:not([class]) > li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: var(--qa-gold); }
+.hd :where(.hd-prose, .hd-sec) ol:not([class]) { display: grid; gap: 10px; margin-top: 12px; padding-left: 22px; list-style: decimal; color: var(--qa-tx-2); }
+.hd :where(.hd-prose, .hd-sec) ol:not([class]) > li::marker { color: var(--qa-gold); font-weight: 760; }
+
+/* code: Mona Sans, set apart by colour and a wash, never a monospace dump */
+.hd code { font-family: var(--qa-sans); font-size: .94em; font-weight: 650; color: var(--qa-gold-hi); overflow-wrap: anywhere; }
+.hd pre { position: relative; margin: 16px 0 0; padding: 16px 18px; overflow-x: auto; border-radius: 14px; background: var(--qa-wash); box-shadow: inset 2px 0 0 var(--qa-gold); font-size: 13.5px; line-height: 1.6; tab-size: 2; }
+.hd pre code { display: block; width: max-content; min-width: 100%; color: var(--qa-tx); font-weight: 540; font-size: 13.5px; white-space: pre; overflow-wrap: normal; }
+
+/* tables: hairline rows, quiet labels, sideways scroll on a phone */
+.hd .dev-table, .hd .price-table-wrap { margin-top: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.hd table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.hd caption { padding-bottom: 10px; text-align: left; font-size: var(--qa-fs-small); font-weight: 650; color: var(--qa-tx-3); }
+.hd th { padding: 10px 16px 10px 0; text-align: left; vertical-align: bottom; font-size: 12.5px; font-weight: 650; color: var(--qa-tx-3); box-shadow: 0 1px 0 var(--qa-rule-2); white-space: nowrap; }
+.hd td, .hd tbody th { padding: 13px 16px 13px 0; vertical-align: top; color: var(--qa-tx-2); box-shadow: 0 1px 0 var(--qa-rule-row); line-height: 1.5; }
+.hd tbody th { font-size: 14.5px; font-weight: 680; color: var(--qa-tx); white-space: normal; }
+.hd td:first-child { color: var(--qa-tx); }
+.hd td code { white-space: nowrap; }
+
+/* disclosure rows (FAQ, notes) */
+.hd details { box-shadow: 0 1px 0 var(--qa-rule); }
+.hd details:first-of-type { box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+.hd summary { position: relative; display: flex; align-items: center; min-height: 54px; padding: 12px 34px 12px 0; cursor: pointer; list-style: none; font-size: 16.5px; font-weight: 720; color: var(--qa-tx); }
+.hd summary::-webkit-details-marker { display: none; }
+.hd summary::after { content: ""; position: absolute; right: 6px; top: 50%; width: 8px; height: 8px; margin-top: -6px; border-right: 1.8px solid var(--qa-tx-3); border-bottom: 1.8px solid var(--qa-tx-3); transform: rotate(45deg); transition: transform var(--qa-t-quick) var(--qa-ease); }
+.hd details[open] summary::after { transform: rotate(-135deg); margin-top: -2px; }
+.hd details > :not(summary) { margin-bottom: 14px; }
+.hd details p { font-size: 15.5px; line-height: 1.6; color: var(--qa-tx-2); }
+
+/* "On this page": underlined tabs that scroll sideways on a phone and follow the section in view */
+.hd-toc { position: sticky; z-index: 20; top: var(--qa-sticky-top, calc(var(--qa-hdr-h) + env(safe-area-inset-top))); display: flex; gap: 0 22px; margin: 22px calc(var(--qa-pad) * -1) 0; padding: 0 var(--qa-pad); overflow-x: auto; scrollbar-width: none; background: var(--qa-glass); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); box-shadow: 0 1px 0 var(--qa-rule), 0 -1px 0 var(--qa-rule); }
+.hd-toc::-webkit-scrollbar { display: none; }
+.hd-toc a { position: relative; flex: none; display: inline-flex; align-items: center; height: 46px; font-size: 14px; font-weight: 680; color: var(--qa-tx-3); white-space: nowrap; transition: color var(--qa-t-quick) var(--qa-ease); }
+.hd-toc a:hover { color: var(--qa-tx-2); }
+.hd-toc a.is-on { color: var(--qa-tx); }
+.hd-toc a.is-on::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--qa-gold); box-shadow: var(--qa-glow-gold); }
+
+/* the first section under an "On this page" bar needs no second rule */
+.hd-toc + .hd-col > .hd-sec:first-child { margin-top: var(--qa-s6); padding-top: var(--qa-s4); box-shadow: none; }
+
+/* a closing band: one line and the next steps */
+.hd-band { display: grid; gap: 16px; margin-top: var(--qa-s16); padding: var(--qa-s10) 0; box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+.hd-band h2 { font-size: 34px; }
+.hd-band p { color: var(--qa-tx-2); font-size: 16px; }
+.hd-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; }
+
+/* forms in docs (partners, launch-story): open fields on hairlines */
+.hd .hd-form label { display: block; font-size: var(--qa-fs-small); font-weight: 650; color: var(--qa-tx-3); }
+.hd .hd-form :where(input:not([type="checkbox"]):not([type="file"]), textarea, select) { display: block; width: 100%; margin-top: 6px; padding: 8px 0 10px; border: 0; border-radius: 0; background: transparent; color: var(--qa-tx); font: inherit; font-size: 18px; font-weight: 620; box-shadow: 0 1px 0 var(--qa-rule-2); outline: none; transition: box-shadow var(--qa-t-quick) var(--qa-ease); }
+.hd .hd-form :where(input, textarea, select)::placeholder { color: var(--qa-tx-3); font-weight: 500; }
+.hd .hd-form :where(input:not([type="checkbox"]), textarea, select):focus { box-shadow: 0 2px 0 var(--qa-gold); }
+.hd .hd-form textarea { font-size: 15px; line-height: 1.5; resize: vertical; }
+.hd .hd-form select { appearance: none; padding-right: 24px; background: linear-gradient(45deg, transparent 50%, var(--qa-tx-3) 50%) right 8px center / 7px 7px no-repeat, linear-gradient(-45deg, transparent 50%, var(--qa-tx-3) 50%) right 2px center / 7px 7px no-repeat; }
+.hd .hd-form select option { background: var(--qa-slab-a); color: var(--qa-tx); }
+.hd .hd-form button[type="submit"], .hd .hd-form .hd-btn { display: inline-flex; align-items: center; justify-content: center; height: 46px; padding: 0 20px; border-radius: var(--qa-r-m); background: var(--qa-wash-2); color: var(--qa-tx); font-size: 15px; font-weight: 740; transition: background-color var(--qa-t-quick) var(--qa-ease); }
+.hd .hd-form button:hover:not(:disabled) { background: var(--qa-rule-2); }
+.hd .hd-form button:disabled { opacity: .45; cursor: not-allowed; }
+.hd [role="status"]:empty { display: none; }
+.hd .hd-status { font-size: 14px; color: var(--qa-tx-3); }
+
+/* ---------- desktop ---------- */
+@media (min-width: 1100px) {
+  .hd-head { padding: 72px 0 12px; }
+  .hd h1 { font-size: 88px; }
+  .hd .hd-lede { font-size: 21px; margin-top: 22px; }
+  .hd h2, .hd .hd-h2 { font-size: 40px; }
+  .hd h3 { font-size: 21px; }
+  .hd-sec { margin-top: var(--qa-s16); padding-top: var(--qa-s10); }
+  .hd-sec p, .hd-sec li { font-size: 17px; }
+  .hd-prose { font-size: 17.5px; }
+  .hd-toc { margin: 30px 0 0; padding: 0; top: var(--qa-nav-h); }
+  /* long docs: the section list stands at the left, the reading column on the right */
+  .hd--split .hd-grid { display: grid; grid-template-columns: 230px minmax(0, 780px); column-gap: 88px; align-items: start; }
+  .hd--split .hd-toc { position: sticky; top: calc(var(--qa-nav-h) + 40px); display: grid; gap: 2px; margin: var(--qa-s12) 0 0; padding: 0; overflow: visible; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+  .hd--split .hd-toc a { height: 34px; padding-left: 16px; font-size: 14.5px; box-shadow: inset 1px 0 0 var(--qa-rule-2); }
+  .hd--split .hd-toc a.is-on { box-shadow: inset 2px 0 0 var(--qa-gold); }
+  .hd--split .hd-toc a.is-on::after { display: none; }
+  .hd-band { grid-template-columns: minmax(0, 1fr) auto; align-items: end; padding: var(--qa-s12) 0; }
+  .hd-band h2 { font-size: 52px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hd summary::after { transition: none; }
+}

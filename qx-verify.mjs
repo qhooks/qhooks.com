@@ -74,7 +74,7 @@ async function render() {
       h('div', { class: 'qvf-post', id: 'qvf-post' }, v.post),
       h('div', { class: 'qvf-row' }, h('a', { class: 'qvf-btn ghost', href: intent, target: '_blank', rel: 'noopener' }, 'Open X to post'),
         h('button', { type: 'button', class: 'qvf-btn ghost', onclick: async e => { try { await navigator.clipboard.writeText(v.post); e.target.textContent = 'Copied'; } catch {} } }, 'Copy text')),
-      h('div', { class: 'qvf-row', style: 'margin-top:12px' }, url, check), st3);
+      h('div', { class: 'qvf-row qvf-row--gap' }, url, check), st3);
   }
   fillPost(saved);
   signBtn.addEventListener('click', async () => {

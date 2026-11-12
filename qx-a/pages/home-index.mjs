@@ -1,0 +1,483 @@
+// QHooks System A: the home page runtime. The ecosystem front door: the brand line, the hook with the live QHOOKS coin,
+// the live ribbon, and four acts (Builders, Callers, Holders, Traders) that show the live product.
+// Data, all public and same-origin, all read only while the tab is visible:
+//   /api/terminal/feed?chain=all                         launches, at load then every 60 s
+//   /api/terminal/market/4663/<QHOOKS>?tf=60             QHOOKS chart, trades, holders, at load then every 20 s
+//                                                        (the terminal reads the same URL every 5 s, so the server cache is shared)
+//   /api/terminal/market/<chain>/<controller>?tf=60      the two most active other launches, once at load for the ribbon, then
+//                                                        again only when the feed shows a newer trade on them
+//   /api/community/activity                              calls, at load then every 60 s
+//   /api/qhooks/buybacks                                 read by qx-burn-ticker.mjs (every 20 s); this page listens for its result
+// Every motion is a real event: a trade, a burn, a call, a launch, a new holder. Nothing is replayed or invented.
+import { mountShell } from '/qx-a/shell.mjs';
+import { h, icon, RM, fmt, setArt, coin, avatar, keeperAvatar, tokenChip, statStrip, tape, toast, liveLabel, liveChart, bigPrice, changeLine, post, callOutcome, supplyMap, countdown, state, skeletonRows, restart, inView } from '/qx-a/components.mjs';
+import '/qx-shell.mjs'; // legacy runtime: wallet copy, get-the-app, proof entry points (its old header code finds no header here)
+
+const QH = '0x20429af7ca3b0ce4d99edbaa0693f26c5df05195', QCHAIN = '4663', QLOGO = '/qhooks-logo.jpg';
+const FEED = '/api/terminal/feed?chain=all', CALLS = '/api/community/activity';
+const MARKET = (c, a) => `/api/terminal/market/${c}/${a}?tf=60`;
+const CHAINS = { '4663': 'Robinhood Chain', '8453': 'Base', '56': 'BNB Chain', '42161': 'Arbitrum', '1': 'Ethereum', '99901': 'Elysium', '143': 'Monad', solana: 'Solana' };
+const $ = (s, r = document) => r.querySelector(s);
+const lower = (v) => String(v || '').toLowerCase();
+const nowS = () => Date.now() / 1000;
+const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+const abs = (u) => new URL(u, location.href).href;
+// Logos come back as same-origin paths, data: URIs or qhooks.com URLs; keep them on this origin so the CSP allows them.
+const logoOf = (u) => { if (typeof u !== 'string' || !u) return null; if (u.startsWith('data:image/') || u.startsWith('/')) return u; try { const x = new URL(u); return x.hostname === 'qhooks.com' ? x.pathname + x.search : null; } catch { return null; } };
+
+/* ================= shell, art, wallet ================= */
+setArt({ banner: '/qx-a/img/qhooks-banner.jpg', blur: '/qx-a/img/qhooks-banner-blur.jpg' });
+const trigger = document.getElementById('qhc-trigger');
+// On home the one gold action is Launch, so the wallet button sits in the header as a secondary button.
+if (trigger) trigger.classList.add('qa-btn', 'qa-btn--secondary', 'qa-wallet__btn');
+const shell = mountShell({ ribbon: true, wallet: trigger || undefined, logo: QLOGO });
+addEventListener('qa:wallet', () => trigger?.click());
+{ // one footer: the site directory and the legal line move into the shell footer
+  const foot = shell.footer, base = foot?.querySelector('.qa-foot__base');
+  const dir = $('[data-a-dir]'), legal = $('[data-a-legal]');
+  if (foot && base) { if (dir) foot.insertBefore(dir, base); if (legal) base.after(legal); }
+}
+const ribbon = shell.ribbon;
+
+/* ================= brand line: builders, callers, holders, traders, then it rests ================= */
+{
+  const line = $('[data-hm-line]'), word = line && $('[data-hm-word]', line);
+  const WORDS = ['builders', 'callers', 'holders', 'traders'], hold = 1750;
+  const rest = () => { line.classList.add('is-rest'); setTimeout(() => line.classList.add('is-rested'), RM ? 0 : 460); };
+  const run = () => {
+    if (RM) return rest();
+    let k = 0;
+    const next = () => { k++; if (k >= WORDS.length) return setTimeout(rest, hold); restart(word, 'is-swap'); setTimeout(() => { word.textContent = WORDS[k]; word.classList.remove('is-swap'); setTimeout(next, hold); }, 230); };
+    setTimeout(next, hold);
+  };
+  if (line && word) {
+    const go = () => (document.fonts?.ready || Promise.resolve()).then(run);
+    if (!document.hidden) go(); else document.addEventListener('visibilitychange', function seen() { if (!document.hidden) { document.removeEventListener('visibilitychange', seen); go(); } });
+  }
+}
+
+/* ================= the hook: real trades tug the line ================= */
+const rig = $('[data-hm-rig]'), coinWrap = $('[data-hm-coin]'), coinPulse = coinWrap?.querySelector('.qa-coin__pulse');
+const heroEl = $('.hm-hero'), tagEl = $('[data-hm-tag]');
+// The coin hangs from the bend of the hook: the cord is as long as it takes to reach the live read beside it.
+function hang() {
+  if (!rig || !heroEl || !tagEl || !coinWrap) return;
+  const coinEl = coinWrap.querySelector('.qa-coin'), cH = coinEl.offsetHeight || 56;
+  const hr = heroEl.getBoundingClientRect(), rr = rig.getBoundingClientRect();
+  const bx = rr.left + rr.width * .52 - hr.left, by = rr.top + rig.offsetHeight * .97 - hr.top;
+  const right = Math.max(0, hr.width - bx + cH / 2 + 16);
+  if (innerWidth >= 1100) {
+    // the read sits to the left of the coin, centred on it; positions are relative to the tag's offset parent
+    const cord = 70, op = (tagEl.offsetParent || heroEl).getBoundingClientRect();
+    coinWrap.style.setProperty('--hm-cord', cord + 'px');
+    const coinCy = hr.top + by + cord + cH / 2, coinLeft = hr.left + bx - cH / 2;
+    tagEl.style.setProperty('--hm-tag-top', Math.round(coinCy - op.top - tagEl.offsetHeight / 2) + 'px');
+    tagEl.style.setProperty('--hm-tag-right', Math.round(op.right - coinLeft + 18) + 'px');
+    return;
+  }
+  tagEl.style.setProperty('--hm-tag-pad', Math.round(right) + 'px');
+  const mt = parseFloat(getComputedStyle(tagEl).marginTop) || 0, tr = tagEl.getBoundingClientRect();
+  const top0 = tr.top - hr.top - mt, need = Math.max(18, by + 22 + cH / 2 - (top0 + tr.height / 2));
+  tagEl.style.setProperty('--hm-tag-mt', Math.round(need) + 'px');
+  coinWrap.style.setProperty('--hm-cord', Math.round(top0 + need + tr.height / 2 - cH / 2 - by) + 'px');
+}
+if (heroEl) { new ResizeObserver(() => hang()).observe(heroEl); document.fonts?.ready.then(hang); hang(); }
+let spring = null;
+function tug(side, usd = 0) {
+  if (coinPulse && !RM) { coinPulse.className = 'qa-coin__pulse'; void coinPulse.offsetWidth; coinPulse.classList.add(side === 'sell' ? 'is-sell' : 'is-buy'); }
+  if (RM || !rig) return;
+  const k = Math.min(1, .35 + Math.log10(1 + usd) / 3.2);
+  spring = { t0: performance.now(), a: (side === 'sell' ? -1.1 : side === 'burn' ? .7 : 1.6) * k, y: (side === 'sell' ? -5 : side === 'burn' ? 3 : 10) * k };
+  requestAnimationFrame(swing);
+}
+function swing(now) {
+  if (!spring) return;
+  const t = (now - spring.t0) / 1000, e = Math.exp(-t * 3.4), c = Math.cos(t * 8.5);
+  rig.style.setProperty('--hm-swing', (spring.a * e * c).toFixed(3) + 'deg');
+  coinWrap?.style.setProperty('--hm-tug', (spring.y * e * Math.cos(t * 11)).toFixed(2) + 'px');
+  if (t < 2.4) requestAnimationFrame(swing); else { rig.style.removeProperty('--hm-swing'); coinWrap?.style.removeProperty('--hm-tug'); spring = null; }
+}
+const tagPrice = bigPrice($('[data-hv-qp]') || h('span'));
+const tagChange = $('[data-hv-qc]');
+
+/* ================= data helpers ================= */
+async function getJSON(url, ms = 12000) {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms);
+  try { const r = await fetch(url, { cache: 'no-store', credentials: 'omit', signal: ctl.signal }); if (!r.ok) throw Error(String(r.status)); return await r.json(); }
+  finally { clearTimeout(t); }
+}
+// Runs fn now (when the tab is visible) and then every ms while it stays visible. A hidden tab makes no requests.
+function poll(fn, ms) {
+  let last = 0, timer = 0, busy = false;
+  const run = async () => { if (busy || document.hidden) return; busy = true; last = Date.now(); try { await fn(); } catch {} finally { busy = false; } };
+  const loop = () => { clearTimeout(timer); timer = setTimeout(async () => { await run(); loop(); }, ms); };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - last >= ms) { run(); loop(); } });
+  run(); loop();
+  return { now: run };
+}
+const flash = (el, text) => { if (!el) return; if (el.textContent && el.textContent !== text && !RM) { el.classList.add('is-tick'); setTimeout(() => el.classList.remove('is-tick'), 60); } el.textContent = text; };
+const count = (key, v) => { const s = $(`[data-hm-count="${key}"]`); if (s && v != null) flash(s, String(v)); };
+const chainName = (c) => CHAINS[String(c)] || 'Chain ' + c;
+const chainDot = (c) => { const d = h('span', { class: 'qa-chain-dot' }); if (String(c) !== '4663') { d.style.setProperty('background', 'var(--qa-gold)'); d.style.setProperty('box-shadow', '0 0 9px var(--qa-gold)'); } return d; };
+const pctCls = (x) => (x > .0005 ? 'qa-up' : x < -.0005 ? 'qa-down' : 'qa-muted');
+
+/* ================= state ================= */
+const H = {}, T = {};
+const S = { feed: null, markets: [], q: null, qSum: null, rate: null, series: [], qTrades: [], seenTrades: new Set(), holders: new Set(), burns: null, seenBurns: new Set(), calls: [], seenCalls: new Set(), seenLaunch: new Set(), other: new Map() };
+let calls = []; // the call posts on screen, each with update() for the live price
+const qPrice = () => num(S.qSum?.priceUsd) ?? num(S.markets.find((m) => lower(m.token) === QH)?.summary?.priceUsd);
+
+/* ================= pulse strip ================= */
+const P = { launches: null, trades: null, vol: null, burned: null, holders: null };
+const dash = (v, f) => (v == null ? '—' : f(v));
+const pulse = statStrip([
+  { label: 'Live launches', value: () => dash(P.launches, String) },
+  { label: 'Trades 24h', value: () => dash(P.trades, (v) => v.toLocaleString('en-US')) },
+  { label: 'Volume 24h', value: () => dash(P.vol, fmt.usd) },
+  { label: 'QHOOKS burned', value: () => dash(P.burned, fmt.tok) },
+  { label: 'QHOOKS holders', value: () => dash(P.holders, (v) => v.toLocaleString('en-US')) },
+]);
+$('[data-hm-pulse]')?.append(pulse.el);
+
+/* ================= Builders: launches ================= */
+const launchBox = $('[data-hm-launches]');
+launchBox?.append(skeletonRows(4));
+const launchRows = new Map();
+function launchHref(m) { return lower(m.token) === QH ? '/terminal#t=' + QCHAIN + ':' + QH : '/terminal#m=' + encodeURIComponent(String(m.chainId)) + ':' + encodeURIComponent(lower(m.controller)); }
+function iconFor(m, cls = 'hm-icon') {
+  const src = logoOf(m.logo) || (lower(m.token) === QH ? QLOGO : null), el = h('span', { class: cls, 'aria-hidden': 'true' });
+  if (src) { const img = h('img', { src, alt: '', loading: 'lazy', decoding: 'async' }); img.addEventListener('error', () => { img.remove(); el.textContent = String(m.symbol || '?').slice(0, 1); }, { once: true }); el.append(img); }
+  else el.textContent = String(m.symbol || '?').replace(/^\$/, '').slice(0, 1).toUpperCase();
+  return el;
+}
+function launchSub(m) {
+  const parts = [chainName(m.chainId)], at = num(m.launchedAt) || (num(m.listedAt) ? m.listedAt / 1000 : null);
+  if (at) parts.push(fmt.age(nowS() - at));
+  const t = num(m.summary?.trades24); if (t != null) parts.push(t + (t === 1 ? ' trade' : ' trades'));
+  return parts.join(' · ');
+}
+function launchRow(m, enter) {
+  const s = m.summary || {}, v = h('span', { class: 'hm-tick' }, num(s.mcapUsd) != null ? fmt.usd(s.mcapUsd) : '—');
+  const ch = h('small', { class: 'hm-tick ' + pctCls(num(s.change24) ?? 0) }, num(s.change24) != null ? fmt.pct(s.change24) : '');
+  const sub = h('span', { class: 'qa-row__s' }, launchSub(m));
+  const el = h('a', { class: 'qa-row hm-launch-row' + (enter && !RM ? ' is-enter' : ''), href: launchHref(m), title: m.name || m.symbol },
+    iconFor(m), h('span', { class: 'qa-row__main' }, h('span', { class: 'qa-row__t' }, m.symbol || m.name || 'Token'), sub), h('span', { class: 'qa-row__v' }, v, ch));
+  return { el, v, ch, sub };
+}
+function featureBlock(m) {
+  const s = m.summary || {}, banner = logoOf(m.profileBanner), at = num(m.launchedAt) || (num(m.listedAt) ? m.listedAt / 1000 : null);
+  const art = banner ? h('div', { class: 'hm-feature__art' }, h('div', { class: 'hm-feature__glow', style: { '--hm-art': `url("${abs(banner)}")` } }), h('img', { src: banner, alt: '', decoding: 'async' })) : null;
+  const c = coin(logoOf(m.logo) || (lower(m.token) === QH ? QLOGO : '/qx-a/img/qhooks-icon.jpg'), { size: 'md', alt: '' });
+  return h('a', { class: 'hm-feature' + (art ? '' : ' hm-feature--plain'), href: launchHref(m), 'aria-label': (m.symbol || 'Token') + ', newest launch' }, art,
+    h('div', { class: 'hm-feature__id' }, c, h('div', null, h('span', { class: 'hm-feature__kick' }, 'Newest launch'), h('div', { class: 'hm-feature__sym' }, m.symbol || m.name)),
+      h('div', { class: 'hm-feature__v' }, h('b', null, num(s.mcapUsd) != null ? fmt.usd(s.mcapUsd) : '—'), num(s.change24) != null ? h('small', { class: pctCls(s.change24) }, fmt.pct(s.change24)) : null)),
+    h('p', { class: 'hm-feature__meta' }, h('span', null, chainDot(m.chainId), chainName(m.chainId)), at ? h('span', null, 'Launched ' + fmt.age(nowS() - at) + ' ago') : null, num(s.holders) != null ? h('span', null, s.holders + ' holders') : null));
+}
+function drawLaunches(fresh = new Set()) {
+  if (!launchBox) return;
+  const live = S.markets.filter((m) => m.live);
+  if (!live.length) { launchBox.replaceChildren(state('loading', { title: 'Refreshing launches' })); return; }
+  const byNew = [...live].sort((a, b) => (b.listedAt || 0) - (a.listedAt || 0));
+  const feat = byNew[0]; // the newest launch, on its own banner when it has one
+  const rest = byNew.filter((m) => m !== feat).slice(0, 6);
+  if (!launchBox.dataset.drawn) {
+    launchRows.clear();
+    const list = h('div', { class: 'qa-list hm-launches' }, rest.map((m) => { const r = launchRow(m); launchRows.set(key(m), r); return r.el; }));
+    launchBox.replaceChildren(featureBlock(feat), h('div', { class: 'hm-live-h' }, h('b', null, 'Newest launches'), h('a', { class: 'qa-link', href: '/markets' }, 'Browse markets')), list);
+    launchBox.dataset.drawn = '1'; launchBox.dataset.feat = key(feat); return;
+  }
+  // refresh in place: values tick, a new launch drops in at the top
+  if (fresh.size) { launchBox.dataset.drawn = ''; drawLaunches(); for (const k of fresh) { const r = launchRows.get(k); if (r && !RM) restart(r.el, 'is-enter'); } return; }
+  for (const m of rest) {
+    const r = launchRows.get(key(m)); if (!r) continue; const s = m.summary || {};
+    flash(r.v, num(s.mcapUsd) != null ? fmt.usd(s.mcapUsd) : '—');
+    r.ch.className = 'hm-tick ' + pctCls(num(s.change24) ?? 0); flash(r.ch, num(s.change24) != null ? fmt.pct(s.change24) : '');
+    r.sub.textContent = launchSub(m);
+  }
+}
+const key = (m) => String(m.chainId) + ':' + lower(m.controller || m.token);
+
+async function loadFeed() {
+  const body = await getJSON(FEED);
+  if (!Array.isArray(body?.markets)) throw Error('feed');
+  const first = !S.feed; S.feed = body;
+  const seen = new Set(), markets = body.markets.filter((m) => { const k = key(m); if (seen.has(k)) return false; seen.add(k); return true; });
+  const fresh = new Set();
+  for (const m of markets) if (m.live && !S.seenLaunch.has(key(m))) { if (!first) fresh.add(key(m)); S.seenLaunch.add(key(m)); }
+  // other launches that traded since we last looked: read their trades for the ribbon
+  for (const m of markets) {
+    const o = S.other.get(key(m)), lt = num(m.summary?.lastTradeAt);
+    if (o && lt && lt > o.lastTradeAt) { o.lastTradeAt = lt; readOther(m, true); }
+  }
+  S.markets = markets;
+  const live = markets.filter((m) => m.live);
+  P.launches = live.length;
+  P.trades = live.reduce((a, m) => a + (num(m.summary?.trades24) || 0), 0);
+  P.vol = live.reduce((a, m) => a + (num(m.summary?.volume24Usd) || 0), 0);
+  const qm = markets.find((m) => lower(m.token) === QH); if (qm && P.holders == null) P.holders = num(qm.summary?.holders);
+  pulse.update(!first); count('launches', live.length);
+  drawLaunches(fresh);
+  if (!S.q && qm) paintTag(qm.summary);
+  for (const k of fresh) { const m = markets.find((x) => key(x) === k); if (m) ribbon?.news({ kind: 'launch', label: 'New launch', text: `${m.symbol} on ${chainName(m.chainId)}`, img: logoOf(m.logo) ? abs(logoOf(m.logo)) : undefined }); }
+  if (first) {
+    // the ribbon starts with the two most active other launches' latest trades
+    const others = live.filter((m) => lower(m.token) !== QH && /^0x[0-9a-f]{40}$/i.test(String(m.controller)) && (num(m.summary?.trades24) || 0) > 0)
+      .sort((a, b) => (b.summary.trades24 || 0) - (a.summary.trades24 || 0)).slice(0, 2);
+    for (const m of others) { S.other.set(key(m), { lastTradeAt: num(m.summary?.lastTradeAt) || 0, seen: new Set() }); readOther(m, false); }
+    const newest = [...live].sort((a, b) => (b.listedAt || 0) - (a.listedAt || 0))[0];
+    if (newest) setTimeout(() => ribbon?.news({ kind: 'launch', label: 'Newest launch', text: `${newest.symbol} on ${chainName(newest.chainId)} · ${fmt.age(nowS() - (num(newest.launchedAt) || newest.listedAt / 1000))} ago`, img: logoOf(newest.logo) ? abs(logoOf(newest.logo)) : undefined }), 2600);
+  }
+}
+async function readOther(m, live) {
+  const o = S.other.get(key(m)); if (!o) return;
+  try {
+    const body = await getJSON(MARKET(m.chainId, lower(m.controller)));
+    const list = (Array.isArray(body?.trades) ? body.trades : []).filter((t) => (num(t?.valueUsd) || 0) >= .01 && t.id);
+    const add = list.filter((t) => !o.seen.has(t.id)).slice(0, live ? 12 : 6).reverse();
+    list.forEach((t) => o.seen.add(t.id));
+    const img = logoOf(m.logo) ? abs(logoOf(m.logo)) : undefined;
+    for (const t of add) ribbonTrade({ symbol: m.symbol, img, side: t.buy ? 'buy' : 'sell', usd: t.valueUsd, w: t.trader, ts: t.ts }, !live);
+  } catch {}
+}
+
+/* ================= ribbon ================= */
+const pendingRibbon = [];
+let ribbonFlushT = 0;
+// At load the latest trades from every source are gathered and then laid down oldest first; after that, each arrives as it happens.
+function ribbonTrade(t, initial) {
+  if (!ribbon) return;
+  if (initial) { pendingRibbon.push(t); clearTimeout(ribbonFlushT); ribbonFlushT = setTimeout(flushRibbon, 900); return; }
+  ribbon.push(t);
+}
+function flushRibbon() { pendingRibbon.sort((a, b) => (a.ts || 0) - (b.ts || 0)).splice(0).forEach((t) => ribbon.push(t)); }
+
+/* ================= Traders: QHOOKS live ================= */
+const tradeBox = $('[data-hm-trade]'), tradeSide = $('[data-hm-trade-side]');
+function buildTraders() {
+  if (!tradeBox || T.el) return;
+  const id = h('div', { class: 'hm-trade-id' }, coin(QLOGO, { size: 'sm', alt: '' }), h('b', null, 'QHOOKS'), h('p', { class: 'qa-meta' }, h('span', null, chainDot(QCHAIN), 'Robinhood Chain'), h('a', { class: 'qa-meta__proof', href: '/proof' }, 'QProof')));
+  T.price = bigPrice(); T.change = changeLine(); T.live = liveLabel();
+  const canvas = h('canvas', { 'aria-label': 'QHOOKS price, last 24 hours', role: 'img' });
+  T.wrap = h('div', { class: 'qa-chart__wrap' }, canvas);
+  T.chartBox = h('div', { class: 'qa-chart hm-trade-chart' }, T.live.el, T.wrap);
+  T.stats = statStrip([
+    { label: 'Market cap', value: () => dash(num(S.qSum?.mcapUsd), fmt.usd) },
+    { label: 'Volume 24h', value: () => dash(num(S.qSum?.volume24Usd), fmt.usd) },
+    { label: 'Buys / sells 24h', value: () => (S.qSum ? `${S.qSum.buys24 ?? 0} / ${S.qSum.sells24 ?? 0}` : '—'), bar: () => [S.qSum?.buys24 || 1, S.qSum?.sells24 || 1] },
+    { label: 'Traders 24h', value: () => dash(num(S.qSum?.traders24), String) },
+    { label: 'Top 10 hold', value: () => dash(num(S.qSum?.top10), (v) => (v * 100).toFixed(1) + '%') },
+  ]);
+  T.stats.el.classList.add('hm-trade-stats');
+  T.el = h('div', null, id, h('div', { class: 'hm-trade-px' }, T.price.el, T.change.el), T.chartBox, T.stats.el);
+  tradeBox.replaceChildren(T.el);
+  T.tape = tape({ rows: 8 });
+  tradeSide?.replaceChildren(h('div', { class: 'hm-live-h' }, h('b', null, 'Trades'), h('span', null, 'QHOOKS, newest first')), T.tape.el, h('a', { class: 'qa-link hm-call-go', href: '/terminal#t=' + QCHAIN + ':' + QH }, 'Trade here for 40% back →'));
+  T.chart = liveChart(canvas, {
+    series: () => S.series,
+    getLive: () => ({ ts: nowS(), price: qPrice() || (S.series.length ? S.series[S.series.length - 1][1] : 0) }),
+    marks: () => S.qTrades.slice(0, 80).map((t) => ({ ts: t.ts, price: t.priceUsd, kind: t.buy ? 'buy' : 'sell', usd: t.valueUsd })),
+  });
+}
+if (tradeBox) tradeBox.append(skeletonRows(3));
+const toRow = (t) => ({ ts: t.ts, b: t.buy ? 1 : 0, usd: num(t.valueUsd) || 0, tok: num(t.token) || 0, w: t.trader, id: t.id });
+// The digits flash only when a newer market read moves the price, never when the first read replaces the feed's figure.
+function paintTag(sum, live = false) {
+  const p = num(sum?.priceUsd); if (p == null) return;
+  tagPrice.set(p, live && S.tagPrev != null ? Math.sign(p - S.tagPrev) : 0); S.tagPrev = p;
+  const c = num(sum?.change24); if (tagChange && c != null) { tagChange.textContent = fmt.pct(c); tagChange.dataset.dir = String(Math.sign(Math.round(c * 1000))); tagChange.setAttribute('aria-label', '24-hour change ' + fmt.pct(c)); }
+}
+function paintTraders(prev) {
+  buildTraders(); const sum = S.qSum; if (!sum) return;
+  const p = qPrice(); if (p != null) T.price.set(p, prev != null && p !== prev ? Math.sign(p - prev) : 0);
+  const c = num(sum.change24); if (c != null) T.change.set(c, { label: '24h' });
+  T.stats.update(prev != null);
+  count('traders', num(sum.traders24));
+  count('holders', num(sum.holders));
+  P.holders = num(sum.holders) ?? P.holders; pulse.update(prev != null);
+  paintTag(sum, prev != null);
+  calls.forEach((x) => x.update());
+}
+let traderTapeShown = false;
+function showTape() {
+  if (traderTapeShown || !T.tape) return; traderTapeShown = true;
+  const rows = S.qTrades.filter((t) => (num(t.valueUsd) || 0) >= .01).slice(0, 8).map(toRow);
+  if (RM) { T.tape.render(rows); T.tape.ages(nowS()); return; }
+  // the latest real trades lay themselves down, oldest first, when the act comes into view
+  rows.reverse().forEach((r, i) => setTimeout(() => { T.tape.push(r); T.tape.ages(nowS()); }, 160 * i));
+}
+async function loadQ() {
+  const body = await getJSON(MARKET(QCHAIN, QH), 15000);
+  if (!body?.summary) throw Error('market');
+  const first = !S.q, prev = first ? null : qPrice();
+  S.q = body; S.qSum = body.summary;
+  const pr = num(body.summary.price), pu = num(body.summary.priceUsd); if (pr && pu) S.rate = pu / pr;
+  const trades = (Array.isArray(body.trades) ? body.trades : []).filter((t) => t?.id && num(t.ts) && num(t.priceUsd));
+  const shown = (t) => (num(t.valueUsd) || 0) >= .01; // dust (under a cent) stays on the chart, not in the tape or ribbon
+  if (first) {
+    const candles = (Array.isArray(body.candles) ? body.candles : []).filter((c) => num(Number(c?.close)) && num(Number(c?.time)));
+    S.series = S.rate ? candles.map((c) => [Number(c.time), Number(c.close) * S.rate]) : trades.map((t) => [t.ts, t.priceUsd]).reverse();
+    S.qTrades = trades; trades.forEach((t) => S.seenTrades.add(t.id));
+    (body.holders || []).forEach((x) => { if (!x.excludedFromHolderCount) S.holders.add(lower(x.holder)); });
+    paintTraders(null); drawHolders();
+    const lastTs = trades[0]?.ts; if (lastTs) T.live.setLast(Math.max(0, Date.now() - lastTs * 1000));
+    if (tradeSide) inView(tradeSide, showTape, .15);
+    trades.filter(shown).slice(0, 12).forEach((t) => ribbonTrade({ symbol: 'QHOOKS', img: abs(QLOGO), side: t.buy ? 'buy' : 'sell', usd: t.valueUsd, w: t.trader, ts: t.ts }, true));
+    return;
+  }
+  // new trades since the last read, oldest first
+  const fresh = trades.filter((t) => !S.seenTrades.has(t.id)).reverse();
+  const before = new Set(S.holders);
+  (body.holders || []).forEach((x) => { if (!x.excludedFromHolderCount) S.holders.add(lower(x.holder)); });
+  S.qTrades = trades;
+  fresh.forEach((t, i) => setTimeout(() => onTrade(t, prev, before), RM ? 0 : i * 420));
+  if (!fresh.length) paintTraders(prev);
+  drawHolders(true);
+}
+function onTrade(t, prev, before) {
+  S.seenTrades.add(t.id);
+  const side = t.buy ? 'buy' : 'sell', usd = num(t.valueUsd) || 0, from = S.series.length ? S.series[S.series.length - 1][1] : t.priceUsd;
+  S.series.push([t.ts, t.priceUsd]);
+  T.chart?.trade({ from, to: t.priceUsd, side, usd }); T.live?.hit();
+  if (usd >= .01) T.tape?.push(toRow(t));
+  paintTraders(prev);
+  tug(side, usd);
+  if (usd >= .01) ribbon?.push({ symbol: 'QHOOKS', img: abs(QLOGO), side, usd, w: t.trader });
+  const who = lower(t.trader);
+  if (t.buy && !before.has(who) && S.holders.has(who)) {
+    toast({ kind: 'holder', title: h('span', null, h('b', null, 'New holder'), ' · ' + fmt.tok(num(t.token) || 0) + ' QHOOKS'), body: `${fmt.short(t.trader)} bought ${fmt.usdExact(usd)}`, ava: avatar(t.trader) });
+    ribbon?.news({ kind: 'holder', label: 'New holder', text: `${fmt.short(t.trader)} bought ${fmt.usdExact(usd)} of QHOOKS`, w: t.trader });
+  } else if (t.buy && usd >= 100) ribbon?.news({ kind: 'buy', label: 'Big buy', text: `${fmt.short(t.trader)} bought ${fmt.usdExact(usd)} of QHOOKS`, w: t.trader });
+}
+setInterval(() => { const n = nowS(); T.tape?.ages(n); H.tape?.ages(n); }, 1000);
+
+/* ================= Holders: burns, the next buyback, the supply ================= */
+// A buyback row: the QHOOKS it burned, what it spent, its age. Same row as the trades tape, burn wash.
+function burnTape(rows = 6) {
+  const el = h('ol', { class: 'qa-tape hm-burn-tape', 'aria-live': 'off' });
+  const row = (r, enter) => { const age = h('span', { class: 'qa-trow__age' }); age.dataset.ts = r.ts;
+    return h('li', { class: 'qa-trow is-burn' + (enter && !RM ? ' is-enter' : ''), style: { '--w': Math.min(100, 8 + 14 * Math.log10(1 + r.tok)).toFixed(1) + '%' }, 'aria-label': 'Buyback burned ' + fmt.tok(r.tok) + ' QHOOKS' },
+      icon('flame', 'qa-glyph'), h('span', { class: 'qa-trow__usd' }, fmt.tok(r.tok)), h('span', { class: 'qa-trow__amt' }, r.usd ? fmt.usdExact(r.usd) : ''), h('span', { class: 'qa-trow__who' }, keeperAvatar(), h('span', null, 'Buyback')), age); };
+  return { el, render(list) { el.replaceChildren(...list.slice(0, rows).map((r) => row(r))); }, push(r) { el.prepend(row(r, true)); while (el.children.length > rows) el.lastElementChild.remove(); }, ages(n) { el.querySelectorAll('[data-ts]').forEach((x) => (x.textContent = fmt.age(n - +x.dataset.ts))); } };
+}
+const holdBox = $('[data-hm-holders]');
+function buildHolders() {
+  if (!holdBox || H.el) return;
+  H.cd = countdown({ label: 'until the next buyback', total: 900 });
+  H.fig = h('div', { class: 'qa-figures' }, [['burned', 'QHOOKS burned'], ['burns', 'buybacks'], ['holders', 'holders']].map(([k, l]) => h('div', null, h('b', { class: 'hm-tick', dataset: { f: k } }, '—'), h('span', null, l))));
+  H.supply = h('div', { class: 'hm-supply' });
+  H.tape = burnTape();
+  H.cdLabel = H.cd.querySelector('span');
+  H.el = h('div', null, h('div', { class: 'hm-hold-top' }, H.cd, H.fig), H.supply, h('div', { class: 'hm-burns' }, h('div', { class: 'hm-live-h' }, h('b', null, 'Buybacks'), h('span', null, 'QHOOKS burned, newest first')), H.tape.el, h('a', { class: 'qa-link hm-call-go', href: '/qhooks-token#qx-buybacks' }, 'Every burn →')));
+  holdBox.replaceChildren(H.el);
+}
+if (holdBox) holdBox.append(skeletonRows(3));
+const wethUsd = () => num(S.qTrades.find((t) => num(t.quoteUsd))?.quoteUsd) ?? null;
+const units = (wei) => { try { return Number(BigInt(wei || 0)) / 1e18; } catch { return 0; } };
+const burnRow = (b) => { const eth = units(b.spentWei), px = wethUsd(); return { ts: b.at, b: 0, bb: 1, usd: px ? eth * px : 0, tok: units(b.burnedWei), id: b.tx }; };
+let supplyKey = '';
+function drawHolders(update = false) {
+  if (!S.burns && !S.qSum) return;
+  buildHolders();
+  const fig = (k, v) => flash(H.fig.querySelector(`[data-f="${k}"]`), v);
+  const dead = S.burns?.dead?.balanceWei ? units(S.burns.dead.balanceWei) : num(S.qSum?.burned);
+  if (dead != null) { fig('burned', fmt.tok(dead)); P.burned = dead; }
+  if (num(S.burns?.burns?.count) != null) fig('burns', S.burns.burns.count.toLocaleString('en-US'));
+  if (num(S.qSum?.holders) != null) fig('holders', String(S.qSum.holders));
+  pulse.update(update);
+  // supply: from the market's labelled holders and summary
+  const s = S.qSum, list = S.q?.holders || [];
+  if (s && num(s.supply) != null) {
+    const burned = num(s.burned) || 0, total = s.supply + burned;
+    const sumL = (re) => list.filter((x) => re.test(String(x.label || ''))).reduce((a, x) => a + (num(x.units) || 0), 0);
+    const locked = sumL(/QLocks|Locked/i), staked = sumL(/Stakers/i), pool = sumL(/^Pool$/i);
+    const platform = list.filter((x) => x.excludedFromHolderCount && !/QLocks|Locked|Stakers|^Pool$|Burn/i.test(String(x.label || ''))).reduce((a, x) => a + (num(x.units) || 0), 0);
+    const top = list.filter((x) => !x.excludedFromHolderCount).slice(0, 10).reduce((a, x) => a + (num(x.units) || 0), 0);
+    const rest = Math.max(0, total - locked - staked - pool - burned - platform - top);
+    const parts = [['locked', 'Locked in QLocks', locked], ['staked', 'Stakers vault', staked], ['pool', 'In the pool', pool], ['top', 'Top 10 wallets', top], ['rest', 'Everyone else', rest], ['platform', 'Platform and engines', platform], ['burned', 'Burned', burned]]
+      .filter((p) => p[2] > 0).map(([k, label, v]) => ({ key: k, label, share: v / total * 100 }));
+    const sk = parts.map((p) => p.key + p.share.toFixed(1)).join();
+    if (sk !== supplyKey) {
+      supplyKey = sk;
+      H.supply.replaceChildren(h('div', { class: 'hm-live-h' }, h('b', null, 'QHOOKS supply'), h('span', null, fmt.tok(total) + ' total')),
+        supplyMap(parts, { locked: 'var(--qa-gold)', staked: 'var(--qa-gold-hi)', pool: 'var(--qa-gold-lo)', burned: 'var(--qa-fire)', top: 'color-mix(in srgb, var(--qa-tx) 52%, transparent)', rest: 'var(--qa-rule-2)', platform: 'color-mix(in srgb, var(--qa-tx) 24%, transparent)' }));
+    }
+  }
+  // the burns tape needs the WETH price from the trades
+  if (S.burns && !H.burnsDrawn && wethUsd()) {
+    H.burnsDrawn = true;
+    const recent = (S.burns.burns?.recent || []).slice(0, 6);
+    recent.forEach((b) => S.seenBurns.add(b.tx));
+    H.tape.render(recent.map(burnRow)); H.tape.ages(nowS());
+    recent.slice(0, 4).forEach((b) => { const r = burnRow(b); ribbonTrade({ symbol: 'QHOOKS', img: abs(QLOGO), side: 'burn', usd: r.usd, w: null, ts: b.at }, true); });
+  }
+}
+// The burn ticker module reads /api/qhooks/buybacks; it hands each result to this page.
+function onBuybacks(e) {
+  const { data, fetchedAt } = e.detail || {}; if (!data) return;
+  const firstBurns = !S.burns; S.burns = data; S.bbAt = fetchedAt || Date.now();
+  if (!firstBurns && H.burnsDrawn) {
+    const fresh = (data.burns?.recent || []).filter((b) => !S.seenBurns.has(b.tx)).reverse();
+    for (const b of fresh) {
+      S.seenBurns.add(b.tx); const r = burnRow(b);
+      H.tape.push(r); tug('burn', r.usd);
+      ribbon?.push({ symbol: 'QHOOKS', img: abs(QLOGO), side: 'burn', usd: r.usd });
+      toast({ kind: 'burn', title: h('span', null, h('b', null, 'Buyback'), ' · burned'), body: `${fmt.tok(r.tok)} QHOOKS for ${fmt.usdExact(r.usd)}`, ava: keeperAvatar() });
+    }
+  }
+  drawHolders(!firstBurns);
+}
+document.addEventListener('qx:buybacks', onBuybacks);
+if (globalThis.__qxBuybacks) onBuybacks({ detail: globalThis.__qxBuybacks });
+setInterval(() => {
+  const d = S.burns, r = d?.rules; if (!H.cd || !r) return;
+  if (!r.everRun) { H.cd.set(0); H.cd.querySelector('b').textContent = r.ready ? 'Ready' : 'Soon'; if (H.cdLabel) H.cdLabel.textContent = 'first buyback'; return; }
+  const chainNow = (d.blockTime || S.bbAt / 1000) + (Date.now() - S.bbAt) / 1000, left = Math.max(0, (r.nextAt || 0) - chainNow);
+  H.cd.set(left); if (H.cdLabel) H.cdLabel.textContent = left > 0 ? 'until the next buyback' : 'next buyback';
+}, 1000);
+
+/* ================= Callers: real calls, Called -> Now ================= */
+const callBox = $('[data-hm-calls]');
+callBox?.append(skeletonRows(2));
+function boardLogo(b) {
+  if (!b) return null; if (lower(b.address) === QH) return QLOGO;
+  const m = S.markets.find((x) => lower(x.token) === lower(b.address) || lower(x.controller) === lower(b.controller || b.address));
+  return logoOf(m?.logo);
+}
+function callPost(c, enter) {
+  const sym = c.board?.symbol || c.board?.name || 'token', isQ = lower(c.board?.address) === QH;
+  const nowP = () => (isQ ? qPrice() : null) ?? num(c.call?.priceNow) ?? num(c.call?.price);
+  const out = callOutcome({ callPrice: c.call.price, nowPrice: nowP() });
+  const p = post({ w: c.author, name: fmt.short(c.author), age: fmt.age((Date.now() - c.createdAt) / 1000), what: h('span', null, 'called', tokenChip('$' + sym, boardLogo(c.board))), text: c.text, media: [out], enter });
+  const href = c.links?.path || (c.id ? '/call/' + c.id : null);
+  if (href) p.querySelector('.qa-post__body').append(h('a', { class: 'hm-call-go', href }, 'Open the call →'));
+  return { el: p, update: () => out.update(nowP()) };
+}
+async function loadCalls() {
+  const body = await getJSON(CALLS);
+  const list = (Array.isArray(body?.calls) ? body.calls : []).filter((c) => c?.kind === 'call' && !c.folded && num(c.call?.price) && c.author).sort((a, b) => b.createdAt - a.createdAt);
+  const first = !S.callsLoaded; S.callsLoaded = true;
+  count('calls', list.length);
+  if (!callBox) return;
+  if (!list.length) { callBox.replaceChildren(state('empty', { title: 'No calls yet', body: 'Make the first call on a token and build your record.', action: 'Make a call', onAction: () => location.assign('/community#make-a-call') })); return; }
+  const fresh = first ? [] : list.filter((c) => !S.seenCalls.has(c.id));
+  list.forEach((c) => S.seenCalls.add(c.id));
+  if (first || fresh.length) {
+    calls = list.slice(0, 3).map((c) => callPost(c, fresh.some((f) => f.id === c.id)));
+    callBox.replaceChildren(h('div', { class: 'hm-live-h' }, h('b', null, 'Latest calls'), h('a', { class: 'qa-link', href: '/community#callers' }, 'Every caller')), h('div', { class: 'qa-feed hm-calls' }, calls.map((x) => x.el)));
+  }
+  for (const c of fresh) {
+    const sym = c.board?.symbol || 'token';
+    toast({ kind: 'call', title: h('span', null, h('b', null, 'Call'), ' · ' + fmt.short(c.author)), body: `Called $${sym} at ${fmt.price(c.call.price)}`, ava: avatar(c.author) });
+    ribbon?.news({ kind: 'call', label: 'New call', text: `${fmt.short(c.author)} called $${sym}`, w: c.author });
+  }
+  if (first && list[0]) {
+    const c = list[0], isQ = lower(c.board?.address) === QH, now = (isQ ? qPrice() : null) ?? num(c.call.priceNow);
+    if (now) setTimeout(() => ribbon?.news({ kind: 'call', label: 'Latest call', text: `${fmt.short(c.author)} called $${c.board?.symbol || 'token'} · ${fmt.mult(now / c.call.price)} since`, w: c.author }), 9000);
+  }
+}
+
+/* ================= start ================= */
+poll(loadFeed, 60000);
+poll(loadQ, 20000);
+poll(loadCalls, 60000);
+// the feed, market and calls come back in any order; the call outcomes use the live QHOOKS price once it is known

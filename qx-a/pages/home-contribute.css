@@ -1,0 +1,68 @@
+/* QHooks System A: /contribute, the QHOOKS contributor round. The round's numbers sit on the floor as a ruled strip;
+   putting ETH in is the one raised surface (the slab); how it works is a quiet list. Ids and classes are the controller's. */
+
+.hd--contribute .cr-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.hd--contribute .cr-head h2 { font-size: 24px; }
+.hd--contribute .cr-panel { margin-top: var(--qa-s10); }
+.hd--contribute .cr-badge { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 720; color: var(--qa-tx-2); }
+.hd--contribute .cr-badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--qa-tx-3); }
+.hd--contribute .cr-badge[data-tone="live"] { color: var(--qa-tx); }
+.hd--contribute .cr-badge[data-tone="live"]::before { background: var(--qa-buy); box-shadow: 0 0 10px var(--qa-buy); }
+.hd--contribute .cr-badge[data-tone="waiting"]::before { background: var(--qa-gold); box-shadow: var(--qa-glow-gold); }
+.hd--contribute .cr-badge[data-tone="cancelled"] { color: var(--qa-warn); }
+.hd--contribute .cr-badge[data-tone="cancelled"]::before { background: var(--qa-warn); }
+
+/* the round's numbers: a ruled strip */
+.hd--contribute .cr-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 16px; box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+.hd--contribute .cr-facts > div { display: grid; gap: 2px; align-content: start; padding: 14px 14px 16px 0; box-shadow: 0 1px 0 var(--qa-rule-row); }
+.hd--contribute .cr-facts > div:nth-child(even) { padding-left: 16px; box-shadow: -1px 0 0 var(--qa-rule), 0 1px 0 var(--qa-rule-row); }
+.hd--contribute .cr-facts span { font-size: var(--qa-fs-small); font-weight: 600; color: var(--qa-tx-3); }
+.hd--contribute .cr-facts strong { font-size: 26px; line-height: 1.1; font-weight: 820; font-stretch: 116%; letter-spacing: -.03em; color: var(--qa-tx); }
+.hd--contribute #cr-when { font-size: 19px; line-height: 1.2; letter-spacing: -.02em; }
+.hd--contribute .cr-facts small { font-size: 12.5px; color: var(--qa-tx-3); }
+.hd--contribute .cr-bar { height: 4px; margin-top: 16px; border-radius: 4px; background: var(--qa-wash-2); overflow: hidden; }
+.hd--contribute .cr-bar span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--qa-gold-lo), var(--qa-gold-hi)); box-shadow: var(--qa-glow-gold); transition: width .6s var(--qa-ease); }
+.hd--contribute .cr-note { margin-top: 12px; font-size: 14.5px; line-height: 1.55; color: var(--qa-tx-2); }
+.hd--contribute .cr-address { margin-top: 10px; font-size: 16px; font-weight: 680; color: var(--qa-tx); overflow-wrap: anywhere; }
+.hd--contribute .cr-mono { font-family: var(--qa-sans); }
+
+/* buttons: one gold per view; the rest wash */
+.hd--contribute .cr-button { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 18px; border-radius: var(--qa-r-m); background: var(--qa-wash-2); color: var(--qa-tx); font-size: 15px; font-weight: 740; transition: background-color var(--qa-t-quick) var(--qa-ease), filter var(--qa-t-tap) var(--qa-ease); }
+.hd--contribute .cr-button:hover:not(:disabled) { background: var(--qa-rule-2); }
+.hd--contribute .cr-button:disabled { opacity: .45; cursor: not-allowed; }
+.hd--contribute .cr-button.cr-primary { background: var(--qa-gold-metal); color: var(--qa-tx-on-gold); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 22px -10px rgba(210,173,114,.7); }
+.hd--contribute .cr-button.cr-primary:hover:not(:disabled) { background: var(--qa-gold-metal); filter: brightness(1.05); }
+.hd--contribute .cr-button.cr-quiet { height: auto; padding: 6px 2px; background: none; color: var(--qa-tx-3); }
+.hd--contribute .cr-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.hd--contribute .cr-wallets { display: grid; gap: 8px; margin-top: 14px; }
+.hd--contribute .cr-wallets .cr-button { justify-content: flex-start; }
+.hd--contribute .cr-mine { margin-top: 14px; }
+
+.hd--contribute .cr-grid { display: grid; }
+/* putting ETH in is the slab */
+.hd--contribute #cr-deposit-panel { position: relative; padding: 22px; border-radius: var(--qa-r-slab); background: var(--qa-slab); box-shadow: var(--qa-slab-edge), var(--qa-slab-shadow); overflow: hidden; }
+.hd--contribute #cr-deposit-panel::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 140px; background: radial-gradient(70% 100% at 50% 0%, var(--qa-gold-wash), transparent); pointer-events: none; }
+.hd--contribute #cr-deposit-panel > * { position: relative; }
+.hd--contribute .cr-form { display: grid; gap: 10px; margin-top: 14px; }
+.hd--contribute .cr-form label { display: grid; gap: 4px; font-size: var(--qa-fs-small); font-weight: 650; color: var(--qa-tx-3); }
+.hd--contribute .cr-form input { width: 100%; padding: 4px 0 10px; border: 0; background: transparent; color: var(--qa-tx); font: inherit; font-size: 40px; font-weight: 820; font-stretch: 116%; letter-spacing: -.045em; box-shadow: 0 1px 0 var(--qa-rule-2); outline: none; }
+.hd--contribute .cr-form input:focus { box-shadow: 0 2px 0 var(--qa-gold); }
+.hd--contribute .cr-form input::placeholder { color: var(--qa-tx-3); }
+.hd--contribute #cr-deposit-go { width: 100%; height: 52px; border-radius: var(--qa-r-btn); font-size: 16px; }
+
+.hd--contribute .cr-how ol { display: grid; margin-top: 14px; }
+.hd--contribute .cr-how li { padding: 14px 0; font-size: 15.5px; line-height: 1.55; color: var(--qa-tx-2); box-shadow: 0 1px 0 var(--qa-rule-row); }
+.hd--contribute .cr-how li:first-child { box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule-row); }
+.hd--contribute .cr-fine { margin-top: var(--qa-s10); max-width: 70ch; }
+.hd--contribute .cr-fine p { font-size: 13px; line-height: 1.55; color: var(--qa-tx-3); }
+.hd--contribute .cr-fine p + p { margin-top: 8px; }
+
+@media (min-width: 1100px) {
+  .hd--contribute #cr-app { max-width: 1080px; }
+  .hd--contribute .cr-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .hd--contribute .cr-facts > div, .hd--contribute .cr-facts > div:nth-child(even) { padding: 18px 20px 20px; box-shadow: -1px 0 0 var(--qa-rule); }
+  .hd--contribute .cr-facts > div:first-child { padding-left: 0; box-shadow: none; }
+  .hd--contribute .cr-facts strong { font-size: 34px; }
+  .hd--contribute .cr-grid { grid-template-columns: minmax(0, 1fr) 420px; column-gap: 56px; align-items: start; }
+  .hd--contribute #cr-deposit-panel { padding: 28px; }
+}

@@ -1,0 +1,122 @@
+/* System A, /founding: Founding Launchers as a race. The 50 spots are a seat map, the prizes are big figures,
+   the launches are a leaderboard ranked by milestone progress. Rules copy stays whole, on the open floor. */
+
+.fd { padding-bottom: 32px; }
+.fd > section { padding-top: var(--qa-section-gap); scroll-margin-top: 80px; }
+.fd .fd-hero { padding-top: 34px; }
+.fd-title { font-size: 46px; }
+.fd-title span { display: inline; }
+
+/* spots: the number, then the 50 seats */
+.fd-count__num { display: flex; align-items: baseline; gap: 12px; }
+.fd .qfd-big { font-size: 96px; line-height: .85; font-weight: 860; font-stretch: var(--qa-wd-display); letter-spacing: -.05em; color: var(--qa-gold-hi); text-shadow: 0 0 40px rgba(210,173,114,.35); }
+.fd-count__num span { font-size: 18px; font-weight: 700; color: var(--qa-tx-2); }
+.fd-seats { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 8px; margin: 22px 0 0; max-width: 520px; }
+.fd-seat { position: relative; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--qa-rule-2); }
+.fd-seat.is-taken { box-shadow: 0 0 0 2px var(--qa-gold), 0 0 16px -2px rgba(210,173,114,.6); }
+.fd-seat .fd-coin { position: absolute; inset: 0; width: auto; height: auto; }
+.fd-seat .fd-coin span { font-size: 12px; }
+.fd-seat.is-new { animation: fd-seat 1.4s var(--qa-ease-out) both; }
+@keyframes fd-seat { 0% { transform: scale(.4); box-shadow: 0 0 0 0 rgba(240,218,174,.9); } 60% { transform: scale(1.12); } 100% { transform: none; } }
+.fd-count__note { margin: 16px 0 0; font-size: 14px; color: var(--qa-tx-3); }
+.fd-count__go { margin: 18px 0 0; }
+/* phone and tablet: the launch button stays in reach while the spots are on screen, above the tab bar */
+@media (max-width: 1099px) {
+  .fd-count__go { position: sticky; z-index: 6; bottom: var(--cx-dock-bottom); margin: 18px calc(var(--qa-pad) * -1) 0; padding: 12px var(--qa-pad); background: linear-gradient(180deg, transparent, var(--qa-glass) 30%, var(--qa-glass)); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  .fd-count__go .qa-btn { width: 100%; }
+}
+
+/* coins */
+.fd-coin { position: relative; width: 48px; height: 48px; flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--qa-gold-metal); color: var(--qa-tx-on-gold); font-weight: 820; box-shadow: 0 0 0 1.5px var(--qa-gold-lo), 0 10px 22px -10px rgba(0,0,0,.85); }
+.fd-coin img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* prizes: figures on the floor, hairlines between */
+.fd-prize-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0 calc(var(--qa-pad) * -1); }
+.fd-prize { display: grid; align-content: start; gap: 4px; padding: 18px var(--qa-pad); box-shadow: 0 1px 0 var(--qa-rule); }
+.fd-prize:nth-child(odd) { box-shadow: 0 1px 0 var(--qa-rule), 1px 0 0 var(--qa-rule); }
+.fd-prize__v { font-size: 30px; line-height: .95; font-weight: 850; font-stretch: var(--qa-wd-display); letter-spacing: -.045em; white-space: nowrap; }
+.fd-prize__v small { display: block; margin-top: 4px; font-size: 14px; font-weight: 720; letter-spacing: -.01em; color: var(--qa-tx-2); font-stretch: 100%; }
+.fd-prize--gold .fd-prize__v { color: var(--qa-gold-hi); text-shadow: 0 0 30px rgba(210,173,114,.4); }
+.fd-prize__t { margin-top: 6px; font-size: 15px; font-weight: 700; color: var(--qa-tx); }
+.fd-prize__s { font-size: 13px; line-height: 1.45; color: var(--qa-tx-3); }
+
+/* teams leaderboard */
+.fd-teams { margin: 0 calc(var(--qa-pad) * -1); }
+.fd-team { position: relative; display: grid; grid-template-columns: 22px 48px minmax(0, 1fr); grid-template-areas: "rank coin main" "race race race" "acts acts acts"; column-gap: 12px; row-gap: 14px; align-items: center; padding: 18px var(--qa-pad); box-shadow: 0 1px 0 var(--qa-rule); }
+.fd-team.is-top::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 55%; z-index: -1; background: linear-gradient(90deg, var(--qa-gold-wash), transparent); pointer-events: none; }
+.fd-team.is-top { isolation: isolate; }
+.fd-team.is-new { animation: cr-drop var(--qa-t-enter) var(--qa-ease-out) both; }
+@keyframes cr-drop { from { opacity: 0; transform: translateY(-10px); } }
+.fd-team .qa-rank { grid-area: rank; font-size: 15px; }
+.fd-team > .fd-coin { grid-area: coin; }
+.fd-team__main { grid-area: main; min-width: 0; }
+.fd-team__name b { font-size: 21px; font-weight: 820; font-stretch: var(--qa-wd-head); letter-spacing: -.025em; }
+.fd-team__name span { font-size: 14px; color: var(--qa-tx-3); }
+.fd-team__meta { margin-top: 4px; font-size: 12.5px; }
+.fd-team__meta { gap: 2px 0; }
+.fd-team__meta > * { padding: 0 9px; }
+@media (max-width: 759px) { .fd-team__meta > *, .fd-team__meta > :first-child { padding: 0; } .fd-team__meta > * + * { box-shadow: none; } .fd-team__meta > * + *::before { content: "·"; margin: 0 7px; color: var(--qa-tx-3); } }
+.fd-team__note { margin: 6px 0 0; font-size: 13px; line-height: 1.45; color: var(--qa-tx-3); }
+.fd-team__race { grid-area: race; display: grid; gap: 10px; }
+.fd-bar { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "l v" "t t"; gap: 6px 10px; align-items: baseline; }
+.fd-bar__l { grid-area: l; font-size: 12.5px; font-weight: 680; color: var(--qa-tx-3); }
+.fd-bar__v { grid-area: v; justify-self: end; font-size: 15px; font-weight: 760; }
+.fd-bar__t { grid-area: t; position: relative; height: 5px; border-radius: 5px; background: var(--qa-wash-2); overflow: hidden; }
+.fd-bar__t .fd-bar__f { position: absolute; left: 0; top: 0; bottom: 0; width: max(5px, var(--p, 0%)); border-radius: 5px; background: linear-gradient(90deg, var(--qa-gold-lo), var(--qa-gold-hi)); box-shadow: 0 0 10px rgba(210,173,114,.55); transition: width var(--qa-t-flash) var(--qa-ease); }
+.fd-bar.is-full .fd-bar__v { color: var(--qa-gold-hi); }
+.fd-team__grant { margin: 0; font-size: 12.5px; color: var(--qa-tx-3); }
+.fd-team.is-qualified .fd-team__grant { color: var(--qa-gold-hi); font-weight: 700; }
+.fd-team__acts { grid-area: acts; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0; font-size: 13.5px; }
+.fd-team__acts .qfd-trust a { color: var(--qa-tx-2); text-decoration: none; font-weight: 650; }
+.fd-team__acts .qfd-trust a:hover { color: var(--qa-tx); }
+.fd-team__acts .qfd-trust { color: var(--qa-tx-3); }
+.fd-empty { padding: 22px 0; color: var(--qa-tx-2); font-size: 15px; }
+
+/* your rewards */
+.fd-figs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 12px 0; }
+.fd-fig { padding-right: 14px; }
+.fd-fig + .fd-fig { padding-left: 14px; box-shadow: -1px 0 0 var(--qa-rule); }
+.fd-fig b { display: block; font-size: 24px; font-weight: 820; font-stretch: var(--qa-wd-head); letter-spacing: -.03em; color: var(--qa-gold-hi); }
+.fd-fig span { display: block; margin-top: 4px; font-size: 12.5px; color: var(--qa-tx-3); }
+.fd-mine p { font-size: 14.5px; color: var(--qa-tx-2); }
+
+/* can I enter + rules */
+.fd-check > p, .fd-rules > p, .fd-paid p { font-size: 15px; line-height: 1.55; color: var(--qa-tx-2); max-width: 68ch; margin: 0 0 12px; }
+.fd-form { display: grid; gap: 6px; margin-top: 14px; max-width: 620px; }
+.fd-form__row { display: flex; gap: 12px; align-items: end; }
+.fd-form__row input { flex: 1; }
+.fd-result { margin-top: 10px; font-size: 14.5px; color: var(--qa-tx); }
+.fd-result select { margin: 10px 0; }
+.fd-result button { margin: 10px 10px 0 0; }
+.fd-rules .qa-head { margin: 26px 0 12px; }
+.fd-rules .qa-head:first-child { margin-top: 0; }
+.fd-list { margin: 0; }
+.fd-list li { padding: 14px 0; box-shadow: 0 -1px 0 var(--qa-rule); font-size: 14.5px; line-height: 1.55; color: var(--qa-tx-2); max-width: 78ch; }
+.fd-list li strong { display: block; margin-bottom: 4px; font-size: 16.5px; font-weight: 760; color: var(--qa-tx); }
+.fd-qhooks a { font-weight: 700; }
+
+@media (min-width: 760px) {
+  .fd-prize__v small { display: inline; margin: 0; }
+  .fd-prize-list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .fd-prize, .fd-prize:nth-child(odd) { box-shadow: 1px 0 0 var(--qa-rule); }
+  .fd-prize:last-child { box-shadow: none; }
+}
+@media (min-width: 1100px) {
+  .fd .fd-hero { padding-top: 56px; max-width: 1060px; }
+  .fd-title { font-size: 80px; }
+  .fd-count { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "num seats" "note seats" "go seats"; column-gap: 64px; align-items: start; }
+  .fd-count__num { grid-area: num; flex-direction: column; gap: 6px; }
+  .fd .qfd-big { font-size: 160px; }
+  .fd-seats { grid-area: seats; max-width: none; grid-template-columns: repeat(10, minmax(0, 52px)); gap: 12px; justify-content: end; align-self: center; }
+  .fd-count__note { grid-area: note; }
+  .fd-count__go { grid-area: go; }
+  .fd-prize-list, .fd-teams { margin: 0; }
+  .fd-prize { padding: 22px 24px; }
+  .fd-prize:first-child { padding-left: 0; }
+  .fd-prize__v { font-size: 48px; }
+  .fd-team { grid-template-columns: 26px 56px minmax(0, 1.2fr) minmax(260px, 1fr) auto; grid-template-areas: "rank coin main race acts"; column-gap: 20px; padding: 20px 6px; }
+  .fd-team > .fd-coin { width: 56px; height: 56px; }
+  .fd-team__acts { flex-direction: column; align-items: flex-end; text-align: right; max-width: 220px; }
+  .fd-check, .fd-rules { max-width: 980px; }
+}
+@media (prefers-reduced-motion: reduce) { .fd-seat.is-new, .fd-team.is-new { animation: none; } }

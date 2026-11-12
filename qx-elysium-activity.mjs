@@ -1,8 +1,8 @@
 import {elysiumPoolKeyId,elysiumSwapPrice} from './qx-elysium-swaps.mjs';
 const ADDRESS=/^0x[0-9a-f]{40}$/,HASH=/^0x[0-9a-f]{64}$/,Q=/^0x(?:0|[1-9a-f][0-9a-f]*)$/;
 const short=value=>value.slice(0,8)+'…'+value.slice(-6);
-const block=value=>{try{return BigInt(value).toLocaleString('en-US');}catch{return 'Unavailable';}};
-const time=value=>Number.isSafeInteger(value)?new Date(value).toISOString().replace('T',' ').slice(0,19)+' UTC':'Time unavailable';
+const block=value=>{try{return BigInt(value).toLocaleString('en-US');}catch{return '—';}};
+const time=value=>Number.isSafeInteger(value)?new Date(value).toISOString().replace('T',' ').slice(0,19)+' UTC':'Time refreshing';
 const number=value=>new Intl.NumberFormat('en',{maximumSignificantDigits:7}).format(value);
 
 /** Read-only pool activity; only an explicit pool selection/refresh makes a GET. */
@@ -42,7 +42,7 @@ export function mountElysiumActivity(container,{client,document:doc=container?.o
   if(loading||error)nodes.push(make('span','Previous observation',{class:'ey-stale'}));
   if(!data.coverage.completeWindow)nodes.push(make('p','Partial window · '+data.coverage.returnedCount+' of '+data.coverage.receivedCount+' observed logs returned. '+(data.coverage.limitReached?'Provider log limit reached. ':'')+'See coverage limits below.',{class:'ey-stale'}));
   const chart=drawChart(data.swaps);if(chart)nodes.push(chart);
-  else if(data.swaps.length)nodes.push(make('p','Price line unavailable: both currency decimals have not been read at this window’s block. Raw amounts remain below.',{class:'ey-note'}));
+  else if(data.swaps.length)nodes.push(make('p','Price line refreshing: both currency decimals have not been read at this window’s block. Raw amounts remain below.',{class:'ey-note'}));
   if(!data.swaps.length)nodes.push(make('div',data.coverage.completeWindow?'No swap events in this scanned window.'+(data.window.nextToBlock?' Try the previous blocks.':''):'No readable swap events returned. Coverage is partial; this does not establish no activity.',{class:'ey-empty'}));
   else{
    const list=make('ol',null,{class:'ey-swap-list'});
@@ -74,7 +74,7 @@ export function mountElysiumActivity(container,{client,document:doc=container?.o
    if(dead||mine!==revision||own.signal.aborted)return;
    if(value.chainId!=='99901'||value.venue?.id!==target.venueId||value.venue?.manager!==target.manager||value.pool?.manager!==target.manager||value.pool?.poolId!==target.poolId||value.pool?.identity!==target.identity||!Number.isSafeInteger(value.observedAt)||value.observedAt<0||typeof value.provider?.name!=='string'||!Array.isArray(value.swaps)||!Q.test(value.block?.number)||!value.coverage)throw TypeError('The swap observation did not match this pool.');
    data=value;assets=new Map();loading=false;render();if(value.swaps.length)void metadata(mine,value);
-  }catch(e){if(dead||mine!==revision)return;error=own.signal.aborted?'The swap read timed out. Refresh to try again.':String(e?.message||'The swap read is unavailable. Refresh to retry.').slice(0,220);}
+  }catch(e){if(dead||mine!==revision)return;error=own.signal.aborted?'The swap read timed out. Refresh to try again.':String(e?.message||'Swaps are refreshing. Refresh to retry.').slice(0,220);}
   finally{if(!dead&&mine===revision){clearTimeout(timer);loading=false;render();}}
  }
  function open(pool,venue){

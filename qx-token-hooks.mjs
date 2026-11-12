@@ -28,7 +28,7 @@ export function createTokenHooksState() {
 
 // Append by pool identity; an empty page can still advance the history cursor.
 export function applyTokenHooksPage(state, page, requestedCursor = null) {
-  if (!page || !Array.isArray(page.pools)) throw new TypeError('The pool response is unavailable.');
+  if (!page || !Array.isArray(page.pools)) throw new TypeError('The pool response did not arrive.');
   const poolMap = new Map(state.pools.map(pool => [String(pool.poolId).toLowerCase(),pool]));
   for (const pool of page.pools) {
     if (pool && typeof pool.poolId === 'string' && pool.poolId && ADDRESS.test(currencyAddress(pool.currency0)) && ADDRESS.test(currencyAddress(pool.currency1))) poolMap.set(pool.poolId.toLowerCase(),pool);
@@ -114,7 +114,7 @@ export function renderTokenHooks(el, {chainId, token, fetcher = globalThis.fetch
       const cancelled=new Promise((_,reject)=>currentRequest.signal.addEventListener('abort',()=>reject(new Error(currentRequest.signal.reason==='timeout'?'Pool read timed out':'Pool read cancelled')),{once:true}));
       const read=async()=>{const response=await fetcher(tokenHooksURL(key,cursor),{headers:{Accept:'application/json'},signal:currentRequest.signal});if(!response.ok)throw new Error(`HTTP ${response.status}`);return response.json();};
       const page=await Promise.race([read(),cancelled]);
-      if (page.status==='unavailable' || page.error) throw new Error(page.reason || page.error || 'Pool read unavailable');
+      if (page.status==='unavailable' || page.error) throw new Error(page.reason || page.error || 'Pool read did not answer');
       const pageKey=tokenHooksKey(page);
       if (!pageKey || pageKey.chainId!==key.chainId || pageKey.token!==key.token) throw new Error('The pool response belongs to another token.');
       if (destroyed) return;
@@ -123,7 +123,7 @@ export function renderTokenHooks(el, {chainId, token, fetcher = globalThis.fetch
       state=applyTokenHooksPage(base,page,cursor);
     } catch (error) {
       if (destroyed) return;
-      state={...state,loading:false,error:error?.message || 'Pool read unavailable'};
+      state={...state,loading:false,error:error?.message || 'Pool read did not answer'};
     } finally {clearTimeout(timer);}
     draw();
     return state;

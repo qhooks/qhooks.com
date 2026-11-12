@@ -4,12 +4,12 @@ import {memberWallet} from './qx-member-wallet.mjs';
 
 const SESSION_KEY='qhooks:trader-session:v1';
 const CHAINS={'1':'Ethereum','56':'BNB Chain','8453':'Base','42161':'Arbitrum','4663':'Robinhood Chain','99901':'Elysium',solana:'Solana'};
-const messages={sign_in:'Sign in with this wallet to continue.',wrong_origin:'Open QHooks directly to change your settings.',slow_down:'Too many changes. Try again shortly.',own_wallet:'This is your own wallet.',invalid_follow:'Choose a full wallet address.',push_off:'Web push is off. The site owner must configure push keys.',no_subscription:'Enable web push in this browser, then try again.',alerts_unavailable:'Alert settings are unavailable. Try again shortly.',traders_unavailable:'Trading records are unavailable. Try Refresh.',invalid_thesis:'Keep your thesis to one line, without other addresses or contact details.'};
+const messages={sign_in:'Sign in with this wallet to continue.',wrong_origin:'Open QHooks directly to change your settings.',slow_down:'Too many changes. Try again shortly.',own_wallet:'This is your own wallet.',invalid_follow:'Choose a full wallet address.',push_off:'Web push is off. The site owner must configure push keys.',no_subscription:'Enable web push in this browser, then try again.',alerts_unavailable:'Alert settings are refreshing. Try again shortly.',traders_unavailable:'Trading records are refreshing. Try Refresh.',invalid_thesis:'Keep your thesis to one line, without other addresses or contact details.'};
 const key=value=>memberWallet(value,{allowBareSolana:true})?.key||null;
 export const traderTime=value=>Number(value)>1e12?Number(value):Number(value)*1000;
 export function traderCountdown(round,now=Date.now()){
  const start=traderTime(round?.start),end=traderTime(round?.end);
- if(!Number.isFinite(start)||!Number.isFinite(end))return'Round times unavailable';
+ if(!Number.isFinite(start)||!Number.isFinite(end))return'Round times refreshing';
  if(now>=end)return'Round ended';
  const pending=now<start,seconds=Math.max(0,Math.ceil(((pending?start:end)-now)/1000));
  const days=Math.floor(seconds/86400),hours=Math.floor(seconds%86400/3600),minutes=Math.floor(seconds%3600/60),rest=seconds%60;
@@ -18,14 +18,14 @@ export function traderCountdown(round,now=Date.now()){
 export const traderUsd=value=>value==null||!Number.isFinite(Number(value))?'—':(Number(value)<0?'−$':'$')+Math.abs(Number(value)).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const percent=value=>value==null||!Number.isFinite(Number(value))?'—':Number(value).toFixed(2)+'%';
 const short=value=>value?String(value).replace(/^solana:/,'').slice(0,6)+'…'+String(value).slice(-4):'—';
-const date=value=>Number.isFinite(traderTime(value))?new Date(traderTime(value)).toLocaleString(): 'Time unavailable';
+const date=value=>Number.isFinite(traderTime(value))?new Date(traderTime(value)).toLocaleString(): '—';
 const tone=value=>Number(value)>0?'qa-up':Number(value)<0?'qa-down':'';
 
 export function createTradersClient({fetcher=(...args)=>globalThis.fetch(...args),headers=()=>({})}={}){
  async function request(path,options={}){
   const response=await fetcher(path,{cache:'no-store',credentials:'omit',redirect:'error',...options,headers:{...(options.body?{'content-type':'application/json'}:{}),...headers(),...options.headers}});
   const body=await response.json().catch(()=>null);
-  if(!response.ok)throw Object.assign(Error(messages[body?.error]||body?.message||'Trading records are unavailable. Try Refresh.'),{status:response.status,code:body?.error,retryAfter:body?.retryAfter});
+  if(!response.ok)throw Object.assign(Error(messages[body?.error]||body?.message||'Trading records are refreshing. Try Refresh.'),{status:response.status,code:body?.error,retryAfter:body?.retryAfter});
   if(!body||typeof body!=='object')throw Error('The trading response was incomplete. Try Refresh.');
   return body;
  }
@@ -43,7 +43,7 @@ export function createTraderSolanaSession({getConnection,capture,fetcher=(...arg
  async function signIn(){
   const connection=capture();await connection.check();const wallet=key(connection.owner);
   if(!wallet?.startsWith('solana:'))throw Error('Connect a Solana wallet with message signing.');
-  const post=async(path,body)=>{connection.assertCurrent();const response=await fetcher('/api/traders/session'+path,{method:'POST',credentials:'omit',redirect:'error',headers:{'content-type':'application/json'},body:JSON.stringify(body)}),value=await response.json().catch(()=>null);await connection.check();if(!response.ok)throw Error(messages[value?.error]||'Trading sign-in is unavailable. Try again.');return value;};
+  const post=async(path,body)=>{connection.assertCurrent();const response=await fetcher('/api/traders/session'+path,{method:'POST',credentials:'omit',redirect:'error',headers:{'content-type':'application/json'},body:JSON.stringify(body)}),value=await response.json().catch(()=>null);await connection.check();if(!response.ok)throw Error(messages[value?.error]||'Trading sign-in did not answer. Try again.');return value;};
   const challenge=await post('/message',{wallet});
   if(challenge?.wallet!==wallet||!/^([0-9a-f]{48})$/.test(challenge?.id||'')||!Number.isFinite(challenge.issuedAt)||Math.abs(challenge.issuedAt-now())>300000||challenge.expiresAt!==challenge.issuedAt+300000||challenge.expiresAt<=now()||challenge.message!==traderSignInMessage({...challenge,origin:origin()}))throw Error('The sign-in message did not match this trading profile.');
   const signature=await connection.sign(challenge.message);await connection.check();
@@ -61,7 +61,7 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
  // Share only in-flight reads: manual Refresh still always asks the server.
  function readProfile(wallet){if(profileReads.has(wallet))return profileReads.get(wallet);const pending=Promise.resolve().then(()=>client.profile(wallet)).finally(()=>{if(profileReads.get(wallet)===pending)profileReads.delete(wallet);});profileReads.set(wallet,pending);return pending;}
  let disposed=false,tab='feed',filter='all',windowKey='7d',generation=0,refreshTimer,countdownTimer,profileWallet=null,round=null,following=new Set(),busy=false;
- const title=h('h2',{id:profile?'qp-trading-title':'qx-traders-title'},profile?'Trading profile':'Trading records');
+ const title=h('h2',{id:profile?'qp-trading-title':'qx-traders-title'},profile?'Trades':'Traders');
  const status=h('p',{class:'qa-empty qt-status',role:'status','aria-live':'polite'}),body=h('div',{class:'qt-panel',role:'tabpanel'}),controls=h('div',{class:'qt-account'}),tabs=h('div',{class:'qt-tabs',role:'tablist','aria-label':profile?'Trading profile views':'Trading views'}),filters=h('div',{class:'qt-filters'}),refresh=button('Refresh',()=>void load());
  const header=h('div',{class:'qa-section-head'},h('div',{},title,h('p',{},profile?'Terminal trades shared by this wallet.':'Public terminal trades, real PnL and trading rounds.')),refresh);
  target.classList.add('qa-section','qt-workspace');target.setAttribute('aria-labelledby',title.id);target.replaceChildren(header,controls,tabs,filters,status,body);
@@ -76,14 +76,14 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
   catch(error){status.textContent=error.message;}finally{node.disabled=false;}
  }
  function traderName(row,{follow=true}={}){
-  const wallet=key(row.wallet),name=h('div',{class:'qt-trader'},h('a',{href:profileUrl({wallet:wallet||row.wallet||'',handle:row.handle})},row.name||short(wallet)),h('code',{title:wallet||''},wallet?short(wallet):'Wallet unavailable'));
+  const wallet=key(row.wallet),name=h('div',{class:'qt-trader'},h('a',{href:profileUrl({wallet:wallet||row.wallet||'',handle:row.handle})},row.name||short(wallet)),h('code',{title:wallet||''},wallet?short(wallet):'Wallet'));
   if(follow&&wallet&&wallet!==selectedOwner()){const control=button(following.has(wallet)?'Following':'Follow trader',()=>void toggleFollow(wallet,control),{'aria-pressed':following.has(wallet),'data-follow-wallet':wallet});name.append(control);}return name;
  }
  function fact(label,value,cls=''){return h('div',{},h('dt',{},label),h('dd',{class:cls},value));}
  function feedRows(rows){
   if(!rows.length)return h('p',{class:'qa-empty'},filter==='following'?'No public terminal trades from the traders you follow.':'No shared terminal trades in this view yet.');
   return h('ol',{class:'qt-feed'},...rows.map(row=>{
-   const chain=CHAINS[row.chainId]||String(row.chainId||'Chain unavailable'),token=String(row.token||''),href='/terminal#t='+encodeURIComponent(String(row.chainId))+':'+encodeURIComponent(token);
+   const chain=CHAINS[row.chainId]||String(row.chainId||'Unknown chain'),token=String(row.token||''),href='/terminal#t='+encodeURIComponent(String(row.chainId))+':'+encodeURIComponent(token);
    const card=h('li',{class:'qa-launch qt-trade'},h('div',{class:'qt-row-head'},traderName(row),h('span',{class:'qt-side '+(row.side==='buy'?'qa-up':'qa-down')},row.side==='buy'?'Buy':'Sell')),
     h('a',{class:'qt-token',href},row.symbol||short(token)),h('span',{class:'qa-chain'},chain),h('dl',{class:'qa-facts qt-facts'},fact('Size',traderUsd(row.usd)),fact('Market cap at entry',traderUsd(row.marketCapUsd))),h('time',{datetime:Number.isFinite(traderTime(row.at))?new Date(traderTime(row.at)).toISOString():''},date(row.at)));
    if(row.thesis&&row.side==='buy')card.append(h('p',{class:'qt-thesis'},row.thesis));return card;
@@ -145,9 +145,9 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
     testAlert.hidden=true;
     try{const subscription=await activeSubscription();if(!subscription)return;const stored=await client.pushSubscriptions();if(signedOwner())testAlert.hidden=!(stored.endpoints||[]).includes(subscription.endpoint);}catch{}
    }
-   const enable=button('Enable web push',async()=>{enable.disabled=true;try{await signedIn();if(!supported)throw Error('Web push is unavailable in this browser. On iPhone, install QHooks on your home screen first.');const permission=await globalThis.Notification.requestPermission();if(permission!=='granted')throw Error('Notifications were not enabled. You can change this in browser settings.');if(!current())return;await globalThis.navigator.serviceWorker.register('/sw.js');const ready=await globalThis.navigator.serviceWorker.ready,bytes=Uint8Array.from(atob(String(config.publicKey).replace(/-/g,'+').replace(/_/g,'/')),char=>char.charCodeAt(0)),subscription=await ready.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});if(!signedOwner())throw Error('Your wallet changed. Review alert settings again.');await client.push(subscription.toJSON());if(current()){note.textContent='Web push enabled for buys by the traders you follow.';await updateTestButton();}}catch(error){if(current())note.textContent=error.message;}finally{enable.disabled=!config.pushEnabled||!supported;}});
+   const enable=button('Enable web push',async()=>{enable.disabled=true;try{await signedIn();if(!supported)throw Error('Web push does not work in this browser. On iPhone, install QHooks on your home screen first.');const permission=await globalThis.Notification.requestPermission();if(permission!=='granted')throw Error('Notifications were not enabled. You can change this in browser settings.');if(!current())return;await globalThis.navigator.serviceWorker.register('/sw.js');const ready=await globalThis.navigator.serviceWorker.ready,bytes=Uint8Array.from(atob(String(config.publicKey).replace(/-/g,'+').replace(/_/g,'/')),char=>char.charCodeAt(0)),subscription=await ready.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});if(!signedOwner())throw Error('Your wallet changed. Review alert settings again.');await client.push(subscription.toJSON());if(current()){note.textContent='Web push enabled for buys by the traders you follow.';await updateTestButton();}}catch(error){if(current())note.textContent=error.message;}finally{enable.disabled=!config.pushEnabled||!supported;}});
    enable.disabled=!config.pushEnabled||!supported;actions.append(enable,testAlert,h('a',{class:'qa-btn',href:'https://t.me/qhooks_bot',target:'_blank',rel:'noopener noreferrer'},'Link Telegram with @qhooks_bot'));
-   if(config.pushEnabled&&!supported)note.textContent+=' Web push is unavailable in this browser. On iPhone, install QHooks on your home screen first.';
+   if(config.pushEnabled&&!supported)note.textContent+=' Web push does not work in this browser. On iPhone, install QHooks on your home screen first.';
    await updateTestButton();
   }catch(error){note.textContent=error.message;}
  }
@@ -158,7 +158,7 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
   clock.textContent=traderCountdown(round,now());timers.clearInterval(countdownTimer);countdownTimer=timers.setInterval(()=>{if(!disposed)clock.textContent=traderCountdown(round,now());},1000);
   const info=h('div',{class:'qt-round-info'},h('section',{},h('h4',{},'How to enter'),h('p',{},'Trade outside tokens in the terminal. Opt in to a public trading profile.'),h('a',{class:'qa-btn qa-btn-primary',href:'/terminal'},'Open terminal')),h('section',{},h('h4',{},'Eligibility'),h('p',{},'All chains. Tokens launched on QHooks never count.'),h('p',{},'At least '+(round.minTrades??5)+' trades and '+traderUsd(round.minVolumeUsd??0)+' in terminal volume during this round.')),h('section',{},h('h4',{},'Rules'),h('p',{},'Ranked by real PnL from eligible terminal trades. Buys and sells with no market risk are excluded. Wallets sharing a funder cluster cannot both rank.'),...rules.map(text=>h('p',{},text))));
   const excluded=h('section',{class:'qt-excluded'},h('h4',{},'Excluded wallets'));
-  if(value.excluded?.length)excluded.append(h('ul',{},...value.excluded.map(row=>h('li',{},h('a',{href:profileUrl({wallet:row.wallet,handle:row.handle})},row.name||short(row.wallet)),h('span',{},({self_trade:'Matching buys and sells had no market risk.',same_funder_cluster:'Shares a funding cluster with another ranked wallet.',lineage_unchecked:'Funding checks are incomplete.',price_unavailable:'A required USD price is unavailable.',incomplete_trade_basis:'A recorded sale has no verified entry cost.'})[row.reason]||row.reason||'Does not meet this round’s rules.')))));else excluded.append(h('p',{class:'qa-empty'},'No exclusions recorded for this round.'));
+  if(value.excluded?.length)excluded.append(h('ul',{},...value.excluded.map(row=>h('li',{},h('a',{href:profileUrl({wallet:row.wallet,handle:row.handle})},row.name||short(row.wallet)),h('span',{},({self_trade:'Matching buys and sells had no market risk.',same_funder_cluster:'Shares a funding cluster with another ranked wallet.',lineage_unchecked:'Funding checks are incomplete.',price_unavailable:'A required USD price is missing.',incomplete_trade_basis:'A recorded sale has no verified entry cost.'})[row.reason]||row.reason||'Does not meet this round’s rules.')))));else excluded.append(h('p',{class:'qa-empty'},'No exclusions recorded for this round.'));
   body.replaceChildren(summary,value.refreshing&&!value.rows?.length?h('p',{class:'qa-empty'},'Refreshing standings…'):standings(value.rows||[],{competition:true}),info,excluded);
  }
  function schedule(){timers.clearTimeout(refreshTimer);if(!disposed&&!doc.hidden)refreshTimer=timers.setTimeout(()=>void load(),pollMs);}
@@ -172,7 +172,7 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
     // The profile response already carries its current public trades. Following is optional metadata.
     const feed=filter==='all'&&Array.isArray(value.trades)?{trades:value.trades.map(row=>({...row,name:row.name||value.name||''}))}:await client.feed({filter,wallet:candidate});if(mine!==generation||disposed)return;const pnl=value.pnl,summary=pnl?h('dl',{class:'qt-metrics qt-profile-pnl'},fact('PnL USD',traderUsd(pnl.pnlUsd),tone(pnl.pnlUsd)),fact('PnL %',percent(pnl.pnlPct)),fact('Trades',pnl.trades??value.trades??'—'),fact('Win rate',pnl.winRate==null?'—':percent(Number(pnl.winRate)*100))):null;body.replaceChildren(...[summary,feedRows(feed.trades||[])].filter(Boolean));
    }else if(tab==='feed'){await follows();const value=await client.feed({filter});if(mine!==generation||disposed)return;body.replaceChildren(feedRows(value.trades||[]));}
-   else if(tab==='leaderboard'){const value=await client.leaderboard(windowKey);pendingProjection=!!value.refreshing;computedAt=value.refreshedAt||value.computedAt;if(mine!==generation||disposed)return;body.replaceChildren(h('p',{class:'qt-ranking-note'},'Ranked by real PnL, not followers.'),h('p',{class:'qt-help'},'Realized + unrealized PnL in USD. Trading fees included; network fees and rewards excluded. At least 5 trades in the selected window. A dash means a USD price is unavailable.'),value.refreshing&&!value.rows?.length?h('p',{class:'qa-empty'},'Refreshing leaderboard…'):standings(value.rows||[]));}
+   else if(tab==='leaderboard'){const value=await client.leaderboard(windowKey);pendingProjection=!!value.refreshing;computedAt=value.refreshedAt||value.computedAt;if(mine!==generation||disposed)return;body.replaceChildren(h('p',{class:'qt-ranking-note'},'Ranked by real PnL, not followers.'),h('p',{class:'qt-help'},'Realized + unrealized PnL in USD. Trading fees included; network fees and rewards excluded. At least 5 trades in the selected window. A dash means a USD price is missing.'),value.refreshing&&!value.rows?.length?h('p',{class:'qa-empty'},'Refreshing leaderboard…'):standings(value.rows||[]));}
    else{const value=await client.competition();pendingProjection=!!value.refreshing;computedAt=value.refreshedAt||value.computedAt;if(mine!==generation||disposed)return;renderCompetition(value);}
    status.textContent=pendingProjection?'Refreshing trading records…'+(computedAt?' Last completed '+new Date(computedAt).toLocaleTimeString()+'.':''):'Updated '+new Date(computedAt||now()).toLocaleTimeString();
   }catch(error){if(mine===generation)status.textContent=error.message+' Your current view stays here. Use Refresh to retry.';}

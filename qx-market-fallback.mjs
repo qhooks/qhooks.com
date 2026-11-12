@@ -16,7 +16,7 @@ export function mountMarketFallback(host,{document:doc=globalThis.document,fetch
   try{
    request??=readPublicJSON(TRENDING_URL,{fetcher}).then(body=>trendingTokens(body,30)).finally(()=>{request=null;});
    const found=await request;if(mine!==revision)return;rows=found;render();
-  }catch{if(mine!==revision)return;status.textContent='Outside tokens are unavailable right now. Launch a token or retry.';retry.hidden=false;}
+  }catch{if(mine!==revision)return;status.textContent='Outside tokens are refreshing. Launch a token or retry.';retry.hidden=false;}
  }
  retry.addEventListener('click',()=>void show(selection));
  return{show,hide(){revision++;host.hidden=true;},dispose(){revision++;host.hidden=true;}};

@@ -1,0 +1,23 @@
+/* QHooks System A: /changelog. Each day is a date on the left and what shipped on the right, newest first. */
+
+.hd--changelog .qcl-day { margin-top: var(--qa-s12); padding-top: var(--qa-s6); box-shadow: 0 -1px 0 var(--qa-rule); }
+.hd--changelog .qcl-date { position: sticky; z-index: 2; top: calc(var(--qa-hdr-h) + env(safe-area-inset-top)); margin: 0 calc(var(--qa-pad) * -1); padding: 10px var(--qa-pad); background: var(--qa-glass); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+.hd--changelog .qcl-date h2 { font-size: 15px; line-height: 1.2; font-weight: 760; font-stretch: 112%; letter-spacing: 0; color: var(--qa-gold-hi); }
+.hd--changelog .qcl-items { display: grid; }
+.hd--changelog .qcl-item { padding: 22px 0; box-shadow: 0 1px 0 var(--qa-rule-row); scroll-margin-top: 120px; }
+.hd--changelog .qcl-item:last-child { box-shadow: none; }
+.hd--changelog .qcl-tag { display: inline-flex; align-items: center; gap: 7px; margin: 0; font-size: 12.5px; font-weight: 720; color: var(--qa-tx-3); }
+.hd--changelog .qcl-tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--qa-gold); }
+.hd--changelog .qcl-item h3 { margin-top: 8px; font-size: 22px; line-height: 1.12; font-weight: 800; font-stretch: 116%; letter-spacing: -.025em; }
+.hd--changelog .qcl-item p:not(.qcl-tag) { margin-top: 8px; max-width: 62ch; font-size: 16px; line-height: 1.6; color: var(--qa-tx-2); }
+.hd--changelog .qcl-item a { color: var(--qa-tx); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--qa-gold) 50%, transparent); text-underline-offset: 3px; }
+.hd--changelog .qcl-item a:hover { color: var(--qa-gold-hi); }
+
+@media (min-width: 1100px) {
+  .hd--changelog .qcl-day { display: grid; grid-template-columns: 260px minmax(0, 820px); column-gap: 64px; align-items: start; margin-top: var(--qa-s16); padding-top: var(--qa-s8); }
+  .hd--changelog .qcl-date { top: calc(var(--qa-nav-h) + 32px); margin: 0; padding: 0; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .hd--changelog .qcl-date h2 { font-size: 26px; line-height: 1.05; font-weight: 830; font-stretch: 118%; letter-spacing: -.03em; color: var(--qa-tx); }
+  .hd--changelog .qcl-item { padding: 0 0 30px; margin-bottom: 30px; }
+  .hd--changelog .qcl-item h3 { font-size: 28px; }
+  .hd--changelog .qcl-item p:not(.qcl-tag) { font-size: 17px; }
+}

@@ -1,0 +1,29 @@
+/* QHooks System A: /pool (token lane). Chains are rows on the floor; the chosen chain opens one slab. */
+@import url("/qx-a/pages/token-base.css");
+body.qa.tp-pool main h1 { max-width: 18ch; }
+body.qa.tp-pool .chain-options { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; margin: var(--qa-section-gap) calc(var(--qa-pad) * -1) 0; }
+body.qa.tp-pool .chain-option { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name go" "sub go"; align-items: center; column-gap: 12px; width: 100%; min-height: 72px; margin: 0; padding: 14px var(--qa-pad); border: 0; border-radius: 0; background: none; box-shadow: 0 1px 0 var(--qa-rule-row); color: var(--qa-tx); text-align: left; cursor: pointer; transition: background-color var(--qa-t-quick) var(--qa-ease); }
+body.qa.tp-pool .chain-option:first-child { box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule-row); }
+body.qa.tp-pool .chain-option::after { content: ""; grid-area: go; width: 8px; height: 8px; border-right: 1.8px solid var(--qa-tx-3); border-top: 1.8px solid var(--qa-tx-3); transform: rotate(45deg); }
+body.qa.tp-pool .chain-option:hover { background: var(--qa-wash); }
+body.qa.tp-pool .chain-option[aria-pressed="true"] { background: linear-gradient(90deg, var(--qa-gold-wash), transparent); }
+body.qa.tp-pool .chain-option[aria-pressed="true"]::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; background: var(--qa-gold); box-shadow: var(--qa-glow-gold); }
+body.qa.tp-pool .chain-option strong { grid-area: name; display: inline-flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 780; font-stretch: 112%; letter-spacing: -.02em; }
+body.qa.tp-pool .chain-option strong img, body.qa.tp-pool .chain-option img { width: 22px; height: 22px; }
+body.qa.tp-pool .chain-option small { grid-area: sub; margin-top: 2px; font-size: 13.5px; color: var(--qa-tx-3); }
+body.qa.tp-pool .chain-selection { position: relative; margin-top: 26px; padding: 22px; border-radius: var(--qa-r-slab); background: var(--qa-slab); box-shadow: var(--qa-slab-edge), var(--qa-slab-shadow); }
+body.qa.tp-pool .chain-selection::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 140px; border-radius: var(--qa-r-slab) var(--qa-r-slab) 0 0; background: radial-gradient(70% 100% at 50% 0%, var(--qa-gold-wash), transparent); pointer-events: none; }
+body.qa.tp-pool .chain-selection > * { position: relative; }
+body.qa.tp-pool .chain-selection h2 { font-size: var(--qa-fs-display-m); font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); }
+body.qa.tp-pool #pools-copy { margin: 8px 0 14px; font-size: 15px; color: var(--qa-tx-2); }
+body.qa.tp-pool .network-actions { display: flex; flex-wrap: wrap; gap: 0 8px; }
+body.qa.tp-pool #pools-custody { color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 22px -10px rgba(210,173,114,.7); }
+body.qa.tp-pool .launch-footnote { margin-top: 12px; font-size: 13px; line-height: 1.5; color: var(--qa-tx-3); }
+body.qa.tp-pool .technical-notes { margin-top: 26px; }
+body.qa.tp-pool .technical-notes p { font-size: 14.5px; color: var(--qa-tx-2); }
+@media (min-width: 1100px) {
+  body.qa.tp-pool .chain-options { grid-template-columns: 1fr 1fr; column-gap: 48px; margin-left: 0; margin-right: 0; }
+  body.qa.tp-pool .chain-option { padding-left: 6px; padding-right: 6px; }
+  body.qa.tp-pool .chain-option:nth-child(2) { box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule-row); }
+  body.qa.tp-pool .chain-selection { max-width: 720px; }
+}

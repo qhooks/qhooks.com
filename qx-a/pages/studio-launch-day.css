@@ -1,0 +1,24 @@
+/* QHOOKS launch record: the token's art opens the page, then the record on hairlines. */
+.qst-day__stage { margin-top: 0; }
+.qst-day .qst-top { padding-top: 26px; }
+.qst-day .cr-hero h1 { font-size: clamp(38px, 10vw, 64px); }
+.qst-day .cr-lede { margin-top: 14px; max-width: 58ch; font-size: 16.5px; line-height: 1.45; color: var(--qa-tx-2); }
+.qst-day .cr-panel { padding-top: var(--qa-section-gap); }
+.qst-day .cr-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 14px; }
+.qst-day .cr-head h2 { margin: 0; font-size: var(--qa-fs-h2); line-height: .95; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); }
+.qst-day .cr-badge { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 720; color: var(--qa-buy); }
+.qst-day .cr-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+.qst-day .ld-record > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; padding: 15px 0; box-shadow: 0 -1px 0 var(--qa-rule); }
+.qst-day .ld-record > div:last-child { box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+.qst-day .ld-record dt { font-size: 12.5px; font-weight: 620; color: var(--qa-tx-3); }
+.qst-day .ld-record dd { text-align: left; font-size: 15.5px; font-weight: 600; line-height: 1.45; color: var(--qa-tx); }
+.qst-day .ld-record dd .qx-link { text-decoration: none; }
+.qst-day .ld-record dd .qx-link code { color: var(--qa-gold-hi); }
+.qst-day .qst-links { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 24px; font-size: 15px; color: transparent; }
+.qst-day .qst-links .qx-link { color: var(--qa-gold-hi); text-decoration: none; font-weight: 720; }
+.qst-day .qst-links .qx-link:hover { color: var(--qa-tx); }
+@media (min-width: 1100px) {
+  .qst-day .qst-top { padding-top: 40px; }
+  .qst-day .ld-record > div { grid-template-columns: 220px minmax(0, 1fr); gap: 4px 28px; align-items: baseline; }
+  .qst-day .ld-record { max-width: 1040px; }
+}

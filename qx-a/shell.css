@@ -1,0 +1,284 @@
+/* QHooks System A: the app shell. Requires tokens.css. Works on its own (pages not yet converted load only this and
+   tokens.css), so every rule is scoped to the shell's own parts and carries the few component styles it uses.
+   Phone: a full-width header attached to the top edge and a full-width 5-tab bar attached to the bottom edge.
+   Neither floats, neither is a pill, and the body is padded so nothing sits under them (except a page's art stage, opt-in).
+   Desktop (>= 1100px): one top nav, no tab bar. Optional live ribbon under either. Footer carries the brand line. */
+
+/* ---------- the shell's own base (old page CSS must not reach in) ---------- */
+:is(.qa-hdr, .qa-tabbar, .qa-ribbon, .qa-foot, .qa-menu, .qa-getapp) { font-family: var(--qa-sans); font-variant-numeric: tabular-nums; font-feature-settings: "zero" 0; -webkit-font-smoothing: antialiased; line-height: 1.4; letter-spacing: normal; text-transform: none; text-align: left; color: var(--qa-tx); }
+:is(.qa-hdr, .qa-tabbar, .qa-ribbon, .qa-foot, .qa-menu, .qa-getapp) :where(*, *::before, *::after) { box-sizing: border-box; }
+:is(.qa-hdr, .qa-tabbar, .qa-ribbon, .qa-foot, .qa-menu, .qa-getapp) :where(a) { color: inherit; text-decoration: none; }
+:is(.qa-hdr, .qa-tabbar, .qa-ribbon, .qa-foot, .qa-menu, .qa-getapp) :where(button) { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-transform: none; letter-spacing: normal; }
+:is(.qa-hdr, .qa-tabbar, .qa-ribbon, .qa-foot, .qa-menu, .qa-getapp) :where(h2, h3, p, ul, ol, li) { margin: 0; padding: 0; list-style: none; }
+:is(.qa-hdr, .qa-tabbar, .qa-ribbon, .qa-foot, .qa-menu, .qa-getapp) :where(em, i, cite) { font-style: normal; }
+:is(.qa-hdr, .qa-tabbar, .qa-ribbon, .qa-foot, .qa-menu, .qa-getapp) :where(a, button, input):focus-visible { outline: 2px solid var(--qa-gold-hi); outline-offset: 3px; border-radius: 6px; }
+.qa-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.qa-i { width: 18px; height: 18px; flex: none; }
+.qa-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* buttons the shell uses (the same as components.css, scoped so pages that are not converted keep theirs) */
+:is(.qa-hdr, .qa-menu, .qa-getapp, [id="qa-wallet"]) .qa-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 18px; border: 0; border-radius: var(--qa-r-m); font-family: var(--qa-sans); font-size: 15px; font-weight: 740; line-height: 1; letter-spacing: normal; white-space: nowrap; text-decoration: none; cursor: pointer; min-width: 0; min-height: 0;
+  transition: transform var(--qa-t-tap) var(--qa-ease), filter var(--qa-t-tap) var(--qa-ease), background-color var(--qa-t-quick) var(--qa-ease), color var(--qa-t-quick) var(--qa-ease); }
+:is(.qa-hdr, .qa-menu, .qa-getapp, [id="qa-wallet"]) .qa-btn:active { transform: scale(.97); }
+:is(.qa-hdr, .qa-menu, .qa-getapp, [id="qa-wallet"]) .qa-btn--primary { color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 22px -10px rgba(210,173,114,.7); }
+:is(.qa-hdr, .qa-menu, .qa-getapp, [id="qa-wallet"]) .qa-btn--primary:hover { filter: brightness(1.05); }
+:is(.qa-hdr, .qa-menu, .qa-getapp, [id="qa-wallet"]) .qa-btn--secondary { color: var(--qa-tx); background: var(--qa-wash-2); box-shadow: none; }
+:is(.qa-hdr, .qa-menu, .qa-getapp, [id="qa-wallet"]) .qa-btn--secondary:hover { background: var(--qa-rule-2); }
+:is(.qa-hdr, .qa-menu, .qa-getapp) .qa-btn--sm { height: 34px; padding: 0 12px; font-size: 13.5px; border-radius: 10px; }
+:is(.qa-hdr, .qa-menu) .qa-btn--block { width: 100%; }
+:is(.qa-hdr, .qa-menu, .qxt-top) .qa-btn--icon { width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: var(--qa-glass-2); color: var(--qa-tx); box-shadow: inset 0 0 0 1px var(--qa-rule-2); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); flex: none; }
+:is(.qa-hdr, .qa-menu, .qxt-top) .qa-btn--icon:hover { box-shadow: inset 0 0 0 1px var(--qa-tx-3); }
+.qa-ava { display: inline-block; flex: none; width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, var(--a1, #555), var(--a2, #222)) center / cover; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+.qa-ava--md { width: 36px; height: 36px; }
+.qa-ava--keeper { display: inline-grid; place-items: center; background: radial-gradient(circle at 50% 62%, #FFB066, #8A3D06); color: #2b1100; }
+.qa-ava--keeper svg { width: 58%; height: 58%; }
+
+/* ---------- body: room for the bars ---------- */
+body.qa-shell { padding-top: calc(var(--qa-hdr-h) + env(safe-area-inset-top) + var(--qa-ribbon-h, 0px)); padding-bottom: calc(var(--qa-tabbar-h) + env(safe-area-inset-bottom) + var(--qa-getapp-h, 0px)); }
+body.qa-shell--ribbon { --qa-ribbon-h: 32px; }
+/* in-page links (#make-a-call, #two-keys …) land below the fixed bars, not under them */
+html:has(> body.qa-shell:not(.qa-shell--adopt)) { scroll-padding-top: calc(var(--qa-hdr-h) + env(safe-area-inset-top) + 44px); }
+html:has(> body.qa-shell--ribbon:not(.qa-shell--adopt)) { scroll-padding-top: calc(var(--qa-hdr-h) + env(safe-area-inset-top) + 76px); }
+body.qa-shell--getapp { --qa-getapp-h: 52px; }
+body.qa-shell.qa-shell--detail { padding-bottom: calc(var(--qa-dock-h) + env(safe-area-inset-bottom) + var(--qa-getapp-h, 0px)); }
+body.qa-shell.qa-shell--over-art { padding-top: 0; }
+body.qa-shell:is(.qa-shell--notabs, .qa-shell--tg) { padding-bottom: calc(env(safe-area-inset-bottom) + var(--qa-getapp-h, 0px)); }
+body.qa-shell.qa-shell--adopt { padding-top: 0; }
+.qa-shell .qa-tabs--section { --qa-sticky-top: calc(var(--qa-hdr-h) + env(safe-area-inset-top) + var(--qa-ribbon-h, 0px)); }
+.qa-shell { --qa-toast-bottom: calc(var(--qa-tabbar-h) + var(--qa-getapp-h, 0px)); }
+.qa-shell.qa-shell--detail { --qa-toast-bottom: var(--qa-dock-h); }
+.qa-shell:is(.qa-shell--notabs, .qa-shell--tg) { --qa-toast-bottom: var(--qa-getapp-h, 0px); }
+
+/* ---------- header (phone) / nav (desktop): one element ---------- */
+header.qa-hdr { position: fixed; z-index: var(--qa-z-nav); top: 0; left: 0; right: 0; width: auto; max-width: none; margin: 0; height: calc(var(--qa-hdr-h) + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 12px 0 14px;
+  display: flex; align-items: center; gap: 10px; border: 0; border-radius: 0; background: var(--qa-glass); -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4); box-shadow: 0 1px 0 var(--qa-rule);
+  transition: background-color var(--qa-t-std) var(--qa-ease), box-shadow var(--qa-t-std) var(--qa-ease); transform: none; }
+.qa-shell--over-art .qa-hdr:not(.is-scrolled) { background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.qa-hdr .qa-brand { display: inline-flex; align-items: center; gap: 9px; font-size: 17px; font-weight: 820; font-stretch: 118%; letter-spacing: -.03em; flex: none; color: var(--qa-tx); }
+.qa-brand__mark { display: inline-block; width: 28px; height: 28px; border-radius: 50%; background: var(--qa-brand-mark, url("img/qhooks-icon.jpg")) center / cover; box-shadow: 0 0 0 1.5px var(--qa-gold), 0 0 14px rgba(210,173,114,.3); flex: none; }
+.qa-hdr .qa-hdr__back { display: none; }
+.qa-hdr .qa-hdr__title { display: none; min-width: 0; font-size: 16px; font-weight: 740; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qa-shell--detail .qa-hdr .qa-hdr__back { display: inline-flex; }
+.qa-shell--detail .qa-hdr .qa-brand { display: none; }
+.qa-shell--detail .qa-hdr .qa-hdr__title { display: block; opacity: 0; transition: opacity var(--qa-t-quick) var(--qa-ease); }
+.qa-shell--detail .qa-hdr.is-scrolled .qa-hdr__title, .qa-shell--detail:not(.qa-shell--over-art) .qa-hdr .qa-hdr__title { opacity: 1; }
+.qa-hdr .qa-nav-links, .qa-hdr .qa-hdr__search { display: none; }
+.qa-hdr__search[hidden] { display: none !important; }
+.qa-hdr__end { margin-left: auto; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.qa-hdr__actions { display: flex; gap: 8px; }
+.qa-hdr__actions:empty { display: none; }
+#qa-wallet { display: flex; align-items: center; min-width: 0; }
+/* the site's own wallet button (#qhc-trigger) lives here; ids outrank the old page rules */
+#qa-wallet > .qa-wallet__btn, #qa-wallet > #qhc-trigger.qa-btn { height: 38px; min-height: 0; max-width: 46vw; margin: 0; padding: 0 14px; border: 0; border-radius: var(--qa-r-m); font: 740 14px/1 var(--qa-sans); letter-spacing: normal; overflow: hidden; text-overflow: ellipsis; order: 0; transform: none; opacity: 1; }
+#qa-wallet > #qhc-trigger.qa-btn--primary { color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 22px -10px rgba(210,173,114,.7); }
+#qa-wallet > #qhc-trigger.qa-btn--secondary { color: var(--qa-tx); background: var(--qa-wash-2); box-shadow: inset 0 0 0 1px var(--qa-rule); }
+#qa-wallet > #qhc-trigger:disabled { opacity: .7; }
+.qa-hdr .qa-theme-btn { display: none; }
+.qa-hdr .qa-menu-btn { display: inline-flex; align-items: center; justify-content: center; }
+
+/* ---------- search (desktop header, and inside the menu) ---------- */
+.qa-search { position: relative; margin: 0; }
+.qa-search__box { display: flex; align-items: center; gap: 9px; height: 42px; padding: 0 14px; border-radius: var(--qa-r-m); background: var(--qa-wash-2); color: var(--qa-tx-3); cursor: text; }
+.qa-search__box input { flex: 1; min-width: 0; height: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; color: var(--qa-tx); font: 500 15px var(--qa-sans); outline: none; -webkit-appearance: none; appearance: none; }
+.qa-search__box input::placeholder { color: var(--qa-tx-3); }
+.qa-search__box input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.qa-search__box:focus-within { box-shadow: inset 0 0 0 1.5px var(--qa-gold); color: var(--qa-tx-2); }
+.qa-search .qa-search__box input:focus, .qa-search .qa-search__box input:focus-visible { outline: none; box-shadow: none; }
+.qa-search__k .qa-i { width: 15px; height: 15px; }
+.qa-search__list { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 8px); max-height: min(420px, 70vh); overflow: auto; padding: 6px; border-radius: 18px; background: var(--qa-slab); box-shadow: var(--qa-slab-edge), var(--qa-slab-shadow); }
+.qa-search__list[hidden] { display: none; }
+.qa-search__list li a { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 11px; min-height: 48px; padding: 7px 10px; border-radius: 12px; }
+.qa-search__list li.is-on a, .qa-search__list li a:hover { background: var(--qa-wash-2); }
+.qa-search__img, .qa-search__k { width: 30px; height: 30px; border-radius: 50%; background: var(--qa-gold-wash) center / cover; display: grid; place-items: center; font-size: 13px; font-weight: 760; color: var(--qa-gold-hi); }
+.qa-search__t { display: grid; min-width: 0; }
+.qa-search__t b { font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qa-search__t small { font-size: 12.5px; color: var(--qa-tx-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qa-search__kind { font-size: 12px; font-weight: 600; color: var(--qa-tx-3); }
+
+/* ---------- live ribbon ---------- */
+.qa-ribbon { position: fixed; z-index: calc(var(--qa-z-nav) - 1); left: 0; right: 0; top: calc(var(--qa-hdr-h) + env(safe-area-inset-top)); height: 32px; overflow: hidden; background: var(--qa-glass);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: 0 1px 0 var(--qa-rule); }
+.qa-ribbon__track { position: absolute; left: 0; top: 0; height: 100%; display: flex; align-items: center; white-space: nowrap; will-change: transform; }
+.qa-ribbon__item { display: inline-flex; align-items: center; gap: 6px; height: 100%; padding: 0 14px; font-size: 12.5px; font-weight: 620; color: var(--qa-tx-2); box-shadow: 1px 0 0 var(--qa-rule); }
+a.qa-ribbon__item:hover { color: var(--qa-tx); background: var(--qa-wash); }
+.qa-ribbon__item .qa-glyph { width: 11px; height: 11px; color: var(--c); }
+.qa-ribbon__item.is-buy { --c: var(--qa-buy); }
+.qa-ribbon__item.is-sell { --c: var(--qa-sell); }
+.qa-ribbon__item.is-burn { --c: var(--qa-fire); }
+.qa-ribbon__item.is-drop { --c: var(--qa-gold-hi); }
+.qa-ribbon__item b { color: var(--qa-tx); font-weight: 740; }
+.qa-ribbon__item i { width: 16px; height: 16px; border-radius: 50%; background: var(--qa-gold) center / cover; flex: none; }
+.qa-ribbon__up { color: var(--qa-buy); }
+.qa-ribbon__down { color: var(--qa-sell); }
+.qa-ribbon__usd { color: var(--qa-tx); }
+.qa-ribbon__idle { box-shadow: none; }
+.qa-ribbon__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--qa-buy); box-shadow: 0 0 8px var(--qa-buy); animation: qa-sh-beat 1.6s ease-in-out infinite; }
+@keyframes qa-sh-beat { 50% { opacity: .35; } }
+.qa-ribbon__item.is-fresh { animation: qa-ribbon-fresh 1.2s var(--qa-ease) both; }
+@keyframes qa-ribbon-fresh { from { background: color-mix(in srgb, var(--c, var(--qa-gold)) 30%, transparent); } }
+.qa-ribbon__news { position: absolute; z-index: 2; left: 0; top: 0; bottom: 0; display: flex; align-items: center; gap: 8px; max-width: 100%; padding: 0 56px 0 12px; font-size: 12.5px; font-weight: 640; color: var(--qa-tx);
+  background: linear-gradient(90deg, var(--qa-slab-a) calc(100% - 22px), transparent); transform: translateY(-100%); transition: transform .38s var(--qa-ease-out); pointer-events: none; }
+.qa-ribbon__news.is-on { transform: none; pointer-events: auto; }
+.qa-ribbon__news b { color: var(--c, var(--qa-gold-hi)); font-weight: 760; flex: none; }
+.qa-ribbon__news .qa-ava { width: 18px; height: 18px; }
+.qa-ribbon__news b, .qa-ribbon__news .qa-ava { flex: none; white-space: nowrap; }
+.qa-ribbon__news { padding-right: 72px; }
+.qa-foot__legal { display: flex; gap: 14px; font-size: 13px; }
+.qa-foot__legal a { color: var(--qa-tx-3); }
+.qa-foot__legal a:hover { color: var(--qa-tx); }
+.qa-ribbon__news > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qa-ribbon__gift { display: inline-grid; place-items: center; width: 18px; height: 18px; color: var(--qa-gold-hi); }
+.qa-ribbon__gift .qa-i { width: 16px; height: 16px; }
+
+/* ---------- 5-tab bar (phone) ---------- */
+nav.qa-tabbar { position: fixed; z-index: var(--qa-z-nav); left: 0; right: 0; bottom: 0; height: calc(var(--qa-tabbar-h) + env(safe-area-inset-bottom)); margin: 0; padding: 0 0 env(safe-area-inset-bottom);
+  display: grid; grid-template-columns: repeat(5, 1fr); border: 0; background: var(--qa-glass); -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4); box-shadow: 0 -1px 0 var(--qa-rule); }
+.qa-shell:is(.qa-shell--detail, .qa-shell--notabs, .qa-shell--tg) .qa-tabbar { display: none; }
+.qa-tabbar .qa-tabbar__a { position: relative; display: grid; justify-items: center; align-content: center; gap: 3px; min-width: 0; font-size: 11px; font-weight: 650; color: var(--qa-tx-3); transition: color var(--qa-t-quick) var(--qa-ease); -webkit-tap-highlight-color: transparent; }
+.qa-tabbar .qa-tabbar__a .qa-i { width: 23px; height: 23px; }
+.qa-tabbar .qa-tabbar__a.is-on { color: var(--qa-tx); }
+.qa-tabbar .qa-tabbar__a.is-on::before { content: ""; position: absolute; top: 0; left: 30%; right: 30%; height: 2px; border-radius: 0 0 2px 2px; background: var(--qa-gold); box-shadow: var(--qa-glow-gold); }
+.qa-tabbar .qa-tabbar__a.is-on .qa-i { color: var(--qa-gold-hi); }
+.qa-tabbar__launch .qa-tabbar__plus { width: 40px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: var(--qa-gold-metal); color: var(--qa-tx-on-gold); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 6px 16px -8px rgba(210,173,114,.8); }
+.qa-tabbar .qa-tabbar__launch .qa-tabbar__plus .qa-i { width: 20px; height: 20px; color: inherit; }
+.qa-tabbar .qa-tabbar__launch.is-on::before { display: none; }
+
+/* ---------- Android: get the app, attached above the tab bar ---------- */
+aside.qa-getapp { position: fixed; z-index: var(--qa-z-nav); left: 0; right: 0; bottom: calc(var(--qa-tabbar-h) + env(safe-area-inset-bottom)); height: 52px; margin: 0; padding: 0 8px 0 14px; display: flex; align-items: center; gap: 10px;
+  font-size: 14px; font-weight: 650; background: var(--qa-slab-a); box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); border-radius: 0; }
+.qa-shell:is(.qa-shell--detail, .qa-shell--notabs, .qa-shell--tg) .qa-getapp { bottom: env(safe-area-inset-bottom); }
+.qa-shell--detail .qa-getapp { bottom: calc(var(--qa-dock-h) + env(safe-area-inset-bottom)); }
+aside.qa-getapp.qx-getapp { max-width: none; margin: 0; border: 0; border-radius: 0; color: var(--qa-tx); font: 650 14px/1.3 var(--qa-sans); }
+.qa-getapp img { width: 28px; height: 28px; border-radius: 8px; }
+aside.qa-getapp.qx-getapp a.qa-btn { padding: 0 12px; border-radius: 10px; }
+aside.qa-getapp.qx-getapp button.qa-getapp__x { width: 40px; height: 40px; font-size: inherit; }
+.qa-getapp span { flex: 1; min-width: 0; }
+.qa-getapp .qa-getapp__x { width: 40px; height: 40px; display: grid; place-items: center; color: var(--qa-tx-3); }
+
+/* ---------- the site's "Refreshing" note (qx-presence.mjs) sits above the bars ---------- */
+.qa-shell #qhooks-refreshing { bottom: calc(var(--qa-toast-bottom, 0px) + env(safe-area-inset-bottom) + 12px) !important; border-radius: var(--qa-r-m) !important; background: var(--qa-slab-a) !important; color: var(--qa-tx) !important; font: 640 13px var(--qa-sans) !important; box-shadow: var(--qa-slab-edge), var(--qa-shadow-pop) !important; }
+
+/* ---------- menu: a sheet on the phone, a panel under the nav on desktop ---------- */
+dialog.qa-menu { position: fixed; inset: auto 0 0 0; z-index: var(--qa-z-sheet); width: 100%; max-width: none; max-height: 90vh; max-height: 90dvh; margin: 0; padding: 0; border: 0; border-radius: var(--qa-r-slab) var(--qa-r-slab) 0 0; overflow: auto; overscroll-behavior: contain;
+  background: var(--qa-slab); color: var(--qa-tx); box-shadow: var(--qa-slab-edge), 0 -30px 60px -20px rgba(0,0,0,.8); }
+dialog.qa-menu[open] { display: block; animation: qa-sh-up .34s var(--qa-ease-out) both; }
+dialog.qa-menu::backdrop { background: rgba(0,0,0,.58); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+@keyframes qa-sh-up { from { transform: translateY(100%); } }
+.qa-menu__in { padding: 10px var(--qa-pad) calc(18px + env(safe-area-inset-bottom)); }
+.qa-menu__top { position: sticky; top: -10px; z-index: 6; display: flex; align-items: center; justify-content: space-between; margin: -10px calc(var(--qa-pad) * -1) 0; padding: 12px var(--qa-pad) 10px; background: var(--qa-slab-a); }
+.qa-menu__t { font-size: 20px; font-weight: 830; font-stretch: 118%; letter-spacing: -.03em; }
+.qa-menu .qa-search--menu { margin: 4px 0 6px; }
+.qa-menu .qa-search--menu .qa-search__list { position: static; margin-top: 6px; max-height: none; box-shadow: none; background: none; padding: 0; }
+.qa-menu__quick { display: grid; grid-template-columns: repeat(5, 1fr); margin: 12px 0 4px; box-shadow: 0 1px 0 var(--qa-rule); }
+.qa-menu__quick a { display: grid; justify-items: center; gap: 4px; padding: 10px 0 14px; font-size: 12px; font-weight: 650; color: var(--qa-tx-2); }
+.qa-menu__quick a:hover { color: var(--qa-tx); }
+.qa-menu__quick .qa-i { width: 22px; height: 22px; color: var(--qa-gold-hi); }
+.qa-menu__me { padding: 16px 0; box-shadow: 0 1px 0 var(--qa-rule); }
+.qa-menu__me:empty { display: none; }
+.qa-menu__who { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 740; }
+.qa-menu__mine { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 10px; font-size: 14.5px; font-weight: 650; }
+.qa-menu__mine a { color: var(--qa-gold-hi); padding: 4px 0; }
+.qa-menu__groups { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 18px; padding: 18px 0 8px; }
+.qa-menu__g h2 { margin-bottom: 6px; font-size: 12px; font-weight: 700; color: var(--qa-tx-3); letter-spacing: .02em; }
+.qa-menu__g a { display: block; padding: 7px 0; }
+.qa-menu__g a b { display: block; font-size: 15px; font-weight: 640; color: var(--qa-tx); }
+.qa-menu__g a span { display: none; }
+.qa-menu__g a:hover b { color: var(--qa-gold-hi); }
+.qa-menu__foot { display: flex; flex-wrap: wrap; gap: 4px 20px; margin-top: 14px; padding-top: 12px; box-shadow: 0 -1px 0 var(--qa-rule); }
+.qa-menu__row { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; font-size: 14px; font-weight: 640; color: var(--qa-tx-2); }
+.qa-menu__row:hover { color: var(--qa-tx); }
+.qa-menu__row .qa-i { width: 17px; height: 17px; }
+
+/* ---------- footer with the brand line ---------- */
+footer.qa-foot { position: relative; z-index: 1; display: block; max-width: var(--qa-maxw); width: auto; margin: var(--qa-s16) auto 0; padding: var(--qa-s16) var(--qa-pad) var(--qa-s10); border: 0; background: none; overflow: hidden; color: var(--qa-tx); font-size: 15px; }
+footer.qa-foot::before { content: ""; position: absolute; left: var(--qa-pad); right: var(--qa-pad); top: 0; height: 1px; background: var(--qa-rule); }
+footer.qa-foot::after { content: ""; position: absolute; left: 50%; top: -120px; width: 620px; height: 320px; transform: translateX(-50%); background: radial-gradient(closest-side, var(--qa-gold-wash), transparent 72%); pointer-events: none; }
+.qa-foot .qa-line { position: relative; }
+.qa-foot .qa-line__hook { position: relative; display: block; width: 2px; height: 46px; margin-bottom: 18px; background: linear-gradient(180deg, transparent, var(--qa-gold-hi)); }
+.qa-foot .qa-line__hook::after { content: ""; position: absolute; left: -5px; bottom: -6px; width: 12px; height: 12px; border-radius: 50%; background: #FFF3DA; box-shadow: 0 0 0 2px var(--qa-gold), 0 0 16px rgba(240,218,174,.9); }
+.qa-foot .qa-line__text { margin: 0; font-size: 40px; line-height: 1.02; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); color: var(--qa-tx); transform-origin: left bottom; transition: transform .7s var(--qa-ease); }
+.qa-foot .qa-line__b { transition: opacity .45s var(--qa-ease); }
+.qa-foot .qa-line__word { display: inline-block; background: var(--qa-gold-metal); -webkit-background-clip: text; background-clip: text; color: transparent; transition: opacity .22s var(--qa-ease), transform .22s var(--qa-ease), filter .22s var(--qa-ease); }
+.qa-foot .qa-line__word.is-swap { opacity: 0; transform: translateY(.18em); filter: blur(4px); }
+.qa-foot .qa-line.is-rest .qa-line__b { opacity: 0; }
+.qa-foot .qa-line.is-rested .qa-line__b { display: none; }
+.qa-foot .qa-line.is-rested .qa-line__text { transform: scale(1.1); }
+.qa-foot__links { position: relative; display: flex; flex-wrap: wrap; gap: 6px 22px; margin-top: var(--qa-s10); font-size: 14px; font-weight: 620; color: var(--qa-tx-2); }
+.qa-foot__links a { padding: 4px 0; }
+.qa-foot__links a:hover, .qa-foot__groups a:hover { color: var(--qa-tx); }
+.qa-foot__groups { display: none; }
+.qa-foot__base { position: relative; display: flex; align-items: center; gap: 12px; margin-top: var(--qa-s6); font-size: 13px; color: var(--qa-tx-3); }
+.qa-foot__base .qa-brand { display: inline-flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 820; font-stretch: 118%; letter-spacing: -.03em; color: var(--qa-tx); }
+.qa-foot__base .qa-brand__mark { width: 24px; height: 24px; }
+.qa-foot__tag { display: none; }
+.qa-foot__social { margin-left: auto; display: flex; gap: 4px; }
+.qa-foot__social a { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; color: var(--qa-tx-2); }
+.qa-foot__social a:hover { background: var(--qa-wash-2); color: var(--qa-tx); }
+
+/* ---------- pages with their own trading header (terminal, perps) keep it as the shell header ---------- */
+.qxt-top.qa-adopted .qa-menu-btn { display: inline-flex; align-items: center; justify-content: center; order: 3; flex: none; width: 40px; height: 40px; margin: 0; padding: 0; border: 0; border-radius: 50%; background: var(--qa-glass-2); color: var(--qa-tx); box-shadow: inset 0 0 0 1px var(--qa-rule-2); cursor: pointer; }
+.qxt-top.qa-adopted .qa-menu-btn:hover { box-shadow: inset 0 0 0 1px var(--qa-tx-3); }
+.qxt-top.qa-adopted .qa-menu-btn .qa-i { width: 20px; height: 20px; }
+
+/* ---------- desktop ---------- */
+@media (min-width: 1100px) {
+  body.qa-shell { padding-top: calc(var(--qa-nav-h) + var(--qa-ribbon-h, 0px)); padding-bottom: var(--qa-getapp-h, 0px); }
+  body.qa-shell.qa-shell--detail { padding-bottom: var(--qa-getapp-h, 0px); }
+  body.qa-shell.qa-shell--over-art, body.qa-shell.qa-shell--adopt { padding-top: 0; }
+  .qa-shell .qa-tabs--section { --qa-sticky-top: calc(var(--qa-nav-h) + var(--qa-ribbon-h, 0px)); }
+  .qa-shell, .qa-shell.qa-shell--detail { --qa-toast-bottom: var(--qa-getapp-h, 0px); }
+  html:has(> body.qa-shell:not(.qa-shell--adopt)) { scroll-padding-top: calc(var(--qa-nav-h) + 52px); }
+  html:has(> body.qa-shell--ribbon:not(.qa-shell--adopt)) { scroll-padding-top: calc(var(--qa-nav-h) + 84px); }
+  header.qa-hdr { height: var(--qa-nav-h); padding: 0 max(var(--qa-pad), calc((100vw - var(--qa-maxw)) / 2 + var(--qa-pad))); gap: 26px; }
+  .qa-hdr .qa-brand { font-size: 18px; }
+  .qa-hdr .qa-brand__mark { width: 30px; height: 30px; }
+  .qa-shell--detail .qa-hdr .qa-brand { display: inline-flex; }
+  .qa-shell--detail .qa-hdr .qa-hdr__back, .qa-shell--detail .qa-hdr .qa-hdr__title, .qa-hdr .qa-hdr__actions { display: none; }
+  .qa-hdr .qa-nav-links { display: flex; gap: 22px; height: 100%; }
+  .qa-nav-links a, .qa-nav-links .qa-nav-more { position: relative; display: inline-flex; align-items: center; height: 100%; font-size: 14.5px; font-weight: 620; color: var(--qa-tx-2); transition: color var(--qa-t-quick) var(--qa-ease); }
+  .qa-nav-links a:hover, .qa-nav-links .qa-nav-more:hover, .qa-nav-links .qa-nav-more[aria-expanded="true"] { color: var(--qa-tx); }
+  .qa-nav-links a.is-on { color: var(--qa-tx); }
+  .qa-nav-links a.is-on::after { content: ""; position: absolute; left: 0; right: 0; bottom: 14px; height: 2px; background: var(--qa-gold); box-shadow: var(--qa-glow-gold); }
+  .qa-nav-links .qa-nav-more::after { content: ""; width: 6px; height: 6px; margin-left: 8px; border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor; transform: translateY(-2px) rotate(45deg); }
+  .qa-hdr .qa-hdr__search { display: flex; align-items: center; flex: 1; min-width: 0; max-width: 340px; margin-left: auto; }
+  .qa-hdr .qa-hdr__search > * { flex: 1; min-width: 0; }
+  .qa-hdr .qa-hdr__search.is-page { max-width: 420px; }
+  .qa-hdr__end { margin-left: 0; }
+  .qa-hdr .qa-theme-btn { display: inline-flex; align-items: center; justify-content: center; }
+  .qa-hdr .qa-menu-btn { display: none; }
+  #qa-wallet > .qa-wallet__btn, #qa-wallet > #qhc-trigger.qa-btn { height: 40px; padding: 0 18px; max-width: 220px; }
+  .qa-ribbon { top: var(--qa-nav-h); }
+  .qa-ribbon__item { font-size: 13px; padding: 0 18px; }
+  .qa-ribbon__news { padding-left: max(var(--qa-pad), calc((100vw - var(--qa-maxw)) / 2 + var(--qa-pad))); font-size: 13px; }
+  nav.qa-tabbar { display: none; }
+  aside.qa-getapp, .qa-shell:is(.qa-shell--detail, .qa-shell--notabs, .qa-shell--tg) .qa-getapp { bottom: 0; }
+  /* menu: a panel under the nav, every section in columns */
+  dialog.qa-menu { inset: calc(var(--qa-nav-h) + 8px) 0 auto 0; width: min(1120px, calc(100vw - 2 * var(--qa-pad))); max-height: calc(100vh - var(--qa-nav-h) - 24px); margin: 0 auto; border-radius: var(--qa-r-slab); box-shadow: var(--qa-slab-edge), var(--qa-slab-shadow); }
+  dialog.qa-menu[open] { animation: qa-sh-drop .26s var(--qa-ease-out) both; }
+  dialog.qa-menu::backdrop { background: rgba(0,0,0,.36); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  @keyframes qa-sh-drop { from { opacity: 0; transform: translateY(-8px); } }
+  .qa-menu__in { padding: 26px 32px 22px; }
+  .qa-menu__top, .qa-menu .qa-search--menu, .qa-menu__quick { display: none; }
+  .qa-menu__me { padding: 0 0 18px; }
+  .qa-menu__me .qa-btn--block { width: auto; }
+  .qa-menu__groups { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 26px 32px; padding: 20px 0 6px; }
+  .qa-menu__g a { padding: 6px 0; }
+  .qa-menu__g a span { display: block; margin-top: 1px; font-size: 12.5px; color: var(--qa-tx-3); line-height: 1.3; }
+  footer.qa-foot { padding: var(--qa-s24) var(--qa-pad) var(--qa-s12); }
+  .qa-foot .qa-line__text { font-size: 72px; }
+  .qa-foot__links { display: none; }
+  .qa-foot__groups { position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 24px; margin-top: var(--qa-s12); }
+  .qa-foot__g h2 { margin-bottom: 10px; font-size: 12.5px; font-weight: 700; color: var(--qa-tx-3); }
+  .qa-foot__g a { display: block; padding: 5px 0; font-size: 14px; font-weight: 600; color: var(--qa-tx-2); }
+  .qa-foot__base { margin-top: var(--qa-s12); }
+  .qa-foot__tag { display: inline; }
+}
+
+/* ---------- light theme: glass stays readable ---------- */
+[data-theme="light"] dialog.qa-menu::backdrop { background: rgba(20,28,24,.28); }
+
+/* ---------- reduced motion: no animation, no transition; data still updates in place ---------- */
+@media (prefers-reduced-motion: reduce) {
+  :is(.qa-hdr, .qa-tabbar, .qa-ribbon, .qa-foot, .qa-menu, .qa-getapp), :is(.qa-hdr, .qa-tabbar, .qa-ribbon, .qa-foot, .qa-menu, .qa-getapp) *, :is(.qa-hdr, .qa-tabbar, .qa-ribbon, .qa-foot, .qa-menu, .qa-getapp) *::before, :is(.qa-hdr, .qa-tabbar, .qa-ribbon, .qa-foot, .qa-menu, .qa-getapp) *::after { animation: none !important; transition: none !important; }
+  .qa-ribbon__track { position: static; overflow-x: auto; scrollbar-width: none; height: 100%; }
+}

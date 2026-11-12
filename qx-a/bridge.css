@@ -1,0 +1,157 @@
+/* QHooks System A bridge. Loaded on every page by theme.js (and again, late, by qx-shell.css). Every rule is scoped to
+   pages that are NOT converted yet (body without data-a-shell), so it does nothing on System A pages.
+   It makes the old pages read as System A with CSS alone, without touching layout or logic:
+   - the old tokens (--qx-*, --q-*, --paper, --ink …) take System A's colours, type and radii, light and dark;
+   - Mona Sans everywhere (no monospace outside code blocks), wide heavy headings, tabular figures;
+   - bordered card grids become the open floor: no box, no fill, a hairline under each block;
+   - pills soften to 12px, buttons take the A primary (gold) / secondary (wash) look, fields become A fields;
+   - the old header, floating menu, phone tab bar and footer give way to the shell (bridge.mjs).
+   Sizes, paddings and border widths are kept (borders turn transparent), so nothing moves or reflows.
+   Selector lists are long on purpose: each rule names the old parts it changes. */
+
+/* the System A icon sprite (components.mjs) can land before the shell sheet: never let it take room */
+.qa-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* ---------- tokens: the old names read System A (doubled :not() outranks the old body skins) ---------- */
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qa-z):not(.qa-z):not(.qa-z) {
+  --qx-bg: var(--qa-floor); --q-bg: var(--qa-floor); --paper: var(--qa-floor); --bg: var(--qa-floor);
+  --qx-bg-2: var(--qa-floor-2); --q-inset: var(--qa-floor-2);
+  --qx-panel: var(--qa-slab-a); --q-raised: var(--qa-slab-a); --panel: var(--qa-slab-a); --dark: var(--qa-slab-a); --q-surface: var(--qa-slab-a);
+  --qx-panel-2: color-mix(in srgb, var(--qa-tx) 7%, var(--qa-floor)); --q-raised-2: color-mix(in srgb, var(--qa-tx) 7%, var(--qa-floor));
+  --qx-ink: var(--qa-tx); --q-text: var(--qa-tx); --ink: var(--qa-tx); --text: var(--qa-tx);
+  --qx-muted: var(--qa-tx-2); --q-text-2: var(--qa-tx-2); --muted: var(--qa-tx-2);
+  --qx-faint: var(--qa-tx-3); --q-text-3: var(--qa-tx-3);
+  --qx-line: var(--qa-rule); --q-line: var(--qa-rule); --line: var(--qa-rule);
+  --qx-line-2: var(--qa-rule-2); --q-line-2: var(--qa-rule-2);
+  --qx-brass: var(--qa-gold); --q-gold: var(--qa-gold); --accent: var(--qa-gold); --qx-accent: var(--qa-gold);
+  --qx-brass-2: var(--qa-gold-hi); --q-gold-2: var(--qa-gold-hi);
+  --qx-on-brass: var(--qa-tx-on-gold); --q-on-gold: var(--qa-tx-on-gold);
+  --q-gold-metal: var(--qa-gold-metal); --q-gold-a: var(--qa-gold-wash);
+  --q-gold-edge: inset 0 1px 0 rgba(255,255,255,.5), 0 8px 22px -10px rgba(210,173,114,.6);
+  --qx-sage: var(--qa-buy); --green: var(--qa-buy); --q-up: var(--qa-buy); --qx-good: var(--qa-buy);
+  --q-down: var(--qa-sell); --qx-bad: var(--qa-sell); --danger: var(--qa-sell);
+  --q-up-a: var(--qa-buy-wash); --q-down-a: var(--qa-sell-wash); --q-warn: var(--qa-warn);
+  --qx-sans: var(--qa-sans); --q-sans: var(--qa-sans); --sans: var(--qa-sans); --qx-serif: var(--qa-sans); --serif: var(--qa-sans);
+  --qx-mono: var(--qa-sans); --q-mono: var(--qa-sans);
+  --q-r: 14px; --q-r-in: 12px; --q-r-chip: 10px; --qx-radius: 14px;
+  --q-ease: var(--qa-ease); --qx-ease: var(--qa-ease);
+  --qa-bridge-art: 58%;
+  color: var(--qa-tx); font-family: var(--qa-sans); font-variant-numeric: tabular-nums; font-feature-settings: "zero" 0; -webkit-font-smoothing: antialiased; letter-spacing: normal;
+  /* the QHooks banner lights the top of the page (System A: pages without a token use the QHooks art) */
+  background: linear-gradient(180deg, color-mix(in srgb, var(--qa-floor) var(--qa-bridge-art), transparent) 0, var(--qa-floor) 620px), url("img/qhooks-banner-blur.jpg") center top / 100% 620px no-repeat, var(--qa-floor);
+}
+html[data-theme="light"].qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qa-z):not(.qa-z):not(.qa-z) { --qa-bridge-art: 92%; }
+html.qa-bridge:not(.qa-bridge-off):has(> body:not([data-a-shell])) { background: var(--qa-floor); color-scheme: dark; }
+html[data-theme="light"].qa-bridge:not(.qa-bridge-off):has(> body:not([data-a-shell])) { color-scheme: light; }
+
+/* ---------- type: Mona Sans, width carries hierarchy; no italics, no monospace outside code ---------- */
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) :where(*):not(pre, pre *, svg, svg *, .qa-sprite) { font-family: var(--qa-sans); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) :is(em, i, cite, dfn, address, var) { font-style: normal; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) :is(code, kbd, samp, tt) { font-family: var(--qa-sans); font-size: inherit; font-variant-numeric: tabular-nums; background: none; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) pre, html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) pre * { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) pre { border-color: transparent; border-radius: var(--qa-r-m); background: var(--qa-wash); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) main h1 { font-weight: 830; font-stretch: 122%; letter-spacing: -.045em; line-height: 1.02; overflow-wrap: break-word; text-wrap: balance; color: var(--qa-tx); font-style: normal; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) main h2 { font-weight: 800; font-stretch: 118%; letter-spacing: -.03em; line-height: 1.06; overflow-wrap: break-word; text-wrap: balance; color: var(--qa-tx); font-style: normal; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) main h3 { font-weight: 730; font-stretch: 108%; letter-spacing: -.015em; overflow-wrap: break-word; font-style: normal; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) main :is(h4, h5, h6, th) { font-weight: 700; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main h1 { font-size: clamp(34px, 2.6vw + 24px, 64px); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main h1 + p, html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main [class*="lede"], html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main [class*="intro"] > p { color: var(--qa-tx-2); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) :is(.eyebrow, [class*="eyebrow"], [class*="kicker"], .q-label) { text-transform: none; letter-spacing: 0; font-weight: 650; font-stretch: 100%; color: var(--qa-gold-hi); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) p { text-wrap: pretty; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) ::selection { background: var(--qa-gold-wash); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) :focus-visible { outline: 2px solid var(--qa-gold-hi); outline-offset: 3px; }
+
+/* ---------- open floor: bordered boxes become blocks on the page with a hairline under them ---------- */
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(:is(div, section, article, aside, li, a, figure, form, fieldset, details, dl, label):is([class$="card"], [class*="card "], [class$="panel"], [class*="panel "], [class$="-box"], [class*="-box "], [class$="-tile"], [class*="-tile "], .q-card), article, fieldset, .cx-band, .qtp-editor, .qtp-preview, .taps-row, .qlc, .build-summary, section.ld, .qd-filters, .qd-stats, .mk-flow, .mk-flow-row, .mk-flow-mod, .mk-flow-you, .mk-facts, .mk-step, .mk-close, .protection-choice, .qsm-feed, .platform-pilot, .qxc-chain-package, .qt-account, .qa-connect, .qre-wallet, .hk-stats, .hk-built-grid, .hk-open, .qsf, .qlk-forms, .qlk-grants, .qm-tabs, section.qa-section, .qre-account, .qre-wallet, .rp-tok-col, .rp-phase, .qtd-form, .qxt-plan, .qtd-summary, .qal-terms, .ct-table-wrap, .qt-workspace):not(dialog, [role="dialog"], dialog *, [role="dialog"] *, [class*="menu"], [class*="popover"], [class*="dropdown"], [class*="toast"], [class*="sheet"], [class*="tooltip"], [class*="modal"], [class*="sticky"], [class*="upload"], [class*="drop"], [class*="slab"], [class*="ticket"], [class*="chart"], [class*="qr"], [class*="banner"], [class*="hero"], [class*="notice"], [class*="alert"], [class*="warn"], [class*="error"], [class*="risk"], [class*="danger"], [class*="caution"], [hidden]) {
+  border-color: transparent; border-radius: 0; background-color: transparent; background-image: none; box-shadow: 0 1px 0 var(--qa-rule);
+}
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(:is(div, section, article, aside, li, a, figure, form, fieldset, details, dl, label):is([class$="card"], [class*="card "], [class$="panel"], [class*="panel "], [class$="-box"], [class*="-box "], [class$="-tile"], [class*="-tile "], .q-card), article, fieldset, .cx-band, .qtp-editor, .qtp-preview, .taps-row, .qlc, .build-summary, section.ld, .qd-filters, .qd-stats, .mk-flow, .mk-flow-row, .mk-flow-mod, .mk-flow-you, .mk-facts, .mk-step, .mk-close, .protection-choice, .qsm-feed, .platform-pilot, .qxc-chain-package, .qt-account, .qa-connect, .qre-wallet, .hk-stats, .hk-built-grid, .hk-open, .qsf, .qlk-forms, .qlk-grants, .qm-tabs, section.qa-section, .qre-account, .qre-wallet, .rp-tok-col, .rp-phase, .qtd-form, .qxt-plan, .qtd-summary, .qal-terms, .ct-table-wrap, .qt-workspace):not(dialog, [role="dialog"], dialog *, [role="dialog"] *, [class*="menu"], [class*="popover"], [class*="dropdown"], [class*="toast"], [class*="sheet"], [class*="tooltip"], [class*="modal"], [class*="sticky"], [class*="upload"], [class*="drop"], [class*="slab"], [class*="ticket"], [class*="chart"], [class*="qr"], [class*="banner"], [class*="hero"], [class*="notice"], [class*="alert"], [class*="warn"], [class*="error"], [class*="risk"], [class*="danger"], [class*="caution"], [hidden]):is(a, button):hover { background-color: var(--qa-wash); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(details):not(dialog, [role="dialog"], dialog *, [role="dialog"] *, [class*="menu"], [class*="popover"], [class*="dropdown"], [class*="toast"], [class*="sheet"], [class*="tooltip"], [class*="modal"], [class*="sticky"], [class*="upload"], [class*="drop"], [class*="slab"], [class*="ticket"], [class*="chart"], [class*="qr"], [class*="banner"], [class*="hero"], [class*="notice"], [class*="alert"], [class*="warn"], [class*="error"], [class*="risk"], [class*="danger"], [class*="caution"], [hidden]) { border-color: transparent; background-color: transparent; box-shadow: 0 1px 0 var(--qa-rule); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main summary { font-weight: 700; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(table) { border-color: transparent; background-color: transparent; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(th, td) { border-color: var(--qa-rule-row); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main th { color: var(--qa-tx-3); font-weight: 650; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main hr { height: 1px; border: 0; background: var(--qa-rule); }
+/* the one raised surface: dialogs and menus become the A slab */
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) :is(dialog, [role="dialog"]:not(body), .qxt-menu, [class*="popover"], [class*="dropdown"]:not(select)):not(.qa-menu) { border-color: transparent; border-radius: var(--qa-r-slab); background: var(--qa-slab); box-shadow: var(--qa-slab-edge), var(--qa-slab-shadow); color: var(--qa-tx); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) dialog::backdrop { background: rgba(0,0,0,.58); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+
+/* ---------- buttons: no pills; A primary (gold metal) and secondary (wash) ---------- */
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(button:not([role="tab"], [role="switch"], [class*="toggle"], [class*="close"], [class*="icon"], [class*="chip"], [class*="tab"]), .button, :is(a, button)[class*="btn"], :is(a, button)[class*="-button"], a[class*="cta"], input[type="submit"], input[type="button"]) { border-radius: var(--qa-r-m); font-weight: 700; letter-spacing: -.005em; text-transform: none; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(button[type="submit"], input[type="submit"], .workspace-button:not([class*="secondary"], [class*="ghost"]), :is(button, a)[class*="primary"], :is(button, a).primary, :is(button, a)[class*="-gold"], :is(button, a)[class*="-brass"]):not(:disabled):not([aria-disabled="true"]) { border-color: transparent; background: var(--qa-gold-metal); color: var(--qa-tx-on-gold); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 8px 22px -10px rgba(210,173,114,.6); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(button[type="submit"], input[type="submit"], .workspace-button:not([class*="secondary"], [class*="ghost"]), :is(button, a)[class*="primary"], :is(button, a).primary, :is(button, a)[class*="-gold"], :is(button, a)[class*="-brass"]):not(:disabled):not([aria-disabled="true"]):hover { filter: brightness(1.05); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(:is(button, a)[class*="ghost"], :is(button, a)[class*="secondary"], .qx-btn:not([class*="primary"]), .qtx-mini, .qd-button, .taps-action, .qcf-button, .qal-refresh):not(:disabled) { border-color: transparent; background: var(--qa-wash-2); color: var(--qa-tx); box-shadow: none; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(:is(button, a)[class*="ghost"], :is(button, a)[class*="secondary"], .qx-btn:not([class*="primary"]), .qtx-mini, .qd-button, .taps-action, .qcf-button, .qal-refresh):not(:disabled):hover { background: var(--qa-rule-2); }
+/* every other button: the A secondary (wash, no outline); coloured ones (buy, sell, danger) keep their colour */
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(button:not([role="tab"], [role="switch"], [class*="toggle"], [class*="close"], [class*="icon"], [class*="chip"], [class*="tab"]), .button, :is(a, button)[class*="btn"], :is(a, button)[class*="-button"], a[class*="cta"], input[type="submit"], input[type="button"]):not(button[type="submit"], input[type="submit"], .workspace-button:not([class*="secondary"], [class*="ghost"]), :is(button, a)[class*="primary"], :is(button, a).primary, :is(button, a)[class*="-gold"], :is(button, a)[class*="-brass"]):not([class*="danger"], [class*="sell"], [class*="buy"], [class*="warn"], [class*="-red"], [class*="red-"], [class*="green"], [class*="-up"], [class*="-down"], [style*="background"], [aria-pressed="true"], [aria-selected="true"], [aria-current], .is-active, .active, .is-on, .on, .selected):not(:disabled) { border-color: transparent; background-color: var(--qa-wash-2); background-image: none; color: var(--qa-tx); box-shadow: none; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(button:not([role="tab"], [role="switch"], [class*="toggle"], [class*="close"], [class*="icon"], [class*="chip"], [class*="tab"]), .button, :is(a, button)[class*="btn"], :is(a, button)[class*="-button"], a[class*="cta"], input[type="submit"], input[type="button"]):not(button[type="submit"], input[type="submit"], .workspace-button:not([class*="secondary"], [class*="ghost"]), :is(button, a)[class*="primary"], :is(button, a).primary, :is(button, a)[class*="-gold"], :is(button, a)[class*="-brass"]):not([class*="danger"], [class*="sell"], [class*="buy"], [class*="warn"], [class*="-red"], [class*="red-"], [class*="green"], [class*="-up"], [class*="-down"], [style*="background"], [aria-pressed="true"], [aria-selected="true"], [aria-current], .is-active, .active, .is-on, .on, .selected):not(:disabled):hover { background-color: var(--qa-rule-2); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(button, .button, [class*="btn"], [class*="-button"]):disabled { opacity: .45; }
+/* chips, tags, tabs: small radius, no outline box; the pressed/current one keeps its state */
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(:is(div, nav, ul)[class*="tabs"], :is(button, a, span, label, li)[class*="chip"], :is(button, a, span, label, li)[class*="pill"], :is(span, a)[class*="badge"], :is(span, a)[class*="-tag"], .lc-badge, .rp-tag, .rp-now, .hk-chip, .qpw-chip, .qpw-tab, .qb-order, .qco-tab, .q-chip, .ld-chain) { border-radius: 8px; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(:is(div, nav, ul)[class*="tabs"], :is(button, a, span, label, li)[class*="chip"], :is(button, a, span, label, li)[class*="pill"], :is(span, a)[class*="badge"], :is(span, a)[class*="-tag"], .lc-badge, .rp-tag, .rp-now, .hk-chip, .qpw-chip, .qpw-tab, .qb-order, .qco-tab, .q-chip, .ld-chain):not([aria-pressed="true"], [aria-selected="true"], [aria-current], .is-active, .active, .is-on, .on, .selected, .is-selected, :checked) { border-color: transparent; }
+
+/* ---------- fields: A fields (wash, no box line, gold focus) ---------- */
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="submit"], [type="button"], [type="image"], [type="hidden"]), select, textarea) {
+  border-color: transparent; border-radius: var(--qa-r-m); background-color: var(--qa-wash-2); color: var(--qa-tx); box-shadow: inset 0 0 0 1px var(--qa-rule); font-variant-numeric: tabular-nums;
+}
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(input, select, textarea):focus { outline: none; border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--qa-gold); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(input, textarea)::placeholder { color: var(--qa-tx-3); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(input[type="checkbox"], input[type="radio"], input[type="range"], progress) { accent-color: var(--qa-gold); }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main label { color: inherit; }
+
+/* ---------- links in running text ---------- */
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(p, li, dd, td) a:not([class]) { color: var(--qa-tx); text-decoration: underline; text-decoration-color: var(--qa-rule-2); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]):not(.qxt) main :is(p, li, dd, td) a:not([class]):hover { text-decoration-color: var(--qa-gold); }
+
+/* ---------- old chrome: the shell replaces it ---------- */
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) :is(header.site-header, header.qfs-header) { display: none !important; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) .q-tabbar { display: none !important; }
+html.qa-bridge.qa-mounted:not(.qa-bridge-off) > body.qa-bridged:not([data-a-shell]) :is(footer.qx-footer, footer.ey-footer) { display: none; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) .skip-link:not(:focus) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+/* before the shell mounts: the header's place is already taken, so nothing jumps */
+html.qa-bridge:not(.qa-bridge-off):not(.qa-mounted) > body:not([data-a-shell]):not(.qxt) { padding-top: calc(var(--qa-hdr-h) + env(safe-area-inset-top)); }
+html.qa-bridge:not(.qa-bridge-off):not(.qa-mounted) > body:not([data-a-shell]):not(.qxt)::before { content: ""; position: fixed; z-index: 40; top: 0; left: 0; right: 0; height: calc(var(--qa-hdr-h) + env(safe-area-inset-top)); background: var(--qa-glass); box-shadow: 0 1px 0 var(--qa-rule); }
+@media (min-width: 1100px) {
+  html.qa-bridge:not(.qa-bridge-off):not(.qa-mounted) > body:not([data-a-shell]):not(.qxt) { padding-top: var(--qa-nav-h); }
+  html.qa-bridge:not(.qa-bridge-off):not(.qa-mounted) > body:not([data-a-shell]):not(.qxt)::before { height: var(--qa-nav-h); }
+}
+/* the old header took room in the page and each page keeps its own top spacing under it; the shell pads the body */
+/* the launch-week drop line keeps its place, on the floor */
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) .qx-drop { border: 0; box-shadow: 0 1px 0 var(--qa-rule); background: transparent; color: var(--qa-tx-2); font-size: 13.5px; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) .qx-drop a { color: var(--qa-gold-hi); text-decoration: none; font-weight: 700; }
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) .qx-drop.qx-drop-hero, html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) .qx-drop.qx-drop-hero .qx-drop-text { padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--qa-tx-2); font-size: 13.5px; }
+/* transaction feedback lines (qx-shell.css) */
+html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) .qx-tx-feedback { border-color: transparent; border-radius: var(--qa-r-m); background: var(--qa-wash); }
+
+/* ---------- the trading header (terminal, perps) stays, dressed as the shell ---------- */
+html.qa-bridge:not(.qa-bridge-off) > body.qxt:not([data-a-shell]) header.qxt-top { background: var(--qa-glass); -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4); border-bottom-color: transparent; box-shadow: 0 1px 0 var(--qa-rule); }
+html.qa-bridge:not(.qa-bridge-off) > body.qxt:not([data-a-shell]) header.qxt-top::after { content: none; }
+html.qa-bridge:not(.qa-bridge-off) > body.qxt:not([data-a-shell]) .qxt-brand { font-weight: 820; font-stretch: 118%; letter-spacing: -.03em; color: var(--qa-tx); }
+html.qa-bridge:not(.qa-bridge-off) > body.qxt:not([data-a-shell]) .qxt-brand img { border: 0; border-radius: 50%; box-shadow: 0 0 0 1.5px var(--qa-gold), 0 0 14px rgba(210,173,114,.3); }
+html.qa-bridge:not(.qa-bridge-off) > body.qxt:not([data-a-shell]) .qxt-nav a { position: relative; background: none; border-radius: 0; font-weight: 620; color: var(--qa-tx-2); }
+html.qa-bridge:not(.qa-bridge-off) > body.qxt:not([data-a-shell]) .qxt-nav a:hover { background: none; color: var(--qa-tx); }
+html.qa-bridge:not(.qa-bridge-off) > body.qxt:not([data-a-shell]) .qxt-nav a[aria-current] { background: none; color: var(--qa-tx); box-shadow: inset 0 -2px 0 var(--qa-gold); }
+html.qa-bridge:not(.qa-bridge-off) > body.qxt:not([data-a-shell]) :is(#qxt-site-menu-toggle, #qxt-site-menu) { display: none !important; }
+html.qa-bridge:not(.qa-bridge-off) > body.qxt:not([data-a-shell]) :is(#qxt-connect, .qxt-wallet > .qhc-trigger) { border: 0; border-radius: var(--qa-r-m); background: var(--qa-gold-metal); color: var(--qa-tx-on-gold); font-weight: 740; box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 22px -10px rgba(210,173,114,.7); }
+html.qa-bridge:not(.qa-bridge-off) > body.qxt:not([data-a-shell]) .qxt-search { border-color: transparent; border-radius: var(--qa-r-m); background: var(--qa-wash-2); box-shadow: none; }
+html.qa-bridge:not(.qa-bridge-off) > body.qxt:not([data-a-shell]) .qxt-search:focus-within { box-shadow: inset 0 0 0 1.5px var(--qa-gold); }
+html.qa-bridge:not(.qa-bridge-off) > body.qxt:not([data-a-shell]) .qxt-search input { background: transparent; border: 0; box-shadow: none; }
+html.qa-bridge:not(.qa-bridge-off) > body.qxt:not([data-a-shell]) .qxt-theme-toggle { border-color: transparent; border-radius: 50%; background: var(--qa-glass-2); box-shadow: inset 0 0 0 1px var(--qa-rule-2); }
+/* the shell tab bar replaces the old one: same place, so the token page's Buy | Sell bar and toasts sit above it */
+@media (max-width: 760px) {
+  html.qa-bridge.qa-mounted:not(.qa-bridge-off) > body.qxt.qa-shell:not([data-a-shell]):has(main.has-market) { padding-bottom: calc(var(--qa-tabbar-h) + 50px + env(safe-area-inset-bottom)); }
+  html.qa-bridge.qa-mounted:not(.qa-bridge-off) > body.qxt.qa-shell:not([data-a-shell]) main.has-market ~ .qv2-bar { bottom: calc(var(--qa-tabbar-h) + env(safe-area-inset-bottom)); border-top: 0; box-shadow: 0 -1px 0 var(--qa-rule); }
+  html.qa-bridge.qa-mounted:not(.qa-bridge-off) > body.qxt.qa-shell:not([data-a-shell]) .qxt-toasts { bottom: calc(var(--qa-tabbar-h) + 10px + env(safe-area-inset-bottom)); }
+  html.qa-bridge.qa-mounted:not(.qa-bridge-off) > body.qxt.qa-shell:not([data-a-shell]):has(main.has-market) .qxt-toasts { bottom: calc(var(--qa-tabbar-h) + 60px + env(safe-area-inset-bottom)); }
+  html.qa-bridge.qa-mounted:not(.qa-bridge-off) > body.qxt.qa-shell:not([data-a-shell]):has(main.has-market) #qhooks-refreshing { bottom: calc(var(--qa-tabbar-h) + 60px + env(safe-area-inset-bottom)) !important; }
+}
+/* the old terminal only had a tab bar on phones (its desktop grid fills the window from 761px) */
+@media (min-width: 761px) {
+  html.qa-bridge:not(.qa-bridge-off) > body.qa-shell.qa-shell--tabs-narrow:not([data-a-shell]) { padding-bottom: 0; }
+  html.qa-bridge:not(.qa-bridge-off) > body.qa-shell--tabs-narrow:not([data-a-shell]) > .qa-tabbar { display: none; }
+}
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) *, html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) *::before, html.qa-bridge:not(.qa-bridge-off) > body:not([data-a-shell]) *::after { scroll-behavior: auto; }
+}

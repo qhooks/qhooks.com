@@ -1,0 +1,113 @@
+/* HOOKS lane (System A): shared pieces for hooks, discover, proof and builder pages. Page files add their own. */
+
+/* legacy chrome steps aside under the System A shell */
+[data-a-shell] .q-tabbar, [data-a-shell] .qx-menu, [data-a-shell] .theme-toggle, [data-a-shell] .site-header, [data-a-shell] .qx-footer { display: none !important; }
+html.q-has-tabbar [data-a-shell] { padding-bottom: calc(var(--qa-tabbar-h) + env(safe-area-inset-bottom)); }
+.qa .skip-link { position: absolute; left: 12px; top: -60px; z-index: 100; padding: 10px 14px; border-radius: var(--qa-r-m); background: var(--qa-gold-metal); color: var(--qa-tx-on-gold); font-weight: 740; }
+.qa .skip-link:focus { top: 10px; }
+.qa .sr-only, .qa .qa-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.qa code, .qa pre, .qa kbd, .qa samp { font-family: var(--qa-sans); font-size: inherit; font-variant-numeric: tabular-nums; font-feature-settings: "zero" 0; }
+/* no monospace anywhere on lane pages, including widgets from shared modules (RepoProof report, monitor) */
+.qa .hl-main *, .qa .qhc-dialog * { font-family: var(--qa-sans) !important; font-feature-settings: "zero" 0; }
+
+/* the site wallet button in the shell slot (it waits off-screen until the shell takes it) */
+[data-a-shell] > #qhc-trigger { position: absolute; left: -9999px; opacity: 0; pointer-events: none; }
+.qa-wallet .qhc-trigger { border: 0; min-width: 0; height: 38px; padding: 0 14px; border-radius: var(--qa-r-m); font: inherit; font-size: 14px; font-weight: 740; color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 22px -10px rgba(210,173,114,.7); letter-spacing: 0; }
+.qa-wallet .qhc-trigger:hover { filter: brightness(1.05); background: var(--qa-gold-metal); }
+
+/* the wallet dialog is a slab */
+.qa .qhc-dialog { border: 0; border-radius: var(--qa-r-slab); background: var(--qa-slab); color: var(--qa-tx); box-shadow: var(--qa-slab-edge), var(--qa-slab-shadow); font-family: var(--qa-sans); padding: 22px; width: min(440px, calc(100vw - 24px)); }
+.qa .qhc-dialog::backdrop { background: rgba(4, 6, 5, .62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.qa .qhc-heading h2 { font-size: var(--qa-fs-h3); font-weight: 800; font-stretch: 112%; letter-spacing: -.02em; }
+.qa .qhc-heading button { border: 0; background: var(--qa-wash-2); color: var(--qa-tx); border-radius: 50%; width: 36px; height: 36px; }
+.qa .qhc-dialog p { color: var(--qa-tx-2); }
+.qa .qhc-choice, .qa .qhc-secondary { border: 0; border-radius: var(--qa-r-m); background: var(--qa-wash-2); color: var(--qa-tx); font: inherit; font-weight: 680; min-height: 44px; }
+.qa .qhc-choice:hover, .qa .qhc-secondary:hover { background: var(--qa-rule-2); }
+.qa .qhc-dialog select { border: 0; border-radius: var(--qa-r-m); background: var(--qa-wash); color: var(--qa-tx); font: inherit; min-height: 42px; padding: 0 10px; }
+.qa .qhc-address { font-family: var(--qa-sans); word-break: break-all; }
+
+/* ---------- page frame ---------- */
+.hl-main { position: relative; z-index: 1; display: block; padding-bottom: var(--qa-s12); }
+.hl-hero { position: relative; padding-top: var(--qa-s8); }
+.hl-eyebrow { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 13px; font-weight: 720; color: var(--qa-gold-hi); }
+.hl-eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--qa-gold); box-shadow: var(--qa-glow-gold); }
+.hl-h1 { margin: 0; font-size: var(--qa-fs-hero); line-height: .92; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); text-wrap: balance; }
+.hl-h1 .hl-gold, .hl-gold { background: linear-gradient(180deg, #F5E2B9, #D2AD72 55%, #A07A40); -webkit-background-clip: text; background-clip: text; color: transparent; }
+[data-theme="light"] .hl-h1 .hl-gold, [data-theme="light"] .hl-gold { background: linear-gradient(180deg, #A9803F, #7A5726); -webkit-background-clip: text; background-clip: text; }
+.hl-lede { margin: 18px 0 0; max-width: 56ch; font-size: 16.5px; line-height: 1.5; color: var(--qa-tx-2); }
+.hl-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.hl-cta .qa-btn { height: 50px; padding: 0 20px; border-radius: var(--qa-r-btn); font-size: 15.5px; }
+.hl-sec { padding-top: var(--qa-section-gap); scroll-margin-top: 120px; }
+.hl-sec + .hl-sec { margin-top: 8px; }
+.hl-rule { height: 1px; background: var(--qa-rule); border: 0; margin: var(--qa-section-gap) 0 0; }
+.hl-p { max-width: 64ch; font-size: 15px; line-height: 1.55; color: var(--qa-tx-2); }
+.hl-p + .hl-p { margin-top: 10px; }
+.hl-p a, .hl-inline a { color: var(--qa-gold-hi); font-weight: 650; }
+.hl-small { font-size: var(--qa-fs-small); color: var(--qa-tx-3); line-height: 1.45; }
+.hl-h3 { font-size: var(--qa-fs-title); font-weight: 760; font-stretch: 108%; letter-spacing: -.012em; line-height: 1.2; }
+
+/* glyph tiles: a mark on a soft gold light, never a bordered box */
+.hl-g { width: 22px; height: 22px; flex: none; }
+.hl-gt { position: relative; display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 14px; color: var(--qa-gold-hi);
+  background: radial-gradient(circle at 50% 40%, rgba(240,218,174,.2), rgba(210,173,114,.06) 62%, transparent 72%); }
+.hl-gt::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(210,173,114,.18); opacity: .7; }
+.hl-gt .hl-g { width: 24px; height: 24px; filter: drop-shadow(0 0 6px rgba(210,173,114,.35)); }
+.hl-gt--lg { width: 64px; height: 64px; border-radius: 20px; }
+.hl-gt--lg .hl-g { width: 32px; height: 32px; }
+.hl-gt--sm { width: 30px; height: 30px; border-radius: 10px; }
+.hl-gt--sm .hl-g { width: 17px; height: 17px; }
+.hl-gt--sm::after { inset: 3px; }
+[data-theme="light"] .hl-gt { color: var(--qa-gold); background: radial-gradient(circle at 50% 40%, rgba(139,102,49,.14), rgba(139,102,49,.04) 62%, transparent 72%); }
+[data-theme="light"] .hl-gt .hl-g { filter: none; }
+
+/* underline sub navigation for page families (Discover, Proof) */
+.hl-subnav { margin: 0 calc(var(--qa-pad) * -1); padding: 0 var(--qa-pad); box-shadow: 0 1px 0 var(--qa-rule); }
+.hl-subnav .qa-tab[aria-current="page"] { color: var(--qa-tx); }
+.hl-subnav .qa-tab[aria-current="page"]::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--qa-gold); box-shadow: var(--qa-glow-gold); }
+.hl-subnav .qa-tab:first-of-type[aria-current="page"]::after { left: 0; }
+
+/* forms: underline fields on the floor */
+.hl-form { display: grid; gap: 0; }
+.hl-form label, .hl-field { display: grid; gap: 4px; padding: 12px 0; font-size: var(--qa-fs-small); font-weight: 650; color: var(--qa-tx-3); box-shadow: 0 1px 0 var(--qa-rule); }
+.qa .hl-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), .qa .hl-form select, .qa .hl-form textarea,
+.qa .hl-input { width: 100%; min-width: 0; border: 0; border-radius: 0; background: transparent; color: var(--qa-tx); font: inherit; font-size: 17px; font-weight: 640; padding: 4px 0; outline: none; box-shadow: none; }
+.qa .hl-form select, .qa select.hl-input { -webkit-appearance: none; appearance: none; padding-right: 22px; background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5' fill='none' stroke='%23a8a49a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") right center / 18px no-repeat; }
+.qa .hl-form select option { background: var(--qa-floor-2); color: var(--qa-tx); }
+.qa .hl-form textarea { resize: vertical; min-height: 64px; line-height: 1.45; }
+.qa .hl-form ::placeholder { color: var(--qa-tx-3); font-weight: 500; }
+.qa .hl-form label:focus-within { box-shadow: 0 1px 0 var(--qa-gold); }
+.qa .hl-form .qa-btn { margin-top: 14px; }
+.hl-check { display: inline-flex !important; grid-auto-flow: column; align-items: center; gap: 8px; box-shadow: none !important; color: var(--qa-tx-2) !important; font-size: 14px !important; }
+.qa .hl-check input { width: 18px; height: 18px; accent-color: var(--qa-gold); }
+
+/* disclosure: a quiet row that opens in place */
+.qa details.hl-more > summary, .qa .hl-more > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 680; color: var(--qa-tx-2); padding: 8px 0; }
+.qa .hl-more > summary::-webkit-details-marker { display: none; }
+.qa .hl-more > summary::after { content: ""; width: 8px; height: 8px; border-right: 1.8px solid currentColor; border-bottom: 1.8px solid currentColor; transform: rotate(45deg) translateY(-2px); transition: transform var(--qa-t-quick) var(--qa-ease); }
+.qa .hl-more[open] > summary::after { transform: rotate(-135deg) translateY(-1px); }
+.qa .hl-more > summary:hover { color: var(--qa-tx); }
+
+/* inline status lines */
+.hl-status { min-height: 1.4em; font-size: 13.5px; color: var(--qa-tx-3); }
+.hl-status:empty { min-height: 0; }
+
+/* addresses: short, Mona Sans, copyable full value in the title */
+.hl-addr { font-weight: 640; color: var(--qa-tx); white-space: nowrap; }
+.hl-addr-full { overflow-wrap: anywhere; font-weight: 600; color: var(--qa-tx-2); }
+
+/* light theme */
+[data-theme="light"] .qa .qhc-dialog::backdrop { background: rgba(20, 28, 24, .3); }
+
+@media (min-width: 1100px) {
+  .hl-hero { padding-top: var(--qa-s12); }
+  .hl-lede { font-size: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hl-main *, .hl-main *::before, .hl-main *::after { animation: none !important; transition: none !important; }
+}
+
+/* chain pickers enhanced by chain-symbols.mjs: the chain mark sits inside the underline field */
+.qa .hl-main .chain-select-control { position: relative; display: block; }
+.qa .hl-main .chain-select-symbol { position: absolute; left: 0; top: 50%; width: 22px; height: 22px; transform: translateY(-58%); pointer-events: none; }
+.qa .hl-main .chain-select-symbol img, .qa .hl-main .chain-select-symbol svg { display: block; width: 22px; height: 22px; border-radius: 6px; }
+.qa .hl-main .chain-select-control select { padding-left: 32px !important; }

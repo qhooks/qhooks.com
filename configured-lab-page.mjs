@@ -28,12 +28,12 @@ export function bindConfiguredLabPage({document:d,target,fetch:request,downloadF
   function install(input){const normalized=normalize(input);for(const k of fields(normalized))$(k).value=normalized[k];invalidate();}
   function download(text,name){if(downloadFile)return downloadFile(text,name);const u=URL.createObjectURL(new Blob([text],{type:'application/json'})),a=d.createElement('a');a.href=u;a.download=name;d.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000);}
   function on(id,type,fn){$(id).addEventListener(type,event=>{if(!dead)return fn(event);});}
-  async function json(response){const text=await response.text();if(text.length>2097152)throw Error('Response too large');const result=JSON.parse(text);if(!response.ok)throw Error(result.error||'Local service unavailable');return result;}
+  async function json(response){const text=await response.text();if(text.length>2097152)throw Error('Response too large');const result=JSON.parse(text);if(!response.ok)throw Error(result.error||'The build service could not be reached');return result;}
   on('form','input',()=>{invalidate();tell('Configuration changed. Validate it again.');});
   if(definition.selector)on(definition.selector,'change',()=>{invalidate();tell('Choose your settings, then validate.');});
   on('form','submit',event=>{event.preventDefault();invalidate();try{current=readForm(k=>$(k).value);tell('Configuration validated. Generate your source project to continue.');}catch(error){tell(error.message,true);}render();});
   on('example','click',()=>{install(example($));tell('Example values filled. Review and validate to continue.');});
-  on('save','click',()=>{if(!current)return;try{target.localStorage.setItem(key(),JSON.stringify(current));tell('Draft saved in this browser.');}catch{tell('Save unavailable. Download your configuration instead.',true);}});
+  on('save','click',()=>{if(!current)return;try{target.localStorage.setItem(key(),JSON.stringify(current));tell('Draft saved in this browser.');}catch{tell('Draft could not be saved. Download your configuration instead.',true);}});
   on('restore','click',()=>{invalidate();try{const text=target.localStorage.getItem(key());if(!text||text.length>4096)throw Error();const input=JSON.parse(text);if(!definition.matchesSaved(input,$))throw Error();install(input);tell('Draft restored. Validate to continue.');}catch{tell('No valid saved draft for this template.',true);}});
   on('draft-download','click',()=>{if(current)download(JSON.stringify(current,null,2),'qhooks-'+slug(current)+'-configuration.json');});
   on('source-download','click',()=>{if(project)download(JSON.stringify(project,null,2),'qhooks-'+slug(current)+'-source-project.json');});
@@ -45,7 +45,7 @@ export function bindConfiguredLabPage({document:d,target,fetch:request,downloadF
       if(dead||rev!==revision)return;
       if(result.kind!=='qhooks-source-project'||result.compiled!==false||result.deploymentEnabled!==false||result.sourceCount!==sourceCount||!/^[a-f0-9]{64}$/.test(result.inputSha256)||JSON.stringify(result.configuration)!==JSON.stringify(normalize(config)))throw Error('Source identity mismatch');
       project=result;tell(`Source ready: ${sourceCount} Solidity files, compiler input, helper bytecode and notices. Build when ready.`);
-    }catch(error){if(!dead&&rev===revision&&error.name!=='AbortError')tell('Source unavailable: '+error.message,true);}
+    }catch(error){if(!dead&&rev===revision&&error.name!=='AbortError')tell('Source could not be prepared: '+error.message,true);}
     finally{if(pending===controller)pending=null;if(!dead&&rev===revision)render();}
   });
   on('build','click',async()=>{
@@ -68,7 +68,7 @@ export function bindConfiguredLabPage({document:d,target,fetch:request,downloadF
       if(JSON.stringify(a?.configuration)!==JSON.stringify(normalize(config))||a.sourceCount!==sourceCount||a.contracts?.[definition.contractKey||'controller']?.name!==controllerName||(definition.contractKey!=='hook'&&a.contracts?.hook?.name!==hookName(config))||a.integration?.configurationEvmTested!==false||a.integration?.transactionSubmissionEnabled!==false)throw Error('Compiled configuration mismatch');
       if(!session.finish(ticket,a))return;
       renderSummary($('summary'),session.snapshot.artifact);$('summary').hidden=false;jobId=id;tell('Build ready. Download the full project or controller ABI and bytecode.');
-    }catch(error){if(!dead&&rev===revision&&error.name!=='AbortError'){session.fail(ticket);tell('Build unavailable: '+error.message,true);}}
+    }catch(error){if(!dead&&rev===revision&&error.name!=='AbortError'){session.fail(ticket);tell('Build could not finish: '+error.message,true);}}
     finally{if(pending===controller)pending=null;if(!dead&&rev===revision)render();}
   });
   for(const [id,kind,name] of [['artifact','artifact','qhooks-'+definition.downloadSlug+'-build.json'],['abi','abi',controllerName+'.abi.json'],['bytecode','bytecode',controllerName+'.bytecode.txt']])on(id,'click',()=>{
@@ -81,7 +81,7 @@ export function bindConfiguredLabPage({document:d,target,fetch:request,downloadF
       const kit=buildIntegrationKit(session.snapshot.artifact);
       download(JSON.stringify(kit,null,2)+'\n','qhooks-'+slug(current)+'-integration-kit.json');
       tell('Integration kit downloaded: build, configuration, public constructor inputs and step-by-step guide.');
-    }catch{tell('Integration kit unavailable for this build. Download the original build for inspection.',true);}
+    }catch{tell('The integration kit could not be prepared. Download the original build for inspection.',true);}
   });
   definition.initialize?.($,target);
   function dispose(){if(dead)return;dead=true;invalidate();target.removeEventListener('pagehide',dispose);}

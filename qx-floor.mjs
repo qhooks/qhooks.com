@@ -56,7 +56,8 @@ async function findLaunch() {
     try { const r = await fetch('/api/v1/launches/' + S.chainId + '/' + S.token); if (r.ok) { const j = await r.json(); const id = j.launch?.poolId || j.poolId; if (isId(id)) hit = await launchOfAny(id); } } catch {}
     if (!hit) hit = await scanLaunched(S.token);
   }
-  if (!hit) { S.found = {error: isAddr(S.token) || isId(S.id) ? 'No QHooks launch found for that on ' + chainName() + '.' : null}; return; }
+  // Nothing entered yet is not a launch: leave the page on its Chain/Token fields (it rendered "undefined" and read the floor list for id=undefined).
+  if (!hit) { S.found = isAddr(S.token) || isId(S.id) ? {error: 'No QHooks launch found for that on ' + chainName() + '.'} : null; return; }
   const r = hit.raw, tokenIs0 = word(r, 4) === 1n, token = wAddr(r, 0);
   const ch = await call(hit.launch, SEL.chain);
   const quote = wAddr(ch, 1);

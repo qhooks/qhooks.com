@@ -5,7 +5,7 @@ import {readGraduationLabDraft,graduationLabStorageKey} from './graduation-lab-d
 const ids=['manager','verifier','token','quote','controller'];
 const fieldNames=['tokenName','symbol','decimals','totalSupply','quoteSupply','notice'];
 export function bindGraduationPage({document:d=document,target=window,loadModules,getArtifacts,downloadFile=null}){
- const $=id=>d.getElementById('grad-'+id),ensure=(v)=>{if(!v)throw Error('Graduation setup unavailable');};
+ const $=id=>d.getElementById('grad-'+id),ensure=(v)=>{if(!v)throw Error('Graduation setup could not be opened');};
  let providers=[],modules=null,provider=null,session=null,signer=null,setup=null,busy=false,dead=false,revision=0,review=null,timer=null;
  const feedback=(s,error=false)=>{$('feedback').textContent=s;$('feedback').dataset.error=String(error);};
  const nextId=state=>ids.find(id=>state?.stages[id]?.status!=='confirmed');

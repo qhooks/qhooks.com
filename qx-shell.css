@@ -1,5 +1,9 @@
-/* Sitewide shell for working pages: maps legacy tokens onto the redesign and restyles header, type and controls.
-   Page layouts, ids and behaviour are untouched. Loaded last. */
+@import url("/qx-a/tokens.css");
+@import url("/qx-a/bridge.css");
+/* Sitewide shell for working pages. The System A shell (/qx-a/shell.css, mounted by /qx-a/bridge.mjs) replaces the
+   header, tab bar and footer; /qx-a/bridge.css, imported here so it also comes last, restyles the rest of an old page
+   as System A (only on pages without body[data-a-shell]). The rules below are the old page skin, kept as the
+   fallback when the shell cannot load; buttons are no longer pills. Page layouts, ids and behaviour are untouched. */
 :root[data-theme] body.q170-desk.qx-inner,:root body.q170-desk.qx-inner{
  --paper:var(--qx-bg);--ink:var(--qx-ink);--muted:var(--qx-muted);--line:var(--qx-line-2);--green:var(--qx-sage);--dark:var(--qx-panel);
  --sans:var(--qx-sans);--serif:var(--qx-serif);
@@ -12,7 +16,7 @@
 .qx-inner p{color:inherit}
 .qx-inner input,.qx-inner select,.qx-inner textarea{border-radius:12px;border:1px solid var(--qx-line-2);background:color-mix(in srgb,var(--qx-ink) 4%,transparent);color:var(--qx-ink);font-family:var(--qx-sans)}
 .qx-inner input:focus,.qx-inner select:focus,.qx-inner textarea:focus{border-color:var(--qx-brass);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--qx-brass) 22%,transparent)}
-.qx-inner main button:not(.theme-toggle):not(.dialog-close),.qx-inner main .button,.qx-inner main [class*="-button"]{border-radius:999px;font-family:var(--qx-sans);font-weight:600}
+.qx-inner main button:not(.theme-toggle):not(.dialog-close),.qx-inner main .button,.qx-inner main [class*="-button"]{border-radius:12px;font-family:var(--qx-sans);font-weight:600}
 .qx-inner main button[type="submit"]:not(:disabled),.qx-inner main .workspace-button:not(:disabled),.qx-inner main .primary:not(:disabled){background:var(--qx-brass);border-color:var(--qx-brass);color:var(--qx-on-brass)}
 .qx-inner main button:disabled{opacity:.45}
 .qx-inner main section,.qx-inner main article,.qx-inner main [class*="card"],.qx-inner main [class*="panel"]{border-radius:var(--qx-radius)}

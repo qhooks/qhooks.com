@@ -1,0 +1,61 @@
+/* Hook marketplace (System A): launch-ready hooks and external deployments as rows with glyphs. */
+.qm-hero { display: grid; gap: 30px; }
+.qm-hero .hl-h1 { max-width: 11ch; }
+.qm-hero .hl-gold { display: block; }
+.qm-platform { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 16px; align-items: start; padding: 20px 0; box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+.qm-platform-k { font-size: 12px; font-weight: 700; color: var(--qa-gold-hi); margin-bottom: 4px; }
+.qm-platform p:not(.qm-platform-k) { margin: 4px 0 8px; font-size: 14px; line-height: 1.5; color: var(--qa-tx-2); }
+.qm-platform .qa-link { color: var(--qa-gold-hi); font-size: 14px; }
+.qm-tools { display: grid; gap: 6px; margin-top: var(--qa-section-gap); }
+.qm-tabs { margin: 0 calc(var(--qa-pad) * -1); padding: 0 var(--qa-pad); box-shadow: 0 1px 0 var(--qa-rule); }
+.qm-tabs .qa-tab { font-size: 16px; }
+.qm-tabs .qa-tab[aria-pressed="true"] { color: var(--qa-tx); }
+.qm-tabs .qa-tab[aria-pressed="true"]::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--qa-gold); box-shadow: var(--qa-glow-gold); }
+.qm-tabs .qa-tab:first-child[aria-pressed="true"]::after { left: 0; }
+.qm-filter { display: flex; align-items: center; gap: 10px; }
+.qm-search { flex: 1; display: flex; align-items: center; gap: 10px; height: 48px; min-width: 0; color: var(--qa-tx-3); box-shadow: 0 1px 0 var(--qa-rule); }
+.qm-search:focus-within { color: var(--qa-gold-hi); box-shadow: 0 1px 0 var(--qa-gold); }
+.qa .qm-search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; color: var(--qa-tx); font: inherit; font-size: 16px; font-weight: 600; outline: none; }
+.qa .qm-search input::placeholder { color: var(--qa-tx-3); font-weight: 500; }
+.qm-external-note { margin-top: 10px; max-width: 72ch; }
+.qm-status { margin: 12px 0 4px; }
+.qm-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
+.qm-card { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; padding: 18px 0; box-shadow: 0 1px 0 var(--qa-rule-row); }
+.qm-main { min-width: 0; }
+.qm-type { color: var(--qa-gold-hi); }
+.qm-card h2 { margin: 4px 0 0; font-size: 18px; font-weight: 780; font-stretch: 110%; letter-spacing: -.015em; }
+.qm-card p { margin-top: 4px; font-size: 14px; line-height: 1.5; color: var(--qa-tx-2); }
+.qm-addr { display: inline-block; margin-top: 2px; font-size: 13px; color: var(--qa-tx-3); }
+.qm-uses { display: flex; align-items: center; gap: 8px; margin-top: 8px !important; font-size: 12.5px !important; font-weight: 620; }
+.qm-uses b { color: var(--qa-gold-hi); }
+.qm-faces { display: inline-flex; }
+.qm-face { width: 20px; height: 20px; border-radius: 50%; background: var(--qa-gold-metal) center / cover; box-shadow: 0 0 0 2px var(--qa-floor); }
+.qm-face + .qm-face { margin-left: -6px; }
+.qm-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 10px; font-size: 13.5px; }
+.qm-ready { font-size: 12.5px; color: var(--qa-tx-3); width: 100%; }
+.qm-card-actions .qx-link { color: var(--qa-gold-hi); font-weight: 700; }
+.qa .qm-kit { color: var(--qa-tx-2); font-weight: 650; font-size: 13.5px; }
+.qa .qm-kit:hover { color: var(--qa-tx); }
+.qm-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 16px; }
+.qm-pagination[hidden] { display: none; }
+@media (min-width: 760px) {
+  .qm-grid { grid-template-columns: 1fr 1fr; column-gap: 48px; }
+}
+@media (min-width: 1100px) {
+  .qm-hero { grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); align-items: end; gap: 72px; }
+  .qm-hero .hl-h1 { font-size: 84px; }
+  .qm-tools { grid-template-columns: auto minmax(0, 420px); justify-content: space-between; align-items: end; }
+  .qm-tabs { margin: 0; padding: 0; box-shadow: none; }
+  .qm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .qm-ready { width: auto; }
+}
+.qm-card { align-content: start; }
+
+/* phone: the hooks come straight after the headline; the platform note moves below the list */
+@media (max-width: 1099px) {
+  .qm { display: flex; flex-direction: column; }
+  .qm-hero { display: contents; }
+  .qm-platform { order: 10; margin-top: var(--qa-section-gap); }
+  .qm-tools { margin-top: 28px; }
+  .qm-hero-copy { padding-top: var(--qa-s8); }
+}

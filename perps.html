@@ -1,24 +1,100 @@
 <!doctype html>
-<html lang="en" class="qxt-page qv2"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <script src="/theme.js"></script><title>Perps | QHooks</title><meta name="description" content="Trade Hyperliquid perpetuals with your own wallet. Charts, positions and margin in one workspace.">
-<link rel="icon" href="/qhooks-logo.jpg"><link rel="stylesheet" href="/qx-site.css"><link rel="stylesheet" href="/wallet-site.css"><link rel="stylesheet" href="/qx-terminal.css"><link rel="stylesheet" href="/qx-perps.css">
-<script src="/qx-telegram.mjs"></script><script src="/tg-early.js"></script><link rel="stylesheet" href="/qx-ds.css"><link rel="stylesheet" href="/qx-site-v2.css"></head>
-<body class="qx qxt qxp"><a class="skip-link" href="#ticket">Skip to order ticket</a>
-<header class="qxt-top"><a class="qxt-brand" href="/"><img src="/qhooks-logo.jpg" alt="" width="28" height="28"><span>QHooks</span></a><nav class="qxt-nav" aria-label="Main navigation"><a href="/terminal">Trade</a><a href="/perps" aria-current="page">Perps</a><a href="/markets">Markets</a></nav><div class="qxp-wallet"><button class="theme-toggle" data-theme-toggle type="button" aria-pressed="false" hidden>Dark mode</button><button type="button" id="qhc-trigger" aria-haspopup="dialog">Connect wallet</button></div></header>
-<main class="qxp-desk">
-<aside class="qxp-markets qxt-card"><details open id="markets-disclosure"><summary>Perps markets <span id="feed-status" class="qxp-feed">Refreshing</span></summary><label class="qxp-search"><span class="qxt-sr">Search perps markets</span><input id="market-search" type="search" placeholder="Search markets" autocomplete="off"></label><p class="qxp-list-label">Market <span>Price / 24h</span></p><div id="markets" class="qxp-market-list" aria-label="Perps markets"><p class="qxt-muted">Refreshing</p></div></details></aside>
-<section class="qxp-workspace" aria-label="Selected market and account">
-<section class="qxt-card qxp-instrument"><div class="qxp-title"><div><p class="qxp-eyebrow">Hyperliquid · Perpetuals</p><h1><span id="coin">BTC</span><span class="qxp-denom"> / USDC</span></h1></div><div class="qxp-price"><strong id="price">—</strong><span id="change">—</span></div></div><dl class="qxp-stats"><div><dt>Funding / 1h</dt><dd id="funding">—</dd></div><div><dt>Open interest</dt><dd id="interest">—</dd></div><div><dt>Max leverage</dt><dd id="max-leverage">—</dd></div><div><dt>Mark price</dt><dd id="mark">—</dd></div></dl></section>
-<section class="qxt-card qxp-chart-card" aria-label="Price chart"><div class="qxp-chart-head"><div id="timeframes" class="qxt-tabs" role="group" aria-label="Candle timeframe"><button type="button" data-tf="1m">1m</button><button type="button" data-tf="5m">5m</button><button type="button" data-tf="15m">15m</button><button type="button" data-tf="1h" aria-pressed="true">1h</button><button type="button" data-tf="4h">4h</button><button type="button" data-tf="1d">1d</button></div><span id="chart-status" class="qxt-muted" role="status">Refreshing</span></div><div id="chart" class="qxp-chart" role="img" aria-label="BTC price candles"></div><a class="qxp-chart-credit" href="https://www.tradingview.com/" target="_blank" rel="noopener">Charts by TradingView</a></section>
-<section class="qxt-card qxp-account"><div class="qxp-section-head"><h2>Your account</h2><button type="button" id="refresh-account">Refresh</button></div><p id="account-status" class="qxt-muted" role="status">Connect your wallet to see positions.</p><dl class="qxp-stats"><div><dt>Perps equity</dt><dd id="equity">—</dd></div><div><dt>Withdrawable</dt><dd id="withdrawable">—</dd></div></dl><div class="qxp-section-head"><h3>Positions <span id="position-count">0</span></h3><button type="button" id="close-all" disabled>Close all</button></div><div id="positions"><p class="qxt-muted">No positions to show.</p></div><div class="qxp-section-head"><h3>Open orders <span id="order-count">0</span></h3></div><div id="orders"><p class="qxt-muted">No orders to show.</p></div></section>
+<link rel="icon" href="/qhooks-logo.jpg">
+<link rel="preload" href="/qx-a/fonts/mona-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/qx-a/tokens.css"><link rel="stylesheet" href="/qx-a/components.css"><link rel="stylesheet" href="/qx-a/shell.css">
+<link rel="stylesheet" href="/wallet-site.css"><link rel="stylesheet" href="/qx-a/pages/markets-common.css"><link rel="stylesheet" href="/qx-a/pages/markets-perps.css">
+<script src="/qx-telegram.mjs"></script><script src="/tg-early.js"></script></head>
+<body class="qa pp" data-a-shell><a class="mk-skip" href="#ticket">Skip to order ticket</a>
+<button type="button" id="qhc-trigger" class="qhc-trigger" aria-haspopup="dialog">Connect wallet</button>
+<main class="qa-page pp-page qxp-desk" id="qa-main">
+<div class="pp-band" id="pp-band" aria-label="Perps markets, live"></div>
+<section class="pp-head" aria-label="Selected market">
+ <div class="pp-ident">
+  <details id="markets-disclosure" class="pp-picker">
+   <summary class="pp-pick"><span class="pp-coin" id="pp-coin" aria-hidden="true">B</span><h1 class="pp-sym"><span id="coin">BTC</span><span class="pp-denom"> / USDC</span></h1><span class="pp-pick__chev" aria-hidden="true"></span><span class="qa-vh">Choose a perps market</span></summary>
+   <div class="pp-menu qxp-markets">
+    <div class="pp-menu__top"><b>Perps markets</b><span id="feed-status" class="pp-feed qxp-feed">Refreshing</span></div>
+    <label class="pp-search"><span class="qa-vh">Search perps markets</span><input id="market-search" type="search" placeholder="Search markets" autocomplete="off"></label>
+    <p class="pp-menu__cols"><span>Market</span><span>Price / 24h</span></p>
+    <div id="markets" class="qxp-market-list" aria-label="Perps markets"><p class="qa-muted">Refreshing</p></div>
+   </div>
+  </details>
+  <p class="pp-meta"><span class="pp-venue"><i aria-hidden="true"></i>Hyperliquid</span><span>Perpetual</span><span id="pp-last" class="pp-last"></span></p>
+ </div>
+ <div class="pp-quote">
+  <p class="qa-price pp-price" id="price">—</p>
+  <p class="pp-change-line"><span id="change" class="pp-change">—</span><small>24h</small></p>
+ </div>
+ <dl class="pp-stats">
+  <div class="pp-stat pp-stat--funding"><dt>Funding / 1h</dt><dd id="funding">—</dd><dd class="pp-next">Next in <b id="pp-next-funding">—</b><span class="pp-fuse" aria-hidden="true"><i id="pp-fuse"></i></span></dd></div>
+  <div class="pp-stat"><dt>Mark price</dt><dd id="mark">—</dd></div>
+  <div class="pp-stat"><dt>Open interest</dt><dd id="interest">—</dd></div>
+  <div class="pp-stat"><dt>Max leverage</dt><dd id="max-leverage">—</dd></div>
+ </dl>
 </section>
-<aside class="qxp-side"><p id="region-message" class="qxp-region" role="status">Perps trading isn't available in your region.</p>
-<section id="ticket" class="qxt-card qxp-ticket" hidden><h2>Place an order</h2><form id="order-form"><div class="qxp-segments" role="group" aria-label="Direction"><button type="button" id="long" aria-pressed="true" class="up">Long</button><button type="button" id="short" aria-pressed="false" class="down">Short</button></div><div class="qxp-pair"><label>Order type<select id="order-kind"><option value="market">Market</option><option value="limit">Limit</option></select></label><label>Margin mode<select id="margin-mode"><option value="cross">Cross</option><option value="isolated">Isolated</option></select></label></div><div class="qxp-pair qxp-size"><label>Size<input id="amount" type="number" min="0" step="any" inputmode="decimal" required placeholder="0.00"></label><label>Unit<select id="size-unit"><option value="USDC">USDC</option><option value="coin">Coin</option></select></label></div><label id="limit-label" hidden>Limit price<input id="limit-price" type="number" min="0" step="any" inputmode="decimal" placeholder="USDC"></label><label>Leverage <output id="leverage-value">3×</output><input id="leverage" type="range" min="1" max="3" value="3" step="1"></label><div class="qxp-pair"><label>Slippage %<input id="slippage" type="number" min="0.01" max="5" step="0.01" value="1" inputmode="decimal" required></label><label class="qxp-check"><input id="reduce-only" type="checkbox">Reduce only</label></div><details class="qxp-brackets"><summary>Take profit / Stop loss</summary><div class="qxp-pair"><label>TP price<input id="tp" type="number" step="any" min="0" inputmode="decimal" placeholder="Optional"></label><label>SL price<input id="sl" type="number" step="any" min="0" inputmode="decimal" placeholder="Optional"></label></div></details><dl class="qxp-estimates"><div><dt>Est. initial margin</dt><dd id="margin-estimate">—</dd></div><div><dt>Est. liquidation</dt><dd id="liq-estimate">—</dd></div></dl><p class="qxp-note">Liquidation estimate is for a new isolated position. Cross margin depends on your whole account.</p><p class="qxp-note">Hyperliquid trading fees apply. <span id="builder-fee" hidden>QHooks fee 0.1%</span></p><button type="submit" id="review-order" class="qxp-primary" disabled>Review Long</button></form><p class="qxp-risk">Perps are leveraged. Positions can be liquidated and you can lose your margin.</p></section>
-<section id="fast-trading" class="qxt-card qxp-fast" hidden><h2>Fast trading</h2><p>Agent keys cannot withdraw.</p><p class="qxp-note">The trading key stays in this browser. Use a trusted device.</p><button type="button" id="setup-agent">Turn on fast trading</button><button type="button" id="forget-agent" hidden>Turn off fast trading</button><p id="setup-status" class="qxp-note" role="status"></p></section>
-<section class="qxt-card qxp-funding"><h2>Move funds</h2><form id="deposit-form" hidden><label>Deposit USDC on Arbitrum<input id="deposit-amount" type="number" min="5" step="0.000001" value="5" inputmode="decimal" required></label><p class="qxp-note">Minimum 5 USDC. Arbitrum ETH is needed for gas. Funds arrive in your Hyperliquid perps account.</p><button type="submit" id="deposit-button">Deposit from Arbitrum</button></form><form id="withdraw-form"><label>Withdraw USDC<input id="withdraw-amount" type="number" min="1.000001" step="0.000001" inputmode="decimal" required placeholder="Amount including fee"></label><p class="qxp-note">Hyperliquid fee: 1 USDC. Sent to your connected wallet on Arbitrum.</p><button type="submit" id="withdraw-button" disabled>Withdraw to my wallet</button></form></section>
-<p id="action-status" class="qxp-action-status" role="status" aria-live="polite"></p>
-</aside></main>
-<dialog id="perps-confirm" class="qxp-confirm" aria-labelledby="confirm-title"><h2 id="confirm-title">Review</h2><div id="confirm-description"></div><div class="qxp-confirm-actions"><button type="button" id="confirm-cancel">Cancel</button><button type="button" id="confirm-send" class="qxp-primary">Confirm</button></div></dialog>
+<div class="pp-board">
+<section class="pp-main qxp-workspace" aria-label="Selected market and account">
+ <section class="pp-chart" aria-label="Price chart">
+  <div class="pp-chart__bar"><div id="timeframes" class="pp-tfs" role="group" aria-label="Candle timeframe"><button type="button" data-tf="1m">1m</button><button type="button" data-tf="5m">5m</button><button type="button" data-tf="15m">15m</button><button type="button" data-tf="1h" aria-pressed="true">1h</button><button type="button" data-tf="4h">4h</button><button type="button" data-tf="1d">1d</button></div><span id="chart-status" class="pp-chart__status" role="status">Refreshing</span></div>
+  <div id="chart" class="pp-chart__canvas qxp-chart" role="img" aria-label="BTC price candles"></div>
+  <a class="pp-credit qxp-chart-credit" href="https://www.tradingview.com/" target="_blank" rel="noopener">Charts by TradingView</a>
+ </section>
+ <section class="pp-flow" id="pp-flow" aria-label="Order book and trades">
+  <div class="pp-flow__tabs" role="tablist" aria-label="Order book and trades"><button type="button" role="tab" id="pp-tab-book" aria-selected="true" aria-controls="pp-book">Book</button><button type="button" role="tab" id="pp-tab-trades" aria-selected="false" aria-controls="pp-trades">Trades</button><span class="pp-flow__note" id="pp-flow-note">Refreshing</span></div>
+  <div class="pp-book" id="pp-book" role="tabpanel" aria-labelledby="pp-tab-book">
+   <p class="pp-book__cols"><span>Price</span><span>Size</span><span>Total</span></p>
+   <ol class="pp-book__asks" id="pp-asks" aria-label="Asks"></ol>
+   <p class="pp-book__mid"><b id="pp-mid">—</b><span>Spread <b id="pp-spread">—</b></span></p>
+   <ol class="pp-book__bids" id="pp-bids" aria-label="Bids"></ol>
+   <div class="pp-book__lean" aria-hidden="true"><span id="pp-lean-b"></span><span id="pp-lean-a"></span></div>
+   <p class="pp-book__leanl"><span id="pp-lean-bl">Bids</span><span id="pp-lean-al">Asks</span></p>
+  </div>
+  <div class="pp-trades" id="pp-trades" role="tabpanel" aria-labelledby="pp-tab-trades">
+   <p class="pp-book__cols"><span>Price</span><span>Size</span><span>Time</span></p>
+   <ol class="pp-trades__list" id="pp-trades-list" aria-live="off"></ol>
+  </div>
+ </section>
+ <section class="pp-account qxp-account" aria-labelledby="pp-account-title">
+  <header class="pp-sec"><h2 id="pp-account-title">Your account</h2><button type="button" id="refresh-account" class="qa-btn qa-btn--secondary qa-btn--sm">Refresh</button></header>
+  <p id="account-status" class="pp-account__status" role="status">Connect your wallet to see positions.</p>
+  <dl class="pp-figs"><div><dt>Perps equity</dt><dd id="equity">—</dd></div><div><dt>Withdrawable</dt><dd id="withdrawable">—</dd></div></dl>
+  <div class="pp-sub"><h3>Positions <sup id="position-count">0</sup></h3><button type="button" id="close-all" class="qa-btn qa-btn--quiet" disabled>Close all</button></div>
+  <div id="positions" class="pp-rows"><p class="qa-muted">No positions to show.</p></div>
+  <div class="pp-sub"><h3>Open orders <sup id="order-count">0</sup></h3></div>
+  <div id="orders" class="pp-rows"><p class="qa-muted">No orders to show.</p></div>
+ </section>
+</section>
+<aside class="pp-side qxp-side" aria-label="Trade">
+ <p id="region-message" class="pp-region" role="status">Perps trading isn't available in your region.</p>
+ <section id="ticket" class="qa-slab pp-ticket qxp-ticket" hidden aria-labelledby="pp-ticket-title"><h2 id="pp-ticket-title" class="qa-vh">Place an order</h2>
+  <form id="order-form">
+   <div class="pp-sides" role="group" aria-label="Direction"><button type="button" id="long" aria-pressed="true" class="pp-side-btn is-long">Long</button><button type="button" id="short" aria-pressed="false" class="pp-side-btn is-short">Short</button></div>
+   <div class="pp-pair"><label class="pp-f">Order type<select id="order-kind" class="qa-select"><option value="market">Market</option><option value="limit">Limit</option></select></label><label class="pp-f">Margin mode<select id="margin-mode" class="qa-select"><option value="cross">Cross</option><option value="isolated">Isolated</option></select></label></div>
+   <div class="pp-amount"><label class="pp-amount__l" for="amount">Size</label><div class="pp-amount__row"><input id="amount" type="number" min="0" step="any" inputmode="decimal" required placeholder="0.00"><label class="pp-unit"><span class="qa-vh">Unit</span><select id="size-unit" class="qa-select"><option value="USDC">USDC</option><option value="coin">Coin</option></select></label></div></div>
+   <label id="limit-label" class="pp-f pp-f--wide" hidden>Limit price<input id="limit-price" class="qa-input" type="number" min="0" step="any" inputmode="decimal" placeholder="USDC"></label>
+   <div class="pp-lev"><label class="pp-lev__l" for="leverage">Leverage <output id="leverage-value" for="leverage">3×</output></label><input id="leverage" type="range" min="1" max="3" value="3" step="1"><div class="pp-lev__presets" id="pp-lev-presets" role="group" aria-label="Leverage presets"></div></div>
+   <div class="pp-pair"><label class="pp-f">Slippage %<input id="slippage" class="qa-input" type="number" min="0.01" max="5" step="0.01" value="1" inputmode="decimal" required></label><label class="pp-check"><input id="reduce-only" type="checkbox"><span>Reduce only</span></label></div>
+   <details class="pp-brackets qxp-brackets"><summary>Take profit / Stop loss</summary><div class="pp-pair"><label class="pp-f">TP price<input id="tp" class="qa-input" type="number" step="any" min="0" inputmode="decimal" placeholder="Optional"></label><label class="pp-f">SL price<input id="sl" class="qa-input" type="number" step="any" min="0" inputmode="decimal" placeholder="Optional"></label></div></details>
+   <dl class="qa-lines pp-est"><div><dt>Est. initial margin</dt><dd id="margin-estimate">—</dd></div><div><dt>Est. liquidation</dt><dd id="liq-estimate">—</dd></div></dl>
+   <button type="submit" id="review-order" class="qa-btn qa-btn--buy qa-btn--block pp-review" disabled>Review Long</button>
+   <p class="qa-fine">Liquidation estimate is for a new isolated position. Cross margin depends on your whole account.</p>
+   <p class="qa-fine">Hyperliquid trading fees apply. <span id="builder-fee" hidden>QHooks fee 0.1%</span></p>
+  </form>
+  <p class="pp-risk qxp-risk">Perps are leveraged. Positions can be liquidated and you can lose your margin.</p>
+ </section>
+ <p id="action-status" class="pp-action" role="status" aria-live="polite"></p>
+ <section id="fast-trading" class="pp-panel qxp-fast" hidden aria-labelledby="pp-fast-title"><h2 id="pp-fast-title">Fast trading</h2><p>Agent keys cannot withdraw.</p><p class="qa-fine">The trading key stays in this browser. Use a trusted device.</p><button type="button" id="setup-agent" class="qa-btn qa-btn--secondary qa-btn--block">Turn on fast trading</button><button type="button" id="forget-agent" class="qa-btn qa-btn--quiet" hidden>Turn off fast trading</button><p id="setup-status" class="qa-fine" role="status"></p></section>
+ <section class="pp-panel qxp-funding" aria-labelledby="pp-funds-title"><h2 id="pp-funds-title">Move funds</h2>
+  <form id="deposit-form" class="pp-fund" hidden><label class="pp-f pp-f--wide">Deposit USDC on Arbitrum<input id="deposit-amount" class="qa-input" type="number" min="5" step="0.000001" value="5" inputmode="decimal" required></label><p class="qa-fine">Minimum 5 USDC. Arbitrum ETH is needed for gas. Funds arrive in your Hyperliquid perps account.</p><button type="submit" id="deposit-button" class="qa-btn qa-btn--secondary qa-btn--block">Deposit from Arbitrum</button></form>
+  <form id="withdraw-form" class="pp-fund"><label class="pp-f pp-f--wide">Withdraw USDC<input id="withdraw-amount" class="qa-input" type="number" min="1.000001" step="0.000001" inputmode="decimal" required placeholder="Amount including fee"></label><p class="qa-fine">Hyperliquid fee: 1 USDC. Sent to your connected wallet on Arbitrum.</p><button type="submit" id="withdraw-button" class="qa-btn qa-btn--secondary qa-btn--block" disabled>Withdraw to my wallet</button></form>
+ </section>
+</aside>
+</div>
+</main>
+<div class="pp-dock qa-dock" id="pp-dock" hidden><button type="button" class="qa-btn qa-btn--buy" data-pp-side="long">Long</button><button type="button" class="qa-btn qa-btn--sell" data-pp-side="short">Short</button></div>
+<dialog id="perps-confirm" class="mk-slab pp-confirm qxp-confirm" aria-labelledby="confirm-title"><h2 id="confirm-title">Review</h2><div id="confirm-description"></div><div class="pp-confirm__acts"><button type="button" id="confirm-cancel" class="qa-btn qa-btn--secondary">Cancel</button><button type="button" id="confirm-send" class="qa-btn qa-btn--primary">Confirm</button></div></dialog>
 <noscript><p>Enable JavaScript to use Perps.</p></noscript>
 <dialog id="qhc-dialog" class="qhc-dialog" aria-labelledby="qhc-title">
  <div class="qhc-heading"><h2 id="qhc-title">Your wallet</h2><button id="qhc-close" type="button" aria-label="Close wallet dialog">×</button></div>
@@ -40,6 +116,6 @@
  <p class="qhc-footnote">Connecting does not authorize spending. Every signature and transaction needs your approval. Never enter your recovery phrase here.</p>
 </dialog><script src="/wallet-early.js"></script>
 <script type="module" src="/wallet-site.mjs"></script><script type="module" src="/wallet-page-resume.mjs"></script><script type="module" src="/wallet-login.mjs"></script><script type="module" src="/l121-mobile-login.mjs"></script>
-
+<script type="module" src="/qx-a/pages/markets-perps.mjs"></script>
 <script type="module" src="/qx-perps.mjs"></script>
 <script type="module" src="/qx-tg-link.mjs"></script><script type="module" src="/qx-appbar.mjs"></script></body></html>

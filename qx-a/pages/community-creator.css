@@ -1,0 +1,102 @@
+/* /creator in System A: one launch and everything its creator acts on, on the open floor.
+   The launch's own panels (qx-trade-blocks.mjs and friends) keep their markup; they read as hairline sections here. */
+.qc { padding-bottom: 16px; --ink: var(--qa-tx); --paper: var(--qa-slab-a); --line: var(--qa-rule-2); --muted: var(--qa-tx-2); --sans: var(--qa-sans); }
+.qc [hidden] { display: none !important; }
+
+/* pick a launch */
+.qc .qa-pick { display: grid; gap: 10px; justify-items: start; padding: 32px 0 8px; }
+.qc .qa-pick h2 { margin: 0; font-size: var(--qa-fs-h2); line-height: 1; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); }
+.qc .qa-pick p { margin: 0; font-size: 15px; color: var(--qa-tx-2); max-width: 52ch; }
+.qc-picklist { display: grid; width: 100%; margin-top: 8px; box-shadow: 0 -1px 0 var(--qa-rule); }
+.qc-pickrow { display: flex; justify-content: space-between; gap: 12px; padding: 14px 0; box-shadow: 0 1px 0 var(--qa-rule-row); }
+.qc-pickrow b { font-size: 16px; font-weight: 760; }
+.qc-pickrow span { font-size: 13px; color: var(--qa-tx-3); }
+.qc-pickrow:hover b { color: var(--qa-gold-hi); }
+
+/* the launch: its coin, name and maker */
+.qc-hero { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px 16px; align-items: center; padding: 26px 0 0; }
+.qc-coin:empty { display: none; }
+.qc-coin { display: block; }
+.qc-coin .qa-coin { display: block; width: 64px; height: 64px; }
+.qc-coin .cx-tok { --s: 64px; }
+.qc-hero-t { min-width: 0; }
+.qc-hero-t .qx-eyebrow a { color: var(--qa-gold); }
+.qc-hero h1 { margin: 4px 0 0; font-size: 34px; line-height: 1; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); overflow-wrap: anywhere; }
+.qc-sym { margin-left: 6px; font-size: .5em; font-weight: 700; font-stretch: 100%; letter-spacing: 0; color: var(--qa-tx-3); }
+.qc-subline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 8px 0 0; font-size: 13.5px; color: var(--qa-tx-2); }
+.qc-subline a { color: var(--qa-tx); font-weight: 680; }
+.qc-subline code { font-family: inherit; }
+.qc-you { color: var(--qa-buy); font-weight: 700; }
+.qc-not { color: var(--qa-warn); }
+.qc-hero-actions { grid-column: 1 / -1; display: flex; gap: 10px; }
+.qc-hero-actions .qa-btn { flex: 1 1 auto; }
+.qc-hero-actions .qa-wallet.is-connected { color: var(--qa-tx-2); }
+
+/* the numbers: one ruled strip, big figures */
+.qc .qa-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin: 22px 0 0; box-shadow: 0 -1px 0 var(--qa-rule); }
+.qc .qa-tiles:empty { display: none; }
+.qc .qa-tile { display: grid; gap: 2px; padding: 14px 14px 14px 0; border: 0; border-radius: 0; background: none; box-shadow: 0 1px 0 var(--qa-rule); }
+.qc .qa-tile:nth-child(even) { padding-left: 14px; box-shadow: -1px 0 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+.qc .qa-tile span { font-size: 12.5px; color: var(--qa-tx-3); }
+.qc .qa-tile b { font-size: 18px; font-weight: 780; font-stretch: 108%; letter-spacing: -.015em; overflow-wrap: anywhere; }
+.qc .qa-tile small { font-size: 12.5px; color: var(--qa-tx-2); }
+
+/* payouts, listing and tables */
+.qc-section, #qc-listing, .qc-table { padding-top: var(--qa-section-gap); }
+.qc-section-head h2, .qc-table h3, .qgl-panel h3 { margin: 0; font-size: var(--qa-fs-display-s); line-height: 1.05; font-weight: 820; font-stretch: var(--qa-wd-head); letter-spacing: var(--qa-track-head); }
+.qc-section-head p, .qgl-panel > p { margin: 8px 0 12px; font-size: 14px; color: var(--qa-tx-2); max-width: 62ch; }
+.qc-pay-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+.qc-pay-row > div { display: grid; gap: 2px; }
+.qc-pay-row span { font-size: 12.5px; color: var(--qa-tx-3); }
+.qc-pay-row b { font-size: 22px; font-weight: 800; font-stretch: 110%; letter-spacing: -.02em; }
+.qc .qa-status { margin: 8px 0 0; font-size: 13px; color: var(--qa-tx-3); }
+.qc .qa-status:empty { display: none; }
+.qc-split { margin-top: 12px; font-size: 14px; color: var(--qa-tx-2); }
+.qc-split summary { cursor: pointer; font-weight: 680; color: var(--qa-tx); }
+.qc-split ul { display: grid; margin: 8px 0; }
+.qc-split li { display: flex; gap: 12px; padding: 8px 0; box-shadow: 0 1px 0 var(--qa-rule-row); }
+.qc-split code { font-family: inherit; color: var(--qa-tx-2); }
+.qc .qa-muted { font-size: 13px; color: var(--qa-tx-3); }
+.qgl-panel { border: 0; padding: 0; background: none; }
+.qgl-links { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 8px; }
+.qgl-links a { font-size: 14px; font-weight: 700; color: var(--qa-gold-hi); }
+.qgl-fields { display: grid; box-shadow: 0 -1px 0 var(--qa-rule); }
+.qgl-field { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; padding: 10px 0; box-shadow: 0 1px 0 var(--qa-rule-row); }
+.qgl-field span { grid-column: 1 / -1; font-size: 12px; color: var(--qa-tx-3); }
+.qgl-field input { min-width: 0; border: 0; background: transparent; color: var(--qa-tx); font: inherit; font-size: 14px; padding: 0; outline: none; }
+.qgl-field button { height: 30px; padding: 0 10px; border: 0; border-radius: 8px; background: var(--qa-wash-2); color: var(--qa-tx); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.qgl-field button:disabled { opacity: .4; cursor: default; }
+.qgl-note, .qgl-status { margin: 8px 0 0; font-size: 12.5px; color: var(--qa-tx-3); }
+.qc .qa-table { display: grid; margin-top: 10px; overflow-x: auto; }
+.qc .qa-tr { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; padding: 10px 0; font-size: 13.5px; box-shadow: 0 1px 0 var(--qa-rule-row); }
+.qc .qa-th { font-size: 12px; color: var(--qa-tx-3); box-shadow: 0 1px 0 var(--qa-rule); }
+.qc .qa-tr code { font-family: inherit; }
+.qc .qa-up { color: var(--qa-buy); }
+.qc .qa-down { color: var(--qa-sell); }
+.qc .qa-empty { padding: 10px 0; }
+
+/* the launch's own panels: hairline sections, not boxed cards */
+.qc .trade-workspace.qc-panels { max-width: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.qc .qc-panels > .trade-card { margin: 0; padding: var(--qa-section-gap) 0 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.qc .qc-panels .trade-card h2 { margin: 0 0 12px; font-size: var(--qa-fs-display-s); line-height: 1.05; font-weight: 820; font-stretch: var(--qa-wd-head); letter-spacing: var(--qa-track-head); }
+.qc .qc-panels :is(.qtb-now div) { border: 0; border-radius: 0; padding: 0 0 0 12px; box-shadow: -1px 0 0 var(--qa-rule); }
+.qc .qc-panels .qtb-now div:first-child { padding-left: 0; box-shadow: none; }
+.qc .qc-panels .qtb-now b { font-family: var(--qa-sans); font-size: 22px; font-weight: 800; color: var(--qa-gold-hi); }
+.qc .qc-panels :is(code, .trade-address) { font-family: var(--qa-sans); }
+.qc .qc-panels .trade-chip { border: 0; padding: 0; border-radius: 0; color: var(--qa-tx-2); }
+.qc .qc-panels :is(input, select, textarea) { border: 0; border-radius: 0; background: transparent; box-shadow: 0 1px 0 var(--qa-rule-2); color: var(--qa-tx); font-family: var(--qa-sans); }
+.qc .qc-panels button:not(.qa-btn):not([class*="qa-"]) { border: 0; border-radius: var(--qa-r-m); background: var(--qa-wash-2); color: var(--qa-tx); font-family: var(--qa-sans); font-weight: 700; padding: 0 14px; }
+
+@media (min-width: 1100px) {
+  .qc-hero { grid-template-columns: auto minmax(0, 1fr) auto; padding-top: 40px; }
+  .qc-coin .qa-coin { width: 84px; height: 84px; }
+  .qc-coin .cx-tok { --s: 84px; }
+  .qc-hero h1 { font-size: 52px; }
+  .qc-hero-actions { grid-column: 3; }
+  .qc-hero-actions .qa-btn { flex: none; height: 48px; padding: 0 22px; }
+  .qc .qa-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+  .qc .qa-tile { box-shadow: -1px 0 0 var(--qa-rule); padding: 14px 16px; }
+  .qc .qa-tile:first-child { padding-left: 0; box-shadow: none; }
+  .qc .qa-tile:nth-child(even) { box-shadow: -1px 0 0 var(--qa-rule); padding-left: 16px; }
+  .qc .qc-panels { grid-template-columns: 1fr 1fr; column-gap: 56px; }
+}
