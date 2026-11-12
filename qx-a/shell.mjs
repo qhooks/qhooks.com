@@ -10,6 +10,7 @@
 // the theme switch (theme.js), every section link, Edit profile, search, the Android "Get the app" bar (never inside the
 // app), Telegram mini-app mode (no tab bar), the launch-week drop line (in the ribbon) and the "Refreshing" note.
 import { h, icon, RM, fmt, avatar, keeperAvatar, brandLine, setTheme as storeTheme, ensureSprite } from './components.mjs';
+import { QCASTER } from '../qcaster-name.mjs';
 
 /* ---------- places ---------- */
 // The five places. `match` lights the right tab on pages that don't say which one they belong to.
@@ -28,6 +29,7 @@ export const MORE = [
 // Every section of the ecosystem: the old site menu, link for link (approved copy).
 export const SECTIONS = [
   { id: 'build', title: 'Build', links: [
+    [QCASTER.name + ' · Beta', QCASTER.path, 'Ask about any hook, design a launch, find an idea'],
     ['Hook marketplace', '/hook-marketplace', 'Launch-ready hooks and external integrations'], ['Launch blocks', '/hooks', 'Trading rules and ready-made launch styles'],
     ['Post-quantum hooks', '/#pq-hooks', 'Hook controls secured by a second key'], ['Lab', '/lab', 'Configure, build and download a hook'],
     ['QGraduation Lab', '/graduation-lab', 'Design when liquidity moves on'], ['Builders marketplace', '/builders', 'Build a module, earn from launches that use it'],

@@ -128,6 +128,8 @@ function launchCard(id){
 // Standard keeps today's start. A higher start costs bundlers and snipers more; the price can't fall below it.
 // Randall 2026-11-08: Elysium launches default to the Floor start (~$20K).
 const DEFAULT_TIER={'99901':'floor'};
+// QCaster's "Review in Create" link may carry ?start=standard|floor|high (2026-11-12). The person still sees and can change it.
+const URL_TIER=(()=>{try{const v=new URLSearchParams(location.search).get('start');return ['standard','floor','high'].includes(v)?v:null;}catch{return null;}})();
 let startTier='standard',customUsd='',startSteps=0,startBase=null,startRun=0,startRetry=null;
 /// Floor/High are USD targets: without a live USD price their steps can't be known, so launching waits ("Refreshing price…").
 const priceBlocked=()=>{if(!startCapOn())return true;if(!startBase?.usd)return true;try{selectedStart({tier:startTier,steps:startSteps,customUsd,standardUsd:startBase.usd});return false;}catch{return true;}};
@@ -307,7 +309,7 @@ function renderRangeShare(){
 }
 function openQuick(id,{scroll=false}={}){
  const card=ideaCard(chainId,id)||ideaCard(chainId,'fair');if(!card)return;pick=card;$('quick').hidden=false;announcePick(card.id);
- renderPair();customUsd='';startTier=card.startUsd?'custom':DEFAULT_TIER[chainId]||'standard';startSteps=0;if(startCapOn()){void readStartBase().then(()=>{if(card.startUsd&&startBase?.usd){startSteps=stepsForUsd(card.startUsd,startBase.usd);renderStart();renderQuick();costSoon();}});}renderStart();
+ renderPair();customUsd='';startTier=card.startUsd?'custom':URL_TIER||DEFAULT_TIER[chainId]||'standard';startSteps=0;if(startCapOn()){void readStartBase().then(()=>{if(card.startUsd&&startBase?.usd){startSteps=stepsForUsd(card.startUsd,startBase.usd);renderStart();renderQuick();costSoon();}});}renderStart();
  renderPq();$('style-name').textContent=card.name;$('style-line').textContent=card.what;
  $('style-blocks').replaceChildren(...card.blocks.map(icon));renderRangeShare();
  for(const a of document.querySelectorAll('#qq-cards [data-launch]'))a.setAttribute('aria-pressed',String(a.dataset.launch===card.id));

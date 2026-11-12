@@ -49,7 +49,7 @@ function decode(raw){
 }
 // These checks only veto overlooked explicit requirements. Selection still
 // requires a real model; there is no keyword-to-recipe fallback.
-function explicitVetoes(text){
+export function explicitVetoes(text){
  const result=[];const lower=text.toLowerCase();
  const taxes=/\b(?:no|without|zero)\s+(?:ongoing\s+)?(?:(buy\s*(?:and|or|\/)\s*sell|buy|sell)\s+)?tax(?:es)?\b/g;
  for(const m of lower.matchAll(taxes)){const sides=m[1];if(!sides||sides.includes('buy'))result.push({field:'buyTaxPercent',op:'eq',value:0});if(!sides||sides.includes('sell'))result.push({field:'sellTaxPercent',op:'eq',value:0});}
