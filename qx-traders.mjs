@@ -1,6 +1,11 @@
 import {migrateCommunityFollowing,communityFollowing} from './qx-community-follow.mjs';
 import {profileUrl,resolveProfileAddress} from './qx-profile-address.mjs';
 import {memberWallet} from './qx-member-wallet.mjs';
+// A read started while the page unloads is refused by WebKit, and Safari logs it as "Fetch API cannot load … due to access
+// control checks" (2026-11-12: a wallet-hub change during pagehide re-ran load() and asked /api/traders/profile again).
+// The flag is set on the capture phase so it is up before any page listener can start a read.
+let leaving=false;
+if(typeof addEventListener==='function'){addEventListener('pagehide',()=>{leaving=true;},{capture:true});addEventListener('pageshow',event=>{if(event.persisted)leaving=false;});}
 
 const SESSION_KEY='qhooks:trader-session:v1';
 const CHAINS={'1':'Ethereum','56':'BNB Chain','8453':'Base','42161':'Arbitrum','4663':'Robinhood Chain','99901':'Elysium',solana:'Solana'};
@@ -59,7 +64,7 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
  const button=(text,click,attrs={})=>{const node=h('button',{type:'button',class:'qa-btn',...attrs},text);node.addEventListener('click',click);return node;};
  const profileReads=new Map();
  // Share only in-flight reads: manual Refresh still always asks the server.
- function readProfile(wallet){if(profileReads.has(wallet))return profileReads.get(wallet);const pending=Promise.resolve().then(()=>client.profile(wallet)).finally(()=>{if(profileReads.get(wallet)===pending)profileReads.delete(wallet);});profileReads.set(wallet,pending);return pending;}
+ function readProfile(wallet){if(leaving)return Promise.reject(Error('Refreshing…'));if(profileReads.has(wallet))return profileReads.get(wallet);const pending=Promise.resolve().then(()=>client.profile(wallet)).finally(()=>{if(profileReads.get(wallet)===pending)profileReads.delete(wallet);});profileReads.set(wallet,pending);return pending;}
  let disposed=false,tab='feed',filter='all',windowKey='7d',generation=0,refreshTimer,countdownTimer,profileWallet=null,round=null,following=new Set(),busy=false;
  const title=h('h2',{id:profile?'qp-trading-title':'qx-traders-title'},profile?'Trades':'Traders');
  const status=h('p',{class:'qa-empty qt-status',role:'status','aria-live':'polite'}),body=h('div',{class:'qt-panel',role:'tabpanel'}),controls=h('div',{class:'qt-account'}),tabs=h('div',{class:'qt-tabs',role:'tablist','aria-label':profile?'Trading profile views':'Trading views'}),filters=h('div',{class:'qt-filters'}),refresh=button('Refresh',()=>void load());
@@ -163,7 +168,7 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
  }
  function schedule(){timers.clearTimeout(refreshTimer);if(!disposed&&!doc.hidden)refreshTimer=timers.setTimeout(()=>void load(),pollMs);}
  async function load(){
-  if(disposed||doc.hidden)return;const mine=++generation;busy=true;refresh.disabled=true;refresh.textContent='Refreshing…';status.textContent='Refreshing…';body.setAttribute('aria-busy','true');
+  if(disposed||doc.hidden||leaving)return;const mine=++generation;busy=true;refresh.disabled=true;refresh.textContent='Refreshing…';status.textContent='Refreshing…';body.setAttribute('aria-busy','true');
   let pendingProjection=false,computedAt=null;
   try{
    if(profile){const resolved=await resolveProfileAddress(events.location||{},{readWalletHandle:false});if(mine!==generation||disposed)return;const candidate=resolved.notFound?null:key(resolved.wallet);if(candidate!==profileWallet){profileWallet=candidate;body.replaceChildren();accountControls();}if(!candidate){body.replaceChildren(h('p',{class:'qa-empty'},'Look up a wallet to read its shared terminal trades.'));status.textContent='';return;}

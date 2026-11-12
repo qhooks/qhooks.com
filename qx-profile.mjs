@@ -178,9 +178,11 @@ async function load(published) {
   paintAvatar($('qp-avatar'), who); $('qp-avatar').classList.add('is-set');
   document.title = short(who) + ' | Profile | QHooks';
   if(shownMember?.wallet===who)showMemberHeader(shownMember);
-  $('qp-root').replaceChildren(h('p', { class: 'qa-loading' }, 'Reading this wallet’s launches…'));
+  // the early paint (qx-profile-early.js) keeps its Calls rows until the current record is drawn
+  if(!$('qp-root').querySelector('[data-qp-early]'))$('qp-root').replaceChildren(h('p', { class: 'qa-loading' }, 'Loading calls…'));
   const get = u => fetch(u, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null);
-  const callerRead=get('/api/community/v2/caller/'+who);
+  const early=globalThis.__qxProfileEarly,callerURL='/api/community/v2/caller/'+who;
+  const callerRead=early&&early.url===callerURL?early.body.then(b=>b?structuredClone(b):get(callerURL)):get(callerURL);
   // Profile identity paints as soon as its own read finishes; optional reads cannot hide it.
   const accountsRevision=linkedRevision;
   const memberRead=memberClient.read(who).then(value=>{if(mine===seq)showMemberHeader(accountsRevision!==linkedRevision&&shownMember?.wallet===who?{...value,accounts:shownMember.accounts}:value);return shownMember?.wallet===who?shownMember:value;}).catch(()=>shownMember?.wallet===who?shownMember:null);
@@ -220,6 +222,10 @@ async function load(published) {
       h('p', { class: 'qa-empty' }, acct?'No launches from this wallet. Launches show up here once they are listed on QHooks Markets; only the wallet that created a launch counts as its creator.':'Launches are unavailable right now. Retry this profile in a moment.')));
     return;
   }
+  // Calls, holdings and posts draw now; the launch cards (trust labels and chain reads) follow into their own section,
+  // so a slow chain read can no longer hold the Calls tab on a loading line (2026-11-12, 9.7 s on desktop).
+  const launchesHead=()=>h('div', { class: 'qa-section-head' }, h('h2', { id: 'qp-launches-h' }, 'Launches'), h('p', {}, 'Newest first. Each launch’s rules are fixed at launch and readable on chain; the terminal shows them before you trade.'));
+  $('qp-root').replaceChildren(...extra, h('section', { class: 'qa-section', 'aria-labelledby': 'qp-launches-h', 'aria-busy': 'true' }, launchesHead(), h('p', { class: 'qa-loading' }, 'Loading launches…')));
   // Trust layer: verified X handles (per launch, signed by this wallet) and copy-of labels.
   const trust = await import('/qx-trust.mjs').catch(() => null), T = new Map();
   if (trust) try {
@@ -235,9 +241,7 @@ async function load(published) {
   } catch { /* labels only */ }
   const cards = await Promise.all(launches.map(L => launchCard(L, T.get(L.chainId + ':' + L.controller.toLowerCase()))));
   if (mine !== seq) return;
-  $('qp-root').replaceChildren(...extra, h('section', { class: 'qa-section', 'aria-labelledby': 'qp-launches-h' },
-    h('div', { class: 'qa-section-head' }, h('h2', { id: 'qp-launches-h' }, 'Launches'), h('p', {}, 'Newest first. Each launch’s rules are fixed at launch and readable on chain; the terminal shows them before you trade.')),
-    ...cards));
+  $('qp-root').replaceChildren(...extra, h('section', { class: 'qa-section', 'aria-labelledby': 'qp-launches-h' }, launchesHead(), ...cards));
 }
 
 // ---- Holdings, badges and board posts (any wallet) ----

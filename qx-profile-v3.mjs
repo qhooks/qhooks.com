@@ -13,6 +13,13 @@ document.body.prepend(ambient());setArt({blur:QHOOKS_ART.blur});
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;};
 const read=async url=>{const r=await fetch(url,{cache:'no-store',credentials:'omit'});if(!r.ok)throw Error('refreshing');return r.json();};
 const cell=(big,label,cls)=>h('div',null,h('b',{class:cls||''},big),h('span',null,label));
+// the early paint (qx-profile-early.js): its caller read is taken once here, and this device's copy of the strip and the
+// call rows (text only) is kept for the next visit's instant paint
+const earlyRead=url=>{const e=globalThis.__qxProfileEarly;return e&&e.url===url?e.body.then(b=>b?structuredClone(b):read(url)):read(url);};
+const dropEarly=()=>document.querySelectorAll('main.pv3 [data-qp-early]').forEach(n=>n.remove());
+const SAVED='qx.profile.v1';
+function remember(keys,value){try{const all=JSON.parse(localStorage.getItem(SAVED)||'{}');for(const k of keys)if(k)all[k]={...value,at:Date.now()};
+ const keep=Object.entries(all).sort((a,b)=>(b[1]?.at||0)-(a[1]?.at||0)).slice(0,12);localStorage.setItem(SAVED,JSON.stringify(Object.fromEntries(keep)));}catch{}}
 
 if(main)run().catch(()=>{main.dataset.pv3State='profile';});
 
@@ -20,7 +27,7 @@ async function run(){
  const bare=/^\/profile(?:\.html)?\/?$/.test(location.pathname)&&!location.hash;
  let who=null;try{who=await resolveProfileAddress(location);}catch{}
  if(!who||who.notFound||!who.wallet){
-  main.dataset.pv3State=bare?'lookup':'notfound';shell.setTitle('Profiles');
+  dropEarly();main.dataset.pv3State=bare?'lookup':'notfound';shell.setTitle('Profiles');
   if(!bare){const box=el('section','pv3-none'),t=el('h2','','No profile at qhooks.com/profile/'+String(who?.handle||'').slice(0,48));
    box.append(t,el('p','','Check the spelling, or look up a profile or wallet below.'));main.prepend(box);}
   return;
@@ -65,10 +72,11 @@ async function run(){
  acts();if(qco)new MutationObserver(acts).observe(qco,{childList:true});
 
  // the caller record: the strip, then the tabs, then each call
- let rec=null;try{rec=await read('/api/community/v2/caller/'+encodeURIComponent(wallet));}catch{}
+ let rec=null;try{rec=await earlyRead('/api/community/v2/caller/'+encodeURIComponent(wallet));}catch{}
  const calls=Array.isArray(rec?.calls)?rec.calls.filter(c=>c&&c.kind==='call'&&c.call):[],byId=new Map(calls.map(c=>[String(c.id),c]));
  const move=c=>moveOf(Number(c.call?.price),Number(livePrice(c.board,c.call?.quoteSymbol)??c.call?.priceNow));
  const anchor=document.getElementById('qp-trading')||document.getElementById('qp-root');
+ main.querySelectorAll('.pv3-proof[data-qp-early]').forEach(n=>n.remove());
  if(rec?.stats&&Number(rec.stats.calls)>0&&!main.querySelector('.pv3-proof')){
   const s=rec.stats,counted=Number(s.counted)||0,hits=Number(s.hits)||0,moves=calls.map(move).filter(Number.isFinite),best=moves.length?Math.max(...moves):NaN;
   const strip=h('div',{class:'qa-record pv3-proof','aria-label':'Caller record'});
@@ -76,9 +84,16 @@ async function run(){
   let held=rec.heldCalls;if(!held)try{held=(await read('/api/callouts/profile/'+encodeURIComponent(wallet)))?.heldCalls;}catch{}
   if(held&&Number(held.total)>0)strip.append(cell(`${Number(held.held)} of ${Number(held.total)}`,'held what they called','qa-up'));
   strip.append(cell(counted>0?Math.round(hits/counted*100)+'%':'—',counted>0?`hit rate · ${counted} timed`:'hit rate · none timed yet'));
-  if(Number.isFinite(best))strip.append(cell(best>=2?fmt.mult(best):fmt.pct(best-1),'best call, to now',best>=1?'qa-up':'qa-down'));
+  // the best call shows only when it is up; a record with no call above its entry says so instead of a red number
+  if(Number.isFinite(best)&&best>1)strip.append(cell(best>=2?fmt.mult(best):fmt.pct(best-1),'best call, to now','qa-up'));
+  else if(moves.length)strip.append(cell('—','No winning call yet'));
   anchor?.before(strip);
- }
+  const nameText=(title?.textContent||'').trim(),named=nameText&&!title?.classList.contains('is-addr')?nameText.slice(0,48):'';
+  const cells=[...strip.children].map(d=>{const b=d.querySelector('b');return[b?.textContent||'',d.querySelector('span')?.textContent||'',b?.classList.contains('qa-up')?'up':b?.classList.contains('qa-down')?'down':''];});
+  const rows=calls.slice(0,8).map(c=>{const m=move(c);return{id:String(c.id),sym:String(c.board?.symbol||'').slice(0,16),text:String(c.text||'').slice(0,160),
+   move:Number.isFinite(m)?(m>=2?fmt.mult(m):fmt.pct(m-1))+' since the call':'',dir:Number.isFinite(m)?(m>1?'up':m<1?'down':''):''};});
+  remember([wallet,who.handle?'@'+who.handle:null],{name:named,cells,calls:rows});
+ }else if(rec)remember([wallet,who.handle?'@'+who.handle:null],{name:'',cells:[],calls:[]});
 
  // tabs: Calls / Trades / Holdings / Launches / Boards over the sections the page already draws
  const root=document.getElementById('qp-root'),trading=document.getElementById('qp-trading');
