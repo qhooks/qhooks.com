@@ -51,7 +51,7 @@ if(new URLSearchParams(location.search).get('go')==='solana'){
  }
  async function action(run){
   if(busy)return;if(!solTreasuryReady()){status(SOL_TREASURY_WAIT);return;}
-  busy=true;render();try{await run();}catch(e){const message=e?.message||'';status(/^(Referral |The referral name |Could not record the referral\.)/.test(message)?message:solLaunchError(e,'Could not complete referral setup. Please try again.'));}finally{busy=false;render();}
+  busy=true;render();let slow=setTimeout(()=>{if(/in your wallet/i.test($('status').textContent))status('Still waiting for your wallet. If no approval opened, close this tab and open the page again inside Phantom, then tap again.');},20000);try{await run();}catch(e){const message=e?.message||String(e||'');const shown=/^(Referral |The referral name |Could not record the referral\.)/.test(message)?message:solLaunchError(e,'Could not complete referral setup. Please try again.');status(shown+(message&&message!==shown?' Details: '+message.slice(0,240):''));console.error('[sol-referral-setup]',e);}finally{clearTimeout(slow);busy=false;render();}
  }
  $('register').onclick=()=>action(record);
  async function repairFeeAccounts(){

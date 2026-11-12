@@ -88,10 +88,11 @@ export async function previewSolReferralFeeAccounts({referral,runtime=solReferra
  tx.feePayer=new r.PublicKey(QHOOKS_SOL_TREASURY);tx.recentBlockhash=(await r.connection.getLatestBlockhash('confirmed')).blockhash;
  return feeAccountCosts(r,built,(await r.connection.getFeeForMessage(tx.compileMessage(),'confirmed')).value);
 }
-export async function setupSolReferralFeeAccounts({referral,runtime=solReferralRuntime,owner=solAddress(),prepare=prepareSolTransaction,send=sendPreparedSol,onStatus=()=>{},onCosts=()=>{},onSent=()=>{}}={}){
+export async function setupSolReferralFeeAccounts({referral,walletFirst=false,runtime=solReferralRuntime,owner=solAddress(),prepare=prepareSolTransaction,send=sendPreparedSol,onStatus=()=>{},onCosts=()=>{},onSent=()=>{}}={}){
  requireReferralWallet(owner);const r=await runtime(),built=await buildSolReferralFeeAccounts(r,owner,referral);
  if(built.transaction.instructions.length){
-  const prepared=await prepare(r,built.transaction,[],owner,{walletFirst:true});requireReferralWallet(solAddress());
+  // No extra signer: let the wallet sign and send (Phantom's recommended path; sign-then-send left Phantom's sheet unopened).
+ const prepared=await prepare(r,built.transaction,[],owner,{walletFirst});requireReferralWallet(solAddress());
   const costs=await feeAccountCosts(r,built,prepared.networkLamports);onCosts(costs);
   onStatus('Simulation passed. '+solFeeAccountCostText(costs)+' Approve account creation in your wallet.');
   const sent=await send(r,prepared);onSent({signature:sent.signature,lastValidBlockHeight:prepared.last.lastValidBlockHeight,referral});await sent.confirm();
