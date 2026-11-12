@@ -17,7 +17,7 @@ export async function recordFinalizedSolReferral(signature,{fetcher=(...a)=>fetc
  return {referral:result.referral,tokens:result.feeAccounts,feeAccountsReady:result.feeAccountsReady===true,missingFeeMints:result.missingFeeMints||[]};
 }
 function checkAccounts(r,provider,addresses,infos,owner,{requireName=true}={}){
- if(!Array.isArray(infos)||infos.length!==3)throw Error('Referral accounts unavailable. Try again.');
+ if(!Array.isArray(infos)||infos.length!==3)throw Error('Refreshing referral accounts. Try again.');
  const [account,...tokens]=infos;
  if(account){
   if(account.owner.toBase58()!==REFERRAL_PROGRAM)throw Error('Referral account program mismatch. Tell the team.');
@@ -79,7 +79,7 @@ export function solFeeAccountCostText({rentLamports,networkLamports}){
 }
 async function feeAccountCosts(r,built,networkLamports){
  const rent=await r.connection.getMinimumBalanceForRentExemption(165,'confirmed');
- if(!Number.isSafeInteger(rent)||rent<0||!Number.isSafeInteger(networkLamports)||networkLamports<0)throw Error('Account costs unavailable. Try again.');
+ if(!Number.isSafeInteger(rent)||rent<0||!Number.isSafeInteger(networkLamports)||networkLamports<0)throw Error('Refreshing account costs. Try again.');
  return {rentLamports:(BigInt(rent)*BigInt(built.transaction.instructions.length)).toString(),networkLamports:String(networkLamports)};
 }
 export async function previewSolReferralFeeAccounts({referral,runtime=solReferralRuntime}={}){

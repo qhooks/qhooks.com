@@ -9,7 +9,7 @@ export async function directDbcOrder({input,output,amount,taker,slippageBps}){
  if(!cfg.ready||status.config!==cfg.config||status.graduated)throw Error('No direct DBC route for this trade. Retry Jupiter after graduation.');
  const pool=new r.PublicKey(status.pool),virtualPool=await r.client.state.getPool(pool),config=await r.client.state.getPoolConfig(new r.PublicKey(cfg.config));
  if(!virtualPool||virtualPool.poolState.config.toBase58()!==cfg.config||virtualPool.poolState.baseMint.toBase58()!==mint)throw Error('Pool config mismatch.');
- const slot=await r.connection.getSlot('confirmed'),time=await r.connection.getBlockTime(slot);if(!Number.isSafeInteger(time))throw Error('Chain time is unavailable. Refresh the quote.');
+ const slot=await r.connection.getSlot('confirmed'),time=await r.connection.getBlockTime(slot);if(!Number.isSafeInteger(time))throw Error('Refreshing chain time. Refresh the quote.');
  const quote=r.client.pool.swapQuote({virtualPool,config,amountIn:new r.BN(String(amount)),swapBaseForQuote:!buy,slippageBps,hasReferral:false,eligibleForFirstSwapWithMinFee:false,currentPoint:new r.BN(time)});
  if(!quote.minimumAmountOut||quote.minimumAmountOut.isZero())throw Error('Trade is too small or the curve has reached graduation.');
  const tx=await r.client.pool.swap({owner:new r.PublicKey(taker),pool,swapBaseForQuote:!buy,amountIn:new r.BN(String(amount)),minimumAmountOut:quote.minimumAmountOut,referralTokenAccount:null});

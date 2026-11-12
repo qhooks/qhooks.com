@@ -45,7 +45,7 @@ export const SOL_LAUNCH_CONFIG = Object.freeze({
  referralPercentage: 20, // Share of QHooks partner fee credited to an enrolled referrer.
 });
 export function solLaunchFeeLamports(price) {
- if (!(Number.isFinite(price) && price > 0)) throw Error('SOL price unavailable. Refresh before launching.');
+ if (!(Number.isFinite(price) && price > 0)) throw Error('Refreshing the SOL price. Refresh before launching.');
  const amount=Math.ceil(SOL_LAUNCH_CONFIG.flatLaunchUsd / price * 1e9);if(!Number.isSafeInteger(amount)||amount<=0)throw Error('SOL price is outside the supported range.');return BigInt(amount);
 }
 export function solScheduledFeeNumerator(seconds) {

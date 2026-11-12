@@ -20,7 +20,7 @@ export async function prepareSolTransaction(runtime,transaction,signers=[],owner
  transaction.signatures=[];
  const serialized=b64(transaction.serialize({requireAllSignatures:false,verifySignatures:false}));
  const simulation=await simulateSol(serialized);
- const fee=await connection.getFeeForMessage(transaction.compileMessage(),'confirmed');if(fee.value==null)throw Error('Network cost unavailable. Refresh review.');
+ const fee=await connection.getFeeForMessage(transaction.compileMessage(),'confirmed');if(fee.value==null)throw Error('Refreshing the network cost. Refresh review.');
  const prepared={transaction,serialized,last,networkLamports:fee.value,owner,units:simulation.unitsConsumed||null};
  approvals.set(prepared,{serialized,owner,signers:[...signers],walletFirst});return prepared;
 }

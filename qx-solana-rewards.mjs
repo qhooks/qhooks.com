@@ -9,7 +9,7 @@ const notices=new Map(),busy=new Set();
 const refValue=()=>{try{return localStorage.getItem('qhooks:sol-referrer:v1')||localStorage.getItem('qhooks:ref')||'';}catch{return '';}};
 const validRef=value=>/^0x[0-9a-fA-F]{40}$/.test(value||'')||/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(value||'');
 try{const ref=new URLSearchParams(location.search).get('ref');if(validRef(ref))localStorage.setItem('qhooks:sol-referrer:v1',ref);}catch{}
-async function api(path='',body){const r=await fetch(BASE+path,{cache:'no-store',...(body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{})});const j=await r.json();if(!r.ok)throw Error(j.detail||({wallet_signature_invalid:'Sign with the wallet that owns these rewards.',claim_below_minimum:'This claim is below the network-cost minimum.',rewards_wallet_needs_funding:'Rewards are recorded. Claims are temporarily unavailable.',claims_not_configured:'Rewards are recorded. Claims are temporarily unavailable.'})[j.error]||'Rewards are unavailable right now. Try again.');return j;}
+async function api(path='',body){const r=await fetch(BASE+path,{cache:'no-store',...(body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{})});const j=await r.json();if(!r.ok)throw Error(j.detail||({wallet_signature_invalid:'Sign with the wallet that owns these rewards.',claim_below_minimum:'This claim is below the network-cost minimum.',rewards_wallet_needs_funding:'Rewards are recorded. Claims open shortly.',claims_not_configured:'Rewards are recorded. Claims open shortly.'})[j.error]||'Refreshing rewards. Try again.');return j;}
 export async function enrollSolanaReferrer(){const wallet=solAddress(),ref=refValue();if(!wallet||!validRef(ref)||ref===wallet)return;const current=await api('?wallet='+wallet);if(!current.enabled||current.referrer)return;const challenge=await api('/challenge',{purpose:'enroll',wallet,referrer:ref});const signature=await signSolMessage(challenge.message);await api('/enroll',{id:challenge.id,signature});}
 const recovery=createSwapRewardRecovery({reconcile:row=>api('/reconcile',row)});
 export function recordSolanaRewards(requestId,result) {
@@ -79,7 +79,7 @@ async function refresh() {
   panel.replaceChildren(h('h3',{},'Solana rewards'),h('p',{},'Jupiter trades: 30% back, instantly, or 40% for verified QHOOKS holders. Referral rewards are paid weekly. Existing launch rewards and balances remain available below.'),...summaries,...rows,...pendingRows,...(!rows.length&&!pendingRows.length?[h('p',{},recovery.read().length?'Confirming your recent swap before crediting rewards…':'Your instant savings appear after a finalized Jupiter trade.')]:[]),copy,check,status);
   const notice=owners.map(owner=>notices.get(owner)).filter(Boolean).join(' ');
   if(notice)status.textContent=notice;
-  else if(rows.length&&all.some(value=>value.balances.some(balance=>!balance.enabled)))status.textContent='Rewards are recorded. Claims are temporarily unavailable.';
+  else if(rows.length&&all.some(value=>value.balances.some(balance=>!balance.enabled)))status.textContent='Rewards are recorded. Claims open shortly.';
   else if(rows.length)status.textContent='Claim minimums: '+all[0].balances.map(balance=>format(balance.minimum,balance.mint===SOL?9:6)+' '+(balance.mint===SOL?'SOL':'USDC')).join(' or ')+'. QHooks pays the payout network cost.';
  } catch(e) {
   if(serial===loading)panel.replaceChildren(h('p',{},e.message),h('button',{type:'button',class:actionClass,onclick:()=>{polls=0;void refresh();}},'Retry rewards'));

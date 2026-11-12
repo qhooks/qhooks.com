@@ -57,7 +57,7 @@ if(new URLSearchParams(location.search).get('go')==='solana'){
  async function repairFeeAccounts(){
   if(solAddress()!==QHOOKS_SOL_TREASURY){status('Connect the QHooks treasury wallet.');return;}
   if(feePending){const r=await solReferralRuntime();try{await waitSolFinalized(r.connection,feePending.signature,{lastValidBlockHeight:feePending.lastValidBlockHeight});}catch(e){if(/^(Transaction failed on chain\.|The transaction expired without confirmation\.)/.test(e?.message||'')){feePending=null;saveFee();}throw e;}}
-  else {const state=await refreshReferral();if(state.feeAccountsReady){status('Fee accounts are already ready.');return;}if(!solReferralSetupState(state,solAddress()).showFeeStep)throw Error('Referral fee account readiness is unavailable. Refresh this page.');
+  else {const state=await refreshReferral();if(state.feeAccountsReady){status('Fee accounts are already ready.');return;}if(!solReferralSetupState(state,solAddress()).showFeeStep)throw Error('Checking the fee accounts. Refresh this page.');
    await setupSolReferralFeeAccounts({referral:state.referral,onStatus:status,onCosts:costs=>{$('fee-costs').textContent=solFeeAccountCostText(costs);},onSent:value=>{feePending=value;saveFee();recovery();}});
   }
   const state=await refreshReferral();status(state.feeAccountsReady?'Fee accounts finalized and verified. Solana referral fees are ready.':'Waiting for finalized fee accounts. Tap Check fee accounts again.');

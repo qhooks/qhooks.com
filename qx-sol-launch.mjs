@@ -54,7 +54,7 @@ export function mountSolCreate({chainSelect,onExit=()=>{}}){
    const quoted=await solApi('cost',{mint:details.mint,creator:owner}),tx=await buildSolLaunch(runtime,{config:config.config,mint,owner,name:details.name,symbol:details.symbol,uri,buy:amount,lamports:quoted.lamports});
    prepared=await prepareSolTransaction(runtime,tx,[mint],owner);
    const sizes=[82,165,runtime.client.program.account.virtualPool.size,679],response=await fetch('/api/sol-launch/rpc',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(sizes.map((size,i)=>({jsonrpc:'2.0',id:i,method:'getMinimumBalanceForRentExemption',params:[size,{commitment:'confirmed'}]})))}),rows=await response.json();
-   if(!Array.isArray(rows)||rows.some(r=>r.error||!Number.isSafeInteger(r.result)))throw Error('Rent estimate unavailable. Refresh review.');const rent=rows.reduce((n,r)=>n+BigInt(r.result)*(r.id===1?BigInt(amount>0n?4:2):1n),0n);
+   if(!Array.isArray(rows)||rows.some(r=>r.error||!Number.isSafeInteger(r.result)))throw Error('Refreshing the rent estimate. Refresh review.');const rent=rows.reduce((n,r)=>n+BigInt(r.result)*(r.id===1?BigInt(amount>0n?4:2):1n),0n);
    if(owner!==solAddress())throw Error('Wallet changed. Review again.');cost={...quoted,rent};notify('Simulation passed. Review the fees above, then confirm in your wallet.');
   }catch(e){prepared=null;cost=null;notify(solLaunchError(e),true);}finally{busy=false;render();}
  }
