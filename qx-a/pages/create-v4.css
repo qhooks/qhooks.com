@@ -1,0 +1,100 @@
+/* /create v4 (2026-11-12): the launch page as one scene. Randall's direction: "something way more dynamic"; references
+   MatrixPay (one hero object under light, huge type with real hierarchy, depth), no italics, noir, no props.
+   One object: a gold coin forming under a shaft of light; it carries the latest real launch and re-forms when a new one
+   lands (create-v4.mjs reads the page's own "Launched on QHooks" list). Copy is the page's own words. Every id, flow and
+   route of create.html is untouched; this file only restyles the hero, the launched rail and the ideas header. */
+
+.cr4 .cr-hero { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); align-content: end; gap: 0;
+  min-height: 0; padding: 0; margin: 0 calc(var(--qa-pad) * -1); }
+.cr4 .cr4-stage { position: relative; height: 380px; overflow: hidden; pointer-events: none; }
+.cr4 .cr4-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cr4 .cr4-stage canvas[hidden] { display: none; }
+/* the lit set (scene3d.mjs): its first frame shows at once, before the live layer loads */
+/* the set melts into the page at its edges (the poster and the live layer are masked; the tag over it is not) */
+.cr4 .cr4-stage--set::before { content: ''; position: absolute; inset: 0; background: #050605 url(/qx-a/set/set-create.webp) 50% 70% / cover no-repeat; }
+.cr4 .cr4-stage--set::before, .cr4 .cr4-stage .qs3 { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 82%, transparent 100%), linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%); -webkit-mask-composite: source-in; mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 82%, transparent 100%), linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%); mask-composite: intersect; }
+.cr4 .cr4-tag { z-index: 2; bottom: 10px; text-shadow: 0 1px 10px #000, 0 0 2px #000; }
+.cr4 .cr4-tag { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; gap: 10px; align-items: baseline;
+  white-space: nowrap; font-size: 12.5px; font-weight: 600; color: var(--qa-tx-3); letter-spacing: .01em; }
+.cr4 .cr4-tag b { color: var(--qa-tx); font-weight: 760; }
+.cr4 .cr-hero__copy { position: relative; z-index: 1; padding: 6px var(--qa-pad) 0; }
+.cr4 .cr-hero .cx-kicker { display: none; } /* the object and the headline say it */
+.cr4 .cr-hero .cx-display { font-size: clamp(54px, 15.5vw, 168px); line-height: .84; font-weight: 880; font-stretch: 125%;
+  letter-spacing: -.035em; text-transform: uppercase; }
+.cr4 .cr-hero .cx-display span { display: block; color: var(--qa-tx-2); font-weight: 260; font-stretch: 112%; letter-spacing: -.02em; }
+.cr4 .cr-hero__lede { max-width: 30ch; margin-top: 20px; font-size: 18px; color: var(--qa-tx-2); }
+.cr4 .cr-hero__go { margin-top: 26px; }
+
+/* the launched tokens: a rail of coins under the scene, the newest first */
+.cr4 .cr-hero__live { position: relative; z-index: 1; margin: 40px 0 0; padding: 18px var(--qa-pad) 0; box-shadow: 0 -1px 0 var(--qa-rule); }
+.cr4 .cr-hero__live .cx-label { margin-bottom: 14px; }
+.cr4 .cr-hero .cr-launched { display: flex; flex-direction: row; gap: 22px; overflow-x: auto; scrollbar-width: none; margin: 0; padding: 0 0 6px; }
+.cr4 .cr-launched::-webkit-scrollbar { display: none; }
+.cr4 .cr-hero .cr-launched__i, .cr4 .cr-hero .cr-launched__i + .cr-launched__i { flex: none; border: 0; box-shadow: none; }
+.cr4 .cr-hero .cr-launched__a, .cr4 .cr-hero .cr-launched__i + .cr-launched__i .cr-launched__a { display: grid; justify-items: center; gap: 8px; width: 92px; padding: 0; text-align: center; }
+.cr4 .cr-launched__coin { width: 64px; height: 64px; box-shadow: 0 0 0 1px rgba(232, 200, 140, .35), 0 10px 28px -12px rgba(232, 200, 140, .55); }
+.cr4 .cr-launched__t b { display: block; font-size: 14px; }
+.cr4 .cr-launched__t small { display: block; margin-top: 2px; font-size: 11.5px; line-height: 1.3; white-space: normal; }
+
+/* the ideas: the same type scale (bold line, light line) */
+.cr4 .cr-ideas { margin-top: 72px; }
+.cr4 .cr-ideas__head .cx-kicker { display: none; }
+.cr4 .cr-ideas__head .cx-h2 { font-size: clamp(40px, 8vw, 96px); line-height: .88; font-weight: 880; font-stretch: 125%; letter-spacing: -.03em; text-transform: uppercase; }
+.cr4 .cr-ideas__head .cx-h2 span { display: block; color: var(--qa-tx-2); font-weight: 260; font-stretch: 112%; letter-spacing: -.02em; }
+.cr4 .cr-ideas__sub { font-size: 18px; color: var(--qa-tx-2); font-weight: 300; font-stretch: 112%; }
+
+@media (min-width: 900px) {
+  .cr4 .cr-hero { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); grid-template-areas: "copy stage" "live live";
+    align-items: end; min-height: min(calc(100svh - var(--qa-nav-h)), 860px); margin: 0 calc(var(--qa-pad) * -1); }
+  .cr4 .cr4-stage { grid-area: stage; align-self: stretch; height: auto; min-height: 620px; }
+  .cr4 .cr-hero__copy { grid-area: copy; align-self: end; padding: 0 0 64px var(--qa-pad); }
+  .cr4 .cr-hero .cx-display { font-size: clamp(64px, 7vw, 124px); }
+  .cr4 .cr-hero__copy { padding-top: 56px; }
+  .cr4 .cr-hero__live { grid-area: live; margin: 0; }
+  .cr4 .cr-hero .cr-launched { gap: 34px; }
+}
+@media (min-width: 1100px) { .cr4 .cr-hero { margin: 0 calc(max(var(--qa-pad), (100vw - var(--qa-maxw)) / 2 + var(--qa-pad)) * -1); }
+  .cr4 .cr-hero__copy { padding-left: max(var(--qa-pad), calc((100vw - var(--qa-maxw)) / 2 + var(--qa-pad))); }
+  .cr4 .cr-hero__live { padding-left: max(var(--qa-pad), calc((100vw - var(--qa-maxw)) / 2 + var(--qa-pad))); padding-right: max(var(--qa-pad), calc((100vw - var(--qa-maxw)) / 2 + var(--qa-pad))); } }
+[data-theme="light"] .cr4 .cr-hero .cx-display span { color: var(--qa-tx-3); }
+
+/* pass 2: every section heading on the page in the same scale (same words) */
+.cr4 :is(#qq-quick-title, #qsf-title, #qc-title-1, #qc-title-2, #qc-title-3, #qc-review-title, #qc-running-title, #qc-done-title) {
+  font-size: clamp(36px, 6vw, 72px); line-height: .9; font-weight: 880; font-stretch: 125%; letter-spacing: -.03em; text-transform: uppercase; }
+.cr4 .qxc-panel-head { align-items: end; }
+
+/* the image and banner pickers: the art shown the way it will appear (create-v4.mjs keeps the real input over the tile) */
+.cr4-drop { position: relative; display: grid; place-items: center; overflow: hidden; margin-top: 6px; color: var(--qa-tx-3);
+  background: radial-gradient(120% 120% at 30% 20%, rgba(232, 200, 140, .10), transparent 60%), var(--qa-wash);
+  box-shadow: inset 0 0 0 1px var(--qa-rule-2); transition: box-shadow var(--qa-t-quick) var(--qa-ease), transform var(--qa-t-quick) var(--qa-ease); }
+.cr4-drop--image { width: 112px; height: 112px; border-radius: 50%; }
+.cr4-drop--banner { width: min(100%, 480px); aspect-ratio: 3 / 1; border-radius: var(--qa-r-m); }
+.cr4-drop:hover, .cr4-drop.is-over { box-shadow: inset 0 0 0 1px var(--qa-gold), 0 14px 40px -18px rgba(232, 200, 140, .6); }
+.cr4-drop:focus-within { outline: 2px solid var(--qa-gold-hi); outline-offset: 3px; }
+.cr4-drop.has-art { box-shadow: 0 0 0 1px rgba(232, 200, 140, .45), 0 18px 46px -20px rgba(232, 200, 140, .55); }
+.cr4-drop--image.has-art { box-shadow: 0 0 0 3px #b98a3e, 0 0 0 5px rgba(255, 238, 205, .35), 0 18px 46px -20px rgba(232, 200, 140, .6); }
+.cr4 .cr4-drop > img.cr4-drop__img { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; max-width: none !important;
+  margin: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; object-fit: cover; }
+/* the page's own small previews stay in the page (its checks read them) but the tile already shows the art */
+.cr4 .cr4-drop.has-art ~ img { position: absolute !important; width: 1px !important; height: 1px !important; opacity: 0; pointer-events: none; }
+.cr4-drop__plus { width: 28px; height: 28px; position: relative; }
+.cr4-drop__plus::before, .cr4-drop__plus::after { content: ""; position: absolute; left: 50%; top: 50%; width: 22px; height: 2px; margin: -1px 0 0 -11px; background: currentColor; border-radius: 2px; }
+.cr4-drop__plus::after { transform: rotate(90deg); }
+.cr4-drop.has-art .cr4-drop__plus { display: none; }
+.cr4-drop__input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; font-size: 0; }
+
+/* the live upload tiles (create-create.mjs dressUpload: Sale first, token profile) in the same gold as the quick-launch drops */
+.cr4 .cr-tile:not(.cr-tile--file) { background: radial-gradient(120% 120% at 30% 20%, rgba(232, 200, 140, .10), transparent 60%), var(--qa-wash); box-shadow: inset 0 0 0 1px var(--qa-rule-2); }
+.cr4 .cr-tile--image { width: 112px; height: 112px; }
+.cr4 .cr-tiled:hover .cr-tile:not(.cr-tile--file) { box-shadow: inset 0 0 0 1px var(--qa-gold), 0 14px 40px -18px rgba(232, 200, 140, .6); }
+.cr4 .cr-tiled:focus-within .cr-tile { outline: 2px solid var(--qa-gold-hi); outline-offset: 3px; }
+.cr4 .cr-tile--image.has-img { box-shadow: 0 0 0 3px #b98a3e, 0 0 0 5px rgba(255, 238, 205, .35), 0 18px 46px -20px rgba(232, 200, 140, .6); }
+.cr4 .cr-tile--banner.has-img { box-shadow: 0 0 0 1px rgba(232, 200, 140, .45), 0 18px 46px -20px rgba(232, 200, 140, .55); }
+
+/* wide: the latest launch as a callout beside the coin, a hairline leading to it (annotation detail, real data only) */
+@media (min-width: 900px) {
+  .cr4 .cr4-tag { left: auto; right: 7%; top: 34%; bottom: auto; transform: none; flex-direction: column; align-items: flex-start; gap: 3px; padding: 2px 0 2px 14px; box-shadow: inset 1px 0 0 rgba(232, 200, 140, .55); }
+  .cr4 .cr4-tag b { font-size: 17px; letter-spacing: .01em; }
+  .cr4 .cr4-tag::before { content: ''; position: absolute; right: 100%; top: 50%; width: 64px; height: 1px; background: linear-gradient(90deg, transparent, rgba(232, 200, 140, .7)); }
+  .cr4 .cr4-tag::after { content: ''; position: absolute; right: calc(100% + 64px); top: 50%; width: 5px; height: 5px; margin: -2px -2px 0 0; border-radius: 50%; background: var(--qa-gold); box-shadow: 0 0 10px rgba(232, 200, 140, .8); }
+}
