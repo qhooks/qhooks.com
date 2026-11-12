@@ -31,10 +31,12 @@ export function mountCallThanks(target,{id,author,hub,sessions,client=createCall
  stop=hub.subscribe(()=>{if(disposed)return;if(target.isConnected===false){dispose();return;}const who=owner();if(who!==lastOwner){lastOwner=who;operation++;busy=false;invalidateRead();status.textContent='';render();void refresh();}else render();});
  render();void refresh();return{refresh,dispose,button,status};
 }
-// A board replaces its post cards while polling. Dispose obsolete subscriptions.
+// Cards are built detached and connected together; clean up after that render turn.
 const boardControls=new Map();
 export async function mountBoardCallThanks(target,post){
- for(const[key,entry]of boardControls)if(entry.target.isConnected===false){entry.control?.dispose();boardControls.delete(key);}
- const previous=boardControls.get(post.id);previous?.control?.dispose();const entry={target,control:null};boardControls.set(post.id,entry);
- try{const[wallet,sessions]=await Promise.all([import('./wallet-hub.mjs'),import('./qx-board-session.mjs')]);if(boardControls.get(post.id)!==entry||target.isConnected===false)return null;entry.control=mountCallThanks(target,{...post,hub:wallet.getWalletHub(window),sessions});return entry.control;}catch{if(boardControls.get(post.id)===entry)boardControls.delete(post.id);return null;}
+ const previous=boardControls.get(target);previous?.control?.dispose();const entry={target,control:null};boardControls.set(target,entry);
+ try{const[wallet,sessions]=await Promise.all([import('./wallet-hub.mjs'),import('./qx-board-session.mjs')]);
+  for(const[key,item]of boardControls)if(item.target.isConnected===false){item.control?.dispose();boardControls.delete(key);}
+  if(boardControls.get(target)!==entry)return null;entry.control=mountCallThanks(target,{...post,hub:wallet.getWalletHub(window),sessions});return entry.control;
+ }catch{if(boardControls.get(target)===entry)boardControls.delete(target);return null;}
 }

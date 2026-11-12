@@ -172,7 +172,7 @@ async function load(published) {
   $('qp-input').value = who;
   $('qp-title').replaceChildren(h('span', { class: 'qp-mono' }, short(who)));
   $('qp-full').textContent = who; $('qp-addr').hidden = false; $('qp-verified').replaceChildren();
-  $('qp-avatar').replaceChildren(); $('qp-member-identity').replaceChildren(); void prepareProfileEditor(who,mine);
+  $('qp-avatar').replaceChildren(); $('qp-member-identity').replaceChildren(); $('qp-explorers').replaceChildren(); $('qp-explorers').hidden=true; void prepareProfileEditor(who,mine);
   paintAvatar($('qp-avatar'), who); $('qp-avatar').classList.add('is-set');
   document.title = short(who) + ' | Profile | QHooks';
   if(shownMember?.wallet===who)showMemberHeader(shownMember);
@@ -189,20 +189,25 @@ async function load(published) {
   let held=member?.profile.shareHoldings?memberHoldingsObservation(await get('/api/terminal/wallet/'+who),who):null;
   if (mine !== seq) return;
   const launches = acct?.launches || [];
-  const chains = [...new Set(launches.map(L => L.chainId))];
-  const ex = (chains.length ? chains : ['8453']).filter(c => EXPLORER[c]);
-  const hasElysiumContext=who!==ZERO&&social&&social.legacyAvailable!==false&&Array.isArray(social.posts)&&social.posts.some(post=>post?.kind==='post'&&!post.hidden&&String(post.author||'').toLowerCase()===who&&isElysiumDiscussion(post.board));
-  const elysiumWalletLink=hasElysiumContext?h('a',{href:elysiumAddressUrl(who),target:'_blank',rel:'noopener noreferrer',title:'Elysium · wallet address '+who,'aria-label':'View wallet address '+who+' on ElysScan (Elysium)'},'Elysium (ElysScan) ↗'):null;
-  $('qp-explorers').replaceChildren('Wallet on ', ...ex.flatMap((c, i) => [i ? ' · ' : '', h('a', { href: EXPLORER[c] + '/address/' + who, target: '_blank', rel: 'noopener noreferrer' }, (CHAIN_NAME[c] || c) + ' ↗')]),...(elysiumWalletLink?[ex.length?' · ':'',elysiumWalletLink]:[]));
-  $('qp-explorers').hidden = false;
+  const socialReadable=social&&social.legacyAvailable!==false;
+  const posts = socialReadable?social.posts||[]:[];
+  const hasElysiumContext=who!==ZERO&&posts.some(post=>post?.kind==='post'&&!post.hidden&&String(post.author||'').toLowerCase()===who&&isElysiumDiscussion(post.board));
+  function showExplorers(){
+    // These records already belong to this profile; the address alone says nothing about its EVM chains.
+    const records=[...launches,...(caller?.calls||[]),...posts,...(held?.positions||[]),...Object.values(socialReadable?social.badges||{}:{}).flat()];
+    const chains=[...new Set(records.filter(row=>row&&!row.hidden).map(row=>String(row.board?.chainId??row.chainId??'')))];
+    const ex=chains.filter(chain=>EXPLORER[chain]&&!(chain==='99901'&&hasElysiumContext));
+    const elysiumWalletLink=hasElysiumContext?h('a',{href:elysiumAddressUrl(who),target:'_blank',rel:'noopener noreferrer',title:'Elysium · wallet address '+who,'aria-label':'View wallet address '+who+' on ElysScan (Elysium)'},'Elysium (ElysScan) ↗'):null;
+    $('qp-explorers').replaceChildren(...(ex.length||elysiumWalletLink?['Wallet on ',...ex.flatMap((c,i)=>[i?' · ':'',h('a',{href:EXPLORER[c]+'/address/'+who,target:'_blank',rel:'noopener noreferrer'},(CHAIN_NAME[c]||c)+' ↗')]),...(elysiumWalletLink?[ex.length?' · ':'',elysiumWalletLink]:[])]:[]));
+    $('qp-explorers').hidden=!ex.length&&!elysiumWalletLink;
+  }
+  showExplorers();
   const first = launches.reduce((m, L) => Math.min(m, L.listedAt || Infinity), Infinity);
   const holdingRows=value=>(value?.positions||[]).filter(p=>p.balance>0).sort((a,b)=>b.balance*b.price-a.balance*a.price);
   const holdingTileFor=value=>tile('Holdings',member?.profile.shareHoldings?value?String(holdingRows(value).length):'Unavailable':'Not shared',member?.profile.shareHoldings?'QHooks index only':'chosen by the wallet owner');
   let holdingTile=holdingTileFor(held),holdingPanel;
-  const retryHoldings=async()=>{const next=memberHoldingsObservation(await get('/api/terminal/wallet/'+who),who);if(mine!==seq)return;held=next;const nextTile=holdingTileFor(next),nextPanel=holdingsSection(holdingRows(next),true,next,retryHoldings);holdingTile.replaceWith(nextTile);holdingTile=nextTile;holdingPanel.replaceWith(nextPanel);holdingPanel=nextPanel;};
+  const retryHoldings=async()=>{const next=memberHoldingsObservation(await get('/api/terminal/wallet/'+who),who);if(mine!==seq)return;held=next;showExplorers();const nextTile=holdingTileFor(next),nextPanel=holdingsSection(holdingRows(next),true,next,retryHoldings);holdingTile.replaceWith(nextTile);holdingTile=nextTile;holdingPanel.replaceWith(nextPanel);holdingPanel=nextPanel;};
   holdingPanel=holdingsSection(holdingRows(held),member?.profile.shareHoldings,held,retryHoldings);
-  const socialReadable=social&&social.legacyAvailable!==false;
-  const posts = socialReadable?social.posts||[]:[];
   $('qp-tiles').replaceChildren(tile('Launches', acct?String(launches.length):'Unavailable', launches.length ? launches.filter(L => L.live).length + ' listed now' : 'created by this wallet'),
     holdingTile,
     tile('Board posts', socialReadable?String(posts.length >= 20 ? '20+' : posts.length):'Unavailable', social?.boards ? 'on ' + social.boards + ' board' + (social.boards === 1 ? '' : 's') : 'none yet'),
@@ -299,6 +304,7 @@ async function loadSolanaProfile(identity,mine){
 }
 const numCalls = n => Number(n || 0).toLocaleString();
 function postsSection(posts) {
+  posts=posts.filter(post=>post.kind!=='call');
   if (!posts.length) return null;
   const when = ms => new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   return h('section', { class: 'qa-section', 'aria-labelledby': 'qp-posts-h' }, h('div', { class: 'qa-section-head' }, h('h2', { id: 'qp-posts-h' }, 'Recent posts'), h('p', {}, 'On QHooks community boards, newest first.')),

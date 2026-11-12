@@ -1,3 +1,4 @@
+import {priceText,moveText} from './qx-call-format.mjs';
 import {profileUrl} from './qx-profile-address.mjs';
 // Board rows and small formatters shared by the board page, the Community hub and profiles (no side effects on import).
 import { CHAIN_NAME, h } from '/qx-chain.mjs';
@@ -30,15 +31,7 @@ export function ago(ms) {
 }
 export const emptyNote = text => h('p', { class: 'qa-empty' }, text);
 // Calls use quote-token prices and percentage moves, never a dollar-profit estimate.
-export function priceText(value) {
-  if (value == null || !Number.isFinite(Number(value))) return '—';
-  const n = Number(value); return n === 0 ? '0' : n.toLocaleString(undefined, { maximumSignificantDigits: 6 });
-}
-export function moveText(value, base = 1) {
-  if (value == null || !(Number(base) > 0) || !Number.isFinite(Number(value))) return '—';
-  const n = (Number(value) / Number(base) - 1) * 100;
-  return (n > 0 ? '+' : '') + Math.round(n) + '%';
-}
+export {priceText,moveText} from './qx-call-format.mjs';
 export const qualityText = value => value == null ? '—' : moveText(1 + Number(value));
 export function callLabels(call) {
   const labels=new Set(call?.labels||[]);if(call?.scoreV2?.indexedFirstDaySales?.status==='observed')labels.add('indexedSales');else if(!call?.scoreV2&&call?.soldAfter)labels.add('legacySale');

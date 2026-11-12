@@ -73,23 +73,39 @@ export function renderDrops(root, d, {now = Date.now(), wallet = null, onClaim =
   return m;
 }
 
+function disconnectedDrops(root) {
+  const connect = el('button', 'qa-btn', 'Connect wallet');
+  connect.type = 'button'; connect.setAttribute('data-qa-connect', '');
+  root.replaceChildren(el('p', 'qdr-note', 'Connect your EVM wallet to see your drops.'), connect);
+}
+
 export async function mountDrops(root, {chain = null} = {}) {
   const {connectedAddress, onWalletChange, send} = await import('/qx-chain.mjs');
   const onClaim = async (c, status) => { await send(c.chainId, {to: c.contract, data: claimManyData(c.items)}, status); await load(); };
-  let last = null;
+  let last = null, lastWallet = null, revision = 0;
   async function load() {
-    const me = connectedAddress();
+    const me = connectedAddress(), mine = ++revision;
+    if (!me) { last = null; lastWallet = null; disconnectedDrops(root); return; }
+    if (lastWallet !== me) { last = null; lastWallet = me; }
+    if (!last) root.replaceChildren(el('p', 'qdr-note', 'Reading your drops…'));
     try {
-      const r = await fetch(me ? '/api/drops/account?wallet=' + me : '/api/drops/status');
+      const r = await fetch('/api/drops/account?wallet=' + me);
       if (!r.ok) throw Error(String(r.status));
-      const d = await r.json(); if (me) d.wallet = me; last = d;
+      const d = await r.json();
+      if (mine !== revision || connectedAddress() !== me) return;
+      d.wallet = me; last = d;
       renderDrops(root, d, {wallet: me, onClaim});
     } catch {
-      if (!last) root.replaceChildren(el('p', 'qdr-note', 'Refreshing…'));
+      if (mine !== revision || connectedAddress() !== me) return;
+      if (!last) {
+        const retry = el('button', 'qa-btn', 'Retry drops'); retry.type = 'button';
+        retry.addEventListener('click', () => load());
+        root.replaceChildren(el('p', 'qdr-note', 'Your drops could not be read. Try again.'), retry);
+      }
     }
   }
+  onWalletChange?.(() => { last = null; void load(); });
+  setInterval(() => { if (document.visibilityState === 'visible') void load(); }, 60000);
   await load();
-  onWalletChange?.(() => { last = null; load(); });
-  setInterval(() => { if (document.visibilityState === 'visible') load(); }, 60000);
 }
 if (typeof document !== 'undefined') { const root = document.getElementById('qdr-panel'); if (root) mountDrops(root); }
