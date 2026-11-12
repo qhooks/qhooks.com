@@ -27,3 +27,17 @@ body.qa.qxt .ta-quote .qa-price:not(.ta-quote-unit)::after { content: ''; positi
 
 /* section headings: one scale with the rest of the site (same words) */
 body.qa.qxt :is(#traders-h, #callers-h, #holders-h, #builder-h) { font-size: clamp(32px, 4.2vw, 56px); line-height: .9; font-weight: 880; font-stretch: 125%; letter-spacing: -.03em; text-transform: uppercase; }
+
+/* bannerfit (2026-11-12, main): the creator's 3:1 banner shown WHOLE on the token terminal (creators put text in it; a cover
+   crop cut QWERTY's "The six ke…"). Terminal only, qa-stage itself unchanged: the frame becomes an exact 3:1 box and the image
+   fills it exactly; the dark grade and grain stay over it. Tokens without a banner (.ta-noart) keep the blurred stage. */
+body.qa.qxt .ta-stage:not(.ta-noart) .qa-stage__frame { inset: auto 0 0 auto; width: 100%; height: auto; aspect-ratio: 3 / 1; }
+body.qa.qxt .ta-stage:not(.ta-noart) .qa-stage__img { left: 0; top: 0; width: 100%; height: 100%; min-width: 0; max-width: none; object-fit: contain; object-position: 50% 50%;
+  transform: translate3d(0, var(--qa-par-y, 0px), 0); }
+@media (max-width: 1099px) { /* phones: the whole banner across the art strip, its bottom edge at the strip's bottom */
+  body.qa.qxt .ta-stage:not(.ta-noart) .qa-stage__frame { top: auto; bottom: 0; } }
+@media (min-width: 1100px) { /* wide: a 3:1 plate on the right of the stage, vertically centred under the header */
+  body.qa.qxt .ta-stage.qa-stage--wide:not(.ta-noart) .qa-stage__frame { width: min(912px, 60vw); top: calc(var(--qa-nav-h) + 8px); bottom: auto; right: 0; }
+  body.qa.qxt .ta-stage.qa-stage--wide:not(.ta-noart) .qa-stage__frame::after {
+    background: linear-gradient(90deg, rgba(5, 5, 5, .85) 0%, rgba(5, 5, 5, .35) 18%, rgba(5, 5, 5, .08) 40%, rgba(5, 5, 5, .08) 100%),
+                linear-gradient(180deg, rgba(5, 5, 5, .25) 0%, rgba(5, 5, 5, 0) 25%, rgba(5, 5, 5, 0) 75%, rgba(5, 5, 5, .55) 100%); } }

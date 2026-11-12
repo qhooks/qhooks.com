@@ -13,10 +13,18 @@ import {
   Color, Vector2, Vector3, Quaternion, BackSide, DoubleSide, AdditiveBlending, RepeatWrapping, SpotLight, PointLight, AmbientLight, DirectionalLight,
 } from '/qx-a/vendor/three/three.module.js';
 import { GLTFLoader } from '/qx-a/vendor/three/addons/loaders/GLTFLoader.js';
+import { EffectComposer } from '/qx-a/vendor/three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from '/qx-a/vendor/three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from '/qx-a/vendor/three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from '/qx-a/vendor/three/addons/postprocessing/OutputPass.js';
 import { mintedArt } from '/qx-a/minted.mjs';
 
 const PLATE = { w: 1080, h: 1350 }, CAM = { fov: 36, pos: [0, 1.6, 12.5], look: [0, .9, 0] }, FLOOR_Y = -1.62, GOLD = 0xd2ad72;
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// glow pass (2026-11-12, Randall: "add the glow and denser dust"): full on desktop and capable phones; lighter on low-power or Save-Data
+const LOW = !!(navigator.connection?.saveData || matchMedia('(prefers-reduced-data: reduce)').matches || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory && navigator.deviceMemory <= 4));
+const WIDE = matchMedia('(min-width: 900px)').matches;
+const BLOOM = { strength: .22, radius: .28, threshold: 1.0 }; // only HDR highlights (> 1) bloom: speculars on the gold, never the type or the face
 const easeOut = (t) => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
 const easeInOut = (t) => { t = Math.min(1, Math.max(0, t)); return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
 const BLOCK_K = 1.42, SEAT_Y = 1.5, SEAT = new Vector3(0, SEAT_Y, .126 * BLOCK_K); // the block's seat on the shank (PROPS.md: seat at block-local (0,0,-.126))
@@ -118,6 +126,9 @@ export function mountHookSet(host, { posY = .62, plate = '/qx-a/set/', prop = '/
   renderer.toneMapping = ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1; renderer.outputColorSpace = SRGBColorSpace; renderer.setClearColor(0, 0);
   const scene = new Scene(); scene.environment = new PMREMGenerator(renderer).fromScene(roomScene(), .04).texture;
   const cam = new PerspectiveCamera(CAM.fov, PLATE.w / PLATE.h, .1, 100); cam.position.set(...CAM.pos); cam.lookAt(...CAM.look);
+  // the glow: a restrained bloom over the HDR frame (gold speculars, the eye, studs, the block's edge); type and the face stay under its threshold
+  const composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, cam));
+  const bloom = new UnrealBloomPass(new Vector2(256, 256), BLOOM.strength, BLOOM.radius, BLOOM.threshold); composer.addPass(bloom); composer.addPass(new OutputPass());
   // lights: the shaft from above, a gold rim from behind right, a cool edge, a low fill
   const key = new SpotLight(0xffe6c4, 70, 0, .42, .85, 1.2); key.position.set(0, 6.4, 1.2); key.target.position.set(0, FLOOR_Y + .8, 0); scene.add(key, key.target);
   const rim = new PointLight(GOLD, 22, 0, 1.4); rim.position.set(3.4, 1.6, -3); scene.add(rim);
@@ -125,7 +136,7 @@ export function mountHookSet(host, { posY = .62, plate = '/qx-a/set/', prop = '/
   scene.add(new AmbientLight(0x1a1918, .6));
   // materials (the film's)
   const steel = new MeshPhysicalMaterial({ color: 0xcbc6bc, metalness: 1, roughness: .32, clearcoat: .3, clearcoatRoughness: .2, envMapIntensity: 1.15, normalMap: brushedNormal(), normalScale: new Vector2(.22, .22) });
-  const gold = new MeshPhysicalMaterial({ color: GOLD, metalness: 1, roughness: .26, clearcoat: .3, clearcoatRoughness: .3, envMapIntensity: 1.5 });
+  const gold = new MeshPhysicalMaterial({ color: GOLD, metalness: 1, roughness: .26, clearcoat: .3, clearcoatRoughness: .3, envMapIntensity: 1.6, emissive: GOLD, emissiveIntensity: .05 });
   const slab = new MeshPhysicalMaterial({ color: 0x0c0d0c, metalness: .5, roughness: .5, clearcoat: .3, clearcoatRoughness: .4 });
   const glass = new MeshPhysicalMaterial({ color: 0xffffff, metalness: 0, roughness: .08, clearcoat: 1, clearcoatRoughness: .06, envMapIntensity: .9 });
   // the assembly swings from the eye
@@ -142,18 +153,20 @@ export function mountHookSet(host, { posY = .62, plate = '/qx-a/set/', prop = '/
   const mRig = rig.clone(true); mRig.traverse((o) => { if (o.isMesh) o.material = o.material === steel ? gSteel : gGold; }); mPivot.add(mRig);
   let mBlock = null;
   // dust in the shaft: fine, slow, additive
-  const N = matchMedia('(min-width: 900px)').matches ? 1400 : 700, pos = new Float32Array(N * 3), seed = new Float32Array(N);
+  const N = LOW ? 1200 : WIDE ? 5000 : 2200, pos = new Float32Array(N * 3), seed = new Float32Array(N);
   for (let i = 0; i < N; i++) { const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * 2.4; pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 1] = FLOOR_Y + Math.random() * 7; pos[i * 3 + 2] = Math.sin(a) * r * .6; seed[i] = Math.random(); }
   const dustGeo = new BufferGeometry(); dustGeo.setAttribute('position', new BufferAttribute(pos, 3)); dustGeo.setAttribute('seed', new BufferAttribute(seed, 1));
+  // depth of field: motes near the hook's plane are small and sharp, those nearer or farther are bigger and softer
   const dustMat = new ShaderMaterial({ transparent: true, depthWrite: false, blending: AdditiveBlending, uniforms: { uT: { value: 0 }, uPx: { value: 1 }, uA: { value: .8 } },
-    vertexShader: 'attribute float seed; uniform float uT; uniform float uPx; varying float vS; void main(){ vS = seed; vec3 p = position; p.y = -1.62 + mod(p.y + 1.62 - uT * (.08 + .12 * seed), 7.0); p.x += sin(uT * .4 + seed * 20.0) * .12; vec4 mv = modelViewMatrix * vec4(p,1.0); gl_PointSize = (1.2 + seed * 2.6) * uPx * (12.5 / -mv.z); gl_Position = projectionMatrix * mv; }',
-    fragmentShader: 'uniform float uA; varying float vS; void main(){ float r = length(gl_PointCoord - .5) * 2.0; float a = (1.0 - smoothstep(.25, 1.0, r)) * uA * (.3 + .7 * vS); gl_FragColor = vec4(vec3(1.0, .88, .64) * a, a); }' });
+    vertexShader: 'attribute float seed; uniform float uT; uniform float uPx; varying float vS; varying float vD; varying float vTw; void main(){ vS = seed; vec3 p = position; p.y = -1.62 + mod(p.y + 1.62 - uT * (.07 + .11 * seed), 7.0); p.x += sin(uT * .4 + seed * 20.0) * .12; vD = clamp(abs(p.z) * .8 + abs(p.x) * .12, 0.0, 1.0); vTw = .55 + .45 * sin(uT * (1.5 + seed * 2.5) + seed * 60.0); vec4 mv = modelViewMatrix * vec4(p,1.0); gl_PointSize = (1.1 + seed * 2.4) * (1.0 + vD * 2.4) * uPx * (12.5 / -mv.z); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'uniform float uA; varying float vS; varying float vD; varying float vTw; void main(){ float r = length(gl_PointCoord - .5) * 2.0; float edge = mix(.3, .0, vD); float a = (1.0 - smoothstep(edge, 1.0, r)) * uA * (.3 + .7 * vS) * (1.0 - .6 * vD) * vTw; gl_FragColor = vec4(vec3(1.0, .88, .64) * a, a); }' });
   scene.add(new Points(dustGeo, dustMat));
 
   let W = 1, H = 1, raf = 0, visible = true, t0 = performance.now(), seatAt = -1e9, pulseAt = -1e9, swing = 0, swingV = 0, seated = false;
   function size() {
     const r = stage.getBoundingClientRect(); W = Math.max(1, r.width); H = Math.max(1, r.height);
-    const dpr = Math.min(devicePixelRatio || 1, W < 700 ? 1.75 : 2); renderer.setPixelRatio(dpr); renderer.setSize(W, H, false);
+    const dpr = Math.min(devicePixelRatio || 1, LOW ? 1.25 : W < 700 ? 1.75 : 2); renderer.setPixelRatio(dpr); renderer.setSize(W, H, false);
+    composer.setPixelRatio(dpr); composer.setSize(W, H); if (LOW || W < 700) bloom.setSize(W * dpr * .5, H * dpr * .5); // lighter bloom resolution on phones and low-power
     const l = Math.max(W / PLATE.w, H / PLATE.h), cw = W / l, ch = H / l;
     cam.setViewOffset(PLATE.w, PLATE.h, (PLATE.w - cw) / 2, (PLATE.h - ch) * posY, cw, ch); cam.updateProjectionMatrix();
     dustMat.uniforms.uPx.value = dpr * l;
@@ -167,7 +180,7 @@ export function mountHookSet(host, { posY = .62, plate = '/qx-a/set/', prop = '/
   let pendingFace = null;
   const loaded = new GLTFLoader().loadAsync(prop).then((g) => {
     const root = g.scene;
-    root.traverse((o) => { if (!o.isMesh) return; const n = o.material?.name || ''; if (n === 'Gold') o.material = gold; else if (n === 'Slab') o.material = slab; else if (o.name === 'face') { faceMesh = o; o.material = new MeshStandardMaterial({ color: 0xffffff, roughness: .18, metalness: .1, emissive: 0xffffff, emissiveIntensity: .85, envMapIntensity: .8 }); } else o.material = slab; });
+    root.traverse((o) => { if (!o.isMesh) return; const n = o.material?.name || ''; if (n === 'Gold') o.material = gold; else if (n === 'Slab') o.material = slab; else if (o.name === 'face') { faceMesh = o; o.material = new MeshStandardMaterial({ color: 0xffffff, roughness: .18, metalness: .1, emissive: 0xffffff, emissiveIntensity: .62, envMapIntensity: .35 }); } else o.material = slab; });
     // a glass pane over the face, for the room's reflection
     const pane = new Mesh(new PlaneGeometry(1.5, .9), glass); pane.position.z = .062; pane.material.transparent = true; pane.material.opacity = .18; root.add(pane);
     block.add(root); block.position.copy(SEAT); block.scale.setScalar(BLOCK_K); block.visible = seated;
@@ -188,10 +201,10 @@ export function mountHookSet(host, { posY = .62, plate = '/qx-a/set/', prop = '/
       block.rotation.set(0, ry, 0);
       if (mBlock) { mBlock.position.copy(block.position); mBlock.rotation.copy(block.rotation); }
     }
-    key.intensity = 70 * (1 + .35 * Math.max(0, 1 - sp / 1.2));
-    dustMat.uniforms.uT.value = t; dustMat.uniforms.uA.value = .75 + .45 * Math.max(0, 1 - sp / 1.4);
+    key.intensity = 70 * (1 + .35 * Math.max(0, 1 - sp / 1.2)); bloom.strength = BLOOM.strength + .22 * Math.max(0, 1 - sp / 1.2);
+    dustMat.uniforms.uT.value = t; dustMat.uniforms.uA.value = .7 + .4 * Math.max(0, 1 - sp / 1.4);
     mPivot.rotation.copy(pivot.rotation);
-    renderer.render(scene, cam);
+    composer.render();
     if (!RM && visible && !document.hidden) raf = requestAnimationFrame(frame);
   }
   const go = () => { if (!raf) raf = requestAnimationFrame(frame); };
