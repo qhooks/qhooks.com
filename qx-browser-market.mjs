@@ -33,7 +33,15 @@ const tidy = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
 const blocked = { gecko: 0, dex: 0 }, backoff = { gecko: 0, dex: 0 };
 export function resetBrowserMarket() { blocked.gecko = blocked.dex = 0; backoff.gecko = backoff.dex = 0; memo.clear(); }
 const memo = new Map();
+// No GeckoTerminal from the browser (2026-11-12 walk): its 429s arrive without CORS headers, so every Trade list load
+// on a phone logged ~21 console errors and waited on retries. GeckoTerminal stays server-side (cached); the browser's
+// fallback reads only DexScreener, which sends CORS headers on its limits too. Every gecko read below returns null, so
+// each path falls through to its DexScreener branch.
+let geckoInBrowser = false;
+/** Off on the site. Tests of the older GeckoTerminal-first paths turn it on to keep covering them. */
+export function setGeckoInBrowser(on) { geckoInBrowser = !!on; memo.clear(); }
 async function getJson(provider, url, { fetcher, now, signal, ttl = 45000 }) {
+  if (provider === 'gecko' && !geckoInBrowser) return null;
   const hit = memo.get(url);
   if (hit && now() - hit.at < ttl) return hit.body;
   if (now() < blocked[provider]) return null;

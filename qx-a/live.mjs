@@ -10,7 +10,7 @@
 // moving between pages does not refetch: at most one feed read per 25 s, activity per 3 min, buybacks per buyback run.
 import { fmt } from './components.mjs';
 
-const ECO = 'qa:eco:v1', CALLS = 'qa:calls:v1', BURNS = 'qa:burns:v1';
+const ECO = 'qa:eco:v2', CALLS = 'qa:calls:v1', BURNS = 'qa:burns:v1';
 const ECO_TTL = 25e3, CALLS_TTL = 180e3, IDLE = 120e3;
 const read = (k) => { try { const v = JSON.parse(localStorage.getItem(k)); return v && typeof v === 'object' ? v : null; } catch { return null; } };
 const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -39,7 +39,7 @@ export function loadEco(maxAge = ECO_TTL) {
   return load(ECO, maxAge, '/api/terminal/feed?chain=all', (j) => ({
     m: (j?.markets || []).filter((m) => m && m.chainId && m.controller && m.symbol).map((m) => {
       const s = m.summary || {};
-      return { c: String(m.chainId), k: m.controller, t: m.token, s: m.symbol, n: m.name || '', i: art(m.logo || m.profileImage), live: !!m.live,
+      return { c: String(m.chainId), k: m.controller, t: m.token, s: m.symbol, n: m.name || '', i: art(m.logo || m.profileImage), live: !!m.live, mc: num(s.mcapUsd),
         ch: num(s.change24), v: num(s.volume24Usd), tr: num(s.trades24), b: num(s.buys24), se: num(s.sells24), lt: num(s.lastTradeAt), at: num(m.listedAt) };
     }),
   }));

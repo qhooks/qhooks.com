@@ -167,6 +167,8 @@ export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24'
     volume: displayMoney('volume'), liquidity: displayMoney('liquidity'), mcap: displayMoney('mcap'),
     capKind: known(row.marketCapUsd) === null && known(row.fdvUsd) !== null ? 'FDV' : '',
     buys: compact(buys), sells: compact(sells), makers: compact(numeric.makers), numeric,
+    // A paid DexScreener boost says so (server/market-freshness.mjs stamps the boosts fallback's rows).
+    boosted: !row.launch && row.provenance?.discoverySource === 'dexscreener_token_boosts',
     safety: safetyLabel(row.safety), quick: row.launch ? launchQuick(row.launch, quick) : externalQuick(chainId, address, quick),
   };
 }
@@ -192,8 +194,9 @@ export function preferences(storage) {
   let sort;
   try { sort = JSON.parse(read('sort')); } catch {}
   return {
-    // First open: Gainers (Randall, 2026-11-09: "auto open to top gainers 6h"); a saved choice wins.
-    tab: ['launches', ...TABS.map(([id]) => id)].includes(read('tab')) ? read('tab') : 'gainers',
+    // First open: Trending (main, 2026-11-12 walk: the server's All Gainers list is DexScreener boosts and too few of them
+    // rank, so Gainers opened thin and fell back to browser reads). Was Gainers (Randall, 2026-11-09). A saved choice wins.
+    tab: ['launches', ...TABS.map(([id]) => id)].includes(read('tab')) ? read('tab') : 'trending',
     chain: CHAINS.some(([id]) => id === read('chain')) ? read('chain') : 'all',
     sort: SORT_KEYS.includes(sort?.key) ? { key: sort.key, direction: sort.direction === 'asc' ? 'asc' : 'desc' } : { key: null, direction: 'desc' },
   };
@@ -215,7 +218,8 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
   const cache = new Map();
   function cancel() { generation++; active?.abort(); active = null; }
   const usable = rows => (Array.isArray(rows) ? rows : []).filter(r => r && r.token && typeof r.token.address === 'string' && CHAINS.some(([id]) => id !== 'all' && id === String(r.chainId)));
-  const full = data => !!data && data.rows.length >= minRows && data.stale !== true;
+  // A server-filtered list (discofeed) is the whole answer for its filters, however short: never top it up or re-floor it.
+  const full = data => !!data && data.stale !== true && (data.filtered === true || data.rows.length >= minRows);
   // The server's discovery feed has no Elysium list (400 invalid_query, polled every 30 s): read it in the browser only.
   const SERVER_SKIP = new Set(['99901']);
   // Gainers/Losers rank the whole received set by the window's move; dust (under $10k liquidity or 24 h volume) can't top it.
@@ -228,16 +232,18 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
       .sort((a, b) => tab === 'gainers' ? move(b) - move(a) : move(a) - move(b));
   }
   function ranked(data, tab, window) {
-    if (!data || !MOVERS.includes(tab)) return data;
+    if (!data || !MOVERS.includes(tab) || data.filtered === true) return data;
     const rows = rankRows(data.rows, tab, window);
     return rows.length ? { ...data, rows } : data;
   }
-  async function serverRead(tab, chain, window, parent) {
+  // Filters travel to the server (it filters the whole pool before its top-N cut); only the set ones are sent.
+  const filterParams = filters => Object.entries(filters || {}).filter(([, v]) => v !== '' && v != null).sort(([a], [b]) => (a < b ? -1 : 1));
+  async function serverRead(tab, chain, window, parent, filters) {
     if (SERVER_SKIP.has(String(chain))) return null;
     const controller = new AbortController(), abort = () => controller.abort(), timer = setTimeout(abort, serverTimeout);
     parent.addEventListener('abort', abort, { once: true });
     try {
-      const response = await fetcher('/api/terminal/market/feed?' + new URLSearchParams({ tab, chain,window }), { cache: 'no-store', signal: controller.signal });
+      const response = await fetcher('/api/terminal/market/feed?' + new URLSearchParams([['tab', tab], ['chain', chain], ['window', window], ...filterParams(filters)]), { cache: 'no-store', signal: controller.signal });
       const body = await response.json();
       if (!response.ok || body?.version !== 1 || !Array.isArray(body.rows)) return null;
       return { ...body, rows: usable(body.rows) };
@@ -253,9 +259,10 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
       source: [server?.rows.length ? feedSourceLabel(server.source) : null, ...String(own.source || '').split(' · ')].filter((v, i, all) => v && !all.slice(0, i).some(p => p && p.includes(v))).join(' · ') || null,
       observedAt: serverFresh ? server.observedAt : own.observedAt, stale: serverFresh ? !!server.stale : false };
   }
-  async function load(tab, chain,window='h24') {
+  async function load(tab, chain,window='h24', filters = {}) {
     cancel();
-    const mine = generation, key = tab + ':' + chain + ':' + window, controller = new AbortController();
+    const fkey = filterParams(filters).map(([k, v]) => k + '=' + v).join('&');
+    const mine = generation, key = tab + ':' + chain + ':' + window + (fkey ? ':' + fkey : ''), controller = new AbortController();
     active = controller;
     const retained = cache.get(key) || cacheRead?.(storage, key) || null;
     changed({ key, loading: true, data: retained, error: null });
@@ -269,10 +276,10 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
     };
     try {
       if (browser) early = setTimeout(() => { if (!serverDone) void startOwn(); }, browserDelay);
-      server = await serverRead(tab, chain, window, controller.signal); serverDone = true;
+      server = await serverRead(tab, chain, window, controller.signal, filters); serverDone = true;
       if (!live()) return;
       // Movers count as full only when enough rows survive the ranking (the server's All list is mostly unranked boosts).
-      const enough = d => full(d) && (!MOVERS.includes(tab) || rankRows(d.rows, tab, window).length >= minRows);
+      const enough = d => full(d) && (d.filtered === true || !MOVERS.includes(tab) || rankRows(d.rows, tab, window).length >= minRows);
       if (browser && !enough(server)) {
         // Paint whatever the server had while the browser read finishes.
         if (server?.rows.length) paintPartial();
@@ -282,11 +289,12 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
       let data = ranked(enough(server) ? server : merged(server, own, tab, chain, window), tab, window);
       // A provider limit can make one refresh much thinner than the last good list: keep those rows behind the new ones
       // and say "Refreshing…" (stale) until a full read lands, instead of shrinking the list on screen.
-      if (data?.rows.length && retained?.rows?.length && data.rows.length < retained.rows.length / 2) {
+      if (data?.rows.length && data.filtered !== true && retained?.rows?.length && data.rows.length < retained.rows.length / 2) {
         const seen = new Set(data.rows.map(r => String(r.chainId) + ':' + String(r.token.address).toLowerCase()));
         data = { ...data, rows: [...data.rows, ...retained.rows.filter(r => r?.token?.address && !seen.has(String(r.chainId) + ':' + String(r.token.address).toLowerCase()))], stale: true };
       }
-      if (!data?.rows.length) {
+      // An empty server-filtered answer is the answer (nothing matches), not a failed read.
+      if (!data?.rows.length && data?.filtered !== true) {
         if (retained?.rows?.length) { changed({ key, loading: false, data: { ...retained, stale: true }, error: null }); return; }
         throw new Error(plainMarketError());
       }

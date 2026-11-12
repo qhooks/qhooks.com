@@ -387,7 +387,7 @@ function makeSearch(kind) {
     list.replaceChildren(...items.map((r, i) => h('li', { role: 'option', id: id + '-' + i, 'aria-selected': String(i === cur), class: i === cur ? 'is-on' : '' },
       h('a', { href: r.href || '#', onclick: (e) => { if (r.go) { e.preventDefault(); r.go(); } close(); } },
         r.img ? h('span', { class: 'qa-search__img', style: { 'background-image': `url("${r.img}")` } }) : h('span', { class: 'qa-search__k', 'aria-hidden': 'true' }, r.k === 'Token' ? r.t.replace(/^\$/, '').slice(0, 1) : ico(r.k === 'Profile' ? 'person' : r.k === 'Search' ? 'search' : 'go')),
-        h('span', { class: 'qa-search__t' }, h('b', null, r.t), r.sub ? h('small', null, r.sub) : null), h('span', { class: 'qa-search__kind' }, r.k)))));
+        h('span', { class: 'qa-search__t' }, h('b', null, r.t), r.sub ? h('small', null, r.sub) : null), h('span', { class: 'qa-search__kind' + (r.mark ? ' qa-search__kind--' + r.mark : '') }, r.badge || r.k)))));
     if (cur >= 0) input.setAttribute('aria-activedescendant', id + '-' + cur); else input.removeAttribute('aria-activedescendant');
     show(items.length > 0 && doc.activeElement === input);
   };
@@ -416,15 +416,22 @@ const ALL_LINKS = () => {
   for (const n of [...NAV, ...MORE]) if (!out.some((x) => x.href === n.href)) out.push({ t: n.label, href: n.href, k: 'Page' });
   return out;
 };
+// Token rows say which contract they are (2026-11-12 walk: two identical "$QWERTY · Robinhood Chain" rows, one a scrapped
+// copy): market cap and short contract on every row, the official contract first with its mark, then the biggest market.
+// A lookalike of an official ticker says "Not official"; another launch with the same ticker below the first says
+// "Same ticker". A pasted contract that is a QHooks launch (token or market address) opens that token directly.
 async function results(q) {
-  const lq = q.toLowerCase().replace(/^\$/, ''), out = [];
-  if (/^0x[0-9a-f]{40}$/i.test(q)) return [{ k: 'Token', t: 'Find ' + fmt.short(q) + ' in the terminal', go: () => terminalSearch(q) }, { k: 'Profile', t: fmt.short(q), sub: 'Profile', href: '/profile/' + q.toLowerCase() }];
-  let eco = null;
-  try { eco = await (await import('./live.mjs')).loadEco(10 * 60e3); } catch {}
+  const lq = q.toLowerCase().replace(/^\$/, ''), out = [], isAddr = /^0x[0-9a-f]{40}$/i.test(q);
+  let eco = null, off = null;
+  try { [eco, off] = await Promise.all([(await import('./live.mjs')).loadEco(10 * 60e3), import('/qx-official.mjs').catch(() => null)]); } catch {}
   const names = await chainNames();
-  for (const m of eco?.m || []) {
-    if (out.length >= 4) break;
-    if ((m.s || '').toLowerCase().includes(lq) || (m.n || '').toLowerCase().includes(lq)) out.push({ k: 'Token', t: '$' + m.s, sub: [m.n, names[m.c]].filter(Boolean).join(' · '), img: m.i, href: '/terminal#m=' + m.c + ':' + m.k });
+  const hits = (eco?.m || []).filter((m) => isAddr ? [m.t, m.k].some((a) => String(a || '').toLowerCase() === lq)
+    : (m.s || '').toLowerCase().includes(lq) || (m.n || '').toLowerCase().includes(lq));
+  out.push(...(await import('./search-rows.mjs')).tokenRows(hits, lq, { names, off, fmt }));
+  if (isAddr) {
+    if (!out.length) out.push({ k: 'Token', t: 'Find ' + fmt.short(q) + ' in the terminal', go: () => terminalSearch(q) });
+    out.push({ k: 'Profile', t: fmt.short(q), sub: 'Profile', href: '/profile/' + q.toLowerCase() });
+    return out;
   }
   for (const p of ALL_LINKS()) { if (out.length >= 8) break; if (p.t.toLowerCase().includes(lq)) out.push(p); }
   const handle = lq.replace(/^@/, '');

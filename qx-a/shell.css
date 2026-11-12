@@ -96,6 +96,10 @@ header.qa-hdr { position: fixed; z-index: var(--qa-z-nav); top: 0; left: 0; righ
 .qa-search__t b { font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qa-search__t small { font-size: 12.5px; color: var(--qa-tx-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qa-search__kind { font-size: 12px; font-weight: 600; color: var(--qa-tx-3); }
+.qa-search__kind--official, .qa-search__kind--fake, .qa-search__kind--dup { padding: 2px 7px; border-radius: 99px; white-space: nowrap; font-size: 11px; }
+.qa-search__kind--official { color: var(--qa-buy); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--qa-buy) 55%, transparent); }
+.qa-search__kind--fake { color: var(--qa-sell); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--qa-sell) 60%, transparent); }
+.qa-search__kind--dup { color: var(--qa-tx-2); box-shadow: inset 0 0 0 1px var(--qa-rule); }
 
 /* ---------- live ribbon ---------- */
 .qa-ribbon { position: fixed; z-index: calc(var(--qa-z-nav) - 1); left: 0; right: 0; top: calc(var(--qa-hdr-h) + env(safe-area-inset-top)); height: 32px; overflow: hidden; background: var(--qa-glass);

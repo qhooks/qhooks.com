@@ -29,7 +29,9 @@ if (typeof window !== 'undefined' && !window.__qhooksPresence) {
   const base = window.fetch.bind(window);
   window.fetch = async (...args) => {
     const r = await base(...args);
-    if (r.headers.get('x-qhooks-refreshing') === '1') {
+    // Pages with their own refresh status (the Trade list's "● Live / Refreshing…", a token's sync line) show one quiet
+    // dot, not a second floating "Refreshing" pill on top of the rows (2026-11-12 walk).
+    if (r.headers.get('x-qhooks-refreshing') === '1' && !document.querySelector('.qxfd-status, #qxt-sync')) {
       let node = document.getElementById('qhooks-refreshing');
       if (!node) { node = document.createElement('div'); node.id = 'qhooks-refreshing'; node.setAttribute('role','status'); node.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9999;padding:8px 12px;border-radius:8px;background:#17212e;color:#fff;font:13px system-ui;pointer-events:none'; document.body.append(node); if (!document.getElementById('qx-pill-style')) { const st = document.createElement('style'); st.id = 'qx-pill-style'; st.textContent = '#qhooks-refreshing#qhooks-refreshing{top:calc(env(safe-area-inset-top) + var(--qa-nav-h, 64px) + 8px)!important;bottom:auto!important;pointer-events:none!important;opacity:.92}'; document.head.append(st); } }
       node.textContent = 'Refreshing';

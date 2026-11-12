@@ -67,9 +67,10 @@ filterDetails.append(filterGrid,el('div',{class:'qxfd-filter-actions'},applyFilt
 function captureFilters(){return validateDiscoveryFilters(Object.fromEntries(Object.entries(filterFields).map(([k,v])=>[k,v.value])));}
 function updateWindow(){for(const b of windows.children)b.setAttribute('aria-pressed',String(b.dataset.window===state.window));const label=WINDOWS.find(([k])=>k===state.window)?.[1]||'24h';headers.get('move')?.querySelector('button')?.replaceChildren(label+' change');}
 windows.addEventListener('click',event=>{const key=event.target.closest('[data-window]')?.dataset.window;if(!WINDOWS.some(([k])=>k===key)||key===state.window)return;state.window=key;savePreference(storage,'window',key);updateWindow();refresh();});
-applyFilters.addEventListener('click',()=>{try{state.filters=captureFilters();filterMessage.textContent='Filters applied to this list.';renderRows();}catch(error){filterMessage.textContent=error.message;}});
-resetFilters.addEventListener('click',()=>{state.filters=validateDiscoveryFilters();for(const input of Object.values(filterFields))input.value='';filterMessage.textContent='Filters cleared.';renderRows();});
-saveView.addEventListener('click',()=>{try{state.filters=captureFilters();savedViews.save({name:viewName.value,chain:state.chain,tab:state.tab,window:state.window,filters:state.filters});renderViews();viewSelect.value=viewName.value.trim();filterMessage.textContent='View saved on this device.';renderRows();}catch(error){filterMessage.textContent=error.message;}});
+applyFilters.addEventListener('click',()=>{try{state.filters=captureFilters();filterMessage.textContent='Filters applied to this list.';renderRows();refresh();}catch(error){filterMessage.textContent=error.message;}});
+const widen=button('Widen filters',{class:'qxfd-widen'});widen.addEventListener('click',()=>resetFilters.click());
+resetFilters.addEventListener('click',()=>{state.filters=validateDiscoveryFilters();for(const input of Object.values(filterFields))input.value='';filterMessage.textContent='Filters cleared.';renderRows();refresh();});
+saveView.addEventListener('click',()=>{try{state.filters=captureFilters();savedViews.save({name:viewName.value,chain:state.chain,tab:state.tab,window:state.window,filters:state.filters});renderViews();viewSelect.value=viewName.value.trim();filterMessage.textContent='View saved on this device.';renderRows();refresh();}catch(error){filterMessage.textContent=error.message;}});
 removeView.addEventListener('click',()=>{try{if(!viewSelect.value)return;savedViews.remove(viewSelect.value);renderViews();filterMessage.textContent='View deleted.';}catch(error){filterMessage.textContent=error.message;}});
 viewSelect.addEventListener('change',()=>{const v=savedViews.list().find(v=>v.name===viewSelect.value);if(!v)return;if(state.wallet)clearSearch();state.tab=v.tab;state.window=v.window;state.chain=CHAINS.some(([k])=>k===v.chain)?v.chain:'all';state.filters=v.filters;state.data=null;for(const [k,input]of Object.entries(filterFields))input.value=v.filters[k]||'';for(const b of chainGroup.children)b.setAttribute('aria-pressed',String(b.dataset.chain===state.chain));viewName.value=v.name;renderTabs();updateWindow();refresh();});
 const panel = el('div', { role: 'tabpanel', id: 'qxfd-panel', class: 'qxfd-panel' });
@@ -194,10 +195,10 @@ function makeRow(vm) {
   const letter = el('span');
   const logo = el('img', { alt: '', width: 26, height: 26, referrerpolicy: 'no-referrer', hidden: '' });
   avatar.append(letter, logo);
-  const symbol = el('b'), name = el('span', { class: 'qxfd-name' }), rowAge = el('span', { class: 'qxfd-age' });
+  const symbol = el('b'), name = el('span', { class: 'qxfd-name' }), rowAge = el('span', { class: 'qxfd-age' }), boost = el('small', { class: 'qxfd-boost', hidden: '', title: 'A paid DexScreener boost, not a ranking' }, 'Boosted');
   const chain = el('img', { class: 'qxfd-chain-icon', width: 13, height: 13, alt: '' });
   const open = button('', { class: 'qxfd-open', tabindex: '-1' });
-  open.append(avatar, el('span', { class: 'qxfd-identity' }, symbol, name), chain, rowAge);
+  open.append(avatar, el('span', { class: 'qxfd-identity' }, el('span', { class: 'qxfd-symline' }, symbol, boost), name), chain, rowAge);
   cells.token.append(open);
   const cap = el('span'), capKind = el('small', { class: 'qxfd-cap-kind' });
   cells.mcap.append(cap, capKind);
@@ -209,7 +210,7 @@ function makeRow(vm) {
   const buy = button('', { class: 'qxfd-buy' });
   const blocked = el('span', { class: 'qxfd-blocked', hidden: '' }, 'not tradable here');
   cells.buy.append(buy, blocked);
-  return { tr, cells, avatar, letter, logo, symbol, name, rowAge, chain, open, cap, capKind, buys, sells, safe, tip, buy, blocked, vm: null };
+  return { tr, cells, avatar, letter, logo, symbol, boost, name, rowAge, chain, open, cap, capKind, buys, sells, safe, tip, buy, blocked, vm: null };
 }
 
 function updateRow(node, vm) {
@@ -217,6 +218,7 @@ function updateRow(node, vm) {
   node.vm = vm;
   text(node.letter, vm.letter); text(node.symbol, vm.symbol); text(node.name, vm.name + (founding.slots.has(vm.chainId+':'+(vm.chainId==='solana'?String(vm.address):String(vm.address).toLowerCase())) ? ' · Founding #' + founding.slots.get(vm.chainId+':'+(vm.chainId==='solana'?String(vm.address):String(vm.address).toLowerCase())) : '')); text(node.rowAge, vm.lifecycle.stage==='bonding'?'Bond '+Math.round(vm.lifecycle.progress*100)+'%':vm.lifecycle.stage==='migrated'?'Migrated · '+vm.age:vm.age);node.rowAge.dataset.stage=vm.lifecycle.stage;
   node.name.title = vm.name;
+  node.boost.hidden = !vm.boosted;
   node.open.setAttribute('aria-label', `Open ${vm.symbol}, ${vm.name || vm.address}, on ${vm.chainName}`);
   node.chain.hidden = !vm.chainIcon;
   if (vm.chainIcon) {
@@ -316,9 +318,13 @@ function renderRows() {
   empty.hidden = !!rows.length || initialLoading;
   const missingWindow=['gainers','losers'].includes(state.tab)&&state.data?.rows?.length&&!state.data.rows.some(r=>Number.isFinite(r.change?.[state.window]));
   const emptyText = !state.query&&missingWindow?'No '+(WINDOWS.find(([k])=>k===state.window)?.[1]||'selected-window')+' history is available for this received set yet.':activeFilters&&!state.query?'No tokens match these filters.':!state.query&&['bonding','migrated'].includes(state.tab)&&!state.error?'No confirmed '+(state.tab==='bonding'?'curves above 80% graduation':'migrations')+' in the received market set.':state.query ? (state.searching ? 'Searching tokens…' : 'No tokens match this search.') : state.error ? 'The token feed could not be loaded. Retry above.' : 'No tokens in this list yet. Try another chain or tab.';
-  text(count, initialLoading ? 'Loading tokens…' : `${rows.length} token${rows.length === 1 ? '' : 's'} · ${rows.filter(r=>r.numeric.move!==null).length} with ${WINDOWS.find(([k])=>k===state.window)?.[1]} history`);
+  // Honest count (discofeed): the server's matched total when it cut the list at its top 100.
+  const matched = state.tab !== 'launches' && !state.query && Number.isFinite(state.data?.total) && state.data.total > rows.length ? state.data.total : null;
+  text(count, initialLoading ? 'Loading tokens…' : `${rows.length}${matched ? ' of ' + matched : ''} token${(matched || rows.length) === 1 ? '' : 's'} · ${rows.filter(r=>r.numeric.move!==null).length} with ${WINDOWS.find(([k])=>k===state.window)?.[1]} history`);
   panel.setAttribute('aria-busy', String(state.loading || state.searching));
   renderFeedFeedback({state,heading,status,notice,noticeText,empty,retry,emptyText});
+  // Never a dead-empty filter result: offer to widen (clears the filters and reloads the whole list).
+  if (!rows.length && activeFilters && !state.query && !initialLoading && !state.loading) { empty.hidden = false; empty.append(' ', widen); }
   text(source, state.tab === 'launches' ? '' : [state.data?.source,state.data?.coverage?.description].filter(Boolean).join(' · '));
   scroll.scrollTop = y;
   if (window.scrollY !== pageY) window.scrollTo({ top: pageY, behavior: 'instant' });
@@ -365,7 +371,7 @@ function refresh() {
   // Only while the token list is on screen: a token page must not keep reading list providers in the background.
   if (document.hidden || root.hidden || state.wallet) return;
   if (state.tab === 'launches') { state.loading = false; state.data = null; state.error = null; renderRows(); }
-  else loader.load(state.tab, state.chain,state.window);updateWindow();
+  else loader.load(state.tab, state.chain, state.window, state.filters);updateWindow();
 }
 function setTab(tab) {
   if (!availableTabs().some(([id]) => id === tab)) return;

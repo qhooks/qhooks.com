@@ -56,6 +56,9 @@ body.qxt-discover-mode{height:100vh;height:100dvh;overflow:hidden;padding-bottom
 .qxfd-identity{display:flex;align-items:baseline;gap:7px;min-width:0;flex:1}
 .qxfd-identity b{font:650 12px var(--qx-sans);overflow:hidden;text-overflow:ellipsis;max-width:86px}
 .qxfd-name{color:var(--qx-muted);font:10px var(--qx-sans);overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.qxfd-symline{display:inline-flex;align-items:baseline;gap:5px;min-width:0}
+.qxfd-boost{font:600 9.5px var(--qx-sans);color:var(--qx-muted);border:1px solid currentColor;border-radius:99px;padding:0 5px;white-space:nowrap;opacity:.85}
+.qxfd-boost[hidden]{display:none}
 .qxfd-chain-icon{border-radius:50%;flex:none}
 .qxfd-age{flex:none;color:var(--qx-muted);font:10px var(--qx-mono);min-width:21px;text-align:right}
 .qxfd-cap-kind{margin-left:3px;color:var(--qx-muted);font:8px var(--qx-sans)}
