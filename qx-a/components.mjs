@@ -1,3 +1,4 @@
+import { priceDigits } from '../qx-price.mjs'; // one price format sitewide (2026-11-12)
 // QHooks System A: component helpers. ES module, no dependencies, CSP-safe (no inline styles in markup; styles go through CSSOM).
 // Import what you need:  import { h, icon, toast, tape, bigPrice } from '/system-a/components.mjs';
 // Every motion here is tied to a call you make for a real event (a trade, a call, a new holder). Reduced motion is honoured.
@@ -75,8 +76,8 @@ if (document.body) ensureSprite(); else addEventListener('DOMContentLoaded', ens
 const SUB = '₀₁₂₃₄₅₆₇₈₉';
 const sub = (n) => String(n).split('').map((d) => SUB[d]).join('');
 export const fmt = {
-  price(p) { if (!(p > 0)) return '$0'; if (p >= 1) return '$' + p.toLocaleString('en-US', { maximumFractionDigits: 4 }); const z = -Math.floor(Math.log10(p)) - 1; if (z >= 4) return '$0.0' + sub(z) + Math.round(p * 10 ** (z + 4)).toString().slice(0, 4); return '$' + p.toFixed(z + 4); },
-  axis(p) { if (!(p > 0)) return '0'; const z = -Math.floor(Math.log10(p)) - 1; if (z >= 3) return '0.0' + sub(z) + Math.round(p * 10 ** (z + 4)).toString().slice(0, 4); return p.toPrecision(4); },
+  price(p) { return p > 0 ? '$' + priceDigits(p) : '$0'; },
+  axis(p) { return p > 0 ? priceDigits(p) : '0'; },
   usd(v) { const a = Math.abs(v); if (a >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B'; if (a >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M'; if (a >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'K'; if (a >= .01) return '$' + v.toFixed(2); return a ? '<$0.01' : '$0'; },
   usdExact(v) { return v >= 1000 ? '$' + Math.round(v).toLocaleString('en-US') : v >= .01 ? '$' + v.toFixed(2) : v ? '<$0.01' : '$0'; },
   tok(n) { const a = Math.abs(n); if (a >= 1e9) return (n / 1e9).toFixed(2) + 'B'; if (a >= 1e6) return (n / 1e6).toFixed(2) + 'M'; if (a >= 1e4) return (n / 1e3).toFixed(1) + 'K'; if (a >= 1e3) return (n / 1e3).toFixed(2) + 'K'; return Math.round(n).toLocaleString('en-US'); },

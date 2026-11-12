@@ -1,3 +1,4 @@
+import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
 import {tokenAvatar,tokenAvatarSources,avatarImage} from './qx-token-avatar.mjs';
 // Discover's data contract and presentation helpers. No DOM, wallet calls or currency estimates.
 import {WINDOWS,DISCOVERY_TABS,lifecycle} from './qx-discovery-model.mjs';
@@ -40,13 +41,7 @@ export function price(value) {
   const n = nonnegative(value);
   if (n === null) return DASH;
   if (!n) return '0';
-  if (n >= 1) return n.toLocaleString('en-US', { maximumFractionDigits: n >= 1000 ? 2 : 4 });
-  // Round before counting zeros, so a value rounding across a power of ten stays correct.
-  const [mantissa, exponent] = n.toExponential(3).split('e');
-  const zeros = -Number(exponent) - 1;
-  const digits = mantissa.replace('.', '').replace(/0+$/, '');
-  if (zeros >= 4) return '0.0' + String(zeros).replace(/\d/g, d => '₀₁₂₃₄₅₆₇₈₉'[d]) + digits;
-  return trim(n.toFixed(Math.max(0, zeros + 4)));
+  return priceDigits(n) ?? DASH; // the site's one price format (qx-price.mjs)
 }
 
 export function money(value, { unit = 'USD', precise = false } = {}) {

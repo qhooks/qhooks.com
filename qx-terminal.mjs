@@ -1,3 +1,4 @@
+import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
 import {communityFollowing,followSubject} from './qx-community-follow.mjs';
 import {swapCandles,mergeSwapCandles} from '/qx-swap-candles.mjs';
 import {shapeCandles} from './qx-chart-shape.mjs';
@@ -90,11 +91,8 @@ const SUB = '₀₁₂₃₄₅₆₇₈₉';
 function price(p) {
   if(p===0)return '0';
   if (!p) return '—';
-  if (p >= 1) return p.toLocaleString('en-US', { maximumFractionDigits: p >= 1000 ? 2 : 4 });
-  if (!(p > 0) || !Number.isFinite(p)) return '—';
-  // Leading zeros after the point are written as a subscript count: 0.0₅1234 = 0.000001234.
-  const e = Math.floor(Math.log10(p)), z = -e - 1, digits = String(Math.round(p / 10 ** (e - 3))).slice(0, 4).replace(/0+$/, '') || '0';
-  return z >= 4 ? '0.0' + String(z).split('').map(d => SUB[d]).join('') + digits : '0.' + '0'.repeat(z) + digits;
+  // the site's one price format (qx-price.mjs): subscript zero count only from 5 leading zeros, e.g. 0.0₅1234
+  return priceDigits(p) ?? '—';
 }
 function compact(n) {
   if (n == null || Number.isNaN(n)) return '—';

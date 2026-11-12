@@ -59,6 +59,12 @@ export const SECTIONS = [
     ['API', '/api', 'Read markets and launch data'], ['Changelog', '/changelog', 'What changed, newest first'], ['Roadmap', '/roadmap', 'What we plan to build next'],
     ['Telegram bot', 'https://t.me/qhooks_bot', 'Alerts, and the terminal inside Telegram'], ['Install the app', '/#on-your-phone', 'Add the terminal to your home screen']] },
 ];
+// menu6 (2026-11-12): the menu leads with six plain tasks; every section above sits under "All tools".
+export const TASKS = [
+  { label: 'Buy', href: '/terminal', icon: 'trade' }, { label: 'Launch', href: '/create', icon: 'plus' },
+  { label: 'Make a call', href: '/community#make-a-call', icon: 'megaphone' }, { label: 'Stake', href: '/stake', icon: 'seal' },
+  { label: 'Claim', href: '/me#qa-rewards', icon: 'check' }, { label: 'Build', href: '/hooks', icon: 'hook' },
+];
 const SOCIAL = [{ label: 'X', href: 'https://x.com/qHooks_', icon: 'x' }, { label: 'Telegram', href: 'https://t.me/qhooks_bot', icon: 'tg' }];
 
 /* ---------- environment ---------- */
@@ -256,6 +262,8 @@ export function mountShell(o = {}) {
   if (!adopt) import('./balance.mjs').then((m) => m.mountBalance(header.querySelector('.qa-hdr__end'), walletSlot)).catch(() => {});
   // the connected wallet's balance beside the wallet button, on every page (qx-a/balance.mjs)
   if (!adopt) import('./balance.mjs').then((m) => m.mountBalance(header.querySelector('.qa-hdr__end'), walletSlot)).catch(() => {});
+  // the connected wallet's balance beside the wallet button, on every page (qx-a/balance.mjs)
+  if (!adopt) import('./balance.mjs').then((m) => m.mountBalance(header.querySelector('.qa-hdr__end'), walletSlot)).catch(() => {});
   S = { api, apply };
   apply({ ...o, footer: o.footer !== false && !(adopt && o.footer == null) });
   if (!adopt && !o.wallet) adoptWallet(walletSlot);
@@ -348,15 +356,16 @@ function makeMenu() {
     h('div', { class: 'qa-menu__in' },
       h('div', { class: 'qa-menu__top' }, h('span', { class: 'qa-menu__t' }, 'QHooks'), close),
       msearch.el,
-      h('div', { class: 'qa-menu__quick' }, NAV.map((n) => h('a', { href: n.href }, ico(n.icon), n.label))),
+      h('nav', { class: 'qa-menu__tasks', 'aria-label': 'Start here' }, TASKS.map((t) => h('a', { href: t.href }, ico(t.icon), h('b', null, t.label)))),
       me,
-      h('div', { class: 'qa-menu__groups' }, SECTIONS.map((g) => h('section', { class: 'qa-menu__g' }, h('h2', null, g.title),
-        h('ul', null, g.links.map(([t, u, sub]) => h('li', null, h('a', linkProps(u), h('b', null, t), h('span', null, sub)))))))),
+      h('details', { class: 'qa-menu__all' }, h('summary', null, 'All tools'), h('div', { class: 'qa-menu__groups' }, SECTIONS.map((g) => h('section', { class: 'qa-menu__g' }, h('h2', null, g.title),
+        h('ul', null, g.links.map(([t, u, sub]) => h('li', null, h('a', linkProps(u), h('b', null, t), h('span', null, sub))))))))),
       h('div', { class: 'qa-menu__foot' }, themeRow, appRow, SOCIAL.map((s) => h('a', { class: 'qa-menu__row', ...linkProps(s.href) }, ico(s.icon), h('span', null, s.label === 'X' ? 'X @qHooks_' : 'Telegram @qhooks_bot'))))));
   el.addEventListener('click', (e) => { if (e.target === el) el.close(); else if (e.target.closest('a[href]')) el.close(); });
+  el.addEventListener('close', () => root.classList.remove('qa-menu-open'));
   return {
     el,
-    open() { if (el.open) return; paintMe(me); try { el.showModal(); } catch { el.setAttribute('open', ''); } if (matchMedia('(min-width: 1100px)').matches) el.querySelector('.qa-menu__g a')?.focus({ preventScroll: true }); },
+    open() { if (el.open) return; paintMe(me); try { el.showModal(); } catch { el.setAttribute('open', ''); } root.classList.add('qa-menu-open'); if (matchMedia('(min-width: 1100px)').matches) el.querySelector('.qa-menu__g a')?.focus({ preventScroll: true }); },
     close() { if (el.open) el.close(); },
   };
 }

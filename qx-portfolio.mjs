@@ -1,3 +1,4 @@
+import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
 import {profileUrl} from './qx-profile-address.mjs';
 import {LIVE} from './chains.mjs';
 
@@ -56,9 +57,8 @@ export const sameOrigin = url => typeof url === 'string' && url ? url.replace(/^
 const SUB = '₀₁₂₃₄₅₆₇₈₉';
 // Long zero runs read as a subscript count: $0.0₃6362.
 export const priceText = n => {
- if (!known(n) || n <= 0 || n >= 0.001) return money(n);
- const z = -Math.floor(Math.log10(n)) - 1;
- return '$0.0' + String(z).split('').map(d => SUB[d]).join('') + Math.round(n * 10 ** (z + 4)).toString().slice(0, 4);
+ if (!known(n) || n <= 0) return money(n);
+ return '$' + priceDigits(n); // the site's one price format (qx-price.mjs)
 };
 export function liveFeed(markets) {
  const map = new Map();
