@@ -1,0 +1,28 @@
+/* /lp-proof v5 (2026-11-12): the proof as the hero, the launch contract's live share as extruded type on the lit set (lpproof-v5.mjs).
+   No coin, no props, no rings. Phones: headline first, the figure under it at ~40% of the viewport. All rules scoped to main.lpp. */
+.lp5 .pf-hero { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+.lp5 .lp5-stage { position: relative; height: 40svh; min-height: 260px; margin: 18px calc(var(--qa-pad) * -1) 0; overflow: hidden; pointer-events: none; }
+.lp5 .lp5-stage--set::before { content: ''; position: absolute; inset: 0; background: #050505 url(/qx-a/set/set-create.webp) 50% 72% / cover no-repeat; }
+.lp5 .lp5-stage--set::before, .lp5 .lp5-stage .qs3 {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 82%, transparent 100%), linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%); -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 82%, transparent 100%), linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%); mask-composite: intersect; }
+/* no WebGL: the same figure as large type over the poster */
+.lp5 .lp5-big { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; margin: 0; font-size: clamp(64px, 18vw, 180px); line-height: 1; font-weight: 900; font-stretch: 125%; letter-spacing: -.05em; color: #F0DAAE; font-variant-numeric: tabular-nums; text-shadow: 0 6px 0 #2a1d0e, 0 18px 40px rgba(0,0,0,.6); }
+.lp5 .lp5-cap { margin: 10px 0 0; text-align: center; font-size: 14px; color: var(--qa-tx-2); }
+.lp5 .lp5-cap b { color: var(--qa-tx); font-weight: 720; }
+body:has(main.lp5) .qa-ambient__art { filter: blur(56px) saturate(.5) brightness(.42) !important; }
+.lp5 .hl-h1 { font-size: clamp(48px, 12.5vw, 124px); line-height: .86; font-weight: 880; font-stretch: 125%; letter-spacing: -.035em; text-transform: uppercase; }
+.lp5 .hl-h1 .hl-gold { display: block; color: var(--qa-tx-2); background: none; -webkit-text-fill-color: currentColor; font-weight: 260; font-stretch: 112%; letter-spacing: -.02em; }
+[data-theme="light"] .lp5 .hl-h1 .hl-gold { color: var(--qa-tx-3); }
+.lp5 .lpp-launch h2, .lp5 .lpp-h2 { font-size: clamp(28px, 3.6vw, 48px); line-height: .92; font-weight: 880; font-stretch: 125%; letter-spacing: -.025em; text-transform: uppercase; }
+@media (min-width: 1100px) {
+  .lp5 .pf-hero { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); align-items: end; min-height: 520px; }
+  .lp5 .pf-hero > :not(.lp5-stage):not(.lp5-cap) { grid-column: 1; }
+  .lp5 .lp5-stage { grid-column: 2; grid-row: 1 / span 3; height: auto; min-height: 480px; align-self: stretch; margin: 0 calc(max(var(--qa-pad), (100vw - var(--qa-maxw)) / 2 + var(--qa-pad)) * -1) 0 0; }
+  .lp5 .lp5-cap { grid-column: 2; grid-row: 4; margin-top: -48px; position: relative; z-index: 2; }
+  .lp5 .hl-h1 { font-size: clamp(64px, 6.6vw, 112px); }
+  .lp5 .lp5-big { font-size: clamp(96px, 9vw, 160px); }
+}
+/* phones: headline, then the figure, then the sentence under it (so the proof is on the first screen) */
+@media (max-width: 1099px) { .lp5 .pf-hero > .hl-lede { order: 3; margin-top: 18px; } .lp5 .lp5-stage { order: 1; margin-top: 10px; } .lp5 .lp5-cap { order: 2; } }
+.lp5 .lp5-big[hidden] { display: none; }
