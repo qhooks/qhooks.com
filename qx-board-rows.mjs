@@ -13,7 +13,8 @@ export const chainName = chain => chain === 'solana' ? 'Solana' : String(chain)=
 export function addressMark(address) {
   const value = String(address || ''), n = /^0x[0-9a-f]+$/i.test(value) ? BigInt(value) : [...value].reduce((n, ch) => (n * 31n + BigInt(ch.charCodeAt(0))) & 0xffffffffn, 0n);
   const hue = Number(n % 50n) + 25, hue2 = Number((n >> 8n) % 60n) + 90, ang = Number((n >> 16n) % 360n);
-  return h('span', { class: 'qb-mark', 'aria-hidden': 'true', style: `background:conic-gradient(from ${ang}deg, hsl(${hue} 48% 58%), hsl(${hue2} 22% 42%), hsl(${hue} 30% 22%), hsl(${hue} 48% 58%))` });
+  // noir + gold (2026-11-12): the shared avatar family
+  return h('span', { class: 'qb-mark', 'aria-hidden': 'true', style: 'background:' + `radial-gradient(circle at 30% 24%, rgba(255,248,232,.32), transparent 56%), conic-gradient(from ${(ang) % 360}deg, ${[['#f1e7d0','#c99a52'],['#d2ad72','#2a1d0e'],['#e8cf99','#0d0c0a'],['#9a6f33','#f1e7d0'],['#6e4c1f','#0d0c0a'],['#f6efe0','#4a3418'],['#b8894a','#14110c'],['#0d0c0a','#d9b779']][(Number(n % 8n)) % 8][0]} 0 ${30 + (Number((n >> 24n) % 41n)) % 41}%, ${[['#f1e7d0','#c99a52'],['#d2ad72','#2a1d0e'],['#e8cf99','#0d0c0a'],['#9a6f33','#f1e7d0'],['#6e4c1f','#0d0c0a'],['#f6efe0','#4a3418'],['#b8894a','#14110c'],['#0d0c0a','#d9b779']][(Number(n % 8n)) % 8][1]} ${30 + (Number((n >> 24n) % 41n)) % 41}% 100%)` });
 }
 export function boardIcon(b) {
   const fallback = addressMark(b.address || b.controller), icon = h('span', { class: 'qb-token-icon', 'aria-hidden': 'true' }, fallback);

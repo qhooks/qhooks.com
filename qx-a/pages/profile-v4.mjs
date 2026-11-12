@@ -28,12 +28,13 @@ function start({ main, banner, hero }) {
     im.onload = () => { clearTimeout(t); ok(im.naturalWidth ? src : ''); }; im.onerror = () => { clearTimeout(t); ok(''); }; im.src = src; });
   const face = async (c, fresh) => { const src = await probe(c.src); if (s3 && last === c) s3.setFace(src, c.sym.replace('$', ''), fresh); };
   function update() {
-    const c = read(); if (!c || c.key === key) return;
-    const fresh = !!key; key = c.key; last = c;
+    // the result can arrive after the line itself: re-read on change, re-form the coin only when the call changes
+    const c = read(); if (!c || c.key + c.res === key) return;
+    const newCall = !last || last.key !== c.key; key = c.key + c.res; last = c;
     tag.replaceChildren(doc.createTextNode('Latest call'), Object.assign(doc.createElement('b'), { textContent: c.sym }));
     if (c.res) tag.append(Object.assign(doc.createElement('span'), { className: c.up ? 'is-up' : c.down ? 'is-down' : '', textContent: c.res }), doc.createTextNode(' since the call'));
     tag.hidden = false;
-    if (s3) face(c, true || fresh);
+    if (s3 && newCall) face(c, true);
   }
   stage.classList.add('pf5-stage--set');
   if (webgl) (window.requestIdleCallback || ((f) => setTimeout(f, 200)))(() => import('/qx-a/scene3d.mjs').then(({ mountSet }) => {

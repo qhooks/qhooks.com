@@ -103,7 +103,8 @@ const tile = (k, v, sub) => h('div', { class: 'qa-tile' }, h('span', {}, k), h('
 // A deterministic mark from the address: two brass/sage stops and an angle, no external service.
 function paintAvatar(el, w) {
   const n = w.startsWith('solana:')?[...base58Decode(w.slice(7))].reduce((n,b)=>n*256n+BigInt(b),0n):BigInt(w), hue = Number(n % 50n) + 25, hue2 = Number((n >> 8n) % 60n) + 90, ang = Number((n >> 16n) % 360n);
-  el.style.background = `conic-gradient(from ${ang}deg, hsl(${hue} 48% 58%), hsl(${hue2} 22% 42%), hsl(${hue} 30% 22%), hsl(${hue} 48% 58%))`;
+  // noir + gold (2026-11-12): same mark as the shared avatar family (ivory/gold/bronze/black pairs, own angle and split)
+  el.style.background = `radial-gradient(circle at 30% 24%, rgba(255,248,232,.32), transparent 56%), conic-gradient(from ${(ang) % 360}deg, ${[['#f1e7d0','#c99a52'],['#d2ad72','#2a1d0e'],['#e8cf99','#0d0c0a'],['#9a6f33','#f1e7d0'],['#6e4c1f','#0d0c0a'],['#f6efe0','#4a3418'],['#b8894a','#14110c'],['#0d0c0a','#d9b779']][(Number(n % 8n)) % 8][0]} 0 ${30 + (Number((n >> 24n) % 41n)) % 41}%, ${[['#f1e7d0','#c99a52'],['#d2ad72','#2a1d0e'],['#e8cf99','#0d0c0a'],['#9a6f33','#f1e7d0'],['#6e4c1f','#0d0c0a'],['#f6efe0','#4a3418'],['#b8894a','#14110c'],['#0d0c0a','#d9b779']][(Number(n % 8n)) % 8][1]} ${30 + (Number((n >> 24n) % 41n)) % 41}% 100%)`;
 }
 
 async function blocksOf(chainId, blocks) {

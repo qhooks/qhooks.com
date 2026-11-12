@@ -93,8 +93,8 @@ export function avatar(addr, size = '', img) {
   if (img) return h('span', { class: cls, style: { 'background-image': `url("${img}")` } });
   if (!addr) return h('span', { class: cls });
   const a = parseInt(addr.slice(2, 6), 16) || 7, b = parseInt(addr.slice(6, 10), 16) || 3;
-  const h1 = a % 360, h2 = (h1 + 50 + (b % 140)) % 360;
-  return h('span', { class: cls, style: { '--a1': `hsl(${h1} 72% 62%)`, '--a2': `hsl(${h2} 58% 28%)` } });
+  // noir + gold (2026-11-12): a two-tone split from ivory/gold/bronze/black pairs, own angle and split point per address
+  return h('span', { class: cls, style: { background: `radial-gradient(circle at 30% 24%, rgba(255,248,232,.32), transparent 56%), conic-gradient(from ${(b) % 360}deg, ${[['#f1e7d0','#c99a52'],['#d2ad72','#2a1d0e'],['#e8cf99','#0d0c0a'],['#9a6f33','#f1e7d0'],['#6e4c1f','#0d0c0a'],['#f6efe0','#4a3418'],['#b8894a','#14110c'],['#0d0c0a','#d9b779']][(a) % 8][0]} 0 ${30 + ((a >> 3) + b) % 41}%, ${[['#f1e7d0','#c99a52'],['#d2ad72','#2a1d0e'],['#e8cf99','#0d0c0a'],['#9a6f33','#f1e7d0'],['#6e4c1f','#0d0c0a'],['#f6efe0','#4a3418'],['#b8894a','#14110c'],['#0d0c0a','#d9b779']][(a) % 8][1]} ${30 + ((a >> 3) + b) % 41}% 100%)` } });
 }
 export const keeperAvatar = (size = '') => h('span', { class: 'qa-ava qa-ava--keeper' + (size ? ' qa-ava--' + size : '') }, icon('flame'));
 export function avatarStack(addrs, more) { return h('span', { class: 'qa-ava-stack' }, addrs.map((a) => avatar(a)), more ? h('span', { class: 'qa-ava-stack__more' }, more) : null); }
