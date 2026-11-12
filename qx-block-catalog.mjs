@@ -2,6 +2,7 @@
 // fields; units: 'pct' (percent, stored as bps), 'min'/'hr'/'day'/'sec' (stored as seconds),
 // 'quote' (quote asset, stored in its base units), 'raw' (plain number), 'addr', 'supplyPct'.
 import {chainMap} from './chains.mjs';
+import {CHAIN_WORD_CAP, chainNames} from './qx-chain-count.mjs';
 export const CATEGORIES = [
   { id: 'protect', name: 'Protection', line: 'Keep bots and whales from taking the launch.' },
   { id: 'fees', name: 'Fees', line: 'Charges that follow the market, the clock or the trade.' },
@@ -114,7 +115,7 @@ export const BUILT_IN = [
   { name: 'Two-key fee claims', line: 'Creator LP fees and graduation need your wallet and your post-quantum key together.' },
   { name: 'Notice period', line: 'Graduation policy changes wait out a public notice before they apply.' },
   { name: 'Creator LP fee', line: 'Pick the pool fee you earn, from 0.01% to 10%.' },
-  { name: 'Six chains', line: 'Base, Ethereum, Arbitrum, BNB Chain, Robinhood Chain and Arc, with the same contracts.' }
+  { name: CHAIN_WORD_CAP + ' chains', glyph: 'chains', line: chainNames() + '.' }   // one count, from chains.mjs (qx-chain-count.mjs)
 ];
 
 export const PRESETS = [

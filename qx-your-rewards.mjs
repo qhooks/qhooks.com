@@ -49,6 +49,20 @@ function shareCard(link) {
   card.append(face, acts, say);
   return card;
 }
+// Before a wallet is connected (newcomer walk, 2026-11-12): what your link will look like, one plain example and the one
+// Connect button on the page section (the cards below hide theirs while this shows). No rates here: the numbers wait for
+// one consistent story from Randall.
+export function sampleCard() {
+  const card = el('div', 'qyr-share qyr-sample'), face = el('div', 'qyr-share-face');
+  const logo = el('img'); logo.src = '/qhooks-logo.jpg'; logo.alt = ''; logo.width = 40; logo.height = 40;
+  const link = el('code', 'qyr-share-link', 'qhooks.com/terminal?ref='); link.append(el('span', 'qyr-ph', 'your-wallet-address'));
+  face.append(logo, el('p', 'qyr-share-k', 'Trade on QHooks with my link'), link);
+  const go = el('button', 'qa-btn qa-btn--primary', 'Connect to get your link'); go.type = 'button'; go.setAttribute('data-qa-connect', '');
+  const acts = el('div', 'qa-actions'); acts.append(go);
+  card.append(el('p', 'qyr-sample-k', 'Your referral link looks like this'), face,
+    el('p', 'qyr-example', 'Example: a friend opens your link and buys a token in the terminal. Their eligible trades credit you, and your share shows up here to claim.'), acts);
+  return card;
+}
 export function renderRewards(root, d, now = Date.now()) {
   const m = rewardsModel(d); root.replaceChildren();
   const grid = el('div', 'qyr-grid');
@@ -67,7 +81,8 @@ export function renderRewards(root, d, now = Date.now()) {
 let seq = 0;
 async function load(root, me) {
   const mine = ++seq;
-  if (!me) { root.replaceChildren(el('p', 'qyr-note', 'Connect your EVM wallet to see your rewards.')); return; }
+  document.getElementById('qa-rewards')?.classList.toggle('is-out', !me);
+  if (!me) { root.replaceChildren(sampleCard()); return; }
   root.replaceChildren(el('p', 'qyr-note', 'Reading your rewards…'));
   for (let i = 0; i < 3; i++) {
     try {

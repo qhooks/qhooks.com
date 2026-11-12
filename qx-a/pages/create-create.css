@@ -201,6 +201,11 @@
 .cr-field { padding: 14px 0 2px; }
 .cr .cr-field input { font-size: 24px; font-weight: 780; font-stretch: 110%; letter-spacing: -.025em; min-height: 50px; }
 .cr .cr-field--sym input { text-transform: uppercase; color: var(--qa-gold-hi); }
+/* Chain: the chain this launch goes to, shown with Name and Ticker (newcomer walk, 2026-11-12) */
+.cr-chainsel { position: relative; display: flex; align-items: center; }
+.cr-chainsel img { position: absolute; left: 0; top: 50%; width: 22px; height: 22px; margin-top: -11px; border-radius: 50%; object-fit: cover; pointer-events: none; }
+.cr .cr-chainsel select { width: 100%; min-height: 50px; font-size: 22px; font-weight: 760; font-stretch: 110%; letter-spacing: -.02em; }
+.cr .cr-chainsel img:not([hidden]) + select { padding-left: 34px; }
 .cr-up { display: grid; gap: 4px; padding: 14px 0; box-shadow: 0 1px 0 var(--qa-rule); }
 .cr .cr-up__l { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--qa-tx); font-size: 15.5px; font-weight: 720; cursor: pointer; }
 .cr-up__t { display: inline-flex; align-items: center; gap: 8px; }
@@ -216,6 +221,10 @@
 .cr-idea__head p { margin: 6px 0 0; font-size: 14px; color: var(--qa-tx-2); }
 .cr-idea #qq-change { align-self: start; }
 .cr-idea .qq-blocks { margin: 12px 0 14px; }
+/* Advanced: pair, extra pools and the post-quantum key, folded; the summary says what is set */
+.cr-idea .qq-adv { margin-top: 10px; }
+.cr-idea .qq-adv__sum { display: grid; gap: 2px; margin-top: 2px; }
+.cr-idea .qq-adv__body > * + * { margin-top: 14px; }
 
 .cr .qq-cost { margin-top: 18px; padding-top: 16px; box-shadow: 0 -1px 0 var(--qa-rule-2); }
 .cr .qq-total { margin: 0 0 8px; font-size: 32px; line-height: 1; font-weight: 840; font-stretch: var(--qa-wd-head); letter-spacing: -.035em; color: var(--qa-tx); }

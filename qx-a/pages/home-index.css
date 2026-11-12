@@ -127,6 +127,8 @@
   .qa .hm-card, .qa .hm-card.is-off { transform: none !important; transition: opacity .32s linear !important; }
   .qa .hm-light i { transition: opacity .6s linear !important; }
 }
+/* the plain line under the brand: what you can do here, and where (newcomer walk, 2026-11-12) */
+.hm-sub { position: relative; z-index: 2; max-width: 30ch; margin: 16px 0 0; font-size: 17px; line-height: 1.4; font-weight: 560; color: var(--qa-tx-2); text-wrap: pretty; }
 .hm-lede { max-width: 46ch; margin-top: 18px; font-size: 16px; line-height: 1.5; color: var(--qa-tx-2); }
 .hm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 22px; }
 .hm-actions .qa-btn { padding: 0 12px; }
@@ -321,6 +323,7 @@
   .hm-hero { min-height: 660px; padding: 64px 0 56px; }
   .hm-rig { width: 300px; right: 7%; top: calc(-1 * (var(--qa-nav-h) + var(--qa-ribbon-h, 0px))); }
   .hm-copy { max-width: 1010px; }
+  .hm-sub { max-width: 36ch; margin-top: 22px; font-size: 21px; }
   .hm-lede { font-size: 18px; max-width: 50ch; margin-top: 22px; }
   .hm-actions { margin-top: 30px; }
   .hm-actions .qa-btn { padding: 0 26px; }

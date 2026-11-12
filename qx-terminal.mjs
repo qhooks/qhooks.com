@@ -15,7 +15,7 @@ import {mountPriceAlerts} from '/qx-price-alerts.mjs';
 import {mountChartTools} from '/qx-chart-tools.mjs';
 import {createTradeTape,mountTapeControls,recentTraders} from '/qx-trade-tape.mjs';
 import {createExternalHolderPanel} from '/qx-market-holders.mjs';
-// Trading terminal: every listed QHooks launch across six chains in one feed, a live chart, tape,
+// Trading terminal: every listed QHooks launch across every live chain in one feed, a live chart, tape,
 // holders and positions from the worker's index (/api/terminal), and a trade ticket that quotes through
 // each pool and its blocks. The launch tools (rules, auction, limit orders, second pool, team locks) are
 // the Trade page's own panels, mounted here unchanged and fed the same pool event.
@@ -1096,9 +1096,26 @@ let tool = null, chosen = false;
 // terminal rewrites the hash to its canonical #m= form; applied once the panel has something to show.
 const toolFromLink = h => { const want = new URLSearchParams(String(h || "").replace(/^#/, "")).get("tab"); return TOOLS.find(([, label]) => label.toLowerCase().replace(/\s+/g, "-") === String(want || "").toLowerCase())?.[0] || null; };
 let linkTool = toolFromLink(location.hash);
+// The tab link lands on the tools card (under the sticky section tabs) and keeps it in view while the chart, tape, holders
+// and proof above it load: on a phone they push it ~7,000 px down after the first scroll (newcomer walk, 2026-11-12).
+// It lets go at the person's first scroll gesture, tap or key, or after 12 s.
+function pinTools() {
+  const box = document.querySelector('.qxt-tools'); if (!box) return;
+  const evs = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
+  let done = false, iv = 0;
+  const stop = () => { if (done) return; done = true; clearInterval(iv); evs.forEach(t => removeEventListener(t, stop, true)); };
+  const go = () => {
+    if (done) return;
+    const nav = document.querySelector('.ta-secnav'), cover = nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 120;
+    const y = Math.max(0, Math.round(box.getBoundingClientRect().top + scrollY - cover - 8));
+    if (Math.abs(y - scrollY) > 2) { const was = scrollY; scrollTo({ top: y, behavior: 'auto' }); if (Math.abs(scrollY - was) > 2) requestAnimationFrame(go); }   // again once the tabs stick
+  };
+  evs.forEach(t => addEventListener(t, stop, { capture: true, passive: true }));
+  iv = setInterval(go, 250); setTimeout(stop, 12000); go();   // a cheap position check; content above can grow without resizing <body>
+}
 function renderTools() {
   const shown = state.sel&&!state.sel.ext&&!state.loading?TOOLS.filter(([id]) => !$(id).hidden):[];
-  if (linkTool && shown.some(([id]) => id === linkTool)) { tool = linkTool; chosen = true; linkTool = null; requestAnimationFrame(() => document.querySelector(".qxt-tools")?.scrollIntoView({ block: "start", behavior: "auto" })); }
+  if (linkTool && shown.some(([id]) => id === linkTool)) { tool = linkTool; chosen = true; linkTool = null; requestAnimationFrame(pinTools); }
   // Until someone picks a tab, the first panel in TOOLS order wins (auction, then rules), whichever loads first.
   if (!chosen || !shown.some(([id]) => id === tool)) tool = shown[0]?.[0] || null;
   $('qxt-tool-tabs').replaceChildren(...shown.map(([id, label]) => h('button', { role: 'tab', type: 'button', 'data-tool': id, ariaSelected: String(id === tool), onclick: () => { tool = id; chosen = true; renderTools(); } }, label)));

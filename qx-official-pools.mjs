@@ -2,7 +2,7 @@
 // Other X pools were created by third parties with a–b% fees." plus a Trade here link and the third-party pools, each
 // tagged "Unofficial · <fee>%". Data: /api/terminal/official-pools. Shown only when such pools exist.
 // Mounts on [data-pool-warning][data-chain][data-token]; the terminal calls mountPoolWarning for every QHooks launch.
-import {warningText, unofficialTag} from '/qx-official-pools-core.mjs';
+import {warningText, trapText, trapTag} from '/qx-official-pools-core.mjs';
 const cache = new Map();
 if (typeof document !== 'undefined' && !document.querySelector('link[data-qop]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/qx-official-pools.css'; l.dataset.qop = ''; document.head.append(l); }
 export function readOfficialPools(chainId, token, fetcher = globalThis.fetch) {
@@ -24,8 +24,9 @@ export function renderPoolWarning(root, d, {tradeHref} = {}) {
   if (tradeHref !== null) { const a = el('a', 'qop-trade', 'Trade here'); a.href = tradeHref || d.tradeHref; p.append(a); }
   if (!d.unofficial?.length) { root.append(p); root.hidden = false; root.setAttribute('role', 'note'); return true; }
   const details = el('details', 'qop-list'), sum = el('summary', null, d.unofficial.length + ' unofficial pool' + (d.unofficial.length === 1 ? '' : 's')), ul = el('ul');
-  for (const u of d.unofficial) { const li = el('li'); li.append(el('code', null, short(u.id)), el('span', 'qop-tag', unofficialTag(u))); if (u.name) li.append(el('span', 'qop-name', u.name)); ul.append(li); }
-  details.append(sum, ul); root.append(p, details); root.hidden = false; root.setAttribute('role', 'note');
+  for (const u of d.unofficial) { const li = el('li'); li.append(el('code', null, short(u.id)), el('span', 'qop-tag', trapTag(u))); if (u.name) li.append(el('span', 'qop-name', u.name)); ul.append(li); }
+  const trap = trapText(d.unofficial), tp = trap ? el('p', 'qop-trap', trap) : null; if (trap) { details.open = true; root.dataset.trap = 'true'; } else delete root.dataset.trap;
+  details.append(sum, ul); root.append(...[p, tp, details].filter(Boolean)); root.hidden = false; root.setAttribute('role', 'note');
   return true;
 }
 export async function mountPoolWarning(root, {chainId, token, tradeHref, fallback = null, retries = 3, retryMs = 15000} = {}) {

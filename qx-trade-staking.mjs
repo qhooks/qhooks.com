@@ -93,7 +93,7 @@ async function render() {
   card.hidden = false;
 }
 
-async function show(pool) {
+async function show(pool, tries = 0) {
   const mine = ++seq;
   const c = pool?.constructor, blocks = c?.blocks;
   if (!card || !blocks || BigInt(blocks) === 0n) { if (card) card.hidden = true; return; }
@@ -117,7 +117,13 @@ async function show(pool) {
     if (mine !== seq) return;
     state = { chainId: pool.chainId, token, quote, vault, blocks, shareBps: shares[at], t, q, supply, mod };
     await render();
-  } catch { if (mine === seq) card.hidden = true; }
+  } catch {
+    // A public RPC read that fails (rate limits on a busy colo) hid the card for good, and links to the Staking tab
+    // (/stake, the home page) landed nowhere. Two more tries, 1.5 s and 3 s apart, before hiding (2026-11-12).
+    if (mine !== seq) return;
+    if (tries < 2) { setTimeout(() => { if (mine === seq) show(pool, tries + 1); }, 1500 * (tries + 1)); return; }
+    card.hidden = true;
+  }
 }
 
 document.addEventListener('qhooks:pool', e => show(e.detail));

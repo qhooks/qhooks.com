@@ -3,6 +3,7 @@
 //  - shell mount (wallet button moves into the shell's slot);
 //  - "Launched on QHooks": the latest real launches from the public launch feed (re-read each minute, new ones drop in);
 //  - the chain row: buttons that drive the quick launch's own chain <select> (#qq-chain) by value + change event;
+//    the Chain field in the form (#cr-chainsel) mirrors and drives the same <select>;
 //  - the idea reel: each idea from qx-quick-launch.mjs gets a drawn motif that plays while it is in focus;
 //  - the stage: the token page header you are making (banner, icon, name, ticker, chain, idea) mirrors the form live;
 //    once your banner is in, the page is lit by it. Launched (#qq-done shown) fires one burst.
@@ -75,8 +76,22 @@ function syncChains() {
   }
   for (const b of chainsRow.children) { const on = b.dataset.chain === sel.value; if (b.getAttribute('aria-pressed') !== String(on)) b.setAttribute('aria-pressed', String(on)); b.disabled = sel.disabled; }
   document.body.classList.toggle('cr-is-solana', sel.value === 'solana');
+  syncChainField(sel);
   paintStageChain();
 }
+// The Chain field in the form (newcomer walk, 2026-11-12): the chain shows next to Name and Ticker, so nobody launches on
+// a chain they only saw as a tab far above. Same options and same change event as the row above.
+const chainField = $('cr-chainsel');
+function syncChainField(sel) {
+  if (!chainField) return;
+  const key = [...sel.options].map((o) => o.value + '=' + o.textContent).join(',');
+  if (chainField.dataset.key !== key) { chainField.dataset.key = key; chainField.replaceChildren(...[...sel.options].map((o) => el('option', { value: o.value }, (o.textContent || '').split(' · ')[0]))); }
+  if (chainField.value !== sel.value) chainField.value = sel.value;
+  chainField.disabled = sel.disabled;
+  const ico = $('cr-chainsel-ico'), src = chainIcon(sel.value);
+  if (ico) { if (src) { if (ico.getAttribute('src') !== src) ico.src = src; ico.hidden = false; } else ico.hidden = true; }
+}
+chainField?.addEventListener('change', () => { const s = $('qq-chain'); if (!s || s.disabled || s.value === chainField.value) return; s.value = chainField.value; s.dispatchEvent(new Event('change', { bubbles: true })); syncChains(); });
 
 /* ---------- idea reel: motifs ---------- */
 // One drawn motif per idea. Shapes only; the idea's own words and rules stay in the module's markup.

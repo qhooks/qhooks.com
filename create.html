@@ -35,12 +35,13 @@
   <div class="cr-form">
    <ul class="cr-ready" id="cr-ready" aria-label="Ready to launch"><li data-need="name">Name</li><li data-need="symbol">Ticker</li><li data-need="image">Image</li><li data-need="banner">Banner</li></ul>
    <div class="qq-fields cr-fields">
+    <label class="cr-field cr-field--chain" for="cr-chainsel"><span class="cx-label">Chain</span><span class="cr-chainsel"><img id="cr-chainsel-ico" alt="" width="22" height="22" hidden><select id="cr-chainsel"></select></span></label>
     <label class="cr-field"><span class="cx-label">Name</span><input id="qq-name" maxlength="64" autocomplete="off" placeholder="Token name"></label>
     <label class="cr-field cr-field--sym"><span class="cx-label">Ticker</span><input id="qq-symbol" maxlength="10" autocomplete="off" placeholder="TICKER"></label>
     <div class="qq-image cr-up" data-up="image"><label class="cr-up__l"><span class="cr-up__t">Image (required)</span><input id="qq-image" class="cx-file" type="file" accept="image/png,image/jpeg,image/webp" required aria-describedby="qq-need-image"><span class="cr-up__btn" aria-hidden="true">Choose</span></label><small id="qq-image-status" role="status" aria-live="polite">Stored with your token as a small square.</small></div>
     <div class="qq-image cr-up" data-up="banner"><label class="cr-up__l"><span class="cr-up__t">Banner (required)</span><input id="qq-banner" class="cx-file" type="file" accept="image/png,image/jpeg,image/webp" required aria-describedby="qq-need-banner"><span class="cr-up__btn" aria-hidden="true">Choose</span></label><small id="qq-banner-status" role="status" aria-live="polite">3:1 · PNG, JPEG or WebP · under 8 MB.</small></div>
    </div>
-   <div class="qq-preset cr-idea"><div class="cr-idea__head"><small class="cx-label">Idea</small><strong id="qq-style-name"></strong><p id="qq-style-line"></p></div><button id="qq-change" class="qa-btn qa-btn--quiet" type="button">Change idea</button><div id="qq-style-blocks" class="qq-blocks"></div><div id="qq-pools" class="qq-startcap qq-pools" hidden></div></div>
+   <div class="qq-preset cr-idea"><div class="cr-idea__head"><small class="cx-label">Idea</small><strong id="qq-style-name"></strong><p id="qq-style-line"></p></div><button id="qq-change" class="qa-btn qa-btn--quiet" type="button">Change idea</button><div id="qq-style-blocks" class="qq-blocks"></div><details id="qq-adv" class="qq-adv" hidden><summary><span>Advanced<span id="qq-adv-sum" class="qq-adv__sum"></span></span></summary><div id="qq-adv-body" class="qq-adv__body"><div id="qq-pools" class="qq-startcap qq-pools" hidden></div></div></details></div>
    <div id="qq-cost" class="qq-cost" aria-live="polite"></div>
    <p class="qxc-fine cr-fine">Everything else comes from the idea: 1,000,000,000 supply, all of it in the pool, a 1% creator pool fee, no first buy.</p>
    <p id="qq-message" class="qxc-message" role="status" aria-live="polite"></p>

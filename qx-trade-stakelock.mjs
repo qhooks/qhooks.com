@@ -140,7 +140,7 @@ async function render() {
     h('p', {class: 'qtx-fine'}, 'When a lock ends it stops earning bonus. Withdraw it with the bonus, or move it into a new lock.'),
     h('p', {class: 'qtx-fine'}, 'The bonus is paid when your lock ends. You can leave early at any time: you get back everything you locked plus staking rewards, and only that lock\'s bonus goes back to the pot. Nobody else can move your locked QHOOKS.'),
     h('p', {class: 'qtx-fine'}, potLeft ? 'Bonus pot: ' + fmt(BigInt(potHeld), 0) + ' QHOOKS. Bonus right now for 1,000,000 QHOOKS: ' + TERMS.map(([, name], i) => name + ' ' + fmt(BigInt(perDay[i]), 0) + '/day').join(' · ') + '. It changes as others lock.' : 'The bonus pot is empty right now. Locks still earn the same staking rewards.'),
-    moveBox, h('div', {class: 'qtx-row'}, amount, term, lockBtn), status, ...rows);
+    ...(moveBox ? [moveBox] : []), h('div', {class: 'qtx-row'}, amount, term, lockBtn), status, ...rows);   // no move box: nothing (replaceChildren would print "null")
   card.hidden = false;
 }
 

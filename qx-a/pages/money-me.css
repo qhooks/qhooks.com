@@ -66,6 +66,13 @@
 .mn-me .qyr-share-face img { width: 36px; height: 36px; border-radius: 50%; }
 .mn-me .qyr-share-k { font-size: 14px; font-weight: 700; }
 .mn-me .qyr-share-link { width: 100%; font-size: 15px; font-weight: 700; color: var(--qa-gold-hi); overflow-wrap: anywhere; }
+.mn-me .qyr-sample { margin-top: 2px; padding-top: 0; box-shadow: none; }
+.mn-me .qyr-sample-k { font-size: 13px; font-weight: 650; color: var(--qa-tx-3); }
+.mn-me .qyr-sample .qyr-share-face { padding: 14px 16px; border-radius: var(--qa-r-m); box-shadow: inset 0 0 0 1px var(--qa-rule-2); }
+.mn-me .qyr-ph { font-weight: 600; color: var(--qa-tx-3); }
+.mn-me .qyr-example { max-width: 52ch; font-size: 14.5px; line-height: 1.5; color: var(--qa-tx-2); }
+/* one Connect for the rewards section while no wallet is connected: the cards below keep their notes, not their buttons */
+.mn-me #qa-rewards.is-out :is(#qa-drops, #qa-evm-panel) [data-qa-connect] { display: none; }
 .mn-me :is(.qyr-note, .qdr-note, .qyr-live) { font-size: 14px; color: var(--qa-tx-2); }
 .mn-me .qyr-live { margin-top: 12px; font-size: var(--qa-fs-small); color: var(--qa-tx-3); display: flex; align-items: center; gap: 7px; }
 .mn-me .qyr-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--qa-buy); box-shadow: var(--qa-glow-buy); }

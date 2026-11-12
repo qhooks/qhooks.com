@@ -29,12 +29,20 @@ export const META_LIMIT = 4096;
 export const PLANNING_GAS = Object.freeze({none: 600000, fair: 1100000, degen: 1100000, community: 1100000, hours: 1100000, burn: 1100000, flywheel: 2200000});
 
 // Filter chips. A chip is shown only when at least one card on the selected chain carries it.
-export const IDEA_GROUPS = Object.freeze([['all', 'All'], ['tokens', 'Tokens'], ['pools', 'Pools'], ['income', 'Income'], ['agents', 'Agents']]);
+export const IDEA_GROUPS = Object.freeze([['all', 'All'], ['kits', 'Kits'], ['tokens', 'Tokens'], ['pools', 'Pools'], ['income', 'Income'], ['agents', 'Agents']]);
 
 // Card copy. Every rule named here is set by the style's preset; nothing else is promised.
 const ARB_CARD = {id: 'arb-burns', style: 'none', snipe: 15, group: 'tokens', name: 'Arb burns',
  what: 'Price gaps between pools buy and burn your token', why: 'A shared contract closes price gaps with other pools.'};
 const CARDS = [
+ // Kits (2026-11-12): Fair-preset launches with a longer anti-snipe window; numbers are QSimpleLaunch _preset FAIR and
+ // QSimpleBlocks _blockCap. "floor" adds a next step on the done screen: /floor sends the pool's fees to a bid wall.
+ {id: 'locked-pool', style: 'fair', snipe: 60, group: 'kits', kit: 'floor', name: 'One-tap locked pool',
+  what: 'All your supply in one pool nobody can pull. A 50% anti-snipe charge fades to 0 over 60 seconds, with one buy cap per block shared by every wallet, then a 1% wallet cap and 30-second cooldown for ten minutes.',
+  why: 'After launch, one more step turns your pool’s fees into a buy wall under the price.'},
+ {id: 'bundle-shield', style: 'fair', snipe: 300, group: 'kits', name: 'Bundle shield',
+  what: 'A 50% anti-snipe charge fades to 0 over five minutes, with one buy cap per block shared by every wallet, then a 1% wallet cap and 30-second cooldown for ten minutes.',
+  why: 'Bundles of fresh wallets in the same block share one cap and pay the charge.'},
  {id: 'plain', style: 'none', snipe: 15, group: 'tokens', name: 'Plain token',
   what: 'Open trading from the first block. No tax, caps or launch games.',
   why: 'Nothing is taken from trades, so every holder trades on the same terms.'},

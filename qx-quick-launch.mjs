@@ -85,7 +85,7 @@ function renderIdeas(){chainId=currentChain();renderPicker();if(chainId==='solan
   const blocks=card.blocks.length?el('div',{class:'qq-blocks'},...card.blocks.map(icon)):el('div',{class:'qq-blocks qq-blocks-none'},el('span',{},'No extra rules'));
   return el('article',{class:'qq-card','data-card':card.id,'data-group':card.group,hidden:group!=='all'&&card.group!==group},
    el('h3',{},card.name),card.chip?el('span',{class:'qq-chip'},card.chip):null,el('p',{class:'qq-what'},card.what),el('p',{class:'qq-why'},card.why),blocks,btn);
- }));
+ }),saleKit(group));
  // Off Robinhood Chain the cards stay visible (lead, 2026-11-08); "Launch this" switches the chain first.
  $('none').hidden=!offChain;$('use-robinhood').hidden=true;$('open').hidden=false;
  if(offChain)$('none-text').textContent='One-tap launches run on Robinhood Chain';
@@ -93,6 +93,16 @@ function renderIdeas(){chainId=currentChain();renderPicker();if(chainId==='solan
 }
 
 // A card picked while another chain is selected: switch the page to Robinhood Chain, then open that card.
+// Sale first as a kit: only on chains where the Sale first card (qx-sale-create.mjs) found QSaleLaunch code.
+function saleKit(group){
+ const ready=window.__qsfChains;if(!ready||!ready.includes(String(chainId)))return null;
+ const btn=el('button',{type:'button',class:'qq-launch-card','data-launch':'sale-first'},'Set up the sale');
+ btn.addEventListener('click',()=>{const r=document.getElementById('qsf-root'),s=document.getElementById('qsf-chain');if(s&&[...s.options].some(o=>o.value===String(chainId))){s.value=String(chainId);s.dispatchEvent(new Event('change',{bubbles:true}));}r?.scrollIntoView({block:'start'});document.getElementById('qsf-name')?.focus({preventScroll:true});});
+ return el('article',{class:'qq-card','data-card':'sale-first','data-group':'kits',hidden:group!=='all'&&group!=='kits'},
+  el('h3',{},'Sale first'),el('p',{class:'qq-what'},'A fair sale before trading opens, at a fixed or falling price. Under the minimum, everyone gets a full refund.'),
+  el('p',{class:'qq-why'},'Everyone pays the same price, so there is nothing to snipe, and the pool opens with the money raised on both sides.'),el('div',{class:'qq-blocks qq-blocks-none'},el('span',{},'1 transaction to open')),btn);
+}
+document.addEventListener('qsf:ready',()=>{if(document.getElementById('qq-cards'))renderIdeas();});
 function launchCard(id){
  if(!ideaCards(currentChain()).length){setQuickChain(QUICK_CHAIN);}
  openQuick(id,{scroll:true});
@@ -124,9 +134,9 @@ const RISK={stable:s=>s+' is a dollar stablecoin. Its issuer can freeze any addr
 function renderPair(){
  readGeo();let box=$('pair');const list=offeredPairs(),hiddenStocks=geo.country==='US'&&pairQuotes(chainId).some(q=>q.risk==='stock');
  if(!pick||!list.length||!multiLive(chainId)&&!pairsLive(chainId)){box?.remove();renderPools();return;}
- if(!box){box=el('div',{id:'qq-pair',class:'qq-startcap qq-pair'});$('style-blocks').after(box);}
+ if(!box){box=el('div',{id:'qq-pair',class:'qq-startcap qq-pair'});$('pools').before(box);}
  if(pick.style==='flywheel'){box.replaceChildren(el('p',{class:'qq-start-k'},'Pair with'),el('p',{class:'qq-start-note'},'Stakers’ share launches pair with ETH. Pick another idea to pair with USDG or a stock token.'));renderPools();return;}
- const opt=(idx,label)=>{const b=el('button',{type:'button',class:'qq-start-opt','aria-pressed':String(idx===pairIdx),'data-pair':String(idx)},label+(idx===pairIdx&&multiLive(chainId)?' · '+poolWeights(extraPools.length)[0]/100+'%':''));
+ const opt=(idx,label)=>{const b=el('button',{type:'button',class:'qq-start-opt','aria-pressed':String(idx===pairIdx),'data-pair':String(idx)},label+(idx===pairIdx&&multiLive(chainId)&&extraPools.length?' · '+poolWeights(extraPools.length)[0]/100+'%':''));
   b.addEventListener('click',()=>{if(busy)return;pairIdx=idx;extraPools=extraPools.filter(i=>i!==idx);poolPrices=null;renderPair();void readStartBase();renderStart();renderPq();renderQuick();costSoon();});return b;};
  if(pairIdx&&!list.some(q=>q.index===pairIdx)){pairIdx=0;void readStartBase();renderStart();costSoon();} // not offered here: back to ETH
  renderPools();const p=curPair(),kids=[el('p',{class:'qq-start-k'},'Pair with'),el('div',{class:'qq-start-opts',role:'group','aria-label':'Pair with'},opt(0,chainById(chainId).quote.symbol.replace(/^W/,'')),...list.map(q=>opt(q.index,q.symbol)))];
@@ -170,19 +180,35 @@ async function addAnyPool(q){
  if(extraPools.length>=6)throw Error('The 70/30 split fits up to six extra pools.');
  if(extraPools.length+2>8)throw Error('Choose up to eight pools.');
  if(!anyQuotes.has(chainId))anyQuotes.set(chainId,new Map());anyQuotes.get(chainId).set(q.address,q);
- extraPools=[...extraPools,q.index];poolDefaults.set(chainId+':'+pairIdx,[...extraPools]);poolPrices=null;poolReadKey='';poolRun++;costRun++;cost=null;renderPair();renderPq();renderQuick();costSoon();
+ extraPools=[...extraPools,q.index];poolDefaults.set(poolChoice(),[...extraPools]);poolPrices=null;poolReadKey='';poolRun++;costRun++;cost=null;renderPair();renderPq();renderQuick();costSoon();
 }
 async function readAnyQuote(q){
  if(q.usd>0&&Date.now()-q.checkedAt<600000)return q.usd;
  const r=await fetch('/api/launch/quote-check?'+new URLSearchParams({chain:chainId,token:q.address}),{cache:'no-store'}),check=r.ok?await r.json():null;
  if(check?.ok!==true){q.usd=null;return null;}Object.assign(q,{symbol:check.symbol,decimals:check.decimals,usd:check.usd,checkedAt:Date.now()});return q.usd;
 }
+// Newcomer walk (2026-11-12): a Plain token starts with one pool (its own default key), and the pair, extra pools and
+// the post-quantum key fold under one Advanced row whose line says what is set. The key stays on by default (product
+// rule, 2026-11-09); the fold opens by itself when the key is what stands between a connected wallet and the launch.
+const poolChoice=()=>chainId+':'+pairIdx+(pick?.id==='plain'?':plain':'');
+let advAuto=false;
+function renderAdv(){
+ const adv=$('adv');if(!adv)return;
+ const pair=$('pair'),pools=$('pools'),pq=$('pq'),poolsOn=!!pools&&!pools.hidden;
+ adv.hidden=!pick||!(pair||poolsOn||pq);if(adv.hidden)return;
+ const sym=q=>String(q?.symbol||'').replace(/^W(ETH|BNB|MON|HYPE)$/,'$1'),lines=[];
+ if(pair||poolsOn){const list=allPoolQuotes(),main=sym(mainQuote());
+  if(multiOn()){const w=poolWeights(extraPools.length);lines.push([main,...extraPools.map(i=>sym(list.find(q=>q.index===i)))].map((s,i)=>s+' '+w[i]/100+'%').join(' · '));}
+  else lines.push('One '+main+' pool');}
+ if(pq)lines.push(pqOn?'Post-quantum key on: changing where your fees go needs a second key.':'Post-quantum key off.');
+ const sum=$('adv-sum');sum.replaceChildren(...lines.map(t=>el('span',{},t)));
+}
 function renderPools(){
  const box=$('pools');if(!box)return;
  const show=!!pick&&pick.style!=='flywheel'&&multiLive(chainId)&&multiQuotes(chainId).length>0;box.hidden=!show;
  if(!show){if(pick?.style==='flywheel')extraPools=[];return;}
- const list=allPoolQuotes().filter(q=>q.address.toLowerCase()!==mainQuote().address.toLowerCase()),choice=chainId+':'+pairIdx;
- if(!poolDefaults.has(choice)){poolDefaults.set(choice,[pairIdx===0?multiQuotes(chainId)[0].index:0]);costRun++;cost=null;}
+ const list=allPoolQuotes().filter(q=>q.address.toLowerCase()!==mainQuote().address.toLowerCase()),choice=poolChoice();
+ if(!poolDefaults.has(choice)){poolDefaults.set(choice,pick.id==='plain'?[]:[pairIdx===0?multiQuotes(chainId)[0].index:0]);costRun++;cost=null;}
  extraPools=poolDefaults.get(choice).filter(i=>list.some(q=>q.index===i));
  const weights=poolWeights(extraPools.length),fresh=pricesFresh();
  const chips=list.map(q=>{const r=fresh?poolPrices.rows.find(r=>r.index===q.index):null,selected=extraPools.includes(q.index),duplicate=extraPools.some(i=>i!==q.index&&list.find(p=>p.index===i)?.address.toLowerCase()===q.address.toLowerCase()),full=!selected&&extraPools.length>=6;
@@ -211,7 +237,7 @@ function capText(steps){if(!startBase)return '';const text=startCapText(startBas
 function renderStart(){
  let box=$('startcap');
  if(!startCapOn()){box?.remove();startSteps=0;startTier='standard';return;}
- if(!box){box=el('div',{id:'qq-startcap',class:'qq-startcap'});($('pools')||$('pair')||$('style-blocks')).after(box);}
+ if(!box){box=el('div',{id:'qq-startcap',class:'qq-startcap'});($('adv')||$('style-blocks')).before(box);}
  startSteps=tierSteps(startTier);
  const radios=START_TIERS.map(([id,label])=>{const b=el('button',{type:'button',class:'qq-start-opt','aria-pressed':String(id===startTier)},startTierLabel(id,startBase?.usd));
   b.addEventListener('click',()=>{startTier=id;if(id==='custom'&&!startSteps)startSteps=tierSteps('floor');renderStart();renderQuick();costSoon();});return b;});
@@ -236,7 +262,7 @@ function renderPq(){
  let box=$('pq');
  if(!pqOnChain()){box?.remove();pqOn=false;return;}
  pqOn=!pqOptOut;
- if(!box){box=el('div',{id:'qq-pq',class:'qq-pq'});($('startcap')||$('style-blocks')).after(box);}
+ if(!box){box=el('div',{id:'qq-pq',class:'qq-pq'});$('adv-body').append(box);}
  const check=el('input',{type:'checkbox',id:'qq-pq-on',checked:pqOn});
  check.addEventListener('change',()=>{pqOptOut=!check.checked;renderPq();renderQuick();costSoon();});
  const kids=[el('label',{class:'qxc-check qq-pq-toggle'},check,el('strong',{},'Add a post-quantum key')),
@@ -282,6 +308,7 @@ function renderQuick(){
  // A token image is required (2026-11-10): no launch, or chain switch for one, until the image is ready.
  const needImage=!image,needBanner=!banner;$('need-image').hidden=!needImage||busy;$('need-banner').hidden=!needBanner||busy;
  b.disabled=busy||!!taken||needImage||needBanner||!!conn&&(conn.chainId===chainId&&(!ready||!cost||priceBlocked()||poolsBlocked()||pqBlocked()||cost.live&&!cost.quote.funded));
+ renderAdv();const adv=$('adv');if(!pqBlocked())advAuto=false;else if(adv&&!adv.hidden&&conn&&conn.chainId===chainId&&!advAuto){advAuto=true;adv.open=true;}
 }
 
 async function rpc(method,params){const c=chainById(chainId);const r=await fetch(c.rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});const j=await r.json();if(j.error||typeof j.result!=='string')throw Error(j.error?.message||'RPC error');return j.result;}
@@ -341,7 +368,8 @@ async function thumbnail(file){
 const rememberLast=v=>{try{localStorage.setItem(LAST,JSON.stringify(v));}catch{/* the receipt is still shown on this page */}};
 function showDone(token,hash){
  const c=chainById(chainId);$('done').hidden=false;$('launch').hidden=true;$('done-name').textContent=$('name').value.trim()+' ('+$('symbol').value.trim().toUpperCase()+') · '+c.name;
- $('token').textContent=token;$('open-market').href=marketPath(chainId,token);$('tx').href=c.explorer+'/tx/'+hash;{const x=launchPostLink({name:$('name').value,ticker:$('symbol').value,chainName:c.name,chainId,token}),px=$('post-x');if(px){px.hidden=!x;if(x)px.href=x;}}$('done').focus?.();
+ $('token').textContent=token;$('open-market').href=marketPath(chainId,token);$('tx').href=c.explorer+'/tx/'+hash;{const x=launchPostLink({name:$('name').value,ticker:$('symbol').value,chainName:c.name,chainId,token}),px=$('post-x');if(px){px.hidden=!x;if(x)px.href=x;}}const fl=$('floor-next');if(fl)fl.remove();if(pick?.kit==='floor'){const a=el('a',{id:'qq-floor-next',class:'qxc-primary',href:'/floor?chain='+chainId+'&token='+token},'Next: turn fees into a buy wall →');$('open-market').after(a);}
+ $('done').focus?.();
 }
 async function receipt(provider,hash){
  for(let i=0;i<240;i++){

@@ -14,3 +14,12 @@ export function warningText(symbol, officialPool, range, {unknown = false} = {})
   return 'Only trade ' + s + ' through qhooks.com or the official pool ' + officialPool + '. Other ' + s + ' pools were created by third parties' + fees + '.';
 }
 export const unofficialTag = p => 'Unofficial' + (Number.isFinite(p?.feePct) ? ' · ' + pct(p.feePct) : '');
+/// Site-only trap line (2026-11-12) for third-party pools whose fee is over 10%: what a trade there loses.
+export const TRAP_PCT = 10;
+export function trapText(pools = []) {
+  const bad = pools.map(p => p?.feePct).filter(v => Number.isFinite(v) && v > TRAP_PCT);
+  if (!bad.length) return '';
+  const top = Math.max(...bad), n = bad.length;
+  return n + (n === 1 ? ' pool charges' : ' pools charge') + ' more than ' + TRAP_PCT + '% per trade (up to ' + pct(top) + '). A swap routed there loses that share of every trade.';
+}
+export const trapTag = p => Number.isFinite(p?.feePct) && p.feePct > TRAP_PCT ? 'Trap · ' + pct(p.feePct) : unofficialTag(p);

@@ -12,6 +12,7 @@
 // the latest real card for each word. Nothing is replayed or invented.
 import { mountShell } from '/qx-a/shell.mjs';
 import { profileUrl } from '/qx-profile-address.mjs';
+import { fillChainCount } from '/qx-chain-count.mjs';
 import { h, icon, RM, fmt, setArt, coin, avatar, keeperAvatar, tokenChip, statStrip, tape, toast, liveLabel, liveChart, bigPrice, changeLine, post, callOutcome, supplyMap, countdown, state, skeletonRows, restart, inView, checks } from '/qx-a/components.mjs';
 import '/qx-shell.mjs'; // legacy runtime: wallet copy, get-the-app, proof entry points (its old header code finds no header here)
 
@@ -164,7 +165,7 @@ function hang() {
   const rw = rig.offsetWidth, rh = rig.offsetHeight, fromRight = card.offsetWidth - (cb.offsetLeft + cb.offsetWidth / 2), coinTop = cb.offsetTop;
   if (innerWidth >= 1100) {
     const bx = rig.offsetLeft + rw * BEND_X, by = rig.offsetTop + rh * BEND_Y, right = bx + fromRight;
-    const blockers = [...document.querySelectorAll('.hm-actions > *, .hm-tag__coin, .hm-tag__read')].filter((e) => e.offsetWidth);
+    const blockers = [...document.querySelectorAll('.hm-sub, .hm-actions > *, .hm-tag__coin, .hm-tag__read')].filter((e) => e.offsetWidth);
     const clear = Math.max(0, ...blockers.map((e) => xIn(e) + e.offsetWidth)) + 40, w = Math.min(560, Math.floor(right - clear));
     if (w >= 430) {
       const brand = $('[data-hm-line]'), top = Math.max(Math.round(by + 44 - coinTop), brand ? yIn(brand) + brand.offsetHeight + 18 : 0);
@@ -184,6 +185,7 @@ function hang() {
   coinWrap.style.setProperty('--hm-cord', Math.max(12, Math.round(sy + coinTop - by + 3)) + 'px');
   pivotToCoin = sy + coinTop - rig.offsetTop;
 }
+fillChainCount(); // one chain count, from chains.mjs
 if (heroEl) { new ResizeObserver(() => hang()).observe(heroEl); document.fonts?.ready.then(hang); hang(); }
 let spring = null;
 function tug(side, usd = 0, w = null) {

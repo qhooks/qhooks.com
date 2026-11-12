@@ -55,6 +55,8 @@ function thumbnail(file) {
   const ok = await Promise.all(chains.map(c => check(c.id).catch(() => false)));
   const ready = chains.filter((c, i) => ok[i] === true);
   if (!ready.length) { root.replaceChildren(); return; }
+  // /create kits list (qx-quick-launch.mjs) shows Sale first only on these chains.
+  window.__qsfChains = ready.map(c => String(c.id)); document.dispatchEvent(new CustomEvent('qsf:ready'));
   const chainSel = el('select', {id: 'qsf-chain'}, ...ready.map(c => el('option', {value: c.id}, c.name)));
   const name = el('input', {id: 'qsf-name', maxlength: '64', autocomplete: 'off', placeholder: 'Token name'});
   const symbol = el('input', {id: 'qsf-symbol', maxlength: '10', autocomplete: 'off', placeholder: 'TICKER'});

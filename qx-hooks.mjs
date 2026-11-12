@@ -80,8 +80,8 @@ function presetRow(p) {
 $('hk-presets').append(...PRESETS.filter((p) => p.id !== 'none' && presetVisible(p)).map(presetRow));
 
 /* ---------- built in ---------- */
-const BUILT_GLYPH = { 'Liquidity lock': 'lock', QGraduation: 'graduation', 'Two-key fee claims': 'keys', 'Notice period': 'bell', 'Creator LP fee': 'fee', 'Six chains': 'chains' };
-$('hk-built').append(...BUILT_IN.map((b) => h('div', { class: 'hk-built-item' }, h('span', { class: 'hl-gt hl-gt--sm' }, glyph(BUILT_GLYPH[b.name] || 'shield')), h('div', null, h('h3', { class: 'hl-h3' }, b.name), h('p', null, b.line)))));
+const BUILT_GLYPH = { 'Liquidity lock': 'lock', QGraduation: 'graduation', 'Two-key fee claims': 'keys', 'Notice period': 'bell', 'Creator LP fee': 'fee' };   // the chains row carries its own glyph (its name follows the live count)
+$('hk-built').append(...BUILT_IN.map((b) => h('div', { class: 'hk-built-item' }, h('span', { class: 'hl-gt hl-gt--sm' }, glyph(BUILT_GLYPH[b.name] || b.glyph || 'shield')), h('div', null, h('h3', { class: 'hl-h3' }, b.name), h('p', null, b.line)))));
 
 renderGrid();
 if (location.hash.startsWith('#block-')) { const t = d.getElementById(location.hash.slice(1)); t?.querySelector('details')?.setAttribute('open', ''); requestAnimationFrame(() => t?.scrollIntoView()); }
