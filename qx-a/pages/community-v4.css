@@ -1,0 +1,40 @@
+/* /community v4 (2026-11-12, overhaul polish): the lit set beside the headline (community-v4.mjs), the headline as one heavy
+   line and one light line (same words), and every section heading on the same scale as /create and Portfolio. No circles,
+   orbits or maps. Every id, hook and flow of community.html stays (rpc-fallback first, traders, profile markers untouched). */
+.cv4 .cx-hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; padding: 0 0 22px; }
+.cv4 .cv4-stage { position: relative; order: -1; height: 300px; margin: 0 calc(var(--qa-pad) * -1) 8px; overflow: hidden; pointer-events: none; }
+.cv4 .cv4-stage--set::before { content: ''; position: absolute; inset: 0; background: #050505 url(/qx-a/set/set-create.webp) 50% 70% / cover no-repeat; }
+.cv4 .cv4-stage--set::before, .cv4 .cv4-stage .qs3, .cv4 .cv4-stage canvas.cv4-2d {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 82%, transparent 100%), linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%); -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 82%, transparent 100%), linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%); mask-composite: intersect; }
+.cv4 .cv4-stage canvas.cv4-2d { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cv4 .cv4-tag { position: absolute; z-index: 2; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; gap: 8px; align-items: baseline; margin: 0;
+  white-space: nowrap; font-size: 12.5px; font-weight: 600; color: var(--qa-tx-3); text-shadow: 0 1px 10px #000, 0 0 2px #000; }
+.cv4 .cv4-tag b { color: var(--qa-tx); font-weight: 760; }
+.cv4 .cv4-tag em { font-style: normal; font-weight: 720; color: var(--qa-tx-2); }
+.cv4 .cv4-tag em.is-up { color: var(--qa-up, #3ddc97); } .cv4 .cv4-tag em.is-down { color: var(--qa-down, #ff5c5c); }
+.cv4 .cx-faces { display: none !important; } /* the counts line already names the callers; no stacked circles */
+
+/* the headline: "MAKE THE CALL." heavy, "BRING THE CROWD." light (same words) */
+.cv4 .cx-title { font-size: clamp(48px, 13.5vw, 132px); line-height: .86; font-weight: 880; font-stretch: 125%; letter-spacing: -.035em; text-transform: uppercase; }
+.cv4 .cx-title span { display: block; background: none; color: var(--qa-tx-2); -webkit-text-fill-color: currentColor; font-weight: 260; font-stretch: 112%; letter-spacing: -.02em; padding: 0; }
+.cv4 .cx-lede { max-width: 40ch; margin-top: 20px; font-size: 17px; }
+[data-theme="light"] .cv4 .cx-title span { color: var(--qa-tx-3); }
+
+/* every section heading on one scale (same words) */
+.cv4 :is(#cx-feed-h, #cx-callers, #cx-callout-points, #qx-traders-title, #cx-referrals) { font-size: clamp(36px, 6vw, 72px); line-height: .9; font-weight: 880; font-stretch: 125%; letter-spacing: -.03em; text-transform: uppercase; }
+.cv4 :is(#cx-who-h, #cx-boards) { font-size: clamp(26px, 3vw, 34px); line-height: .95; font-weight: 860; font-stretch: 125%; letter-spacing: -.02em; text-transform: uppercase; }
+.cv4 #cx-referrals span { background: none; color: var(--qa-tx-2); -webkit-text-fill-color: currentColor; font-weight: 260; }
+
+@media (min-width: 1100px) {
+  .cv4 .cx-hero { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); align-items: end; min-height: 600px; padding: 0 0 40px; }
+  .cv4 .cv4-stage { order: 0; grid-column: 2; grid-row: 1; height: auto; align-self: stretch; min-height: 560px; margin: 0 calc(max(var(--qa-pad), (100vw - var(--qa-maxw)) / 2 + var(--qa-pad)) * -1) 0 0; }
+  .cv4 .cx-hero__copy { grid-column: 1; grid-row: 1; align-self: end; padding: 48px 0 24px; }
+  .cv4 .cx-title { font-size: clamp(64px, 7vw, 116px); }
+  .cv4 .cx-title span { display: block; }
+  /* the latest call as a callout beside the coin, a hairline leading to it */
+  .cv4 .cv4-tag { left: auto; right: 7%; top: 30%; bottom: auto; transform: none; flex-direction: column; align-items: flex-start; gap: 3px; padding: 2px 0 2px 14px; box-shadow: inset 1px 0 0 rgba(232, 200, 140, .55); }
+  .cv4 .cv4-tag b { font-size: 17px; }
+  .cv4 .cv4-tag::before { content: ''; position: absolute; right: 100%; top: 50%; width: 64px; height: 1px; background: linear-gradient(90deg, transparent, rgba(232, 200, 140, .7)); }
+  .cv4 .cv4-tag::after { content: ''; position: absolute; right: calc(100% + 64px); top: 50%; width: 5px; height: 5px; margin: -2px -2px 0 0; border-radius: 50%; background: var(--qa-gold); box-shadow: 0 0 10px rgba(232, 200, 140, .8); }
+}
