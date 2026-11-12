@@ -123,7 +123,7 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
   const goldMat = new THREE.MeshPhysicalMaterial({ color: GOLD, metalness: 1, roughness: .28, emissive: 0x000000 });
   const studMat = new THREE.MeshPhysicalMaterial({ color: GOLD, metalness: 1, roughness: .3, emissive: GOLD, emissiveIntensity: .6 });
   const threadMat = new THREE.MeshBasicMaterial({ color: GOLD_HI, transparent: true, opacity: .9 });
-  const MATS = { Steel: steelMat, Gold: goldMat, GoldLit: studMat, Thread: threadMat };
+  const MATS = { Steel: steelMat, Gold: goldMat, GoldLit: steelMat, Thread: threadMat }; // the studs are plain steel (lit gold read as a dashed glitch)
   const surface = []; const reflection = new THREE.Group(); scene.add(reflection);
   const reflMat = new THREE.MeshPhysicalMaterial({ color: 0xd4c6ad, metalness: 1, roughness: .5, transparent: true, opacity: .3, depthTest: false, depthWrite: false, clippingPlanes: [new THREE.Plane(new THREE.Vector3(0, -1, 0), PLINTH_TOP)] });
   {
@@ -213,13 +213,16 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     g.clearRect(0, 0, w, h); g.textAlign = 'center'; g.textBaseline = 'middle';
     try { g.fontStretch = stretch; } catch {}
     try { g.letterSpacing = (tracking * size).toFixed(1) + 'px'; } catch {}
-    g.font = `${weight} ${size}px ${FONT}`; g.fillStyle = color; g.fillText(text, w / 2, h / 2);
+    g.font = `${weight} ${size}px ${FONT}`;
+    { const tw = g.measureText(text).width; if (tw > w * .94) { size = size * w * .94 / tw; try { g.letterSpacing = (tracking * size).toFixed(1) + 'px'; } catch {} g.font = `${weight} ${size}px ${FONT}`; } }
+    g.fillStyle = color; g.fillText(text, w / 2, h / 2);
     const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; tx.minFilter = THREE.LinearMipmapLinearFilter; tx.generateMipmaps = true; return tx;
   }
-  // extruded type: the same glyph texture on a stack of planes, the back ones darker
-  function extruded(w, h, depth = 8, step = .045) {
+  // extruded type: the same glyph texture on a stack of planes, the back ones darker. 40 planes over the depth, so the side
+  // walls read as a continuous extrusion at full resolution (the stepped look of 8 coarse planes is gone).
+  function extruded(w, h, depth = .45, planes = 40) {
     const g = new THREE.Group(); const geo = new THREE.PlaneGeometry(w, h); g.userData.planes = [];
-    for (let i = depth; i >= 0; i--) { const front = i === 0; const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, color: front ? 0xffffff : new THREE.Color().setScalar(lerp(.16, .46, 1 - i / depth)), opacity: 1, toneMapped: false })); m.position.z = -i * step; m.renderOrder = 10 - i; g.add(m); g.userData.planes.push(m); }
+    for (let i = planes; i >= 0; i--) { const front = i === 0; const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, color: front ? 0xffffff : new THREE.Color().setScalar(lerp(.16, .46, 1 - i / planes)), opacity: 1, toneMapped: false })); m.position.z = -i * depth / planes; m.renderOrder = 60 - i; g.add(m); g.userData.planes.push(m); }
     g.userData.setMap = (tx) => g.userData.planes.forEach((m) => { m.material.map = tx; m.material.needsUpdate = true; });
     g.userData.setOpacity = (o) => g.userData.planes.forEach((m) => { m.material.opacity = o; });
     g.visible = false; scene.add(g); return g;
@@ -227,16 +230,16 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
   /* ---------- builders: the hook alone in its light; the six block names live in the DOM chips (Randall: the slabs read as dominos) ---------- */
 
   /* ---------- callers: the latest call's outcome as extruded type ---------- */
-  const numberG = extruded(4.6, 1.44, 9, .05);
+  const numberG = extruded(4.6, 1.44, .45);
   const numberSub = new THREE.Mesh(new THREE.PlaneGeometry(4.6, .5), new THREE.MeshBasicMaterial({ transparent: true, toneMapped: false, depthWrite: false })); numberSub.visible = false; scene.add(numberSub);
   let callData = { pct: null, label: '' }, callTexKey = '', callShown = 0;
 
   /* ---------- holders: the hook alone, and the real QHOOKS-burned figure as extruded type in the burn colour ---------- */
-  const burnedG = extruded(4.6, 1.44, 9, .05);
+  const burnedG = extruded(4.6, 1.44, .45);
   let burnedData = { text: '', value: 0 }, burnedShown = -1, burnedKey = '';
 
   /* ---------- traders: the chain names slam in as type; one coin flips as each lands ---------- */
-  const nameG = extruded(5.8, 1.36, 7, .05);
+  const nameG = extruded(5.8, 1.36, .35);
   const nameTex = CHAIN_NAMES.map((n) => textTex({ text: n, w: 1536, h: 360, size: 236, weight: 900, color: '#F4F1E9', tracking: -.045 }));
   let nameIdx = -1; // no chain coin in this scene: the 3D chain word carries it (a flat icon on a disc read as a broken image)
 
@@ -258,7 +261,7 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     callers:  { hook: [[-2.6, .9, .5], [-1.2, 2.4, .26]], cam: [[.6, .2, 6.4], [0, .3, 7.6]] },
     holders:  { hook: [[-2.6, .9, .5], [-1.2, 2.4, .26]], cam: [[.6, .2, 6.4], [0, .3, 7.6]] },
     traders:  { hook: [[-2.6, .9, .5], [-1.25, 2.4, .26]], cam: [[.6, .2, 6.6], [0, .3, 8.0]] },
-    close:    { hook: [[0, .3, .92], [0, 1.15, .7]], cam: [[0, .2, 5.6], [0, .25, 6.8]] },
+    close:    { hook: [[2.45, .1, .85], [0, 1.15, .7]], cam: [[.9, .2, 6.2], [0, .25, 6.8]] },
   };
   const CH = ['hero', 'builders', 'callers', 'holders', 'traders', 'close'];
   const pick = (k) => { const a = L[k], i = PORT ? 1 : 0; return { h: a.hook[i], c: a.cam[i] }; };
@@ -295,7 +298,7 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     // the real QHOOKS-burned total (units); fmt renders it the way the DOM does
     setBurned(value, fmt) { if (!(value > 0)) return; const same = burnedData.value === value; burnedData = { value, fmt: fmt || ((v) => String(Math.round(v))), text: (fmt || String)(value), at: same ? burnedData.at : t }; },
     coin(i) { if (i === nameIdx) { flashV = Math.max(flashV, .1); zoomV = Math.max(zoomV, .03); } },
-    get version() { return 'nodominos2'; },
+    get version() { return 'audit4'; },
     setCall({ pct, label }) { callData = { pct, label }; },
     setBands(arr) { bands = Array.isArray(arr) && arr.length ? arr : null; },
     setProgress(p) { Pt = clamp(p, 0, 5.999); if (!running) api.resume(); },
@@ -306,7 +309,11 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     debug() { const low = new THREE.Vector3(0, -1.14, 0).applyMatrix4(hookRoot.matrixWorld).project(camera); const num = numberG.visible ? new THREE.Vector3(0, -.72, 0).applyMatrix4(numberG.matrixWorld).project(camera) : null;
       const bn = burnedG.visible ? (1 - new THREE.Vector3(0, -.72, 0).applyMatrix4(burnedG.matrixWorld).project(camera).y) / 2 * H : null;
       const nm = nameG.visible ? (1 - new THREE.Vector3(0, -.68, 0).applyMatrix4(nameG.matrixWorld).project(camera).y) / 2 * H : null;
-      return { version: 'nodominos2', P, forgeT, hook: { visible: hookRoot.visible, pos: hookRoot.position.toArray(), scale: hookRoot.scale.x, bottomPx: (1 - low.y) / 2 * H }, numberBottomPx: num ? (1 - num.y) / 2 * H : null, vaultBottomPx: Math.max(bn || 0, nm || 0) || null, cam: camera.position.toArray(), parts: model.children.length, dpr: DPR, bands }; },
+      const px = (v) => ({ x: (v.x + 1) / 2 * W, y: (1 - v.y) / 2 * H }); const corner = (g, x, y) => px(new THREE.Vector3(x, y, 0).applyMatrix4(g.matrixWorld).project(camera));
+      const nameBox = nameG.visible ? { left: corner(nameG, -2.9, 0).x, right: corner(nameG, 2.9, 0).x, top: corner(nameG, 0, .68).y, bottom: corner(nameG, 0, -.68).y } : null;
+      const numBox = numberG.visible ? { left: corner(numberG, -2.3, 0).x, right: corner(numberG, 2.3, 0).x, top: corner(numberG, 0, .72).y, bottom: corner(numberG, 0, -.72).y } : null;
+      const hookRightPx = px(new THREE.Vector3(.72, 0, 0).applyMatrix4(hookRoot.matrixWorld).project(camera)).x, hookLeftPx = px(new THREE.Vector3(-.72, 0, 0).applyMatrix4(hookRoot.matrixWorld).project(camera)).x;
+      return { version: 'audit4', nameBox, numBox, hookRightPx, hookLeftPx, P, forgeT, hook: { visible: hookRoot.visible, pos: hookRoot.position.toArray(), scale: hookRoot.scale.x, bottomPx: (1 - low.y) / 2 * H }, numberBottomPx: num ? (1 - num.y) / 2 * H : null, vaultBottomPx: Math.max(bn || 0, nm || 0) || null, cam: camera.position.toArray(), parts: model.children.length, dpr: DPR, bands }; },
   };
 
   /* ---------- the frame ---------- */
@@ -357,11 +364,11 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     // ---- builders: the hook alone (the block names are the DOM chips)
 
     // ---- callers: the number rises as extruded type and counts to the real value
-    const cOn = ch === 'callers' || (ch === 'builders' && u > .85) || (ch === 'holders' && u < .15);
+    const cOn = ch === 'callers' || (ch === 'builders' && u > .85);
     numberG.visible = numberSub.visible = cOn && callData.pct != null;
     if (numberG.visible) {
       const cu = ch === 'callers' ? u : ch === 'builders' ? 0 : 1;
-      const rise = easeOutQuint(span(cu, 0, .22)), leave = ch === 'holders' ? easeInOut(span(u, 0, .15)) : 0;
+      const rise = easeOutQuint(span(cu, 0, .22)), leave = ch === 'callers' ? easeInOut(span(u, .82, .96)) : 0;
       const target = callData.pct, shown = target * easeOut(span(cu, .08, .62));
       if (Math.abs(shown - callShown) > Math.max(.05, Math.abs(target) * .004) || callTexKey !== callData.label) {
         callShown = shown; callTexKey = callData.label;
@@ -370,27 +377,27 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
         numberG.userData.setMap(textTex({ text: txt, w: 1536, h: 480, size: 380, weight: 900, color: pos ? '#3EDD8F' : '#FF5E64', tracking: -.06 }));
         numberSub.material.map?.dispose(); numberSub.material.map = textTex({ text: callData.label, w: 1536, h: 160, size: 50, weight: 680, color: 'rgba(244,241,233,.86)', stretch: 'normal', tracking: 0 }); numberSub.material.needsUpdate = true;
       }
-      const nx = PORT ? 0 : 1.45, ny = PORT ? (bandY != null ? bandY + .25 : 1.5) : .35, sc = PORT ? Math.min(.56, bandH ? bandH / 2.1 : .56) : .74;
-      numberG.position.set(nx, ny + (1 - rise) * -1.6 + leave * 1.4, lerp(-1.5, .2, rise) - leave * 3); numberG.scale.setScalar(sc * lerp(.86, 1, rise));
+      const nx = PORT ? .45 : 1.75, ny = PORT ? (bandY != null ? bandY + .25 : 1.5) : .35, sc = PORT ? Math.min(.5, bandH ? bandH / 2.1 : .5) : .7;
+      numberG.position.set(nx, ny + (1 - rise) * .5 + leave * .6, lerp(-1.5, .2, rise) - leave * 3); numberG.scale.setScalar(sc * lerp(.86, 1, rise));
       numberG.rotation.set(-.08 + pointer.y * .05, PORT ? 0 : -.22 + pointer.x * .08, 0);
       numberG.userData.setOpacity(rise * (1 - leave));
-      numberSub.position.set(nx, ny - 1.02 * sc, numberG.position.z + .02); numberSub.scale.setScalar(sc); numberSub.rotation.copy(numberG.rotation); numberSub.material.opacity = easeOut(span(cu, .15, .35)) * (1 - leave);
+      numberSub.position.set(nx, numberG.position.y - 1.02 * sc, numberG.position.z + .02); numberSub.scale.setScalar(sc); numberSub.rotation.copy(numberG.rotation); numberSub.material.opacity = easeOut(span(cu, .15, .35)) * (1 - leave);
     }
 
     // ---- holders: the burned figure rises as extruded type (fire) and counts up to the real value; a real burn re-counts it
-    const hOn = ch === 'holders' || (ch === 'callers' && u > .85) || (ch === 'traders' && u < .15);
+    const hOn = ch === 'holders' || (ch === 'callers' && u > .85);
     burnedG.visible = hOn && !!burnedData.text;
     if (burnedG.visible) {
       const vu = ch === 'holders' ? u : ch === 'callers' ? 0 : 1;
-      const rise = easeOutQuint(span(vu, 0, .22)), leave = ch === 'traders' ? easeInOut(span(u, 0, .15)) : 0;
+      const rise = easeOutQuint(span(vu, 0, .22)), leave = ch === 'holders' ? easeInOut(span(u, .82, .96)) : 0;
       const shown = burnedData.value * easeOut(span(vu, .08, .62)) * easeOut(span(t - burnedData.at, 0, 1.2));
       if (Math.abs(shown - burnedShown) > Math.max(1, burnedData.value * .004) || burnedKey !== burnedData.text) {
         burnedShown = shown; burnedKey = burnedData.text;
         burnedG.userData.planes.forEach((pl) => pl.material.map?.dispose());
         burnedG.userData.setMap(textTex({ text: burnedData.fmt(shown), w: 1536, h: 480, size: 380, weight: 900, color: '#FF9A45', tracking: -.06 }));
       }
-      const nx = PORT ? 0 : 1.45, ny = PORT ? (bandY != null ? bandY + .25 : 1.5) : .35, sc = PORT ? Math.min(.56, bandH ? bandH / 2.1 : .56) : .74;
-      burnedG.position.set(nx, ny + (1 - rise) * -1.6 + leave * 1.4, lerp(-1.5, .2, rise) - leave * 3); burnedG.scale.setScalar(sc * lerp(.86, 1, rise));
+      const nx = PORT ? .45 : 1.75, ny = PORT ? (bandY != null ? bandY + .25 : 1.5) : .35, sc = PORT ? Math.min(.5, bandH ? bandH / 2.1 : .5) : .7;
+      burnedG.position.set(nx, ny + (1 - rise) * .5 + leave * .6, lerp(-1.5, .2, rise) - leave * 3); burnedG.scale.setScalar(sc * lerp(.86, 1, rise));
       burnedG.rotation.set(-.08 + pointer.y * .05, PORT ? 0 : -.22 + pointer.x * .08, 0);
       burnedG.userData.setOpacity(rise * (1 - leave));
     }
@@ -400,10 +407,10 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     nameG.visible = tOn;
     if (tOn) {
       const tu = ch === 'traders' ? u : ch === 'holders' ? 0 : 1, leave = ch === 'close' ? easeInOut(span(u, 0, .2)) : 0;
-      const slot = .112, k = clamp(Math.floor((tu - .04) / slot), 0, CHAIN_NAMES.length - 1), at = .04 + k * slot, slam = easeOutQuint(span(tu, at, at + .06));
+      const slot = .085, k = clamp(Math.floor((tu - .04) / slot), 0, CHAIN_NAMES.length - 1), at = .04 + k * slot, slam = easeOutQuint(span(tu, at, at + .05)), gone = ch === 'traders' ? easeInOut(span(u, .73, .86)) : 0;
       if (k !== nameIdx) { nameIdx = k; nameG.userData.setMap(nameTex[k]); flashV = Math.max(flashV, .08); zoomV = Math.max(zoomV, .03); }
-      const sc = PORT ? Math.min(.5, bandH ? bandH / 2.9 : .5) : .8, nx = PORT ? .25 : 1.6, ny = PORT ? (bandY != null ? bandY - .15 * sc : 1.3) : .1;
-      nameG.position.set(nx, ny, lerp(-.8, .3, slam) - leave * 3); nameG.scale.setScalar(sc * lerp(1.3, 1, slam)); nameG.userData.setOpacity(slam * (1 - leave) * (tu > .02 ? 1 : 0));
+      const sc = PORT ? Math.min(.48, bandH ? bandH / 2.9 : .48) : .56, nx = PORT ? .55 : 1.55, ny = PORT ? (bandY != null ? bandY - .15 * sc : 1.3) : .5;
+      nameG.position.set(nx, ny, lerp(-.8, .3, slam) - leave * 3); nameG.scale.setScalar(sc * lerp(1.3, 1, slam)); nameG.userData.setOpacity(slam * (1 - leave) * (1 - gone) * (tu > .02 ? 1 : 0)); nameG.position.y += gone * .6;
       nameG.rotation.set(-.06 + pointer.y * .04, PORT ? 0 : -.18 + pointer.x * .06, 0);
     } else nameIdx = -1;
 

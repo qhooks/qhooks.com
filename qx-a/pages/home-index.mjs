@@ -420,11 +420,18 @@ function callPost(c, enter) {
   return { el: p, update: () => { const v = nowP(); if (out && v != null) out.update(v); } };
 }
 // The scene's extruded figure: the latest call that has a real outcome (the same unit on both sides), its real move.
+// The 3D caption never sets a wallet address: the caller's profile name when they have one, otherwise just the time.
+const callerNames = new Map(); // wallet -> name ('' when the profile has none); the public profile read, once per wallet
+function callerName(w) {
+  const k = lower(w); if (!/^0x[0-9a-f]{40}$/.test(k)) return '';
+  if (!callerNames.has(k)) { callerNames.set(k, ''); getJSON('/api/community/profile/' + k).then((b) => { const n = String(b?.profile?.name || '').trim(); if (n) { callerNames.set(k, n.slice(0, 24)); pushCall(); } }).catch(() => {}); }
+  return callerNames.get(k) || '';
+}
 function pushCall() {
   if (!scene) return;
   const c = S.calls.find((x) => callNow(x) != null); if (!c) { scene.setCall({ pct: null, label: '' }); return; }
-  const now = callNow(c), pct = (now / c.call.price - 1) * 100;
-  scene.setCall({ pct, label: `$${c.board?.symbol || 'token'} · called by ${fmt.short(c.author)} · ${fmt.age((Date.now() - c.createdAt) / 1000)} ago` });
+  const now = callNow(c), pct = (now / c.call.price - 1) * 100, who = callerName(c.author);
+  scene.setCall({ pct, label: `$${c.board?.symbol || 'token'} · called ${who ? 'by ' + who + ' · ' : ''}${fmt.age((Date.now() - c.createdAt) / 1000)} ago` });
 }
 async function loadCalls() {
   const body = await getJSON(CALLS);
