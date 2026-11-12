@@ -350,3 +350,6 @@ html.qa-menu-open, html.qa-menu-open body { overflow: hidden; }
 .qa-menu__all[open] > summary::after { transform: rotate(-135deg); }
 .qa-menu__all .qa-menu__groups { padding-top: 4px; }
 @media (min-width: 1100px) { .qa-menu__tasks { grid-template-columns: repeat(6, 1fr); } }
+/* solidhdr (2026-11-12): the header is solid like the tab bar, so nothing shows through it; over art it stays clear
+   until the page scrolls (.qa-shell--over-art .qa-hdr:not(.is-scrolled) above is more specific) */
+header.qa-hdr { background: var(--qa-floor); -webkit-backdrop-filter: none; backdrop-filter: none; }
