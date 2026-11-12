@@ -380,6 +380,7 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
     pool.position.x = plinth.position.x = plinthRing.position.x = hookPos.x; pool.scale.setScalar(hs); plinth.scale.set(hs, 1, hs); plinthRing.scale.setScalar(hs);
     plinthRing.material.opacity = .35 + .3 * studFlash + .4 * heat;
     const plinthOn = ch !== 'callers' && ch !== 'traders' && !PORT; plinth.visible = plinthRing.visible = pool.visible = plinthOn && hs > .55;
+    floor.visible = !PORT; // portrait: no floor, so its horizon never cuts a hard seam across the words (the plinth is off there too)
     // the reflection on the plinth: the hook mirrored through the plinth top
     reflection.visible = hookRoot.visible && plinth.visible;
     if (reflection.visible) { reflection.position.set(hookRoot.position.x, 2 * -1.52 - hookRoot.position.y, hookRoot.position.z); reflection.scale.set(hookRoot.scale.x, -hookRoot.scale.y, hookRoot.scale.z); reflection.rotation.set(0, 0, -hookRoot.rotation.z); reflection.children.forEach((c) => { c.rotation.copy(hookSpin.rotation); c.position.copy(model.position).applyEuler(hookSpin.rotation); }); }
