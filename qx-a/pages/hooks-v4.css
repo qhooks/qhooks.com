@@ -1,0 +1,89 @@
+/* /hooks v4 (2026-11-12): the Builders Lab as one scene, to the bar of /create v4 and Portfolio v4 (POLISH-BRIEF).
+   One object under light: the QHooks hook in the lit set with a launch block seated on its shank (hooks-v4.mjs,
+   hooks-v4-scene.mjs). The object has its own band above the words on a phone and stands beside them at 1440.
+   Copy is the page's own words. Every id, flow, filter and route of hooks.html is untouched; this file only restyles
+   the hero and raises the type hierarchy and annotation detail of the sections under it. No italics, no boxes. */
+
+/* ---------- the hero ---------- */
+.hk4 .hk4-hero { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); align-content: end; gap: 0;
+  min-height: 0; padding: 0; margin: 0 calc(var(--qa-pad) * -1); overflow: visible; }
+.hk4 .hk4-stage { position: relative; height: 420px; overflow: hidden; pointer-events: none; }
+/* the lit set: the first frame shows at once, before the live layer loads; the set melts into the page at its edges */
+.hk4 .hk4-stage--set::before, .hk4 .hk4-stage--still::before { content: ''; position: absolute; inset: 0; background: #050605 url(/qx-a/set/set-create.webp) 50% 62% / cover no-repeat; }
+.hk4 .hk4-stage--set::before, .hk4 .hk4-stage--still::before, .hk4 .hk4-stage .hk4-set {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 84%, transparent 100%), linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%); -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 84%, transparent 100%), linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%); mask-composite: intersect; }
+.hk4 .hk4-stage .hk4-set { z-index: 1; }
+/* without WebGL: the hook photograph in the still set */
+.hk4 .hk4-still { position: absolute; left: 50%; top: 2%; height: 92%; width: auto; transform: translateX(-50%); filter: drop-shadow(0 30px 40px rgba(0,0,0,.6));
+  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent 98%); mask-image: linear-gradient(180deg, #000 70%, transparent 98%); }
+/* the annotation: what is on the hook (real data from the page's own live list) */
+.hk4 .hk4-tag { position: absolute; z-index: 2; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; gap: 10px; align-items: baseline; white-space: nowrap;
+  font-size: 12.5px; font-weight: 600; color: var(--qa-tx-3); letter-spacing: .01em; text-shadow: 0 1px 10px #000, 0 0 2px #000; }
+.hk4 .hk4-tag b { color: var(--qa-tx); font-weight: 760; }
+.hk4 .hk4-tag[hidden] { display: none; }
+
+.hk4 .hk-hero-copy { position: relative; z-index: 1; padding: 6px var(--qa-pad) 0; }
+.hk4 .hk-hero .hl-eyebrow { margin-bottom: 18px; font-size: 11.5px; font-weight: 740; letter-spacing: .14em; text-transform: uppercase; color: var(--qa-gold-hi); }
+.hk4 .hk-hero .hl-eyebrow::after { content: ''; width: 56px; height: 1px; margin-left: 6px; background: linear-gradient(90deg, rgba(232,200,140,.7), transparent); }
+.hk4 .hk-hero .hl-h1 { max-width: none; font-size: clamp(50px, 14.2vw, 160px); line-height: .86; font-weight: 880; font-stretch: 125%; letter-spacing: -.035em; text-transform: uppercase; }
+.hk4 .hk-hero .hl-h1 .hk4-h1b { display: block; background: none; -webkit-background-clip: initial; background-clip: initial; color: var(--qa-tx-2); font-weight: 260; font-stretch: 112%; letter-spacing: -.02em; }
+[data-theme="light"] .hk4 .hk-hero .hl-h1 .hk4-h1b { color: var(--qa-tx-3); background: none; }
+.hk4 .hk-hero .hl-lede { max-width: 30ch; margin-top: 20px; font-size: 18px; color: var(--qa-tx-2); }
+.hk4 .hk-hero .hl-cta { margin-top: 26px; }
+.hk4 .hk-create-link { margin-top: 18px; }
+/* the live line: a small annotation on a hairline */
+.hk4 .hk-pulse { margin-top: 26px; padding: 2px 0 2px 14px; font-size: 12.5px; letter-spacing: .01em; box-shadow: inset 1px 0 0 rgba(232,200,140,.5); }
+.hk4 .hk-pulse:empty { padding: 0; box-shadow: none; }
+
+/* ---------- the sections: one type scale, index numerals, hairlines ---------- */
+.hk4 .qa-head__t { font-size: clamp(34px, 6vw, 72px); line-height: .9; font-weight: 880; font-stretch: 125%; letter-spacing: -.03em; text-transform: uppercase; }
+.hk4 .qa-head__t--s { font-size: clamp(28px, 4.6vw, 48px); }
+.hk4 .hk-open-t { font-size: clamp(24px, 3.2vw, 36px); line-height: .95; font-weight: 860; font-stretch: 122%; letter-spacing: -.025em; text-transform: uppercase; margin-bottom: 10px; }
+.hk4 .qa-head { align-items: end; }
+.hk4 .qa-head__note { font-size: 12px; font-weight: 640; letter-spacing: .04em; text-transform: uppercase; color: var(--qa-tx-3); }
+.hk4 .hk-build { padding-top: 56px; }
+.hk4 .hk-how-rail { counter-reset: hk; }
+.hk4 .hk-how-rail li { counter-increment: hk; padding-top: 4px; }
+.hk4 .hk-how-rail li b { display: flex; align-items: baseline; gap: 10px; font-size: 20px; font-weight: 820; font-stretch: 118%; letter-spacing: -.02em; }
+.hk4 .hk-how-rail li b::before { content: counter(hk, decimal-leading-zero); font-size: 11px; font-weight: 720; letter-spacing: .12em; color: var(--qa-gold-hi); font-variant-numeric: tabular-nums; }
+.hk4 .hk-how-rail li > span:last-child { font-size: 14.5px; }
+.hk4 .hk-stats { margin-top: 56px; padding: 22px 0 18px; box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+.hk4 .hk-stats .qa-stat__v { font-size: clamp(34px, 5vw, 56px); font-weight: 860; font-stretch: 118%; letter-spacing: -.03em; line-height: 1; }
+.hk4 .hk-stats .qa-stat__l { margin-top: 6px; font-size: 11.5px; font-weight: 640; letter-spacing: .06em; text-transform: uppercase; color: var(--qa-tx-3); }
+.hk4 .hk-live .qa-head__note { text-transform: none; letter-spacing: 0; font-size: 13px; }
+.hk4 .hk-block__t { font-size: 19px; }
+.hk4 .hk-preset__t { font-size: clamp(26px, 4.4vw, 40px); font-weight: 860; font-stretch: 122%; letter-spacing: -.025em; text-transform: uppercase; }
+.hk4 .hk-discover-t { font-size: clamp(44px, 9vw, 112px); line-height: .88; font-weight: 880; font-stretch: 125%; letter-spacing: -.035em; text-transform: uppercase; }
+.hk4 .hk-discover-t .hl-gold { display: block; background: none; -webkit-background-clip: initial; background-clip: initial; color: var(--qa-tx-2); font-weight: 260; font-stretch: 112%; letter-spacing: -.02em; }
+.hk4 .hk-discover .hl-eyebrow { font-size: 11.5px; font-weight: 740; letter-spacing: .14em; text-transform: uppercase; }
+.hk4 .hk-dir b { font-size: clamp(30px, 4vw, 44px); font-weight: 860; letter-spacing: -.03em; }
+.hk4 .hk-dir span { font-size: 11.5px; font-weight: 640; letter-spacing: .06em; text-transform: uppercase; color: var(--qa-tx-3); }
+.hk4 .hk-open-row { padding: 32px 0; }
+
+/* ---------- wide ---------- */
+@media (min-width: 900px) {
+  .hk4 .hk4-hero { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); grid-template-areas: "copy stage"; align-items: end;
+    min-height: min(calc(100svh - var(--qa-nav-h)), 860px); margin: 0 calc(var(--qa-pad) * -1); }
+  .hk4 .hk4-stage { grid-area: stage; align-self: stretch; height: auto; min-height: 640px; }
+  .hk4 .hk-hero-copy { grid-area: copy; align-self: end; padding: 56px 0 64px var(--qa-pad); }
+  .hk4 .hk-hero .hl-h1 { font-size: clamp(64px, 7vw, 124px); }
+  .hk4 .hk-hero .hl-lede { max-width: 34ch; }
+  /* the annotation as a callout beside the object, a hairline leading to it */
+  .hk4 .hk4-tag { left: auto; right: 4%; top: 64%; bottom: auto; transform: none; flex-direction: column; align-items: flex-start; gap: 3px; padding: 2px 0 2px 14px; box-shadow: inset 1px 0 0 rgba(232,200,140,.55); }
+  .hk4 .hk4-tag b { font-size: 17px; letter-spacing: .01em; }
+  .hk4 .hk4-tag::before { content: ''; position: absolute; right: 100%; top: 50%; width: 64px; height: 1px; background: linear-gradient(90deg, transparent, rgba(232,200,140,.7)); }
+  .hk4 .hk4-tag::after { content: ''; position: absolute; right: calc(100% + 64px); top: 50%; width: 5px; height: 5px; margin: -2px -2px 0 0; border-radius: 50%; background: var(--qa-gold); box-shadow: 0 0 10px rgba(232,200,140,.8); }
+  .hk4 .hk-stats { margin-top: 0; }
+  /* in the still set the annotation sits under the hook, as on a phone */
+  .hk4 .hk4-stage--still .hk4-tag { left: 50%; right: auto; top: auto; bottom: 20px; transform: translateX(-50%); flex-direction: row; align-items: baseline; gap: 10px; padding: 0; box-shadow: none; }
+  .hk4 .hk4-stage--still .hk4-tag b { font-size: 12.5px; }
+  .hk4 .hk4-stage--still .hk4-tag::before, .hk4 .hk4-stage--still .hk4-tag::after { display: none; }
+}
+@media (min-width: 1100px) {
+  .hk4 .hk4-hero { margin: 0 calc(max(var(--qa-pad), (100vw - var(--qa-maxw)) / 2 + var(--qa-pad)) * -1); min-height: min(calc(100svh - var(--qa-nav-h)), 800px); }
+  .hk4 .hk-hero-copy { padding-left: max(var(--qa-pad), calc((100vw - var(--qa-maxw)) / 2 + var(--qa-pad))); }
+  .hk4 .hk-hero .hl-h1 { max-width: none; }
+  .hk4 .hk-build { padding-top: 72px; }
+  .hk4 .hk-how-rail li b { font-size: 22px; }
+}
