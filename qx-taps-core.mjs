@@ -5,6 +5,7 @@ import {FOUNDING, grantBatch, dayCut} from './founding-config.mjs';
 import {decodeGrant, grantedSet, SEL as GRANT_SEL} from './founding-fund.mjs';
 import {approvalChecks, allowanceData} from './qx-flywheel2-setup.mjs';
 import {verifyDeployment} from './qx-pool-fee-share.mjs';
+import {verifyPlan as verifyAdaptive} from './qx-adaptive-liquidity.mjs';
 
 export const GROUPS = [{id: 'wallet', label: 'Your wallet'}, {id: 'solana', label: 'Your wallet (Solana)'}, {id: 'safe', label: 'Safe, both signers'}, {id: 'privy', label: 'Privy dashboard (one visit)'}];
 const pad = a => String(a).toLowerCase().replace(/^0x/, '').padStart(64, '0');
@@ -329,6 +330,16 @@ export async function evaluateCatalogue(catalogue, io, {onUpdate} = {}) {
           add(base(art.chainId), () => row.step === 'create'
             ? checkCode({address: art.address}, art.chainId, io.rpc)
             : checkCalls([{to: art.safeBatch.calls[0].to, data: allowanceData(art.constructor.safe, art.address), expect: {kind: 'gte', value: art.safeBatch.calls[0].args[1]}}], art.chainId, io.rpc));
+          return items;
+        }
+        if (row.adapter === 'adaptiveLiquidity') {
+          // 2026-11-12: the pool-fee share moves to a QRange. Code checks for the two any-wallet taps; the Safe tap is done when
+          // the new share is approved and the old one (0x5934 → v2) is at 0.
+          const art = await json(row.manifest); verifyAdaptive(art);
+          const weth = art.safeBatch.calls[0].to, safe = art.constructor.safe;
+          add(base(art.chainId), () => row.step === 'range' ? checkCode({address: art.range.address}, art.chainId, io.rpc)
+            : row.step === 'create' ? checkCode({address: art.address}, art.chainId, io.rpc)
+            : checkCalls([{to: weth, data: allowanceData(safe, art.address), expect: 'nonzero'}, {to: weth, data: allowanceData(safe, art.replaces.feeShare), expect: {kind: 'equals', value: '0'}}], art.chainId, io.rpc));
           return items;
         }
         if (row.adapter === 'arbAllow') {
