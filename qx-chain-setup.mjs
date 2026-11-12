@@ -10,6 +10,7 @@
 // factory's predictToken(connected wallet, salt), read once that factory has code (a test launch from this wallet).
 import {getWalletHub} from '/wallet-hub-fresh.mjs';
 import {chainById} from '/chains.mjs';
+import {readCreateNativeUSD} from '/qx-create-prices.mjs';
 
 const root=document.getElementById('qcs-root'),hub=getWalletHub(window),q=new URLSearchParams(location.search);
 const list=k=>new Set((q.get(k)||'').split(',').map(x=>x.trim()).filter(Boolean));
@@ -62,6 +63,9 @@ async function check(chainId,s){
 }
 const say=(chain,text,tone='')=>{status={chain,text,tone};draw();};
 const gwei=w=>(Number(w)/1e9).toPrecision(3)+' gwei';
+// USD per native coin (2026-11-12): the cost line also shows dollars at today's gas, so a costly chain can be skipped.
+const usdOf={};
+const usdText=(chainId,w)=>{const p=usdOf[net(chainId)?.native||'ETH'];if(!(p>0))return '';const v=Number(w)/1e18*p;return ' (about $'+(v>=100?Math.round(v).toLocaleString('en-US'):v>=1?v.toFixed(2):v.toFixed(3))+')';};
 const native=(chainId,w)=>{const n=Number(w)/1e18;return (n===0?'0':n.toPrecision(3))+' '+(net(chainId)?.native||'ETH');};
 // Reads one chain: every step (in parallel), gas price, and the connected wallet's balance there.
 async function refresh(chainId){
@@ -70,6 +74,7 @@ async function refresh(chainId){
  await Promise.all([
   ...C.steps.map(async s=>{try{S.steps[s.id]=await check(chainId,s);}catch{S.steps[s.id]=null;}}),
   rpc(chainId,'eth_gasPrice',[]).then(v=>{S.gasPrice=BigInt(v);}).catch(()=>{}),
+  (async()=>{const sym=net(chainId)?.native||'ETH';if(usdOf[sym]===undefined){usdOf[sym]=null;usdOf[sym]=await readCreateNativeUSD(sym).catch(()=>null);}})(),
   owner?rpc(chainId,'eth_getBalance',[owner,'latest']).then(v=>{S.balance={owner,wei:BigInt(v)};}).catch(()=>{S.balance=null;}):Promise.resolve(S.balance=null)
  ]);
  S.read=true;draw();
@@ -166,8 +171,9 @@ function section(chainId,many){
   ...(chainById(chainId)?[]:[el('dt',{},'Network'),el('dd',{},'Chain '+chainId+' · '+ch.native+' · '+ch.rpc+'. The first Send adds and switches it in your wallet; then connect again once.')]),
   el('dt',{},'Every step'),el('dd',{},valued.length?'Network gas, plus '+valued.map(s=>native(chainId,BigInt(s.value))+' sent with “'+s.group+'”').join(', '):'Value 0 · network gas only'),
   el('dt',{},'Go'),el('dd',{},(cleared?'Cleared for this chain':'Waiting for a go (go='+chainId+')')+(!C.steps.some(needsFactoryGo)?'':factoryGo.has(chainId)?' · launch contract cleared':' · launch contract needs factory='+chainId)),
+  ...(C.optional?[el('dt',{},'Optional'),el('dd',{},C.optional)]:[]),
   el('dt',{},'Progress'),el('dd',{},done+' of '+C.steps.length+' set up'),
-  el('dt',{},'Still to send'),el('dd',{},left===0n&&leftValue===0n?'Nothing. This chain is set up.':'About '+Number(left).toLocaleString('en-US')+' gas'+(leftValue?' + '+native(chainId,leftValue):'')+(cost!=null?', '+native(chainId,cost)+' in all at today’s '+gwei(S.gasPrice)+'. Keep at least twice that in the wallet.':'.')),
+  el('dt',{},'Still to send'),el('dd',{},left===0n&&leftValue===0n?'Nothing. This chain is set up.':'About '+Number(left).toLocaleString('en-US')+' gas'+(leftValue?' + '+native(chainId,leftValue):'')+(cost!=null?', '+native(chainId,cost)+usdText(chainId,cost)+' in all at today’s '+gwei(S.gasPrice)+'. Keep at least twice that in the wallet.':'.')),
   el('dt',{},'Your wallet here'),el('dd',{},!conn?'Connect your wallet to see its balance.':bal==null?'Refreshing…':native(chainId,bal)+(cost!=null&&left>0n?(bal>=cost*2n?' · enough':bal>=cost?' · enough, but under twice the cost':' · not enough yet'):''))));
  // Wallet on another network: one tap to switch (the hub switches; Elysium is added from the manifest).
  if(conn&&conn.chainId!==chainId&&left>0n&&cleared){

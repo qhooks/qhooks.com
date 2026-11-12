@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Auto-range liquidity | QHooks</title><link rel="preload" href="/qx-a/fonts/mona-sans-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/qx-a/tokens.css"><link rel="stylesheet" href="/qx-a/components.css"><link rel="stylesheet" href="/qx-a/shell.css"><link rel="stylesheet" href="/wallet-site.css"><link rel="stylesheet" href="/qx-a/pages/money-common.css"><link rel="stylesheet" href="/qx-a/pages/money-flow.css"><link rel="stylesheet" href="/qx-a/pages/money-holders.css"><link rel="stylesheet" href="/qx-a/pages/money-floor.css"><meta name="description" content="Rising floor: part of this launch's fees fund a bid that only moves up. Nobody can withdraw it."><link rel="icon" href="/qhooks-logo.jpg" type="image/jpeg">
+<link rel="modulepreload" href="/wallet-site.mjs"><link rel="modulepreload" href="/wallet-hub.mjs"><link rel="modulepreload" href="/wallet-hub-fresh.mjs"><link rel="modulepreload" href="/full-launch/prototypes/qwallet/client/wallet-session.mjs"><link rel="modulepreload" href="/wallet-discovery.mjs"><link rel="modulepreload" href="/wallet-preference.mjs"><link rel="modulepreload" href="/wallet-rpc-compat.mjs"><link rel="modulepreload" href="/chain-catalog.mjs"><link rel="modulepreload" href="/wallet-login.mjs"><link rel="modulepreload" href="/embedded-wallet-provider.mjs"><meta property="og:type" content="website"><meta property="og:site_name" content="QHooks"><meta property="og:title" content="Verify your launch | QHooks"><meta property="og:description" content="Link your QHooks launch to your X account: your wallet signs a free message and you post the code it gives you."><meta property="og:image" content="https://qhooks.com/og/qhooks-card.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://qhooks.com/og/qhooks-card.png"><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/app-icons/apple-touch-icon.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="QHooks"><meta name="theme-color" content="#090B0A"></head>
+<body class="qa" data-a-shell data-a-active="community"><a class="mn-skip" href="#main">Skip to content</a><button type="button" id="qhc-trigger" class="qhc-trigger" aria-haspopup="dialog">Connect wallet</button>
+<div class="qa-ambient" aria-hidden="true"><div class="qa-ambient__art"></div><div class="qa-ambient__grain"></div></div>
+<main id="main" class="qa-page mn-hold mn-floorpg mn-rangepg">
+ <div class="mn-hold__grid">
+ <div class="mn-col">
+ <header class="mn-top mn-hold__top">
+  <span class="qa-coin qa-coin--md mn-coin"><img class="qa-coin__img" src="/qhooks-logo.jpg" alt="" width="96" height="96"><span class="qa-coin__ring" aria-hidden="true"></span></span>
+  <p class="mn-kicker"><span class="mn-dot" aria-hidden="true"></span><span>Liquidity</span><span>Auto-range</span></p>
+  <h1 class="mn-h1">Auto-range liquidity</h1>
+  <p class="mn-lede">Your launch's fees keep liquidity bunched around the price, so trades move it less. It follows the price after big moves. Nobody can withdraw it.</p>
+ </header>
+ <h2 class="mn-h2 mn-floor-setup">Add auto-range liquidity to your launch</h2>
+ <section class="qlk-card mn-flow" id="qrg-root"><p>Refreshing…</p></section>
+ <section class="qlk-card mn-flow" id="qrg-key" aria-label="Your quantum key" hidden></section>
+ </div>
+ </div>
+</main><dialog id="qhc-dialog" class="qhc-dialog" aria-labelledby="qhc-title">
+ <div class="qhc-heading"><h2 id="qhc-title">Your wallet</h2><button id="qhc-close" type="button" aria-label="Close wallet dialog">×</button></div>
+ <section class="qhc-login"><button id="qhc-email-login" type="button" class="qhc-choice">Continue with email or Google</button><p>No wallet extension needed. Your QWallet quantum key stays separate.</p><button id="qhc-email-logout" type="button" class="qhc-secondary" hidden>Sign out of QHooks login</button><p id="qhc-login-status" role="status" aria-live="polite"></p></section><section class="qhc-mobile">
+ <label for="qhc-mobile-chain">Mobile wallet network</label><select id="qhc-mobile-chain"></select>
+ <button id="qhc-mobile-login" type="button" class="qhc-choice">MetaMask Mobile</button>
+ <p id="qhc-mobile-status" role="status" aria-live="polite">Connect your phone with a QR code.</p>
+ <button id="qhc-mobile-disconnect" type="button" class="qhc-secondary" hidden>Disconnect mobile session</button>
+ <p class="qhc-sdk-notice">Uses MetaMask Connect, copyright ConsenSys. <a href="/metamask/LICENSE.txt" target="_blank" rel="noopener">License</a></p>
+</section>
+<div id="qhc-choices">
+  <p>Choose an EVM wallet.</p>
+  <div id="qhc-wallets" class="qhc-wallets"></div>
+  <div id="qhc-empty"><p>No wallet detected in this browser.</p><p>Open <strong>qhooks.com</strong> in Chrome with your wallet extension enabled, or in your wallet app’s built-in browser.</p><p>The in-app preview cannot access Chrome’s wallet extensions. Use MetaMask Mobile above to pair your phone.</p></div>
+  <button id="qhc-rescan" type="button" class="qhc-secondary">Detect wallets again</button>
+ </div>
+ <div id="qhc-account" hidden><p id="qhc-address" class="qhc-address"></p><p id="qhc-chain"></p><p id="qhc-remembered"></p><button id="qhc-forget" type="button" class="qhc-secondary">Disconnect and forget</button></div>
+ <div id="qhc-email-network" hidden><label for="qhc-embedded-chain">Embedded wallet network</label><select id="qhc-embedded-chain"></select><button id="qhc-embedded-switch" type="button" class="qhc-secondary">Switch network</button></div><p id="qhc-status" role="status" aria-live="polite"></p>
+ <p class="qhc-footnote">Connecting does not authorize spending. Every signature and transaction needs your approval. Never enter your recovery phrase here.</p>
+</dialog><script src="/wallet-early.js"></script>
+<script type="module" src="/qx-rpc-fallback.mjs"></script><script type="module" src="/wallet-site.mjs"></script><script type="module" src="/wallet-page-resume.mjs"></script><script type="module" src="/wallet-login.mjs"></script><script type="module" src="/l121-mobile-login.mjs"></script><script type="module" src="/qx-shell.mjs"></script><script type="module" src="/qx-a/pages/money-shell.mjs"></script>
+<script type="module" src="/qx-range.mjs"></script>
+<script type="module" src="/qx-a/pages/money-holders.mjs"></script></body></html>
