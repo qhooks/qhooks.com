@@ -2,12 +2,13 @@
 //   0 hero · 1 builders · 2 callers · 3 holders · 4 traders · 5 close.
 // The look is the commercial's (work/qhooks-film-20261112/film.js): the same room environment, lights, brushed steel and
 // gold, the same bloom + grade pass (vignette, grain, aberration, light sweep). The gold hook (the film's model, packed to
-// hook.bin) forms out of sparks once at load, then each chapter gives it one hero object: launch blocks snapping on, the
-// latest call's outcome as extruded type, the vault ring, the eight chain coins orbiting the word. Every motion beyond
-// the scroll choreography is a real event the page hands in (hit, call, burn). Phone first: DPR capped, no DoF pass
-// (dust fakes it by depth), a top band for the object in portrait so the words never sit on it.
-// three lives at /qx-a/vendor/three (shared with /create); the addons carry one patch: `from 'three'` → a relative path,
-// because the CSP (script-src 'self') forbids an inline import map.
+// hook.bin) forms out of sparks once at load, then each chapter gives it one hero object: launch blocks docking on the
+// shank, the latest call's outcome as extruded type, QHOOKS coins on the floor that burn into embers, the chain names
+// slamming in as type with one coin flipping. Every motion beyond the scroll choreography is a real event the page hands
+// in (hit, call, burn). No rings, orbits, halos or node lines anywhere (Randall, 2026-11-12: they read as bubble maps).
+// Phone first: DPR capped, no DoF pass (dust fakes it by depth), a top band for the object in portrait so the words
+// never sit on it. three lives at /qx-a/vendor/three (shared with /create); the addons carry one patch: `from 'three'`
+// → a relative path, because the CSP (script-src 'self') forbids an inline import map.
 import * as THREE from '../vendor/three/three.module.js';
 import { EffectComposer } from '../vendor/three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../vendor/three/addons/postprocessing/RenderPass.js';
@@ -25,8 +26,9 @@ const span = (t, a, b) => clamp((t - a) / (b - a));
 function seeded(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 const GOLD = 0xd2ad72, GOLD_HI = 0xf0daae;
 const FONT = '"Mona Sans", ui-sans-serif, system-ui, sans-serif';
+const CHAIN_NAMES = ['ROBINHOOD.', 'BASE.', 'BNB.', 'ARBITRUM.', 'ETHEREUM.', 'ELYSIUM.', 'MONAD.', 'SOLANA.'];
 
-export async function mountScene(canvas, { icons = [], portrait = () => innerHeight > innerWidth } = {}) {
+export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg', portrait = () => innerHeight > innerWidth } = {}) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: 'high-performance', stencil: false });
   const DPR = Math.min(devicePixelRatio || 1, 1.6);
   renderer.setPixelRatio(DPR);
@@ -39,6 +41,7 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
   const camera = new THREE.PerspectiveCamera(34, 1, .1, 100);
   let W = 1, H = 1, PORT = false, P = 0, Pt = 0, t = 0, running = false, raf = 0, last = 0;
   const texLoader = new THREE.TextureLoader();
+  const imgTex = (src) => { const tx = texLoader.load(src); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; return tx; };
 
   /* ---------- environment: the film's dark room with warm strip lights ---------- */
   const envScene = new THREE.Scene();
@@ -60,7 +63,7 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
   const sweep = new THREE.PointLight(0xffe7b8, 0, 12, 1.4); scene.add(sweep);
   scene.add(new THREE.AmbientLight(0x141414, .5));
 
-  /* ---------- the set: backdrop glow (film), one key shaft, dust in the beam, floor, plinth ---------- */
+  /* ---------- the set: a near-black void, two or three parallel vertical shafts, dust, polished floor and plinth ---------- */
   const backMat = new THREE.ShaderMaterial({
     uniforms: { uGlow: { value: .5 }, uCenter: { value: new THREE.Vector2(.5, .5) }, uTint: { value: new THREE.Color(GOLD) }, uAspect: { value: 1 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
@@ -72,17 +75,16 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
     const v = g.createLinearGradient(0, 0, 0, 512); v.addColorStop(0, 'rgba(255,247,232,1)'); v.addColorStop(.5, 'rgba(255,244,226,.4)'); v.addColorStop(1, 'rgba(255,244,226,0)'); g.fillStyle = v; g.fillRect(0, 0, 128, 512);
     const hz = g.createLinearGradient(0, 0, 128, 0); hz.addColorStop(0, 'rgba(0,0,0,1)'); hz.addColorStop(.3, 'rgba(0,0,0,0)'); hz.addColorStop(.7, 'rgba(0,0,0,0)'); hz.addColorStop(1, 'rgba(0,0,0,1)'); g.globalCompositeOperation = 'destination-out'; g.fillStyle = hz; g.fillRect(0, 0, 128, 512);
     const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; return tx; })();
-  // the architectural void: two or three tall vertical shafts of haze, parallel, never a cone
   const shaftMat = new THREE.MeshBasicMaterial({ map: shaftTex, transparent: true, opacity: .11, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
   const shaft = new THREE.Group(); scene.add(shaft);
   [[1.0, -.05, -.9], [1.7, 1.9, -3.2], [.6, -2.4, -3.8]].forEach(([w, x, z]) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 18), shaftMat); m.position.set(x, 4.5, z); shaft.add(m); });
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshPhysicalMaterial({ color: 0x050505, roughness: .14, metalness: .75, clearcoat: 1, clearcoatRoughness: .08 })); floor.rotation.x = -Math.PI / 2; floor.position.y = -1.62; scene.add(floor);
+  const FLOOR_Y = -1.62, PLINTH_TOP = -1.52;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshPhysicalMaterial({ color: 0x050505, roughness: .14, metalness: .75, clearcoat: 1, clearcoatRoughness: .08 })); floor.rotation.x = -Math.PI / 2; floor.position.y = FLOOR_Y; scene.add(floor);
   const poolTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); const r = g.createRadialGradient(128, 128, 0, 128, 128, 128); r.addColorStop(0, 'rgba(240,218,174,.2)'); r.addColorStop(.4, 'rgba(210,173,114,.04)'); r.addColorStop(1, 'rgba(210,173,114,0)'); g.fillStyle = r; g.fillRect(0, 0, 256, 256); const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; return tx; })();
-  const pool = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); pool.rotation.x = -Math.PI / 2; pool.position.y = -1.61; scene.add(pool);
-  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.12, .1, 72), new THREE.MeshPhysicalMaterial({ color: 0x070708, roughness: .1, metalness: .8, clearcoat: 1, clearcoatRoughness: .05 })); plinth.position.y = -1.57; scene.add(plinth);
-  const plinthRing = new THREE.Mesh(new THREE.TorusGeometry(1.05, .01, 8, 128), new THREE.MeshBasicMaterial({ color: GOLD_HI, transparent: true, opacity: .55, blending: THREE.AdditiveBlending, depthWrite: false })); plinthRing.rotation.x = Math.PI / 2; plinthRing.position.y = -1.515; scene.add(plinthRing);
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); pool.rotation.x = -Math.PI / 2; pool.position.y = FLOOR_Y + .01; scene.add(pool);
+  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.12, .1, 72), new THREE.MeshPhysicalMaterial({ color: 0x070708, roughness: .1, metalness: .8, clearcoat: 1, clearcoatRoughness: .05 })); plinth.position.y = PLINTH_TOP - .05; scene.add(plinth);
 
-  /* ---------- dust: fine particles caught in the beam, soft by depth (the DoF the phone cannot afford) ---------- */
+  /* ---------- dust: fine particles caught in the beam, soft by depth ---------- */
   const DUST = 2600;
   const dustGeo = new THREE.BufferGeometry();
   { const rnd = seeded(5), p = new Float32Array(DUST * 3), s = new Float32Array(DUST); for (let i = 0; i < DUST; i++) { p[i * 3] = (rnd() - .5) * 7; p[i * 3 + 1] = -1.6 + rnd() * 7; p[i * 3 + 2] = (rnd() - .5) * 6; s[i] = rnd(); } dustGeo.setAttribute('position', new THREE.BufferAttribute(p, 3)); dustGeo.setAttribute('aSeed', new THREE.BufferAttribute(s, 1)); }
@@ -105,7 +107,6 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
   const hookRoot = new THREE.Group(); scene.add(hookRoot);
   const hookSpin = new THREE.Group(); hookRoot.add(hookSpin);
   const model = new THREE.Group(); hookSpin.add(model);
-  // brushed-steel normal map (film.js): streaked noise along u, turned into normals
   function brushedNormalMap() {
     const S = 256, c = document.createElement('canvas'); c.width = c.height = S; const ctx = c.getContext('2d');
     const rnd = seeded(3), hgt = new Float32Array(S * S);
@@ -124,7 +125,7 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
   const threadMat = new THREE.MeshBasicMaterial({ color: GOLD_HI, transparent: true, opacity: .9 });
   const MATS = { Steel: steelMat, Gold: goldMat, GoldLit: studMat, Thread: threadMat };
   const surface = []; const reflection = new THREE.Group(); scene.add(reflection);
-  const reflMat = new THREE.MeshPhysicalMaterial({ color: 0xd4c6ad, metalness: 1, roughness: .5, transparent: true, opacity: .3, depthTest: false, depthWrite: false, clippingPlanes: [new THREE.Plane(new THREE.Vector3(0, -1, 0), -1.52)] });
+  const reflMat = new THREE.MeshPhysicalMaterial({ color: 0xd4c6ad, metalness: 1, roughness: .5, transparent: true, opacity: .3, depthTest: false, depthWrite: false, clippingPlanes: [new THREE.Plane(new THREE.Vector3(0, -1, 0), PLINTH_TOP)] });
   {
     const buf = await (await fetch(new URL('./hook.bin', import.meta.url), { cache: 'force-cache' })).arrayBuffer();
     const dv = new DataView(buf), hl = dv.getUint32(4, true), head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 8, hl)).replace(/\0+$/, '')), base = 8 + hl;
@@ -161,24 +162,24 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   const particles = new THREE.Points(pGeo, pMat); particles.position.copy(model.position); particles.frustumCulled = false; hookSpin.add(particles);
 
-  /* ---------- bursts: a real trade, burn or call throws sparks off the hook ---------- */
+  /* ---------- bursts: a real trade, burn or call throws sparks; a burning coin rises as embers ---------- */
   const bursts = [];
   const burstMat = (color) => new THREE.ShaderMaterial({
-    uniforms: { uT: { value: 9 }, uStrength: { value: 1 }, uColor: { value: new THREE.Color(color) }, uPx: { value: 1 }, uUp: { value: 1 } },
-    vertexShader: `attribute vec3 aDir; attribute float aSeed; uniform float uT, uStrength, uPx, uUp; varying float vL;
-      void main(){ float t = uT; float e = 1.0 - exp(-3.2 * t); vec3 p = aDir * (uStrength * (0.5 + aSeed) * e); p.y += uUp * 0.9 * e - 0.9 * t * t;
+    uniforms: { uT: { value: 9 }, uStrength: { value: 1 }, uColor: { value: new THREE.Color(color) }, uPx: { value: 1 }, uUp: { value: 1 }, uSize: { value: 1 } },
+    vertexShader: `attribute vec3 aDir; attribute float aSeed; uniform float uT, uStrength, uPx, uUp, uSize; varying float vL;
+      void main(){ float t = uT; float e = 1.0 - exp(-3.2 * t); vec3 p = aDir * (uStrength * (0.5 + aSeed) * e); p.y += (uUp > 1.5 ? 0.25 * e + t * 0.55 : uUp * 0.9 * e - 0.9 * t * t);
         vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * mv; vL = clamp(1.0 - t / 1.3, 0.0, 1.0);
-        gl_PointSize = uPx * (3.0 + 5.0 * aSeed) * vL * 32.0 / -mv.z; }`,
-    fragmentShader: `uniform vec3 uColor; varying float vL; void main(){ vec2 d = gl_PointCoord - 0.5; float r = length(d); if (r > 0.5) discard; float core = exp(-r * r * 14.0); gl_FragColor = vec4(uColor * (0.5 + core), core * vL); }`,
+        gl_PointSize = uSize * uPx * (3.0 + 5.0 * aSeed) * vL * 32.0 / -mv.z; }`,
+    fragmentShader: `uniform vec3 uColor; uniform float uSize; varying float vL; void main(){ vec2 d = gl_PointCoord - 0.5; float r = length(d); if (r > 0.5) discard; float core = exp(-r * r * 14.0); gl_FragColor = vec4(uColor * (0.5 + core), core * vL * min(1.0, uSize)); }`,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
-  { const rnd = seeded(21); for (let b = 0; b < 4; b++) { const M = 260, dir = new Float32Array(M * 3), sd = new Float32Array(M), pos = new Float32Array(M * 3);
+  { const rnd = seeded(21); for (let b = 0; b < 5; b++) { const M = 260, dir = new Float32Array(M * 3), sd = new Float32Array(M), pos = new Float32Array(M * 3);
     for (let i = 0; i < M; i++) { const th = rnd() * 6.283, ph = Math.acos(2 * rnd() - 1); dir[i * 3] = Math.sin(ph) * Math.cos(th); dir[i * 3 + 1] = Math.abs(Math.sin(ph) * Math.sin(th)); dir[i * 3 + 2] = Math.cos(ph) * .7; sd[i] = rnd(); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aDir', new THREE.BufferAttribute(dir, 3)); g.setAttribute('aSeed', new THREE.BufferAttribute(sd, 1));
     const m = new THREE.Points(g, burstMat(GOLD_HI)); m.visible = false; m.frustumCulled = false; scene.add(m); bursts.push(m); } }
   let burstI = 0;
-  const COLORS = { buy: 0x9ff0c2, sell: 0xff8a8e, burn: 0xffa352, call: 0xf0daae, gold: 0xf0daae };
-  function burst(worldPos, { color = 'gold', strength = 1, up = 1 } = {}) {
-    const b = bursts[burstI++ % bursts.length]; b.position.copy(worldPos); b.visible = true; b.material.uniforms.uT.value = 0; b.material.uniforms.uStrength.value = strength; b.material.uniforms.uUp.value = up; b.material.uniforms.uColor.value.setHex(COLORS[color] || COLORS.gold);
+  const COLORS = { buy: 0x9ff0c2, sell: 0xff8a8e, burn: 0xffa352, call: 0xf0daae, gold: 0xf0daae, ember: 0xff7a2a };
+  function burst(worldPos, { color = 'gold', strength = 1, up = 1, size = 1 } = {}) {
+    const b = bursts[burstI++ % bursts.length]; b.position.copy(worldPos); b.visible = true; b.material.uniforms.uT.value = 0; b.material.uniforms.uStrength.value = strength; b.material.uniforms.uUp.value = up; b.material.uniforms.uSize.value = size; b.material.uniforms.uColor.value.setHex(COLORS[color] || COLORS.gold);
   }
 
   /* ---------- post: bloom + the film's grade (vignette, grain, aberration, sweep, flash) ---------- */
@@ -223,13 +224,23 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
     g.userData.setOpacity = (o) => g.userData.planes.forEach((m) => { m.material.opacity = o; });
     g.visible = false; scene.add(g); return g;
   }
+  // a coin: a gold edge with two faces, no rim ring
+  const faceMat = new THREE.MeshPhysicalMaterial({ color: 0x151a18, metalness: .2, roughness: .35, clearcoat: 1 });
+  function makeCoin(tex, r = .32) {
+    const g = new THREE.Group();
+    const edge = new THREE.Mesh(new THREE.CylinderGeometry(r, r, .07, 48), goldMat); edge.rotation.x = Math.PI / 2; g.add(edge);
+    const faces = [];
+    [1, -1].forEach((s) => { const f = new THREE.Mesh(new THREE.CircleGeometry(r * .9, 48), faceMat); f.position.z = s * .0356; if (s < 0) f.rotation.y = Math.PI; g.add(f);
+      const ic = new THREE.Mesh(new THREE.CircleGeometry(r * .74, 48), new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false })); ic.position.z = s * .037; if (s < 0) ic.rotation.y = Math.PI; g.add(ic); faces.push(ic); });
+    g.userData.faces = faces; g.userData.setMap = (tx) => faces.forEach((f) => { f.material.map = tx; f.material.needsUpdate = true; });
+    return g;
+  }
 
-  /* ---------- builders: six launch blocks snap onto the hook ---------- */
+  /* ---------- builders: six launch blocks dock onto the hook (no links between them) ---------- */
   const BLOCKS = ['ANTI-SNIPE', 'BUYBACK + BURN', 'AUTO BURN', 'BUY / SELL TAX', 'KING OF THE POOL', 'LAST BUYER WINS'];
   const blocks = [], blockGroup = new THREE.Group(); scene.add(blockGroup);
   const slabMat = new THREE.MeshPhysicalMaterial({ color: 0x14181a, metalness: .35, roughness: .32, clearcoat: 1, clearcoatRoughness: .25 });
   const edgeMat = new THREE.LineBasicMaterial({ color: GOLD_HI, transparent: true, opacity: .75 });
-  const linkMat = new THREE.LineBasicMaterial({ color: GOLD_HI, transparent: true, opacity: .55, blending: THREE.AdditiveBlending, depthWrite: false });
   {
     const bw = 1.05, bh = .16, bd = .62, box = new THREE.BoxGeometry(bw, bh, bd), edges = new THREE.EdgesGeometry(box);
     BLOCKS.forEach((label, i) => {
@@ -238,41 +249,27 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
       const face = new THREE.Mesh(new THREE.PlaneGeometry(bw * .92, bd * .72), new THREE.MeshBasicMaterial({ map: textTex({ text: label, w: 512, h: 192, size: 54, weight: 760, color: '#F0DAAE', stretch: 'normal', tracking: .02 }), transparent: true, toneMapped: false, depthWrite: false }));
       face.rotation.x = -Math.PI / 2; face.position.y = bh / 2 + .004; g.add(face);
       const led = new THREE.Mesh(new THREE.SphereGeometry(.03, 10, 10), new THREE.MeshBasicMaterial({ color: GOLD_HI })); led.position.set(-bw / 2 + .09, bh / 2 + .02, bd / 2 - .09); g.add(led);
-      const link = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), linkMat); g.userData.link = link; blockGroup.add(link);
       g.userData.i = i; g.userData.led = led; g.visible = false; blockGroup.add(g); blocks.push(g);
     });
   }
-  const packets = [];
-  for (let i = 0; i < 3; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(.028, 8, 8), new THREE.MeshBasicMaterial({ color: GOLD_HI, transparent: true, opacity: .9 })); m.visible = false; scene.add(m); packets.push(m); }
 
-  /* ---------- callers: the latest call's outcome as extruded type; rings when a call lands ---------- */
+  /* ---------- callers: the latest call's outcome as extruded type ---------- */
   const numberG = extruded(4.6, 1.44, 9, .05);
   const numberSub = new THREE.Mesh(new THREE.PlaneGeometry(4.6, .5), new THREE.MeshBasicMaterial({ transparent: true, toneMapped: false, depthWrite: false })); numberSub.visible = false; scene.add(numberSub);
-  const rings = []; for (let i = 0; i < 4; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(1, .012, 8, 128), new THREE.MeshBasicMaterial({ color: GOLD_HI, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); r.visible = false; scene.add(r); rings.push(r); }
-  let ringT = 99, ringAt = new THREE.Vector3();
   let callData = { pct: null, label: '' }, callTexKey = '', callShown = 0;
 
-  /* ---------- holders: the vault ring closes around the hook (film.js) ---------- */
-  const vault = new THREE.Group(); scene.add(vault); vault.visible = false;
-  const vaultSegs = []; for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(new THREE.TorusGeometry(1.6, .05, 12, 48, Math.PI / 3 - .08), goldMat.clone()); m.material.emissive = new THREE.Color(GOLD); m.material.emissiveIntensity = .25; m.material.transparent = true; vault.add(m); vaultSegs.push(m); }
-  const vaultInner = new THREE.Mesh(new THREE.TorusGeometry(1.25, .012, 8, 128), new THREE.MeshBasicMaterial({ color: GOLD_HI, transparent: true, opacity: .5, blending: THREE.AdditiveBlending, depthWrite: false })); vault.add(vaultInner);
-  const vaultTicks = new THREE.Group(); vault.add(vaultTicks);
-  for (let i = 0; i < 36; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(.012, i % 3 ? .06 : .13, .012), new THREE.MeshBasicMaterial({ color: GOLD_HI, transparent: true, opacity: .55 })); const a = i / 36 * Math.PI * 2; m.position.set(Math.cos(a) * 1.42, Math.sin(a) * 1.42, 0); m.rotation.z = a + Math.PI / 2; vaultTicks.add(m); }
+  /* ---------- holders: QHOOKS coins drop onto the floor; a real burn takes one and it rises as embers ---------- */
+  const qTex = imgTex(logo);
+  const PILE = [[-.95, .35], [-.55, -.15], [-.15, .45], [.25, -.3], [.6, .25], [1.0, -.1], [-.75, .75], [.05, .85], [.8, .7]]; // x, z around the hook's bend
+  const coinPile = PILE.map(([x, z], k) => { const c = makeCoin(qTex, .3); c.userData = { ...c.userData, x, z, k, burn: null, gone: false, respawn: 0, rot: (k * 1.7) % 1 - .5 }; c.visible = false; scene.add(c); return c; });
+  let burnQueue = 0;
 
-  /* ---------- traders: the word, the eight chain coins orbiting through it ---------- */
-  const wordG = extruded(6.6, 1.65, 7, .05); wordG.userData.setMap(textTex({ text: 'TRADERS', w: 2048, h: 512, size: 400, weight: 900, color: '#F4F1E9', tracking: -.05 }));
-  const coins = [], coinGroup = new THREE.Group(); scene.add(coinGroup); coinGroup.visible = false;
-  const nodeMat = new THREE.MeshPhysicalMaterial({ color: 0x151a18, metalness: .2, roughness: .35, clearcoat: 1 });
-  icons.forEach((src, i) => {
-    const g = new THREE.Group();
-    const disc = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, .06, 40), nodeMat); disc.rotation.x = Math.PI / 2; g.add(disc);
-    g.add(new THREE.Mesh(new THREE.TorusGeometry(.315, .014, 8, 48), goldMat));
-    const tx = texLoader.load(src); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4;
-    const ic = new THREE.Mesh(new THREE.PlaneGeometry(.42, .42), new THREE.MeshBasicMaterial({ map: tx, transparent: true, toneMapped: false })); ic.position.z = .035; g.add(ic);
-    const ic2 = ic.clone(); ic2.position.z = -.035; ic2.rotation.y = Math.PI; g.add(ic2);
-    g.userData.i = i; g.userData.flash = 0; coinGroup.add(g); coins.push(g);
-  });
-  const orbit = new THREE.Mesh(new THREE.TorusGeometry(1, .006, 6, 160), new THREE.MeshBasicMaterial({ color: GOLD_HI, transparent: true, opacity: .22, blending: THREE.AdditiveBlending, depthWrite: false })); coinGroup.add(orbit);
+  /* ---------- traders: the chain names slam in as type; one coin flips as each lands ---------- */
+  const nameG = extruded(5.8, 1.36, 7, .05);
+  const nameTex = CHAIN_NAMES.map((n) => textTex({ text: n, w: 1536, h: 360, size: 236, weight: 900, color: '#F4F1E9', tracking: -.045 }));
+  const chainTex = icons.map(imgTex);
+  const chainCoin = makeCoin(chainTex[0] || qTex, .36); chainCoin.visible = false; scene.add(chainCoin);
+  let nameIdx = -1, coinFlash = 0;
 
   /* ---------- layout ---------- */
   function resize() {
@@ -284,36 +281,36 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
   const cam = { x: 0, y: 0, z: 6 };
   const hookPos = new THREE.Vector3();
   const bendWorld = () => { hookRoot.updateWorldMatrix(true, false); return new THREE.Vector3(0, -.4, 0).applyMatrix4(hookRoot.matrixWorld); };
-  // chapter layouts: [landscape, portrait] → hook [x, y, scale] and camera [x, y, z]. Portrait keeps the object in a top
-  // band (the camera looks at y 0.15; the band centre sits at about y 1.2), so the words below never sit on it.
+  // chapter layouts: [landscape, portrait] → hook [x, y, scale] and camera [x, y, z]. Portrait keeps the object in the DOM's
+  // band (setBands) so the words below never sit on it.
   const L = {
     hero:     { hook: [[1.75, .1, 1], [.1, 1.2, .68]], cam: [[.9, .2, 6.2], [0, .25, 7.4]] },
     builders: { hook: [[2.0, .1, .92], [.05, 1.35, .56]], cam: [[1.0, .2, 6.4], [0, .3, 7.8]] },
     callers:  { hook: [[-2.6, .9, .5], [-1.2, 2.4, .26]], cam: [[.6, .2, 6.4], [0, .3, 7.6]] },
-    holders:  { hook: [[1.9, 0, .8], [.05, 1.55, .42]], cam: [[1.0, .1, 6.4], [0, .3, 7.8]] },
-    traders:  { hook: [[1.5, .15, .62], [.05, 1.45, .42]], cam: [[1.0, .2, 7.0], [0, .3, 8.6]] },
+    holders:  { hook: [[1.9, .15, .8], [.05, 1.55, .42]], cam: [[1.0, .1, 6.4], [0, .3, 7.8]] },
+    traders:  { hook: [[-2.6, .9, .5], [-1.25, 2.4, .26]], cam: [[.6, .2, 6.6], [0, .3, 8.0]] },
     close:    { hook: [[0, .3, .92], [0, 1.15, .7]], cam: [[0, .2, 5.6], [0, .25, 6.8]] },
   };
   const CH = ['hero', 'builders', 'callers', 'holders', 'traders', 'close'];
   const pick = (k) => { const a = L[k], i = PORT ? 1 : 0; return { h: a.hook[i], c: a.cam[i] }; };
+  let bands = null;
   function layoutFor(p) {
     const i = clamp(Math.floor(p), 0, 5), u = p - i, a = pick(CH[i]), b = pick(CH[Math.min(i + 1, 5)]);
     const m = easeInOut(span(u, .65, 1)); // the hand-over happens in the last 35% of a chapter
     cam.x = lerp(a.c[0], b.c[0], m); cam.y = lerp(a.c[1], b.c[1], m); cam.z = lerp(a.c[2], b.c[2], m);
     let hx = lerp(a.h[0], b.h[0], m), hy = lerp(a.h[1], b.h[1], m), hs = lerp(a.h[2], b.h[2], m), bandY = null, bandH = 0;
     if (PORT && bands) {
-      // the band in world units at z 0: centre the object in it; cap its height to the band less a 16 px margin each side
       const ba = bands[i] || bands[bands.length - 1], bb = bands[Math.min(i + 1, 5)] || ba;
       const top = lerp(ba.top, bb.top, m), bot = lerp(ba.bottom, bb.bottom, m), Hw = 2 * cam.z * Math.tan(25 * Math.PI / 180);
       bandY = .15 + (.5 - (top + bot) / 2) * Hw; bandH = Math.max(0, (bot - top) - 32 / Math.max(1, H)) * Hw;
-      const ch = CH[i], ext = ch === 'holders' ? 3.95 : ch === 'traders' ? 2.4 : 2.32; // the object's height per unit of hook scale
-      hs = Math.min(hs, bandH / ext); hy = bandY + (ch === 'holders' ? .15 * hs : 0) + (ch === 'traders' ? -.1 : 0);
+      const ch = CH[i], ext = ch === 'holders' ? 2.75 : 2.32; // the object's height per unit of hook scale (holders: the coins under the bend)
+      hs = Math.min(hs, bandH / ext); hy = bandY + (ch === 'holders' ? .2 * hs : 0);
     }
     return { i, u, m, hx, hy, hs, bandY, bandH };
   }
 
   /* ---------- real events ---------- */
-  let spring = null, studFlash = 0, vaultFlash = 0, forgeT = 0, bands = null;
+  let spring = null, studFlash = 0, forgeT = 0;
   const mountedAt = performance.now();
   const pointer = { x: 0, y: 0 }, pointerT = { x: 0, y: 0 };
   addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') { pointerT.x = (e.clientX / innerWidth - .5) * 2; pointerT.y = (e.clientY / innerHeight - .5) * 2; } }, { passive: true });
@@ -324,12 +321,11 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
   }
   const api = {
     hit(side, usd = 0) { tug(side, usd); const s = .5 + Math.min(1.6, Math.log10(1 + usd) / 2.2); burst(bendWorld(), { color: side, strength: s, up: side === 'sell' ? .2 : 1 }); if (side === 'burn') studFlash = 1; },
-    call() { ringT = 0; ringAt.copy(numberG.visible ? numberG.position : bendWorld()); burst(bendWorld(), { color: 'call', strength: 1.1 }); flashV = .2; },
-    burn(tok = 0) { tug('burn', tok); burst(bendWorld(), { color: 'burn', strength: .6 + Math.min(1.4, Math.log10(1 + tok) / 3), up: 1.4 }); studFlash = 1; vaultFlash = 1; },
-    coin(i) { const c = coins[i]; if (c) c.userData.flash = 1; },
+    call() { burst(bendWorld(), { color: 'call', strength: 1.3, up: 1.2 }); flashV = .2; zoomV = .04; },
+    // a real burn: one coin on the floor burns into rising embers (the number of coins taken scales with the QHOOKS burned)
+    burn(tok = 0) { tug('burn', tok); studFlash = 1; burnQueue += 1 + Math.min(2, Math.floor(Math.log10(1 + tok) / 3)); },
+    coin(i) { if (i === nameIdx) coinFlash = 1; },
     setCall({ pct, label }) { callData = { pct, label }; },
-    // portrait: the DOM's object band per chapter, as fractions of the viewport height; the object is centred in it and
-    // scaled so its lowest point clears the words under it (Randall: the words never sit on the object)
     setBands(arr) { bands = Array.isArray(arr) && arr.length ? arr : null; },
     setProgress(p) { Pt = clamp(p, 0, 5.999); if (!running) api.resume(); },
     resume() { if (running) return; running = true; last = performance.now(); raf = requestAnimationFrame(frame); },
@@ -337,7 +333,9 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
     dispose() { api.pause(); renderer.dispose(); },
     get running() { return running; },
     debug() { const low = new THREE.Vector3(0, -1.14, 0).applyMatrix4(hookRoot.matrixWorld).project(camera); const num = numberG.visible ? new THREE.Vector3(0, -.72, 0).applyMatrix4(numberG.matrixWorld).project(camera) : null;
-      return { P, forgeT, hook: { visible: hookRoot.visible, pos: hookRoot.position.toArray(), scale: hookRoot.scale.x, bottomPx: (1 - low.y) / 2 * H }, numberBottomPx: num ? (1 - num.y) / 2 * H : null, vaultBottomPx: vault.visible ? (1 - new THREE.Vector3(0, -1.65, 0).applyMatrix4(vault.matrixWorld).project(camera).y) / 2 * H : null, cam: camera.position.toArray(), parts: model.children.length, dpr: DPR, bands }; },
+      const pile = coinPile.filter((c) => c.visible); const pileLow = pile.length ? Math.max(...pile.map((c) => (1 - new THREE.Vector3(0, -.32, 0).applyMatrix4(c.matrixWorld).project(camera).y) / 2 * H)) : null;
+      const nm = nameG.visible ? (1 - new THREE.Vector3(0, -.68, 0).applyMatrix4(nameG.matrixWorld).project(camera).y) / 2 * H : null;
+      return { P, forgeT, hook: { visible: hookRoot.visible, pos: hookRoot.position.toArray(), scale: hookRoot.scale.x, bottomPx: (1 - low.y) / 2 * H }, numberBottomPx: num ? (1 - num.y) / 2 * H : null, vaultBottomPx: Math.max(pileLow || 0, nm || 0) || null, cam: camera.position.toArray(), parts: model.children.length, dpr: DPR, bands }; },
   };
 
   /* ---------- the frame ---------- */
@@ -351,8 +349,8 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
     pointer.x += (pointerT.x - pointer.x) * (1 - Math.exp(-dt * 3)); pointer.y += (pointerT.y - pointer.y) * (1 - Math.exp(-dt * 3));
     const { i, u, hx, hy, hs, bandY, bandH } = layoutFor(P);
     const ch = CH[i];
-    if (i !== lastChapter) { if (lastChapter >= 0) sweepT = 0; lastChapter = i; } // a light sweep when a chapter's word lands
-    forgeT = (now - mountedAt) / 1000; // wall clock, so the forge finishes on time even when frames are slow
+    if (i !== lastChapter) { if (lastChapter >= 0) sweepT = 0; lastChapter = i; }
+    forgeT = (now - mountedAt) / 1000;
     const forge = span(forgeT, .15, 2.4);
 
     // hook: position, scale, the slow idle turn and sway, the spring of a real hit
@@ -360,10 +358,9 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
     hookRoot.position.copy(hookPos); hookRoot.scale.setScalar(hs * (ch === 'hero' ? lerp(.92, 1, forge) : 1));
     hookSpin.rotation.y = .2 + Math.sin(t * .21) * .6 + (PORT ? 0 : pointer.x * .18);
     hookSpin.rotation.z = -.05 + Math.sin(t * .5) * .02;
-    hookRoot.rotation.set(0, 0, Math.sin(t * 1.25) * .018); // the idle pendulum
+    hookRoot.rotation.set(0, 0, Math.sin(t * 1.25) * .018);
     if (spring) { const st = t - spring.t0, e = Math.exp(-st * 3.2); hookRoot.rotation.z += spring.a * e * Math.cos(st * 8.5); hookRoot.position.y += spring.y * e * Math.cos(st * 11); if (st > 2.6) spring = null; }
     hookRoot.visible = forge > .35;
-    // forge heat cools into steel; the studs flash on real burns
     const heat = (1 - smooth(span(forgeT, 1.7, 3.3))) * (forge > .35 ? 1 : 0);
     steelMat.emissive.setRGB(1, .42, .1); steelMat.emissiveIntensity = heat * .7;
     studFlash = Math.max(0, studFlash - dt * 1.4); studMat.emissiveIntensity = .6 + 1.2 * heat + 1.6 * studFlash;
@@ -372,18 +369,16 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
     threadMat.opacity = .9 * smooth(span(forgeT, 1.9, 2.7));
     if (forgeT > 2.2 && forgeT - dt <= 2.2) { flashV = .3; zoomV = .08; sweepT = 0; }
 
-    // the set follows the hook: the shaft, the key light, the dust, the plinth
+    // the set follows the hook
     key.target.position.copy(hookPos); key.position.set(hookPos.x - 4, 6, 6);
     rim.position.set(hookPos.x + 4, 2, -3);
     shaft.position.set(hookPos.x, 0, 0); shaftMat.opacity = (.1 + .02 * Math.sin(t * .37)) * (ch === 'callers' ? .6 : 1) + .15 * heat;
     dustMat.uniforms.uTime.value = t; dustMat.uniforms.uCenter.value.set(hookPos.x, .2, 0); dustMat.uniforms.uFocus.value = cam.z; dustMat.uniforms.uOpacity.value = ch === 'callers' ? .5 : 1;
-    pool.position.x = plinth.position.x = plinthRing.position.x = hookPos.x; pool.scale.setScalar(hs); plinth.scale.set(hs, 1, hs); plinthRing.scale.setScalar(hs);
-    plinthRing.material.opacity = .35 + .3 * studFlash + .4 * heat;
-    const plinthOn = ch !== 'callers' && ch !== 'traders' && !PORT; plinth.visible = plinthRing.visible = pool.visible = plinthOn && hs > .55;
-    floor.visible = !PORT; // portrait: no floor, so its horizon never cuts a hard seam across the words (the plinth is off there too)
-    // the reflection on the plinth: the hook mirrored through the plinth top
+    pool.position.x = plinth.position.x = hookPos.x; pool.scale.setScalar(hs); plinth.scale.set(hs, 1, hs);
+    const plinthOn = ch !== 'callers' && ch !== 'traders' && !PORT; plinth.visible = pool.visible = plinthOn && hs > .55;
+    floor.visible = !PORT;
     reflection.visible = hookRoot.visible && plinth.visible;
-    if (reflection.visible) { reflection.position.set(hookRoot.position.x, 2 * -1.52 - hookRoot.position.y, hookRoot.position.z); reflection.scale.set(hookRoot.scale.x, -hookRoot.scale.y, hookRoot.scale.z); reflection.rotation.set(0, 0, -hookRoot.rotation.z); reflection.children.forEach((c) => { c.rotation.copy(hookSpin.rotation); c.position.copy(model.position).applyEuler(hookSpin.rotation); }); }
+    if (reflection.visible) { reflection.position.set(hookRoot.position.x, 2 * PLINTH_TOP - hookRoot.position.y, hookRoot.position.z); reflection.scale.set(hookRoot.scale.x, -hookRoot.scale.y, hookRoot.scale.z); reflection.rotation.set(0, 0, -hookRoot.rotation.z); reflection.children.forEach((c) => { c.rotation.copy(hookSpin.rotation); c.position.copy(model.position).applyEuler(hookSpin.rotation); }); }
     backMat.uniforms.uGlow.value = (ch === 'close' ? .5 : .35) + .5 * heat; backMat.uniforms.uCenter.value.set(.5 + hookPos.x * .05, .5 + hookPos.y * .05);
     backMat.uniforms.uTint.value.setHex(ch === 'callers' ? 0x3edd8f : GOLD);
     bloom.strength = .3 + .4 * heat + .25 * studFlash;
@@ -405,13 +400,9 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
         g.rotation.set(lerp(.9, .42, dock), lerp(side * 1.4, side * -.62, dock), lerp(side * .3, 0, dock));
         g.scale.setScalar(lerp(.55, 1, dock) * hs / .92 * (1 - leave * .5)); g.visible = dock > 0 && leave < 1;
         g.userData.led.material.color.setHex(dock >= .999 ? 0x9ff0c2 : GOLD_HI);
-        const link = g.userData.link, pa = link.geometry.attributes.position; tmpV.set(.45, yy, 0).applyMatrix4(hookRoot.matrixWorld);
-        pa.setXYZ(0, g.position.x - side * .5 * g.scale.x, g.position.y, g.position.z); pa.setXYZ(1, tmpV.x, tmpV.y, tmpV.z); pa.needsUpdate = true; link.visible = dock > .9 && leave < .5; link.material.opacity = .55 * (dock - .9) * 10 * (1 - leave);
         if (dock > .999 && !g.userData.snapped) { g.userData.snapped = true; burst(g.position, { color: 'gold', strength: .45, up: .5 }); flashV = Math.max(flashV, .05); } if (dock < .5) g.userData.snapped = false;
       });
-      const docked = blocks.filter((g) => g.userData.link.visible);
-      packets.forEach((pk, k) => { if (docked.length < 2 || leave > 0) { pk.visible = false; return; } const s = ((t * .35 + k / 3) % 1) * (docked.length - 1), a = docked[Math.floor(s)], b = docked[Math.min(docked.length - 1, Math.floor(s) + 1)]; pk.visible = true; pk.position.lerpVectors(a.position, b.position, s % 1); });
-    } else packets.forEach((pk) => (pk.visible = false));
+    }
 
     // ---- callers: the number rises as extruded type and counts to the real value
     const cOn = ch === 'callers' || (ch === 'builders' && u > .85) || (ch === 'holders' && u < .15);
@@ -433,33 +424,52 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
       numberG.userData.setOpacity(rise * (1 - leave));
       numberSub.position.set(nx, ny - 1.02 * sc, numberG.position.z + .02); numberSub.scale.setScalar(sc); numberSub.rotation.copy(numberG.rotation); numberSub.material.opacity = easeOut(span(cu, .15, .35)) * (1 - leave);
     }
-    ringT += dt;
-    rings.forEach((r, k) => { const ru = span(ringT, k * .08, 1.5 + k * .08); r.visible = ru > 0 && ru < 1; if (!r.visible) return; r.position.copy(ringAt); r.scale.setScalar(.15 + 4.2 * easeOut(ru)); r.material.opacity = (1 - ru) * .8; r.lookAt(camera.position); });
 
-    // ---- holders: the vault closes around the hook and keeps turning
-    const vOn = ch === 'holders' || (ch === 'callers' && u > .85) || (ch === 'traders' && u < .15);
-    vault.visible = vOn;
-    if (vOn) {
+    // ---- holders: QHOOKS coins drop onto the floor under the hook by scroll; a real burn takes one and it rises as embers
+    const hOn = ch === 'holders' || (ch === 'callers' && u > .85) || (ch === 'traders' && u < .15);
+    if (hOn) {
       const vu = ch === 'holders' ? u : ch === 'callers' ? 0 : 1, leave = ch === 'traders' ? easeInOut(span(u, 0, .15)) : 0;
-      vault.position.set(hookPos.x, hookPos.y - .15 * hs, .1); vault.scale.setScalar(hs * 1.2 * (1 + leave * 1.6));
-      vaultSegs.forEach((s, k) => { const su = easeOutQuint(span(vu, .04 + k * .05, .34 + k * .05)); s.rotation.z = (k / 6) * Math.PI * 2 + (1 - su) * (k % 2 ? 2.5 : -2.5); s.scale.setScalar(lerp(2.2, 1, su)); s.material.opacity = 1 - leave; s.visible = su > 0; s.material.emissiveIntensity = .25 + 1.4 * vaultFlash; });
-      vault.rotation.z = -t * .22; vault.rotation.y = .3 * Math.sin(t * .6) + (PORT ? 0 : .35); vault.rotation.x = .12;
-      vaultInner.material.opacity = (.3 + .5 * vaultFlash) * (1 - leave); vaultTicks.visible = vu > .4; vaultTicks.rotation.z = t * .1;
-    }
-    vaultFlash = Math.max(0, vaultFlash - dt * 1.2);
+      const pileY = PORT ? hookPos.y - 1.16 * hs - .02 : PLINTH_TOP + .035, spread = PORT ? hs * 2.1 : hs * 1.1, cs = PORT ? Math.max(.5, hs * 1.25) : .95;
+      coinPile.forEach((c) => {
+        const d = c.userData;
+        if (vu < .03 && d.gone) { d.gone = false; d.burn = null; } // scrolling back in drops a fresh set
+        const drop = easeOutQuint(span(vu, .04 + d.k * .06, .3 + d.k * .06));
+        if (d.gone && d.respawn && t > d.respawn) { d.gone = false; d.respawn = 0; d.redrop = t; }
+        const re = d.redrop ? easeOutQuint(span(t - d.redrop, 0, .8)) : 1;
+        const fall = Math.min(drop, re);
+        c.visible = fall > 0 && !d.gone && leave < 1;
+        if (!c.visible) return;
+        const x = hookPos.x + d.x * spread, z = d.z * spread * (PORT ? .35 : 1) + (PORT ? .5 : .2);
+        c.position.set(x, pileY + (1 - fall) * 3.2 + (PORT ? .3 * cs : .12 * cs), z);
+        c.rotation.set(PORT ? -1.3 + d.rot * .2 : Math.PI / 2 - .55 + d.rot * .3, d.rot * 1.3, 0);
+        c.scale.setScalar(cs * (1 - leave * .6));
+        if (fall > .999 && !d.landed) { d.landed = true; burst(c.position, { color: 'gold', strength: .1, up: .3, size: .3 }); } if (fall < .5) d.landed = false;
+        // burning: the coin lifts, shrinks and goes dark while embers rise from it
+        if (d.burn != null) {
+          const bt = t - d.burn, e = span(bt, 0, 1.3);
+          c.position.y += e * .5; c.scale.setScalar(cs * (1 - e * .85)); c.rotation.y += bt * 2.5;
+          if (bt > .02 && !d.embered) { d.embered = true; burst(c.position, { color: 'ember', strength: .28, up: 2.2, size: .4 }); }
+          if (e >= 1) { d.gone = true; d.burn = null; d.embered = false; d.landed = false; d.redrop = 0; d.respawn = t + 9; c.visible = false; }
+        }
+      });
+      if (burnQueue > 0 && vu > .3) { const cand = coinPile.filter((c) => c.visible && c.userData.burn == null && !c.userData.gone); if (cand.length) { const c = cand[Math.floor(Math.random() * cand.length)]; c.userData.burn = t; burnQueue--; flashV = Math.max(flashV, .12); } else burnQueue = 0; }
+    } else coinPile.forEach((c) => (c.visible = false));
 
-    // ---- traders: the word stands behind the hook and the chain coins orbit through it
+    // ---- traders: the chain names slam in as type, one after another, by scroll; the coin flips to each chain as it lands
     const tOn = ch === 'traders' || (ch === 'holders' && u > .85) || (ch === 'close' && u < .2);
-    wordG.visible = coinGroup.visible = tOn;
+    nameG.visible = chainCoin.visible = tOn;
     if (tOn) {
       const tu = ch === 'traders' ? u : ch === 'holders' ? 0 : 1, leave = ch === 'close' ? easeInOut(span(u, 0, .2)) : 0;
-      const land = easeOutQuint(span(tu, 0, .25));
-      const ws = PORT ? .5 : .8;
-      wordG.position.set(hookPos.x + (PORT ? 0 : .1), hookPos.y + (PORT ? .1 : .05), -1.9 + (1 - land) * -3 - leave * 4); wordG.scale.setScalar(ws * lerp(.9, 1, land)); wordG.userData.setOpacity(land * (1 - leave)); wordG.rotation.set(0, (PORT ? 0 : -.08) + pointer.x * .04, 0);
-      coinGroup.position.set(hookPos.x, hookPos.y + (PORT ? .1 : .05), -.2); const R = PORT ? 1.5 : 2.6; orbit.scale.setScalar(R); orbit.rotation.x = Math.PI / 2 - .28;
-      coins.forEach((c, k) => { const a = t * .42 + (k / coins.length) * Math.PI * 2, show = easeOutQuint(span(tu, .08 + k * .04, .4 + k * .04)) * (1 - leave); c.position.set(Math.cos(a) * R, Math.sin(a) * R * .28 + Math.sin(a) * .1, Math.sin(a) * R * .92); c.scale.setScalar(show * (PORT ? .7 : .9) * (1 + .4 * c.userData.flash)); c.visible = show > 0; c.lookAt(camera.position); c.userData.flash = Math.max(0, c.userData.flash - dt * 1.5); c.children[1].material = c.userData.flash > .05 ? studMat : goldMat; });
-      orbit.material.opacity = .22 * land * (1 - leave);
-    }
+      const slot = .112, k = clamp(Math.floor((tu - .04) / slot), 0, CHAIN_NAMES.length - 1), at = .04 + k * slot, slam = easeOutQuint(span(tu, at, at + .06));
+      if (k !== nameIdx) { nameIdx = k; nameG.userData.setMap(nameTex[k]); chainCoin.userData.setMap(chainTex[k] || qTex); flashV = Math.max(flashV, .08); zoomV = Math.max(zoomV, .03); }
+      const sc = PORT ? Math.min(.5, bandH ? bandH / 2.9 : .5) : .8, nx = PORT ? .25 : 1.6, ny = PORT ? (bandY != null ? bandY - .15 * sc : 1.3) : .1;
+      nameG.position.set(nx, ny, lerp(-.8, .3, slam) - leave * 3); nameG.scale.setScalar(sc * lerp(1.3, 1, slam)); nameG.userData.setOpacity(slam * (1 - leave) * (tu > .02 ? 1 : 0));
+      nameG.rotation.set(-.06 + pointer.y * .04, PORT ? 0 : -.18 + pointer.x * .06, 0);
+      const cs = PORT ? sc * 1.15 : 1.0;
+      chainCoin.position.set(nx + (PORT ? 0 : .1), ny + (PORT ? 1.02 * sc : 1.45), .6); chainCoin.scale.setScalar(cs * (1 - leave * .5) * (1 + .25 * coinFlash));
+      chainCoin.rotation.set(.12, Math.PI * 2 * slam + .25 + Math.sin(t * .7) * .12, 0); chainCoin.visible = tu > .02 && leave < 1;
+      coinFlash = Math.max(0, coinFlash - dt * 1.5); chainCoin.children[0].material = coinFlash > .05 ? studMat : goldMat;
+    } else nameIdx = -1;
 
     bursts.forEach((b) => { if (!b.visible) return; b.material.uniforms.uT.value += dt; if (b.material.uniforms.uT.value > 1.4) b.visible = false; });
 
@@ -469,7 +479,6 @@ export async function mountScene(canvas, { icons = [], portrait = () => innerHei
     flashV = Math.max(0, flashV - dt * 2.2); zoomV = Math.max(0, zoomV - dt * .4);
     G.uFlash.value = flashV; G.uZoom.value = zoomV; G.uTime.value = t; G.uAb.value = .004 + .02 * zoomV;
 
-    // camera
     camera.position.set(cam.x + pointer.x * .12, cam.y + .04 * Math.sin(t * .3) - pointer.y * .08, cam.z);
     camera.lookAt(cam.x * .55, PORT ? .15 : cam.y * .6, 0);
     camera.fov = PORT ? 50 : 34; camera.updateProjectionMatrix();

@@ -1,6 +1,6 @@
 // Portfolio v4 (2026-11-12, site overhaul): one object per state.
-//  - Connected: your largest holdings as minted gold coins (each token's own art) orbiting a lit core on a tilted ring,
-//    sized by value. The total stays as real text beside it. When the page's live repricing changes the total
+//  - Connected: your largest holdings as minted gold coins (each token's own art) standing in a row on a lit floor,
+//    sized by value (no rings or orbits: Randall, circles read as bundle/bubble maps). The total stays as real text beside it. When the page's live repricing changes the total
 //    (#qp-total), the ring pulses; when the holdings change (#qp-top), the orbit rebuilds.
 //  - Not connected: the same orbit carries the live QHooks tokens the page already lists (#mn-pf-live).
 // Reads only the page's own DOM (qx-portfolio.mjs and money-portfolio.mjs fill it); no extra network reads.
@@ -30,25 +30,20 @@ function scene(host, read) {
   }
   function frame(now) {
     raf = 0; if (off) return; const k = (now - t0) / 1000; ctx.clearRect(0, 0, W, H);
-    const cx = W / 2, cy = H * .5, rx = Math.min(W * .42, 360), ry = rx * .3, base = Math.min(W, H) * .085, pulse = Math.max(0, 1 - (now - pulseAt) / 1400);
-    // light from above onto the core
-    const shaft = ctx.createLinearGradient(0, 0, 0, cy + ry);
-    shaft.addColorStop(0, 'rgba(255, 238, 205, 0)'); shaft.addColorStop(.3, 'rgba(255, 238, 205, .15)'); shaft.addColorStop(1, 'rgba(255, 238, 205, 0)');
-    ctx.fillStyle = shaft; ctx.beginPath(); ctx.moveTo(cx - base * .9, 0); ctx.lineTo(cx + base * .9, 0); ctx.lineTo(cx + rx * .7, cy + ry); ctx.lineTo(cx - rx * .7, cy + ry); ctx.closePath(); ctx.fill();
-    // the core
-    const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, base * 2.4);
-    core.addColorStop(0, `rgba(255, 236, 196, ${.85})`); core.addColorStop(.25, `rgba(232, 200, 140, ${.45 + .3 * pulse})`); core.addColorStop(1, 'rgba(232, 200, 140, 0)');
-    ctx.fillStyle = core; ctx.beginPath(); ctx.arc(cx, cy, base * 2.4, 0, Math.PI * 2); ctx.fill();
-    // the ring
-    ctx.lineWidth = 1.2; ctx.strokeStyle = `rgba(232, 200, 140, ${.28 + .4 * pulse})`; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = 'rgba(232, 200, 140, .10)'; ctx.beginPath(); ctx.ellipse(cx, cy, rx * 1.18, ry * 1.18, 0, 0, Math.PI * 2); ctx.stroke();
-    // coins on the ring, back to front
-    const spin = RM ? 0 : k * .16;
-    const placed = coins.map((c) => { const a = c.phase + spin, z = Math.sin(a); return { c, x: cx + Math.cos(a) * rx, y: cy + z * ry, z }; }).sort((a, b) => a.z - b.z);
-    for (const p of placed) {
-      const depth = .62 + .38 * (p.z + 1) / 2, R = base * 1.7 * p.c.size * depth;
-      drawCoin(ctx, { cx: p.x, cy: p.y - R * .15, R, turn: RM ? .15 : Math.sin(k * .7 + p.c.phase) * .35, front: p.c.img, letter: (p.c.sym || '?').slice(0, 1).toUpperCase(), alpha: .45 + .55 * depth, k: RM ? 0 : k + p.c.phase, dpr, glow: pulse * .8 });
-    }
+    // 2D fallback (no WebGL): the holdings standing in one row on a floor line under a vertical shaft of light, the largest
+    // in the middle. No rings or orbits (Randall: circles read as bundle/bubble maps).
+    const cx = W / 2, floorY = H * .82, pulse = Math.max(0, 1 - (now - pulseAt) / 1400);
+    const sh = ctx.createLinearGradient(cx - W * .09, 0, cx + W * .09, 0);
+    sh.addColorStop(0, 'rgba(255, 246, 230, 0)'); sh.addColorStop(.5, `rgba(255, 246, 230, ${.10 + .06 * pulse})`); sh.addColorStop(1, 'rgba(255, 246, 230, 0)');
+    ctx.fillStyle = sh; ctx.fillRect(cx - W * .09, 0, W * .18, floorY);
+    const pool = ctx.createRadialGradient(cx, floorY, 0, cx, floorY, W * .3); pool.addColorStop(0, 'rgba(255, 240, 215, .16)'); pool.addColorStop(1, 'rgba(255, 240, 215, 0)');
+    ctx.save(); ctx.translate(cx, floorY); ctx.scale(1, .16); ctx.fillStyle = pool; ctx.beginPath(); ctx.arc(0, 0, W * .3, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    const order = [...coins].sort((a, b) => b.size - a.size), row = []; order.forEach((c, i) => (i % 2 ? row.unshift(c) : row.push(c)));
+    const R0 = Math.min(H * .2, W * .07), gap = R0 * .25, ws = row.map((c) => 2 * R0 * c.size), total = ws.reduce((s, w) => s + w, 0) + gap * Math.max(0, row.length - 1), fit = Math.min(1, W * .9 / Math.max(1, total));
+    let x = cx - total * fit / 2;
+    row.forEach((c, i) => { const R = R0 * c.size * fit; x += R;
+      drawCoin(ctx, { cx: x, cy: floorY - R, R, turn: RM ? .15 : Math.sin(k * .5 + c.phase) * .3, front: c.img, letter: (c.sym || '?').slice(0, 1).toUpperCase(), alpha: 1, k: RM ? 0 : k + c.phase, dpr, glow: pulse * .6 });
+      x += R + gap * fit; });
     if (!RM && visible && !doc.hidden) raf = requestAnimationFrame(frame);
   }
   const go = () => { if (!raf) raf = requestAnimationFrame(frame); };

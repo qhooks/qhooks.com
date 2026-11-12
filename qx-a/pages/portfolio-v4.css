@@ -1,5 +1,5 @@
 /* Portfolio v4 (2026-11-12, site overhaul): one object per state (portfolio-v4.mjs draws it): your holdings as minted
-   gold coins orbiting a lit core beside a huge total; signed out, the live QHooks tokens on the same orbit. Type: the
+   gold coins standing in a row on a lit floor beside a huge total; signed out, the live QHooks tokens the same way. Type: the
    page's own words, bold line then light line, no italics. Every id and hook of portfolio.html stays. */
 .pf4 .pf4-orbit { position: relative; min-width: 0; }
 .pf4 .pf4-stage { position: relative; height: 300px; pointer-events: none; }

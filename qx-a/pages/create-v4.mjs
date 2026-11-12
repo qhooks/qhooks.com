@@ -34,19 +34,14 @@ if (hero && !hero.querySelector('.cr4-stage')) {
   // the scene's geometry, from the stage size
   const geo = () => { const R = Math.min(W * .26, H * .25, 150), cx = W / 2, cy = H * .47; return { R, cx, cy, floorY: cy + R * 1.55 }; };
 
-  function shaft(g, k) {
-    const top = -20, w0 = g.R * .55, w1 = g.R * 2.6;
-    const grd = ctx.createLinearGradient(0, top, 0, g.floorY);
-    grd.addColorStop(0, `rgba(255, 238, 205, ${.20 + .03 * Math.sin(k * 1.3)})`); grd.addColorStop(.75, 'rgba(232, 200, 140, .05)'); grd.addColorStop(1, 'rgba(232, 200, 140, 0)');
-    ctx.fillStyle = grd; ctx.beginPath(); ctx.moveTo(g.cx - w0, top); ctx.lineTo(g.cx + w0, top); ctx.lineTo(g.cx + w1, g.floorY); ctx.lineTo(g.cx - w1, g.floorY); ctx.closePath(); ctx.fill();
+  function shaft(g, k) { // a vertical shaft of light (no cone)
+    const w = g.R * 1.1, grd = ctx.createLinearGradient(g.cx - w, 0, g.cx + w, 0);
+    grd.addColorStop(0, 'rgba(255, 246, 230, 0)'); grd.addColorStop(.5, `rgba(255, 246, 230, ${.13 + .02 * Math.sin(k * 1.3)})`); grd.addColorStop(1, 'rgba(255, 246, 230, 0)');
+    ctx.fillStyle = grd; ctx.fillRect(g.cx - w, 0, w * 2, g.floorY);
   }
-  function floor(g, glow) {
-    for (let i = 1; i >= 0; i--) {
-      ctx.beginPath(); ctx.ellipse(g.cx, g.floorY, g.R * (1.15 + i * .38), g.R * (.18 + i * .06), 0, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(232, 200, 140, ${(.26 - i * .12) * (.7 + .3 * glow)})`; ctx.lineWidth = i ? 1 : 1.6; ctx.stroke();
-    }
+  function floor(g, glow) { // a pool of light on the floor (no rings: Randall, circles read as bundle/bubble maps)
     const pool = ctx.createRadialGradient(g.cx, g.floorY, 0, g.cx, g.floorY, g.R * 1.6);
-    pool.addColorStop(0, `rgba(255, 228, 170, ${.22 * (.6 + .4 * glow)})`); pool.addColorStop(1, 'rgba(255, 228, 170, 0)');
+    pool.addColorStop(0, `rgba(255, 240, 215, ${.2 * (.6 + .4 * glow)})`); pool.addColorStop(1, 'rgba(255, 240, 215, 0)');
     ctx.fillStyle = pool; ctx.beginPath(); ctx.ellipse(g.cx, g.floorY, g.R * 1.6, g.R * .36, 0, 0, Math.PI * 2); ctx.fill();
   }
   // the coin: turned around its vertical axis by `turn`; formed 0..1

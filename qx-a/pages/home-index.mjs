@@ -88,7 +88,7 @@ const canGL = () => { try { const c = document.createElement('canvas'); return !
 if (glCanvas && !RM && !navigator.connection?.saveData && canGL()) {
   const start = () => import('/qx-a/landing/scene.mjs').then(async ({ mountScene }) => {
     await (document.fonts?.load?.('900 100px "Mona Sans"') || Promise.resolve()).catch(() => {});
-    scene = await mountScene(glCanvas, { icons: COIN_ICONS });
+    scene = await mountScene(glCanvas, { icons: COIN_ICONS, logo: QLOGO });
     document.body.classList.add('l3-live'); globalThis.__l3 = scene;
     measure(); scene.setProgress(P); pushCall();
     sceneQ.splice(0).filter((q) => Date.now() - q.at < 180000).forEach((q, i) => setTimeout(() => scene[q.name]?.(...q.args), 400 + i * 420));

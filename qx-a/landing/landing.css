@@ -158,9 +158,7 @@ body.l3-body { background: #070807; }
 .l3-burns .qa-trow__usd { color: var(--qa-fire); }
 .l3-burns .qa-trow__who span:not(.qa-ava) { color: var(--qa-tx-3); }
 
-/* traders: the word stands in the scene, so the head keeps only the kicker and the line */
-.l3-live .l3-ch--traders .l3-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.l3-ch--traders .l3-say { margin-top: 0; }
+/* traders: the chain names slam in as type in the scene; the DOM keeps the word */
 
 /* close */
 .l3-ch--close .l3-ch__in { grid-template-rows: minmax(0, 1fr) auto; }
