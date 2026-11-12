@@ -97,7 +97,7 @@ function renderIdeas(){chainId=currentChain();renderPicker();if(chainId==='solan
   const btn=el('button',{type:'button',class:'qq-launch-card','data-launch':card.id,disabled:off},off?'Not on '+(c?.name||'this chain')+' yet':'Launch this');btn.addEventListener('click',()=>launchCard(card.id));
   const blocks=card.blocks.length?el('div',{class:'qq-blocks'},...card.blocks.map(icon)):el('div',{class:'qq-blocks qq-blocks-none'},el('span',{},'No extra rules'));
   return tapCard(el('article',{class:'qq-card','data-card':card.id,'data-group':card.group,hidden:group!=='all'&&card.group!==group},
-   el('h3',{},card.name),card.chip?el('span',{class:'qq-chip'},card.chip):null,el('p',{class:'qq-what'},card.what),el('p',{class:'qq-why'},card.why),blocks,off?el('p',{class:'qq-why qq-off-note'},'Auto-range liquidity isn’t set up on '+(c?.name||'this chain')+' yet.'):null,btn),btn);
+   el('h3',{},card.name),card.chip?el('span',{class:'qq-chip'},card.chip):null,el('p',{class:'qq-what'},card.what),el('p',{class:'qq-why'},card.why),blocks,off?el('p',{class:'qq-why qq-off-note'},'Adaptive liquidity isn’t set up on '+(c?.name||'this chain')+' yet.'):null,btn),btn);
  }),saleKit(group));
  // Off Robinhood Chain the cards stay visible (lead, 2026-11-08); "Launch this" switches the chain first.
  $('none').hidden=!offChain;$('use-robinhood').hidden=true;$('open').hidden=false;
@@ -155,7 +155,7 @@ function renderPair(){
  if(!pick||!list.length||!multiLive(chainId)&&!pairsLive(chainId)){box?.remove();renderPools();return;}
  if(!box){box=el('div',{id:'qq-pair',class:'qq-startcap qq-pair'});$('pools').before(box);}
  if(pick.style==='flywheel'){box.replaceChildren(el('p',{class:'qq-start-k'},'Pair with'),el('p',{class:'qq-start-note'},'Stakers’ share launches pair with ETH. Pick another idea to pair with USDG or a stock token.'));renderPools();return;}
- if(isRangeKit()){box.replaceChildren(el('p',{class:'qq-start-k'},'Pair with'),el('p',{class:'qq-start-note'},'Auto-range launches use one '+chainById(chainId).quote.symbol.replace(/^W/,'')+' pool.'));renderPools();return;}
+ if(isRangeKit()){box.replaceChildren(el('p',{class:'qq-start-k'},'Pair with'),el('p',{class:'qq-start-note'},'Adaptive liquidity launches use one '+chainById(chainId).quote.symbol.replace(/^W/,'')+' pool.'));renderPools();return;}
  const opt=(idx,label)=>{const b=el('button',{type:'button',class:'qq-start-opt','aria-pressed':String(idx===pairIdx),'data-pair':String(idx)},label+(idx===pairIdx&&multiLive(chainId)&&extraPools.length?' · '+poolWeights(extraPools.length)[0]/100+'%':''));
   b.addEventListener('click',()=>{if(busy)return;pairIdx=idx;extraPools=extraPools.filter(i=>i!==idx);poolPrices=null;renderPair();void readStartBase();renderStart();renderPq();renderQuick();costSoon();});return b;};
  if(pairIdx&&!list.some(q=>q.index===pairIdx)){pairIdx=0;void readStartBase();renderStart();costSoon();} // not offered here: back to ETH

@@ -10,7 +10,7 @@ d.title = N + ' · Beta | QHooks';
 $('qc-name').textContent = N;
 $('qc-q').placeholder = 'Ask ' + N + '…';
 
-const ASK_TRY = ['Which hooks stop snipers?', 'What are the fees?', 'How does auto-range work?', 'What does Bundle shield do?', 'Solana fees'];
+const ASK_TRY = ['Which hooks stop snipers?', 'What are the fees?', 'How does adaptive liquidity work?', 'What does Bundle shield do?', 'Solana fees'];
 const DESIGN_TRY = ['A meme token on Robinhood Chain, anti-snipe, small burn, liquidity that grows', 'Holders earn from every trade, on Base', 'A fair sale first on BNB Chain', 'Plain token, no tax, $20K start'];
 const HERO = {ask: ['Ask about any ', 'hook.'], design: ['Design a launch in ', 'plain words.'], ideas: ['Find your next ', 'launch idea.']};
 

@@ -209,7 +209,7 @@ async function render() {
   if (f?.error) kids.push(el('p', {class: 'qfl-note', 'data-tone': 'bad'}, f.error));
   if (f && !f.error) {
     kids.push(el('p', {class: 'qfl-note'}, f.symbol + ' · LP fees go to ' + (fl?.address === f.payout ? 'its range' : short(f.payout))));
-    if (fl?.notLive) kids.push(el('p', {class: 'qfl-note'}, 'Auto-range liquidity is not set up on ' + chainName() + ' yet.'));
+    if (fl?.notLive) kids.push(el('p', {class: 'qfl-note'}, 'Adaptive liquidity is not set up on ' + chainName() + ' yet.'));
     else if (fl?.exists) kids.push(rangeCard(f, fl, conn));
     else if (fl) kids.push(createCard(f, fl, conn));
   }
