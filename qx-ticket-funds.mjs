@@ -34,7 +34,9 @@ export function breakdownRows(data, chainId) {
   return rows.sort((a, b) => (b.here - a.here) || b.usd - a.usd);
 }
 
-export function mountAvailable({h, getOwner, getChain}) {
+// checksline 2026-11-12: signed out, the line reads "Sign in to see what you can spend" and a tap opens sign-in.
+export const SIGNED_OUT_TEXT = 'Sign in to see what you can spend';
+export function mountAvailable({h, getOwner, getChain, onSignIn}) {
   try { if (!document.getElementById('qxt-funds-style')) { const l = document.createElement('link'); l.id = 'qxt-funds-style'; l.rel = 'stylesheet'; l.href = '/qx-ticket-funds.css'; document.head.append(l); } } catch {}
   const line = h('button', {type: 'button', class: 'qxt-avail', ariaExpanded: 'false', hidden: true});
   const more = h('div', {class: 'qxt-avail-more', hidden: true, role: 'region', ariaLabel: 'Balances across chains'});
@@ -54,10 +56,10 @@ export function mountAvailable({h, getOwner, getChain}) {
     if (cached) paint(cached); else more.replaceChildren(h('p', {class: 'qxt-avail-total'}, 'Reading balances across chains…'));
     try { const d = await refreshBalances(owner); if (mine === seq && !more.hidden) paint(d); } catch { if (!cached && mine === seq) more.replaceChildren(h('p', {}, 'Balances across chains are refreshing. Try again in a moment.')); }
   }
-  line.addEventListener('click', () => { more.hidden = !more.hidden; line.setAttribute('aria-expanded', String(!more.hidden)); if (!more.hidden) void open(); });
+  line.addEventListener('click', () => { if (!getOwner() && line.dataset.signin === '1') { onSignIn?.(); return; } more.hidden = !more.hidden; line.setAttribute('aria-expanded', String(!more.hidden)); if (!more.hidden) void open(); });
   return {
     elements: [line, more],
-    set(text) { line.textContent = text; line.hidden = !text; if (!text) { more.hidden = true; line.setAttribute('aria-expanded', 'false'); } },
+    set(text) { line.textContent = text; line.hidden = !text; line.dataset.signin = text === SIGNED_OUT_TEXT ? '1' : ''; line.setAttribute('aria-expanded', 'false'); if (!text) { more.hidden = true; line.setAttribute('aria-expanded', 'false'); } },
     close() { more.hidden = true; line.setAttribute('aria-expanded', 'false'); seq++; },
   };
 }

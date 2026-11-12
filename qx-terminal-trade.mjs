@@ -13,7 +13,7 @@ import {pendingHomeBuy, dismissHomeBuy, homeBuyRecoveryView, finishHomeBuy} from
 import {prepareTradeThesis,recordTerminalTrade} from './qx-trade-record.mjs';
 import {renderSolanaRewards,enrollSolanaReferrer,recordSolanaRewards} from './qx-solana-rewards.mjs';
 import {mountTradingSettings} from './qx-trading-settings.mjs';
-import {mountAvailable, availableText} from './qx-ticket-funds.mjs';
+import {mountAvailable, availableText, SIGNED_OUT_TEXT} from './qx-ticket-funds.mjs';
 import {resolveTradingTolerance} from './qx-trading-preferences.mjs';
 // Terminal trade ticket: market buys and sells through the launch's live pool and its blocks, amount
 // presets, price tolerance, price impact, and buys paid in the native coin where the chain allows.
@@ -114,7 +114,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   const unit = h('span', { class: 'qxt-unit' });
   const balance = h('button', { type: 'button', class: 'qxt-bal', title: 'Use the whole balance' }, 'Max');
   // 2026-11-12: one money line above the amount (what can be spent here, with chain); tap for every chain.
-  const avail = mountAvailable({h, getOwner: () => connectedAddress(), getChain: () => st?.chainId});
+  const avail = mountAvailable({h, getOwner: () => connectedAddress(), getChain: () => st?.chainId, onSignIn: () => (document.getElementById('qxt-connect')||document.getElementById('qhc-trigger'))?.click()});
   let autoNote = '', unitUsd = null, usdMode = false;
   // $/token toggle on the amount (default token). In $ mode the visible box takes dollars and writes the token amount
   // into the real amount field, which every quote and send path already reads.
@@ -360,7 +360,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     unitUsd = side === 'sell' ? priceUsd : await readQuoteUsd(payUnit()).catch(() => null);
     if(st!==activeState||!isSelection(intent)||mine!==layoutRevision||busy||recovery)return;
     unitToggle.disabled = !(unitUsd > 0); if (!(unitUsd > 0) && usdMode) setUsdMode(false); syncUsd();
-    avail.set(b ? moneyLine(b) : st?.sol ? (solAddress() ? '' : 'Connect a Solana wallet to trade') : '');labelPayOptions(b);
+    avail.set(b ? moneyLine(b) : st?.sol ? (solAddress() ? '' : 'Connect a Solana wallet to trade') : !st?.noRoute && !connectedAddress() ? SIGNED_OUT_TEXT : '');labelPayOptions(b);
     homeRowName.textContent = homeName(homePref);
     balance.disabled = !b;showAddFunds(b);
     refresh();
@@ -938,10 +938,10 @@ if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} amount.value = '
       const alive=()=>isSelection(intent)&&st===activeState&&mine===qseq&&!busy&&!recovery&&ownerMatches();
       try{
         let held,precision;
-        if(st.sol){const response=await fetch('/api/terminal/sol/balance/'+me+'?mint='+st.token,{cache:'no-store'});if(!response.ok)throw Error('Token balance is unavailable. Refresh holdings and try again.');const body=await response.json();if(!/^\d{1,78}$/.test(body.token||''))throw Error('Token balance is unavailable.');held=BigInt(body.token);precision=body.decimals;}
+        if(st.sol){const response=await fetch('/api/terminal/sol/balance/'+me+'?mint='+st.token,{cache:'no-store'});if(!response.ok)throw Error('Couldn’t read your token balance. Refresh holdings and try again.');const body=await response.json();if(!/^\d{1,78}$/.test(body.token||''))throw Error('Couldn’t read your token balance. Try again in a moment.');held=BigInt(body.token);precision=body.decimals;}
         else{const body=await erc20(st.chainId,st.token,me);held=body.balance;precision=body.decimals;}
         if(!alive())return false;
-        if(typeof held!=='bigint'||held<0n||held>=1n<<256n||!Number.isInteger(precision)||precision<0||precision>36||precision!==st.decimals)throw Error('Token precision is unavailable or changed. Reopen this token before selling.');
+        if(typeof held!=='bigint'||held<0n||held>=1n<<256n||!Number.isInteger(precision)||precision<0||precision>36||precision!==st.decimals)throw Error('Couldn’t confirm this token’s decimals. Reopen this token before selling.');
         const value=sellPortion(held,percent);
         if(!value)throw Error(held===0n?'This wallet has no available tokens to sell.':'This balance is too small for that percentage.');
         pendingSellPrefill=false;side='sell';sellCash=false;homeSelected=false;if(st.multi)pay='auto';paySel.value=pay;sellPrefillOwner=me;

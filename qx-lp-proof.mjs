@@ -81,26 +81,49 @@ function launchCard(j) {
     el('p', {class: 'lpp-note'}, 'Read at ' + j.readAt + '. Machine-readable: ', link('/api/v1/lp-proof?chain=' + j.chain + '&pool=' + j.poolId, '/api/v1/lp-proof?chain=' + j.chain + '&pool=' + j.poolId.slice(0, 10) + '…')));
 }
 
+// First paint (2026-11-12, main's finish sweep: /lp-proof sat on "Loading…" past 6 s while the chain read ran). The last
+// good answer this browser saw, or for the default view the snapshot shipped with the page (/lp-proof-first.json), paints
+// at once with its own "Read at" time; the live read replaces it, and a failed live read leaves it in place.
+const LOCAL = 'qhooks.lpp.v1:', LOCAL_MAX = 7 * 864e5;
+const peek = k => { try { const v = JSON.parse(localStorage.getItem(LOCAL + k) || 'null'); return v && Date.now() - v.at < LOCAL_MAX ? v.body : null; } catch { return null; } };
+const keep = (k, body) => { try { localStorage.setItem(LOCAL + k, JSON.stringify({at: Date.now(), body})); } catch {} };
+
+function page(one, all, lookup) {
+  const kids = [];
+  kids.push(...(one.ok ? (one.body.pools || [one.body]).map(p => launchCard({...p, readAt: one.body.readAt})) : [el('p', {class: 'lpp-note', 'data-tone': 'bad'}, one.body?.hint || 'That could not be read right now.')]));
+  // The verdict comes first; looking up another launch follows it.
+  kids.push(lookup);
+  if (all) {
+    kids.push(el('h2', {class: 'lpp-h2'}, 'Launch contracts'), el('p', {class: 'lpp-statement'}, all.statement));
+    for (const id of ORDER) { const c = all.chains.find(x => x.chain === id); if (c) for (const k of c.contracts) kids.push(contractCard(id, k)); }
+    kids.push(el('p', {class: 'lpp-note'}, 'Machine-readable for scanners: ', link('/api/v1/lp-proof', '/api/v1/lp-proof'), ' (add ?chain=<id>&token=<address> for one launch). Read at ' + all.readAt + '.'));
+  }
+  return kids;
+}
+
 async function render() {
   const chain = qs.get('chain') || '4663', token = (qs.get('token') || '').trim(), pool = (qs.get('pool') || '').trim();
-  const kids = [];
   const sel = el('select', {'aria-label': 'Chain'}, ...ORDER.map(id => el('option', {value: id, selected: id === chain}, NAMES[id])));
   const inp = el('input', {placeholder: '0x… token address', value: token, spellcheck: 'false', autocomplete: 'off', 'aria-label': 'Token address'});
   const go = el('button', {type: 'button', class: 'qa-btn qa-btn--secondary qtx-mini qas-go'}, 'Check this launch');
   go.addEventListener('click', () => { const u = new URL(location.href); u.searchParams.set('chain', sel.value); u.searchParams.delete('pool'); if (inp.value.trim()) u.searchParams.set('token', inp.value.trim()); else u.searchParams.delete('token'); location.href = u.toString(); });
   const lookup = el('div', {class: 'lpp-lookup'}, el('h3', {class: 'lpp-lookup-t'}, 'Check another launch'), el('div', {class: 'lpp-row hl-form'}, el('label', {}, 'Chain', sel), el('label', {}, 'Token address', inp), go));
-  {
-    const r = await fetch('/api/v1/lp-proof?chain=' + encodeURIComponent(token || pool ? chain : OFFICIAL.chain) + (pool ? '&pool=' + encodeURIComponent(pool) : token ? '&token=' + encodeURIComponent(token) : '&pool=' + OFFICIAL.pool));
-    const j = await r.json().catch(() => ({}));
-    kids.push(...(r.ok ? (j.pools || [j]).map(p => launchCard({...p, readAt:j.readAt})) : [el('p', {class: 'lpp-note', 'data-tone': 'bad'}, j.hint || 'That could not be read right now.')]));
-  }
-  // The verdict comes first; looking up another launch follows it.
-  kids.push(lookup);
-  const all = await (await fetch('/api/v1/lp-proof')).json();
-  kids.push(el('h2', {class: 'lpp-h2'}, 'Launch contracts'), el('p', {class: 'lpp-statement'}, all.statement));
-  for (const id of ORDER) { const c = all.chains.find(x => x.chain === id); if (c) for (const k of c.contracts) kids.push(contractCard(id, k)); }
-  kids.push(el('p', {class: 'lpp-note'}, 'Machine-readable for scanners: ', link('/api/v1/lp-proof', '/api/v1/lp-proof'), ' (add ?chain=<id>&token=<address> for one launch). Read at ' + all.readAt + '.'));
-  root.replaceChildren(...kids);
-  for (const b of root.querySelectorAll('.lpp-bar')) b.style.setProperty('--share', Math.max(0, Math.min(100, Number(b.dataset.share) || 0)) + '%');
+  const paint = (one, all) => {
+    root.replaceChildren(...page(one, all, lookup));
+    for (const b of root.querySelectorAll('.lpp-bar')) b.style.setProperty('--share', Math.max(0, Math.min(100, Number(b.dataset.share) || 0)) + '%');
+  };
+  const key = token || pool ? chain + ':' + (pool || token).toLowerCase() : 'official';
+  let painted = false;
+  const first = peek(key) || (key === 'official' ? await fetch('/lp-proof-first.json').then(r => r.ok ? r.json() : null).catch(() => null) : null);
+  if (first?.one?.ok) { paint(first.one, first.all); painted = true; }
+  const oneURL = '/api/v1/lp-proof?chain=' + encodeURIComponent(token || pool ? chain : OFFICIAL.chain) + (pool ? '&pool=' + encodeURIComponent(pool) : token ? '&token=' + encodeURIComponent(token) : '&pool=' + OFFICIAL.pool);
+  const [one, all] = await Promise.all([
+    fetch(oneURL).then(async r => ({ok: r.ok, body: await r.json().catch(() => ({}))})).catch(() => null),
+    fetch('/api/v1/lp-proof').then(r => r.ok ? r.json() : null).catch(() => null),
+  ]);
+  if (!one) { if (!painted) throw new Error('read failed'); return; }
+  if (!one.ok && painted) return; // keep the last good verdict on screen
+  paint(one, all || first?.all || null);
+  if (one.ok && all) keep(key, {one, all});
 }
 render().catch(() => { root.textContent = 'This could not be read right now. Try again in a moment.'; });

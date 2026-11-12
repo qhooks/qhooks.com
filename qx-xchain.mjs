@@ -129,7 +129,7 @@ export function assertFundingQuote(q, { owner, from, to, amountNeeded, deliveryA
   }
   const fees = summarize(q);
   if (fees.feeTotalUsd === null || fees.appFeeUsd === null || Number(fees.appFeeUsd) !== 0 || !promptCounts(q).total) {
-    throw error('relay_fee_unknown', 'Relay fees or wallet steps are unavailable. Refresh the quote before funding.');
+    throw error('relay_fee_unknown', 'Couldn’t read this move’s fees or wallet steps. Refresh the quote before funding.');
   }
   return q;
 }

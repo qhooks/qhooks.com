@@ -370,9 +370,16 @@ export function createHookNameResolver(fetcher=requestJSON,limit=20) {
 }
 // Server error codes are shown as plain words; a temporary outage reads as refreshing.
 export const plainError=v=>v==null?'':String(v).replace(/_/g,' ').replace(/\bunavailable\b/gi,'refreshing').replace(/\bstale\b/gi,'refreshing');
+// First paint (2026-11-12, main's finish sweep: the hook pages sat on skeletons past 6 s while D1 was slow). Reads made
+// with {keep:true} leave their last good body in this browser; peekJSON hands it to the page at once, and the live read
+// then replaces it. Degraded answers (the Tape down) are never kept.
+const LOCAL='qhooks.qd.v1:',LOCAL_MAX=864e5,LOCAL_BYTES=300000;
+export function peekJSON(path){try{const v=JSON.parse(localStorage.getItem(LOCAL+path)||'null');return v&&Date.now()-v.at<LOCAL_MAX?v.body:null;}catch{return null;}}
+function keepJSON(path,body){if(!body||body.error||body.status==='unavailable'||body.coverage?.tapeAvailable===false)return;try{const s=JSON.stringify({at:Date.now(),body});if(s.length<=LOCAL_BYTES)localStorage.setItem(LOCAL+path,s);}catch{}}
 export async function requestJSON(path, options = {}, fetcher = globalThis.fetch) {
+  const {keep,...init}=options;
   const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),12000);
-  try { const r=await fetcher(path,{...options,signal:controller.signal,headers:{Accept:'application/json',...options.headers}}).catch(e=>{throw e?.name==='AbortError'?new Error('the read took longer than 12 seconds'):e;});const body=await r.json();if (!r.ok) {const e=new Error(plainError(body.error) || `HTTP ${r.status}`); e.status=r.status; e.body=body; throw e;}return body; } finally {clearTimeout(timer);}
+  try { const r=await fetcher(path,{...init,signal:controller.signal,headers:{Accept:'application/json',...init.headers}}).catch(e=>{throw e?.name==='AbortError'?new Error('the read took longer than 12 seconds'):e;});const body=await r.json();if (!r.ok) {const e=new Error(plainError(body.error) || `HTTP ${r.status}`); e.status=r.status; e.body=body; throw e;}if(keep)keepJSON(path,body);return body; } finally {clearTimeout(timer);}
 }
 
 // DOM controllers run only in a page; exported render helpers remain usable in Node.
@@ -437,23 +444,30 @@ function boot() {
       $('qd-prev').disabled=state.offset===0;$('qd-next').disabled=board.offset+board.hooks.length>=board.total;$('qd-export').href=boardURL(state);renderTray();
     }
     $('qd-board').addEventListener('change',event=>{const el=event.target;if(!el.dataset.compare)return;if(el.checked){if(tray.length===4){el.checked=false;status('Compare up to four hooks. Remove one before adding another.');return;}tray.push(el.dataset.compare);}else tray=tray.filter(x=>x!==el.dataset.compare);renderTray();});
-    async function load(){const serial=++loadSerial;status('Loading hook records…');try{
-      const [next,directory]=await Promise.all([requestJSON(boardURL(state)),requestJSON(API+'?limit=1')]);if(serial!==loadSerial)return;board=next;drawBoard();
+    const showBoard=(next,directory)=>{board=next;drawBoard();
       for(const c of next.chains || [])if(![...form.elements.chain.options].some(o=>o.value===String(c.chainId)))form.elements.chain.add(new Option(c.name,String(c.chainId)));fillForm();
-      $('qd-stats').innerHTML=renderStats(next,directory);$('qd-stats-source').textContent='Directory total includes new Tape records. Activity totals are from '+formatTime(directory.snapshotAt)+'.';status(`${formatNumber(next.total)} matching hooks.`);
+      $('qd-stats').innerHTML=renderStats(next,directory);$('qd-stats-source').textContent='Directory total includes new Tape records. Activity totals are from '+formatTime(directory.snapshotAt)+'.';};
+    async function load(){const serial=++loadSerial;
+      const seen=[peekJSON(boardURL(state)),peekJSON(API+'?limit=1')];if(seen[0]&&seen[1]&&!board){showBoard(seen[0],seen[1]);status('Refreshing hook records…');}else status('Loading hook records…');
+      try{
+      const [next,directory]=await Promise.all([requestJSON(boardURL(state),{keep:true}),requestJSON(API+'?limit=1',{keep:true})]);if(serial!==loadSerial)return;showBoard(next,directory);status(`${formatNumber(next.total)} matching hooks.`);
     }catch(e){if(serial===loadSerial)fail(e,$('qd-board'));}}
     form.addEventListener('submit',e=>{e.preventDefault();state=filterState(new URLSearchParams({...formState(form),offset:'0'}));updateURL(state);void load();});
     $('qd-prev').onclick=()=>{state.offset=Math.max(0,state.offset-state.limit);updateURL(state);void load();};$('qd-next').onclick=()=>{state.offset+=state.limit;updateURL(state);void load();};
     addEventListener('popstate',()=>{state=filterState(location.search);fillForm();void load();});
-    void requestJSON(API+'/projects').then(body=>{for(const p of body.projects || [])if(![...form.elements.project.options].some(o=>o.value===p.id))form.elements.project.add(new Option(p.name,p.id));fillForm();}).catch(e=>status('Project filter did not load · '+e.message));
-    void requestJSON(API+'?new=1&limit=12').then(body=>{$('qd-new').innerHTML=renderNewHooks(body);}).catch(e=>{$('qd-new').innerHTML=note('First-seen records did not load · '+e.message);});
+    const addProjects=body=>{for(const p of body.projects || [])if(![...form.elements.project.options].some(o=>o.value===p.id))form.elements.project.add(new Option(p.name,p.id));fillForm();};
+    {const seen=peekJSON(API+'/projects');if(seen)addProjects(seen);}
+    void requestJSON(API+'/projects',{keep:true}).then(addProjects).catch(e=>status('Project filter did not load · '+e.message));
+    {const seen=peekJSON(API+'?new=1&limit=12');if(seen)$('qd-new').innerHTML=renderNewHooks(seen);}
+    void requestJSON(API+'?new=1&limit=12',{keep:true}).then(body=>{$('qd-new').innerHTML=renderNewHooks(body);}).catch(e=>{if(!$('qd-new').querySelector('a'))$('qd-new').innerHTML=note('First-seen records did not load · '+e.message);});
     $('qd-refresh')?.addEventListener('click',()=>void load());refresh=load;void load();
     // The newest finalized swaps on the Tape, refreshed every 30 seconds while the page is visible.
     const liveHost=$('qd-live-swaps');
     if(liveHost){
       const seenLive=new Set(),names=createHookNameResolver();let primed=false,liveAt=0,rows=[];
       const draw=()=>{liveHost.innerHTML=renderTapeRows({swaps:rows},'swaps',[],names.names);for(const el of liveHost.querySelectorAll('[data-event]')){if(!seenLive.has(el.dataset.event)){if(primed)el.classList.add('is-enter');seenLive.add(el.dataset.event);}}primed=primed||rows.length>0;};
-      const loadLive=async()=>{if(document.hidden)return;try{const body=await requestJSON(API+'/tape/swaps?limit=6');rows=Array.isArray(body.swaps)?body.swaps:[];draw();liveAt=Date.now();void names.resolve(rows).then(draw);}catch{if(!liveHost.querySelector('[data-event]'))liveHost.innerHTML=note('The Tape is refreshing. Open it for coverage by chain.');}};
+      {const seen=peekJSON(API+'/tape/swaps?limit=6');if(Array.isArray(seen?.swaps)){rows=seen.swaps;draw();void names.resolve(rows).then(draw);}}
+      const loadLive=async()=>{if(document.hidden)return;try{const body=await requestJSON(API+'/tape/swaps?limit=6',{keep:true});rows=Array.isArray(body.swaps)?body.swaps:[];draw();liveAt=Date.now();void names.resolve(rows).then(draw);}catch{if(!liveHost.querySelector('[data-event]'))liveHost.innerHTML=note('The Tape is refreshing. Open it for coverage by chain.');}};
       setInterval(()=>void loadLive(),30000);
       setInterval(()=>{const l=$('qd-live');if(l&&liveAt){const s=Math.round((Date.now()-liveAt)/1000);l.textContent=s<2?'Refreshed just now':`Refreshed ${s}s ago`;}},1000);
       document.addEventListener('visibilitychange',()=>{if(!document.hidden)void loadLive();});void loadLive();
@@ -521,7 +535,9 @@ function boot() {
     function draw(){const q=form.elements.q.value.toLowerCase(),category=form.elements.category.value;const items=registry.filter(p=>(!category || p.category===category)&&(!q || [p.name,p.summary,...(p.tags || [])].join(' ').toLowerCase().includes(q))).sort((a,b)=>Number(b.qhooks)-Number(a.qhooks)||a.name.localeCompare(b.name));$('qd-projects').innerHTML=renderProjectCards(items);status(`${items.length} projects shown. QHooks entries come first.`);}
     async function detail(){const serial=++loadSerial;let id;try{id=decodeURIComponent(location.hash.slice(1));}catch{status('Project link is invalid.');return;}if(!id){$('qd-project-detail').innerHTML='';return;}status('Reading project deployments…');try{const p=await requestJSON(`${API}/projects/${encodeURIComponent(id)}`);if(serial!==loadSerial)return;$('qd-project-detail').innerHTML=renderProjectDetail(p);status('Project sources and returned live observations loaded.');}catch(e){if(serial===loadSerial){$('qd-project-detail').innerHTML=empty('Project did not load · '+e.message);status('The selected project could not be read. Choose another project or retry.');}}}
     form.onsubmit=e=>{e.preventDefault();const p=new URLSearchParams(formState(form));history.replaceState(null,'',location.pathname+'?'+p+location.hash);draw();};form.elements.q.oninput=draw;form.elements.category.onchange=()=>form.requestSubmit();addEventListener('hashchange',()=>void detail());
-    void requestJSON(API+'/projects').then(p=>{registry=p.projects || [];for(const c of [...new Set(registry.map(p=>p.category))].filter(Boolean).sort())form.elements.category.add(new Option(c,c));form.elements.category.value=initial.get('category') || '';draw();void detail();}).catch(e=>fail(e,$('qd-projects')));refresh=detail;
+    let detailed=false;const showRegistry=p=>{registry=p.projects || [];for(const c of [...new Set(registry.map(p=>p.category))].filter(Boolean).sort())if(![...form.elements.category.options].some(o=>o.value===c))form.elements.category.add(new Option(c,c));form.elements.category.value=initial.get('category') || '';draw();if(!detailed){detailed=true;void detail();}};
+    {const seen=peekJSON(API+'/projects');if(seen)showRegistry(seen);}
+    void requestJSON(API+'/projects',{keep:true}).then(showRegistry).catch(e=>{if(!registry.length)fail(e,$('qd-projects'));});refresh=detail;
   }
   if(main.dataset.discover==='compare') {
     const form=$('qd-compare-form');async function load(){const serial=++loadSerial,ids=parseCompareHash(location.hash);if(!ids.length){$('qd-comparison').innerHTML='';status(location.hash?'Enter two to four different valid hook IDs.':'Choose two to four hooks on the board, or enter their IDs above.');return;}form.elements.ids.value=ids.join(',');status('Reading each hook…');try{const b=await requestJSON(API+'/compare?ids='+encodeURIComponent(ids.join(',')));if(serial!==loadSerial)return;$('qd-comparison').innerHTML=renderComparison(b);status('Comparison loaded. Differing rows are highlighted.');}catch(e){if(serial===loadSerial){$('qd-comparison').innerHTML=empty('Comparison did not load · '+e.message);status('The requested hooks could not be compared. Try again or change the IDs.');}}}
@@ -554,8 +570,17 @@ function boot() {
       status('Refreshing finalized records…');if(liveEl)liveEl.textContent='Refreshing…';$('qd-refresh').disabled=true;for(const el of form.elements)el.disabled=true;
       try{
         const p=params(),kinds=['status','pools','swaps','activity'];
-        const results=await Promise.allSettled(kinds.map(kind=>requestJSON(API+'/tape/'+kind+'?'+(kind==='activity'?p:new URLSearchParams(kind==='status'?{}:{chain:p.get('chain'),limit:'25'})))));
+        const urlOf=kind=>API+'/tape/'+kind+'?'+(kind==='activity'?p:new URLSearchParams(kind==='status'?{}:{chain:p.get('chain'),limit:'25'}));
+        if(!refreshedAt){const seen=kinds.map(kind=>peekJSON(urlOf(kind)));if(seen.every(Boolean))apply(kinds,seen.map(value=>({status:'fulfilled',value})),p,true);}
+        const results=await Promise.allSettled(kinds.map(kind=>requestJSON(urlOf(kind),{keep:true})));
         if(current!==generation)return;
+        const failures=apply(kinds,results,p,false);
+        drawRows();resolveNames(current);refreshedAt=Date.now();liveEl?.classList.add('is-on');
+        status(failures.length?'Some records could not refresh · '+failures.join('; ')+'. Last loaded records remain visible.':'Finalized records refreshed · '+formatTime(new Date().toISOString()));
+      }catch(e){fail(e);}
+      finally{busy=false;$('qd-refresh').disabled=false;for(const el of form.elements)el.disabled=false;}
+    }
+    function apply(kinds,results,p,early){
         const failures=[];
         for(let i=0;i<results.length;i++){
           const kind=kinds[i],result=results[i];
@@ -570,10 +595,8 @@ function boot() {
           }
           if(kind==='activity'){records.activity=body;$('qd-activity-json').href=API+'/tape/activity?'+p;}
         }
-        drawRows();resolveNames(current);refreshedAt=Date.now();liveEl?.classList.add('is-on');
-        status(failures.length?'Some records could not refresh · '+failures.join('; ')+'. Last loaded records remain visible.':'Finalized records refreshed · '+formatTime(new Date().toISOString()));
-      }catch(e){fail(e);}
-      finally{busy=false;$('qd-refresh').disabled=false;for(const el of form.elements)el.disabled=false;}
+        if(early){drawRows();resolveNames(generation);}
+        return failures;
     }
     for(const kind of ['pools','swaps'])$('qd-more-'+kind).onclick=async()=>{
       if(busy || !cursors[kind])return;busy=true;const button=$('qd-more-'+kind);button.disabled=true;

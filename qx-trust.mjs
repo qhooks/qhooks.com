@@ -29,8 +29,8 @@ export const verdictOf = (chainId, controller) => once('v:' + keyOf(chainId, con
   const address=String(controller).toLowerCase(),response=await fetch('/api/repoproof/check?'+new URLSearchParams({kind:'launch',chainId:String(chainId),address}),{cache:'no-store'}),value=await response.json();
   if(value?.version!==1||value.subject?.kind!=='launch'||String(value.subject?.chainId)!==String(chainId)||value.subject?.address?.toLowerCase()!==address)return null;
   const report=value.report;
-  if(!report||!['danger','caution','clear','unknown'].includes(report.level)||!Array.isArray(report.checks))return {level:null,unavailable:true,state:value.state,source:'QProof via QHooks',checkedAt:value.checkedAt||null,cached:!!value.cached,stale:!!value.stale};
-  return {...report,state:value.state,source:'QProof via QHooks',checkedAt:value.checkedAt||report.completedAt||report.retrievedAt||null,cached:!!value.cached,stale:!!value.stale||value.state!=='ready'||!response.ok};
+  if(!report||!['danger','caution','clear','unknown'].includes(report.level)||!Array.isArray(report.checks))return {level:null,unavailable:true,state:value.state,source:'QProof via QHooks',checkedAt:value.checkedAt||null,cached:!!value.cached,stale:!!value.stale,retryAt:value.retryAt||null};
+  return {...report,state:value.state,source:'QProof via QHooks',checkedAt:value.checkedAt||report.completedAt||report.retrievedAt||null,cached:!!value.cached,stale:!!value.stale||value.state!=='ready'||!response.ok,retryAt:value.retryAt||null};
 }).catch(() => null);
 export const trustList = () => once('list', 20000, () => getJson('/api/trust/list')).then(j => j.markets || {}).catch(() => ({}));
 export const forget = (chainId, controller) => { cache.delete('t:' + keyOf(chainId, controller)); cache.delete('v:' + keyOf(chainId, controller)); cache.delete('list'); };
@@ -55,7 +55,7 @@ const completeCoverage=v=>v?.coverage?.complete===true&&v?.coverage?.unknown===0
 function verdictMeta(v){
  const at=checkTime(v),coverage=v?.coverage,checked=Number.isSafeInteger(coverage?.checked)?coverage.checked:null,unknown=Number.isSafeInteger(coverage?.unknown)?coverage.unknown:null;
  const snapshot=v?.snapshot,point=snapshot?(snapshot.chain?' · snapshot '+String(snapshot.chain).slice(0,40):'')+(snapshot.block!=null?' · block '+String(snapshot.block).slice(0,80):snapshot.slot!=null?' · slot '+String(snapshot.slot).slice(0,80):''):'';
- return (v?.source||'QProof via QHooks')+' · '+(v?.stale?'refreshing · ':'')+(v?.cached?'cached · ':'')+(at?new Date(at).toISOString()+' ('+ageOf(at)+')':'check time unknown')+' · source coverage: '+(checked!==null?checked+' checked'+(unknown!==null?', '+unknown+' unknown':''):Array.isArray(v?.checks)?v.checks.length+' returned checks; completeness unknown':'unavailable')+(point||'');
+ return (v?.source||'QProof via QHooks')+' · '+(v?.stale?'refreshing · ':'')+(v?.cached?'cached · ':'')+(at?new Date(at).toISOString()+' ('+ageOf(at)+')':'check time unknown')+' · source coverage: '+(checked!==null?checked+' checked'+(unknown!==null?', '+unknown+' unknown':''):Array.isArray(v?.checks)?v.checks.length+' returned checks; completeness unknown':'no checks returned yet')+(point||'');
 }
 export function verdictChip(v) {
   if (!v || !v.level) return h('span', { class: 'qtr-chip' }, v?.unsupported ? 'Not covered' : 'Refreshing…');
@@ -86,7 +86,7 @@ export function factsOf(pool) {
    read('Recovery initiating key',controller,SEL.recoveryBy,hex=>{const n=uint(hex);if(n>2n)throw Error('Invalid recovery key');return Number(n);}),
    read('Total supply',token,SEL.totalSupply),read('Original creator balance',token,calldata('0x70a08231',['address'],[owner]))
   ]);
-  const liquidity={k:'Liquidity',v:!knownType?'Unavailable · launch type could not be determined':hasBlocksField?'Permanent: nobody can withdraw it, the creator included':'The creator can withdraw graduated liquidity with both keys',tone:!knownType?'':hasBlocksField?'':'warn',source:'Listed launch configuration'};
+  const liquidity={k:'Liquidity',v:!knownType?'Not read yet · launch type could not be determined':hasBlocksField?'Permanent: nobody can withdraw it, the creator included':'The creator can withdraw graduated liquidity with both keys',tone:!knownType?'':hasBlocksField?'':'warn',source:'Listed launch configuration'};
   const facts=[liquidity];let cfg=null,on=[];
   if(configWords){
    cfg=Object.fromEntries(BLOCK_FIELDS.map(([key],i)=>[key,configWords[i]]));
@@ -94,29 +94,29 @@ export function factsOf(pool) {
    if(on.includes('holderGate')&&cfg.gateToken===BigInt(AUCTION_ADDRESS))on=on.map(id=>id==='holderGate'?'openingAuction':id);
    const names=on.map(id=>BLOCKS.find(block=>block.id===id)?.name||id);
    facts.push({k:'Blocks observed',v:names.length?names.length+': '+names.join(', '):'None enabled in the observed configuration',tone:''});
-  }else facts.push({k:'Blocks observed',v:hasBlocks?'Unavailable · block configuration could not be read':'No block contract in the listed launch configuration',tone:''});
-  if(hasBlocks)facts.push({k:'Charges observed',v:'A buy '+(buy===null?'charge is unavailable':'pays '+pct(buy))+', a sell '+(sell===null?'charge is unavailable':'pays '+pct(sell))+' (on top of pool fees)',tone:(buy!==null&&buy>=1000n)||(sell!==null&&sell>=1000n)?'warn':''});
+  }else facts.push({k:'Blocks observed',v:hasBlocks?'Not read yet · block configuration could not be read':'No block contract in the listed launch configuration',tone:''});
+  if(hasBlocks)facts.push({k:'Charges observed',v:'A buy '+(buy===null?'charge could not be read':'pays '+pct(buy))+', a sell '+(sell===null?'charge could not be read':'pays '+pct(sell))+' (on top of pool fees)',tone:(buy!==null&&buy>=1000n)||(sell!==null&&sell>=1000n)?'warn':''});
   let locked=null,lockState='unavailable';
   try{
    const live=await isLive(chainId,'locks');reads['QLocks presence']='observed';
    if(live){locked=await read('QLocks summary',await extraAddress('locks',chainId),calldata(SEL.locksSummary,['address'],[token]),hex=>abiWords(hex,5)[0]);lockState=locked===null?'unavailable':'observed';}
    else lockState='not_deployed';
   }catch{reads['QLocks presence']='unavailable';}
-  const lockText=lockState==='not_deployed'?'QLocks is not deployed at its listed address; lock coverage unavailable':locked===null?'QLocks balance unavailable':supply===null?'QLocks share unavailable because total supply could not be read':supply===0n?'QLocks holds '+locked+' raw token units':share(locked,supply)+' of supply in QLocks across all beneficiaries, with public notice';
-  const creatorText=free===null?'Original creator wallet balance unavailable':supply===null?'Original creator wallet share unavailable because total supply could not be read':supply===0n?'Original creator wallet holds '+free+' raw token units':'Original creator wallet holds '+share(free,supply)+' unlocked';
+  const lockText=lockState==='not_deployed'?'QLocks is not deployed at its listed address; lock coverage could not be read':locked===null?'QLocks balance could not be read':supply===null?'QLocks share could not be worked out because total supply could not be read':supply===0n?'QLocks holds '+locked+' raw token units':share(locked,supply)+' of supply in QLocks across all beneficiaries, with public notice';
+  const creatorText=free===null?'Original creator wallet balance could not be read':supply===null?'Original creator wallet share could not be worked out because total supply could not be read':supply===0n?'Original creator wallet holds '+free+' raw token units':'Original creator wallet holds '+share(free,supply)+' unlocked';
   facts.push({k:'Token locks & creator holdings',v:(supply===0n?'Total supply is 0; percentage shares do not apply. ':'')+lockText+'; '+creatorText,tone:free!==null&&supply!==null&&supply>0n&&free*20n>supply?'warn':''});
-  const ownerText=current===null?'Current creator wallet unavailable. ':current!==owner?'Keys were rotated to '+current+'. ':'';
-  const recoveryText=eta===null?'Recovery status unavailable; it could not be read from the controller.':eta>0?'A creator key recovery is pending'+(by===1?' (started by the wallet)':by===2?' (started by the post-quantum key)':' (initiating key unavailable)')+'; it can replace both keys from '+new Date(eta*1000).toISOString()+' unless the other key cancels it.':'No recovery pending at this observation.';
+  const ownerText=current===null?'Current creator wallet could not be read. ':current!==owner?'Keys were rotated to '+current+'. ':'';
+  const recoveryText=eta===null?'Recovery status could not be read from the controller.':eta>0?'A creator key recovery is pending'+(by===1?' (started by the wallet)':by===2?' (started by the post-quantum key)':' (initiating key could not be read)')+'; it can replace both keys from '+new Date(eta*1000).toISOString()+' unless the other key cancels it.':'No recovery pending at this observation.';
   facts.push({k:'Creator keys',v:ownerText+'Creator actions require the wallet and a post-quantum key together. '+recoveryText,tone:eta!==null&&eta>0?'warn':''});
   if(cfg&&configWords.length>=BLOCK_FIELDS.length+8){
    try{await loadModules();const payees=configWords.slice(BLOCK_FIELDS.length,BLOCK_FIELDS.length+8).map(toAddress).filter(value=>value!==ZERO),found=modulesAmong(payees,token,quote);facts.push({k:'Modules observed',v:found.length?found.map(f=>f.module.name+(f.module.builderBps?' (builder keeps '+pct(f.module.builderBps)+')':'')).join(', '):'No recognized modules among the observed payees',tone:''});}
-   catch{facts.push({k:'Modules observed',v:'Unavailable · reviewed module coverage could not be checked',tone:''});}
-  }else if(hasBlocks)facts.push({k:'Modules observed',v:'Unavailable · complete payee configuration could not be read',tone:''});
+   catch{facts.push({k:'Modules observed',v:'Not read yet · reviewed module coverage could not be checked',tone:''});}
+  }else if(hasBlocks)facts.push({k:'Modules observed',v:'Not read yet · complete payee configuration could not be read',tone:''});
   const observed=Object.values(reads).filter(state=>state==='observed').length,unavailable=Object.values(reads).filter(state=>state==='unavailable').length;
   return {facts,token,owner,current,recovery:eta===null?null:eta>0,buyBps:buy===null?null:Number(buy),sellBps:sell===null?null:Number(sell),checkedAt:new Date().toISOString(),source:'RPC latest + listed launch configuration (liquidity policy)',coverage:{observed,unavailable,reads}};
  });
 }
-const factsMeta=f=>{const at=timeOf(f.checkedAt);return f.source+' · observed '+(at?new Date(at).toISOString()+' ('+ageOf(at)+')':'time unavailable')+' · read coverage: '+f.coverage.observed+' observed, '+f.coverage.unavailable+' unavailable. RPC reads use latest independently; no common block was pinned.';};
+const factsMeta=f=>{const at=timeOf(f.checkedAt);return f.source+' · observed '+(at?new Date(at).toISOString()+' ('+ageOf(at)+')':'time not recorded')+' · read coverage: '+f.coverage.observed+' observed, '+f.coverage.unavailable+' not read yet. RPC reads use latest independently; no common block was pinned.';};
 
 // ---- The Launch terms card's trust section ----
 const verifyHref = pool => '/verify#m=' + pool.chainId + ':' + pool.controller;
@@ -143,7 +143,7 @@ export async function renderTrust(el, pool) {
   if (!active()) return;
   const creator = t?.verified
     ? h('div', { class: 'qtr-row' }, h('b', {}, 'Creator'), badge(t.verified))
-    : h('div', { class: 'qtr-row' }, h('b', {}, 'Creator'), h('span', { class: 'qtr-muted' }, t?'Not verified on X':'Creator verification unavailable'), h('a', { class: 'qtr-link', href: verifyHref(pool) }, 'Are you the creator? Verify'));
+    : h('div', { class: 'qtr-row' }, h('b', {}, 'Creator'), h('span', { class: 'qtr-muted' }, t?'Not verified on X':'Creator verification refreshing'), h('a', { class: 'qtr-link', href: verifyHref(pool) }, 'Are you the creator? Verify'));
   const copy = t?.copyOf ? h('div', { class: 'qtr-warn', role: 'note' }, h('b', {}, 'Check you have the right token'),
     h('span', {}, 'Same ' + t.copyOf.same + ' as $' + t.copyOf.symbol + ' (' + t.copyOf.name + '), launched earlier by the verified creator @' + t.copyOf.handle + '. '),
     h('a', { href: '/terminal#m=' + t.copyOf.chainId + ':' + t.copyOf.controller }, 'Open the earlier launch')) : null;
@@ -155,27 +155,42 @@ export async function renderTrust(el, pool) {
 
 // ---- The terminal's risk banner for a QHooks launch ----
 /** Fills the ticket's banner: copy warning first, then QProof's verdict, then the facts that matter at the moment of trading. */
-export async function renderRisk(el, pool) {
+// checksline 2026-11-12 (main: signed-out visitors saw "Checks: refreshing" for 60 s+ while /api/repoproof/check said 200):
+// the line was painted once. A "running"/stale answer was never asked again, and the whole banner waited on ~50 chain
+// reads. Now: chain reads get FACTS_WAIT ms and are added when they land; a running or stale answer is asked again
+// (QProof's retryAt, 4–30 s) up to RECHECKS times, then the line shows the last verdict instead of "refreshing".
+// Wallet-independent: nothing here reads the connected account.
+export const RECHECKS = 8, FACTS_WAIT = 8000;
+const pendingVerdict = v => !!v && (['queued','running','pending','checking'].includes(v.state) || !!v.stale);
+const recheckDelay = v => { const at = Date.parse(v?.retryAt || ''); return Number.isFinite(at) ? Math.min(30000, Math.max(4000, at - Date.now())) : 8000; };
+const within = (p, ms, timers) => new Promise(resolve => { const id = timers.setTimeout(() => resolve(undefined), ms); p.then(x => { timers.clearTimeout(id); resolve(x); }, () => { timers.clearTimeout(id); resolve(null); }); });
+export async function renderRisk(el, pool, { quiet = false, tries = 0, timers = globalThis } = {}) {
   const key = keyOf(pool.chainId, pool.controller),active=beginRender(el,key);
-  el.hidden=false;el.replaceChildren(h('p',{class:'qtr-evidence'},checksSummary({state:'running'})));
-  const [t, v, f] = await Promise.all([trustOf(pool.chainId, pool.controller), verdictOf(pool.chainId, pool.controller), factsOf(pool).catch(() => null)]);
+  if(!quiet){el.hidden=false;el.replaceChildren(h('p',{class:'qtr-evidence'},checksSummary({state:'running'})));}
+  const factsP=factsOf(pool).catch(() => null);
+  const [t, v, fRaw] = await Promise.all([trustOf(pool.chainId, pool.controller), verdictOf(pool.chainId, pool.controller), within(factsP, FACTS_WAIT, timers)]);
   if (!active()) return;
+  const f = fRaw || null, again = opts => { if (active() && el.isConnected !== false) void renderRisk(el, pool, { quiet: true, timers, ...opts }); };
+  // Facts still reading: paint now, add them when they land (factsOf caches, so the re-render reads nothing twice).
+  if (fRaw === undefined) factsP.then(x => { if (x && active()) again({ tries }); });
+  const pending = pendingVerdict(v), exhausted = pending && tries >= RECHECKS;
+  if (pending && !exhausted) timers.setTimeout(() => { if (!active()) return; cache.delete('v:' + key); again({ tries: tries + 1 }); }, recheckDelay(v));
   const warningChecks=(v?.checks||[]).filter(c=>c.status==='danger'||c.status==='caution');
   const warningFacts=(f?.facts||[]).filter(fact=>fact.tone==='warn');
   const level = t?.copyOf || v?.level === 'danger' || warningChecks.some(c=>c.status==='danger') ? 'danger'
     : v?.level === 'caution' || warningChecks.length || warningFacts.length || f?.recovery ? 'caution' : '';
   const title = t?.copyOf ? 'Copy warning: same ' + t.copyOf.same + ' as $' + t.copyOf.symbol + ' by @' + t.copyOf.handle
     : v?.level === 'danger' ? 'QProof: ' + v.headline : v?.level === 'caution' ? 'Trade with care: ' + v.headline : v?.level === 'clear' ? checksSummary(v) : 'Refreshing market checks…';
-  const partialReads=!f||f.coverage.unavailable>0||f.facts.some(fact=>/unavailable|could not be read|could not be checked/i.test(fact.v));
+  const partialReads=!f||f.coverage.unavailable>0||f.facts.some(fact=>/unavailable|not read yet|could not be (?:read|checked|determined|worked out)/i.test(fact.v));
   // checks-rel 2026-11-10 (walkthrough item 3): final states instead of an endless "Refreshing" — this one line only.
-  const summary=checksSummary(v,{flags:warningChecks.length+warningFacts.length});
+  const summary=checksSummary(exhausted&&v?.level?{...v,state:'ready',stale:false}:v,{flags:warningChecks.length+warningFacts.length});
   const creator=h('li',{},...(t?.verified?['Creator verified on X: ',badge(t.verified,{compact:true})]:[t?'Creator not verified on X':'Creator not verified on X']));
   const factLine=fact=>h('li',{},h('b',{},fact.k+': '),fact.v);
   const body=h('div',{class:'qtr-risk-detail-body'},
     h('p',{class:'qtr-headline'},title),h('ul',{},creator),
     h('p',{class:'qtr-evidence'},verdictMeta(v)),
     (v?.checks||[]).some(c=>c.status!=='danger'&&c.status!=='caution')?h('ul',{},...(v.checks.filter(c=>c.status!=='danger'&&c.status!=='caution').map(c=>h('li',{},c.title)))):null,
-    f?h('p',{class:'qtr-evidence'},factsMeta(f)):h('p',{class:'qtr-evidence'},'Launch contract observations unavailable.'),
+    f?h('p',{class:'qtr-evidence'},factsMeta(f)):h('p',{class:'qtr-evidence'},'Launch contract observations refreshing.'),
     f?h('ul',{},...f.facts.filter(fact=>fact.tone!=='warn').map(factLine)):null,
     h('a', { href: v?.url || 'https://repoproof.online/proof#q=' + encodeURIComponent('https://qhooks.com/l/' + pool.chainId + '/' + pool.controller), target: '_blank', rel: 'noopener' }, v?.url && v.level ? 'Evidence on QProof ↗' : 'Full check on QProof ↗'));
   // Native details/summary retains browser keyboard behavior without a second action or any scan.

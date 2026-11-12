@@ -51,6 +51,13 @@ function style() {
 .qxb:not(.compact) .qxb-note{font-size:13.5px}
 .qxb.compact .qxb-more{display:grid;gap:10px}
 .qxb-list-h{font-weight:600;font-size:14px}.qxb-more .qxb-row{padding-top:10px;border-top:1px solid var(--qx-line,rgba(127,127,127,.2))}
+/* System A pages (body.qa, 2026-11-12): no card grid. Figures in columns split by hairline rules, rows between hairlines. */
+body.qa .qxb-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 0;padding:14px 0;border-block:1px solid var(--qa-rule)}
+body.qa .qxb .qxb-cell{border:0;border-radius:0;background:none;padding:0 0 0 14px;box-shadow:-1px 0 0 var(--qa-rule)}
+body.qa .qxb .qxb-cell:nth-child(odd){padding-left:0;box-shadow:none}
+body.qa .qxb .qxb-cell>span{text-transform:none;letter-spacing:0;font:500 12.5px/1.3 var(--qa-sans);color:var(--qa-tx-3)}
+body.qa .qxb .qxb-cell>b{font:800 18px/1.2 var(--qa-sans);color:var(--qa-tx)}
+body.qa .qxb:not(.compact) .qxb-more{border:0;border-radius:0;background:none;padding:0}
 @media (max-width:700px){.qxb-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.qxb:not(.compact) .qxb-cell{padding:16px 16px}.qxb:not(.compact) .qxb-cell b{font-size:19px}.qxb:not(.compact) .qxb-more{padding:16px}}`;
   document.head.append(s);
 }

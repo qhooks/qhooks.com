@@ -44,7 +44,7 @@ const ribbon = shell.ribbon;
 
 /* ================= the hero: the brand line, looping ================= */
 // "For the next generation of token builders / callers / holders / traders", resting on "For the next generation."
-// It loops so it is never missed (Randall, 2026-11-12). Each word brings its people's live card onto the hook (the stage,
+// It plays once, then rests (Randall, 2026-11-12: looping read as repetitive). Each word brings its people's live card onto the hook (the stage,
 // below), read from the same public data the page already loads; nothing is invented and an unknown card says
 // "Refreshing". The slot and the stage have fixed heights, so the page never moves. Reduced motion crossfades the word
 // and the card instead of rolling and dropping them. It pauses while the tab is hidden or the hero is scrolled away.
@@ -114,7 +114,7 @@ const brand = (() => {
   const line = $('[data-hm-line]'), slot = line && $('[data-hm-slot]', line);
   if (!line || !slot) return { refresh() {} };
   const HOLD = 2800, REST = 3200, ROLL = RM ? 320 : 560;
-  let k = 0, timer = 0, running = false, inViewNow = true, key = 'builders';
+  let k = 0, timer = 0, running = false, done = false, inViewNow = true, key = 'builders';
   const showWord = (w) => {
     const old = $('.hm-slot__w.is-on', slot), next = h('span', { class: 'hm-slot__w' }, w + '.');
     next.dataset.hmWord = '';
@@ -130,11 +130,12 @@ const brand = (() => {
     line.classList.toggle('is-rest', resting);
     if (!resting) showWord(WORDS[k]);
     stage.show(key, false);
-    timer = setTimeout(tick, resting ? REST : HOLD);
+    if (resting) { done = true; running = false; clearTimeout(timer); return; }
+    timer = setTimeout(tick, HOLD);
   };
   function tick() { if (running) step(); }
   const sync = () => {
-    const want = !document.hidden && inViewNow;
+    const want = !done && !document.hidden && inViewNow;
     if (want && !running) { running = true; clearTimeout(timer); timer = setTimeout(tick, HOLD); }
     else if (!want && running) { running = false; clearTimeout(timer); }
   };

@@ -411,7 +411,7 @@ export function createMoveFunds({ document = globalThis.document, target = globa
         t.symbol + (side === 'from' ? ' · ' + (t.amount === null ? DASH : Number(t.amount).toLocaleString('en-US', { maximumSignificantDigits: 6 })) : ''))));
       select.value = token.address;
     }
-    view.balance.textContent = s.from ? 'Available ' + (s.from.amount ?? DASH) + ' ' + s.from.symbol + ' · ' + money(s.from.usd) : 'Balance unavailable';
+    view.balance.textContent = s.from ? 'Available ' + (s.from.amount ?? DASH) + ' ' + s.from.symbol + ' · ' + money(s.from.usd) : 'Refreshing…';
     view.owner.textContent = s.owner ?? 'Connect your wallet';
     showReserve();
   }

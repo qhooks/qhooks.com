@@ -1,19 +1,23 @@
 /* Trade page: blocks on the selected pool */
 .qtb h2{margin:0 0 12px}
-.qtb-now{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 8px}
-.qtb-now div{border:1px solid var(--qx-line-2,rgba(241,238,227,.18));border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
-.qtb-now span{font-size:12.5px;color:var(--qx-muted,#a7aea3)}
-.qtb-now b{font:600 22px var(--qx-mono,ui-monospace,monospace);color:var(--qx-brass,#d2ad72)}
+/* System A (2026-11-12): no bordered card grid. Figures sit in columns split by hairline rules, between hairlines. */
+.qtb-now{display:grid;grid-template-columns:1fr 1fr;gap:10px 0;margin:0 0 10px;padding:12px 0;border-block:1px solid var(--qa-rule,var(--qx-line,rgba(241,238,227,.12)))}
+.qtb-now div{border:0;border-radius:0;background:none;padding:0 0 0 14px;box-shadow:-1px 0 0 var(--qa-rule,var(--qx-line,rgba(241,238,227,.12)));display:flex;flex-direction:column;gap:4px;min-width:0}
+.qtb-now div:first-child{padding-left:0;box-shadow:none}
+.qtb-now span{font-size:12.5px;color:var(--qa-tx-3,var(--qx-muted,#a7aea3))}
+.qtb-now b{font:800 22px/1.15 var(--qa-sans,var(--qx-sans,inherit));letter-spacing:-.01em;color:var(--qa-gold-hi,var(--qx-brass,#d2ad72));overflow-wrap:anywhere}
 .qtb-note{font-size:12.5px;color:var(--qx-faint,#6f776c);margin:0 0 12px;line-height:1.45}
 .qtb-list{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:2px}
 .qtb-list li{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px dashed var(--qx-line,rgba(241,238,227,.1));font-size:13.5px}
 .qtb-list a{color:var(--qx-ink,#f1eee3);font-weight:600;text-decoration:none}
 .qtb-list a:hover{color:var(--qx-brass,#d2ad72)}
 .qtb-list span{color:var(--qx-muted,#a7aea3);text-align:right}
-.qtb-pots{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:0}
-.qtb-pots div{background:var(--qx-bg-2,#111613);border-radius:12px;padding:10px 12px}
-.qtb-pots dt{font-size:12px;color:var(--qx-muted,#a7aea3)}
-.qtb-pots dd{margin:4px 0 0;font:600 14px var(--qx-mono,ui-monospace,monospace)}
+/* Pots: hairline rows, label left and figure right (was a grid of filled cards). */
+.qtb-pots{display:grid;grid-template-columns:minmax(0,1fr);gap:0;margin:0}
+.qtb-pots div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;background:none;border-radius:0;padding:9px 0;border-top:1px solid var(--qa-rule,var(--qx-line,rgba(241,238,227,.12)))}
+.qtb-pots div:last-child{border-bottom:1px solid var(--qa-rule,var(--qx-line,rgba(241,238,227,.12)))}
+.qtb-pots dt{font-size:13px;color:var(--qa-tx-3,var(--qx-muted,#a7aea3))}
+.qtb-pots dd{margin:0;font:650 14px var(--qa-sans,var(--qx-sans,inherit));text-align:right;overflow-wrap:anywhere}
 .qtb-ref{margin-top:14px;padding-top:12px;border-top:1px solid var(--qx-line,rgba(241,238,227,.1))}
 .qtb-ref h3{margin:0 0 4px;font-size:15px}
 .qtb-ref p{margin:0 0 10px;font-size:12.5px;color:var(--qx-muted,#a7aea3);line-height:1.45}
