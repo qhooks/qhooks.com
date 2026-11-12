@@ -1,3 +1,8 @@
 @import url("./setup-base.css");
 /* Full fee addresses stay visible, including on a 390px screen. */
 .setup #qrs-fee-accounts p { font-size: 14px; overflow-wrap: anywhere; }
+
+/* setup pages: [hidden] must win over skin display rules; aria-disabled buttons look off but still explain on tap */
+.setup-flow [hidden],.qsc-setup [hidden]{display:none!important}
+#qrs-fee-create[aria-disabled="true"],#qrs-fee-create.is-off{opacity:.45;filter:grayscale(1);cursor:not-allowed}
+.qsc-fee-hint{margin-top:.6rem;font-weight:600}.qsc-fee-hint-link{display:inline-flex;align-items:center;min-height:44px;padding:.5rem 1rem;margin-top:.4rem;border-radius:999px;background:var(--qa-accent,#d8b46a);color:#111!important;text-decoration:none;font-weight:700}

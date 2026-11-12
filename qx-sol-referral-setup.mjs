@@ -1,11 +1,21 @@
 import {solTreasuryReady,QHOOKS_SOL_TREASURY,SOL_TREASURY_WAIT} from './qx-sol-treasury.mjs';
-import {solAddress,onSolChange} from './qx-solana.mjs';
+import {solAddress,solWallets,onSolChange} from './qx-solana.mjs';
 import {setupSolWallet} from './qx-sol-setup-wallet.mjs';
 import {solLaunchError} from './qx-sol-launch-errors.mjs';
 import {solReferralRuntime,referralSetupAddresses,setupSolReferral,setupSolReferralFeeAccounts,previewSolReferralFeeAccounts,solFeeAccountCostText,recordFinalizedSolReferral} from './qx-sol-referral-client.mjs';
 import {solReferralSetupState} from './qx-sol-referral-setup-state.mjs';
 import {waitSolFinalized} from './qx-sol-launch-confirm.mjs';
 const $=id=>document.getElementById('qrs-'+id);
+const FEE_SHORT=QHOOKS_SOL_TREASURY.slice(0,4)+'…'+QHOOKS_SOL_TREASURY.slice(-4);
+function feeHint(off,tapped){const el=$('fee-hint');if(!el)return;const me=solAddress();let text='',link=false;
+ if(!off){el.hidden=true;return;}
+ if(!me&&!solWallets().length){text='Open this page in Phantom first, then connect '+FEE_SHORT+'.';link=true;}
+ else if(!me)text='Connect the treasury wallet '+FEE_SHORT+' first.';
+ else if(me!==QHOOKS_SOL_TREASURY)text='This wallet is not the treasury. Connect '+FEE_SHORT+'.';
+ else text=tapped?'Checking account rent. Try again in a moment.':'';
+ el.textContent=text;
+ if(link){const a=document.createElement('a');a.href='https://phantom.app/ul/browse/'+encodeURIComponent(location.href)+'?ref='+encodeURIComponent(location.origin);a.textContent='Open in Phantom';a.className='qsc-fee-hint-link';el.append(' ',a);}
+ el.hidden=!text;if(tapped&&text)el.scrollIntoView({block:'nearest'});}
 if(new URLSearchParams(location.search).get('go')==='solana'){
  $('gate').hidden=true;$('active').hidden=false;let busy=false,pending=null,feePending=null,unrecorded=false,referralState=null,costKey='',costsReady=false;
  const pendingKey='qhooks:sol-referral:pending:'+QHOOKS_SOL_TREASURY;
@@ -23,7 +33,7 @@ if(new URLSearchParams(location.search).get('go')==='solana'){
  function save(){try{if(pending)localStorage.setItem(pendingKey,JSON.stringify(pending));else localStorage.removeItem(pendingKey);}catch{}}
  function saveFee(){try{if(feePending)localStorage.setItem(feePendingKey,JSON.stringify(feePending));else localStorage.removeItem(feePendingKey);}catch{}}
  function render(){renderWallet();recovery();$('create').disabled=busy||!!pending||!!feePending||!referralState;$('create').hidden=referralState?.ready===true;$('register').textContent='Record referral';$('register').hidden=!pending&&!unrecorded;$('register').disabled=busy;$('recovery').hidden=!pending&&!unrecorded;$('signature').value=pending?.signature||$('signature').value;$('signature').readOnly=!!pending;$('treasury').textContent=solTreasuryReady()?QHOOKS_SOL_TREASURY:SOL_TREASURY_WAIT;
-  const step=solReferralSetupState(referralState,solAddress(),{busy,pending:!!feePending});$('fee-step').hidden=!step.showFeeStep;$('fee-create').disabled=!step.canCreateFees||!costsReady;$('fee-check').hidden=!feePending;$('fee-check').disabled=busy||solAddress()!==QHOOKS_SOL_TREASURY;$('fee-missing').textContent=step.missing.map(m=>m.startsWith('So111')?'wrapped SOL':'USDC').join(' and ');
+  const step=solReferralSetupState(referralState,solAddress(),{busy,pending:!!feePending});$('fee-step').hidden=!step.showFeeStep;{const off=!!(!step.canCreateFees||!costsReady);$('fee-create').setAttribute('aria-disabled',String(off));$('fee-create').classList.toggle('is-off',off);feeHint(off);}$('fee-check').hidden=!feePending;$('fee-check').disabled=busy||solAddress()!==QHOOKS_SOL_TREASURY;$('fee-missing').textContent=step.missing.map(m=>m.startsWith('So111')?'wrapped SOL':'USDC').join(' and ');
   $('fee-accounts').replaceChildren(...step.missing.map(mint=>{const p=document.createElement('p');p.textContent=(mint.startsWith('So111')?'Wrapped SOL (wSOL)':'USDC')+': '+referralState.feeAccounts[mint];return p;}));
  }
  async function reviewFeeCosts(){
@@ -52,7 +62,7 @@ if(new URLSearchParams(location.search).get('go')==='solana'){
   }
   const state=await refreshReferral();status(state.feeAccountsReady?'Fee accounts finalized and verified. Solana referral fees are ready.':'Waiting for finalized fee accounts. Tap Check fee accounts again.');
  }
- $('fee-create').onclick=()=>action(repairFeeAccounts);$('fee-check').onclick=()=>action(repairFeeAccounts);
+ $('fee-create').onclick=()=>{if($('fee-create').getAttribute('aria-disabled')==='true'&&solAddress()!==QHOOKS_SOL_TREASURY){feeHint(true,true);return;}return action(repairFeeAccounts);};$('fee-check').onclick=()=>action(repairFeeAccounts);
  $('create').onclick=()=>action(async()=>{
   if(pending){await record();return;}
   if(solAddress()!==QHOOKS_SOL_TREASURY){status('Connect the QHooks treasury wallet.');return;}
