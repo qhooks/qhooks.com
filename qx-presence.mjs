@@ -31,7 +31,7 @@ if (typeof window !== 'undefined' && !window.__qhooksPresence) {
     const r = await base(...args);
     if (r.headers.get('x-qhooks-refreshing') === '1') {
       let node = document.getElementById('qhooks-refreshing');
-      if (!node) { node = document.createElement('div'); node.id = 'qhooks-refreshing'; node.setAttribute('role','status'); node.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9999;padding:8px 12px;border-radius:8px;background:#17212e;color:#fff;font:13px system-ui'; document.body.append(node); }
+      if (!node) { node = document.createElement('div'); node.id = 'qhooks-refreshing'; node.setAttribute('role','status'); node.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9999;padding:8px 12px;border-radius:8px;background:#17212e;color:#fff;font:13px system-ui;pointer-events:none'; document.body.append(node); if (!document.getElementById('qx-pill-style')) { const st = document.createElement('style'); st.id = 'qx-pill-style'; st.textContent = '#qhooks-refreshing#qhooks-refreshing{top:calc(env(safe-area-inset-top) + var(--qa-nav-h, 64px) + 8px)!important;bottom:auto!important;pointer-events:none!important;opacity:.92}'; document.head.append(st); } }
       node.textContent = 'Refreshing';
     }
     if (r.headers.get('x-qhooks-cache') === 'fresh') document.getElementById('qhooks-refreshing')?.remove();

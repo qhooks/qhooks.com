@@ -2,13 +2,15 @@
 // /safe-drops-fund (no Safe app; owner A calls approveHash, owner B execTransaction with both v=1 signatures).
 // 1. Grants: 50,000 QHOOKS each, vested 30 days, for founding creators who reached the milestone before today 00:00
 //    UTC and don't have one yet (read from QGrants on chain), in slot order, within the 2.5M budget.
-// 2. Top-up: the founding WETH the drop list is waiting for, deposited into QDrops.
+// 2. Top-up: WETH into QDrops for founding top-ups and callout rewards (one WETH budget). The amount field starts at
+//    0.05 WETH (main thread 2026-11-12) and lives in the link (?weth=), so both owners sign the same amount; it never
+//    goes below what founding is waiting for. The rest is the callout reserve, shown in weeks at recent pool size.
 // Everything that decides the hash is fixed for the day (the cut, on-chain grants, a list update), so both owners
 // build the same transaction. Nothing is sent unless an eth_call of the exact transaction succeeds from the owner.
 import {getWalletHub} from '/wallet-hub-fresh.mjs';
 import {chainById} from '/chains.mjs';
 import {FOUNDING, beneficiary, grantBatch, dayCut} from '/founding-config.mjs';
-import {grantsTx, topUpTx, decodeGrant, grantedSet, SEL} from '/founding-fund.mjs';
+import {grantsTx, topUpTx, decodeGrant, grantedSet, SEL, parseWeth, DEFAULT_WETH} from '/founding-fund.mjs';
 import {safeHashCall, safeExecData} from '/qdrops-core.mjs';
 const hub = getWalletHub(window), CHAIN = FOUNDING.pay.chain, SAFE = FOUNDING.grant.grantor;
 const OWNERS = [{a: '0x88db60586866294409e47bbbb0b436104f09c1b5', name: 'Qhooks 1'}, {a: '0x9b13398df547c18e68d1cfe086ff1cb5f1a84127', name: 'Qhooks2'}];
@@ -40,12 +42,27 @@ async function readGrants() {
   const tx = rows.length ? grantsTx(rows) : null;
   return {...c, kind: 'grants', rows, left, granted: granted.size, bal, tx, short: tx && bal < tx.total, waiting};
 }
-async function readTopUp() {
-  const c = await readCommon(), need = BigInt(c.api.wethWaiting || '0');
-  const bal = BigInt(await call(FOUNDING.pay.token, '0x' + SEL.balanceOf + pad(SAFE)));
-  const tx = need > 0n ? topUpTx(need) : null;
-  return {...c, kind: 'topup', need, bal, tx, short: tx && bal < tx.amount};
+const wethInput = el('input', {id: 'qff-amount', type: 'text', inputmode: 'decimal', autocomplete: 'off', value: new URLSearchParams(location.search).get('weth') || DEFAULT_WETH, 'aria-describedby': 'qff-amount-hint'});
+const wethField = el('p', {class: 'qff-amount'}, el('label', {for: 'qff-amount'}, 'Amount (WETH) '), wethInput, el('span', {id: 'qff-amount-hint'}, ' Both owners use the same amount: it is saved in this page link.'));
+let poolCache = null;
+// One shared request, at most 8 s: the pool size is a hint for the split, never a reason to hold the page.
+function calloutPool() {
+  if (poolCache && (poolCache.body === undefined || Date.now() - poolCache.at < 300000)) return poolCache.p;
+  const entry = {at: Date.now(), body: undefined};
+  entry.p = Promise.race([fetch('/api/drops/callouts-pool', {cache: 'no-store'}).then(r => r.ok ? r.json() : null).catch(() => null), new Promise(res => setTimeout(() => res(null), 8000))])
+    .then(b => { entry.body = b; if (!b) entry.at = Date.now() - 240000; return b; });
+  poolCache = entry; return entry.p;
 }
+async function readTopUp() {
+  const [c, pool] = await Promise.all([readCommon(), calloutPool()]), need = BigInt(c.api.wethWaiting || '0');
+  const bal = BigInt(await call(FOUNDING.pay.token, '0x' + SEL.balanceOf + pad(SAFE)));
+  const typed = parseWeth(wethInput.value), amount = typed === null ? null : typed < need ? need : typed;
+  const tx = amount && amount > 0n ? topUpTx(amount) : null;
+  const callouts = tx ? tx.amount - need : 0n, daily = pool?.dailyPoolWei ? BigInt(pool.dailyPoolWei) : null;
+  const weeks = daily && daily > 0n ? Number(callouts) / Number(daily * 7n) : null;
+  return {...c, kind: 'topup', need, bal, tx, short: tx && bal < tx.amount, typed, callouts, daily, weeks, days: pool?.days?.length || 0};
+}
+wethInput.addEventListener('change', () => { const q = new URLSearchParams(location.search); q.set('weth', wethInput.value.trim()); history.replaceState(null, '', location.pathname + '?' + q + location.hash); drawTopUp(); });
 async function withHash(s) {
   if (!s.tx) return {...s, hash: null, approved: [false, false]};
   const hash = await call(SAFE, safeHashCall(s.tx, s.nonce));
@@ -113,9 +130,13 @@ const drawGrants = section(document.getElementById('qff-grants'), readGrants, s 
   extraNote: null,
   note: (s.waiting?.length ? s.waiting.length + ' qualified creator' + (s.waiting.length > 1 ? 's hold' : ' holds') + ' under 100,000 QHOOKS right now and will join a later batch. ' : '') + (s.rows.length ? 'Each creator reached ' + FOUNDING.grant.holders + ' holders and $' + FOUNDING.grant.volumeUsd.toLocaleString('en-US') + ' of volume within 14 days, before today 00:00 UTC. Check the tokens before approving.' : 'Milestones reached today join tomorrow\'s batch.'),
 }));
+const weeksText = s => s.weeks == null ? 'Refreshing…' : s.weeks >= 52 ? 'over a year' : s.weeks >= 2 ? Math.floor(s.weeks) + ' weeks' : s.weeks >= 1 ? 'about 1 week' : Math.max(1, Math.floor(s.weeks * 7)) + ' days';
 const drawTopUp = section(document.getElementById('qff-weth'), readTopUp, s => ({
-  title: s.tx ? 'Deposit ' + fmt(s.tx.amount, 4) + ' WETH for founding top-ups' : 'No top-ups waiting',
-  facts: [['Waiting in the drop list', fmt(s.need, 6) + ' WETH (volume share, extra cashback, bounty)'], ['Safe WETH', fmt(s.bal, 4)], ['Into', 'QDrops ' + FOUNDING.pay.drops]],
-  note: s.tx ? (s.short ? 'The Safe holds less WETH than this needs. Move WETH to the Safe first.' : 'The next drop list pays these once the WETH is in.') : 'Each weekly drop list adds what founding launches earned.',
+  title: s.tx ? 'Deposit ' + fmt(s.tx.amount, 4) + ' WETH for rewards' : s.typed === null ? 'Enter an amount' : 'Nothing to deposit',
+  facts: [['Founding top-ups', fmt(s.need, 6) + ' WETH waiting in the drop list'],
+    ['Callout rewards', fmt(s.callouts, 6) + ' WETH · covers ' + weeksText(s) + (s.daily ? ' at ' + fmt(s.daily, 6) + ' WETH a day (10% of terminal fees, last ' + s.days + ' days)' : '')],
+    ['Safe WETH', fmt(s.bal, 4)], ['Into', 'QDrops ' + FOUNDING.pay.drops]],
+  extra: [wethField],
+  note: s.tx ? (s.short ? 'The Safe holds less WETH than this. Move WETH to the Safe first.' : 'Drop lists pay founding top-ups and callout rewards from this. What is not used yet stays in QDrops for later lists.') : s.typed === null ? 'Type an amount like 0.05.' : 'Each weekly drop list adds what founding launches and callers earned.',
 }));
 drawGrants(); drawTopUp();

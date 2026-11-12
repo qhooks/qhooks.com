@@ -72,7 +72,9 @@ export function nextLeaves(previous, awards) {
 }
 /// Splits `pot` (bigint) by weight [{account, weight}] with integer floors; the rounding remainder stays unallocated.
 /// shareCap (0..1) caps any one account's share; capped excess also stays unallocated (it rolls to the next epoch).
-export function splitByWeight(rows, pot, {shareCap = 1, redistribute = false} = {}) {
+/// remainder (callouts, Randall 2026-11-12): when every account is at the cap and pot is still left (fewer accounts than
+/// 1/shareCap), the rest is shared by weight among all of them, so a lone caller gets the whole day.
+export function splitByWeight(rows, pot, {shareCap = 1, redistribute = false, remainder = false} = {}) {
   const live = rows.filter(r => BigInt(r.weight) > 0n);
   const total = live.reduce((s, r) => s + BigInt(r.weight), 0n);
   if (!total || pot <= 0n) return [];
@@ -89,6 +91,7 @@ export function splitByWeight(rows, pot, {shareCap = 1, redistribute = false} = 
     if (!over.length) { for (const i of open) amount.set(i, left * BigInt(live[i].weight) / w); break; }
     for (const i of over) { amount.set(i, cap); open.delete(i); left -= cap; }
   }
+  if (remainder && !open.size && left > 0n) for (const [i, r] of live.entries()) amount.set(i, (amount.get(i) || 0n) + left * BigInt(r.weight) / total);
   return live.map((r, i) => ({account: r.account, amount: amount.get(i) || 0n})).filter(r => r.amount > 0n);
 }
 /// Canonical bytes of an epoch file, hashed into dataHash on chain so anyone can check the JSON they downloaded.

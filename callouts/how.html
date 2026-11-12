@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How callout points work | QHooks</title><meta name="description" content="How QHooks callout points are scored and how the daily callout pool is shared."><link rel="icon" href="/qhooks-logo.jpg">
+<link rel="preload" href="/qx-a/fonts/mona-sans-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/qx-a/tokens.css"><link rel="stylesheet" href="/qx-a/components.css"><link rel="stylesheet" href="/qx-a/shell.css"><link rel="stylesheet" href="/qx-a/pages/studio-common.css"><link rel="stylesheet" href="/qx-a/pages/studio-launch-day.css"></head><body class="qa qst-page" data-a-shell><a class="skip-link" href="#main">Skip to content</a><div class="qst-wallet-home" hidden><button type="button" id="qhc-trigger" class="qa-btn qa-btn--primary qa-wallet__btn qhc-trigger" aria-haspopup="dialog">Connect wallet</button></div><main id="main" class="qa-page qst qst-day cr-main">
+  <section class="cr-hero qst-top">
+   <p class="qx-eyebrow">Callouts · Method</p>
+   <h1>How callout points work</h1>
+   <p class="cr-lede">Every day, 10% of the terminal’s trading fees on Robinhood Chain goes to callers. It is shared by points, and points come from the gains of people who bought because of your call.</p>
+  </section>
+  <section class="cr-panel qst-sec" aria-labelledby="ch-points">
+   <div class="cr-head"><h2 id="ch-points">Points</h2></div>
+   <dl class="ld-record">
+    <div><dt>A call</dt><dd>A token you hold, posted with your wallet’s signature. Anyone can call.</dd></div>
+    <div><dt>Points</dt><dd>1 point = 1 cent made by people who bought because of the call within 24 hours, marked at the end of the next day (UTC). A losing call scores zero.</dd></div>
+    <div><dt>Who counts</dt><dd>Someone who bought through the call’s Buy button or call link while signed in, or a wallet that followed you at least a day before buying. The wallet must be at least a week old on QHooks and put in at least $10.</dd></div>
+    <div><dt>Never counts</dt><dd>Your own wallets, wallets you funded, calls on a token you launched, and your own gain on the token.</dd></div>
+   </dl>
+  </section>
+  <section class="cr-panel qst-sec" aria-labelledby="ch-adj">
+   <div class="cr-head"><h2 id="ch-adj">Adjustments</h2></div>
+   <dl class="ld-record">
+    <div><dt>Still holding</dt><dd>1.25× when you still hold the token you called at scoring time, checked on chain.</dd></div>
+    <div><dt>Calls a day</dt><dd>Your first 3 calls a day count fully. Later calls count less.</dd></div>
+    <div><dt>Market cap</dt><dd>Under $100K at the call counts less. Over $1M counts 1.5×, over $10M counts 2×.</dd></div>
+    <div><dt>Daily limit</dt><dd>At most 100,000 points per caller per day.</dd></div>
+   </dl>
+  </section>
+  <section class="cr-panel qst-sec" aria-labelledby="ch-pool">
+   <div class="cr-head"><h2 id="ch-pool">The day’s pool</h2></div>
+   <dl class="ld-record">
+    <div><dt>Share</dt><dd>Your points ÷ everyone’s points that day. No caller takes more than 25% while others can take the rest. When there aren’t enough callers to fill the pool, what’s left is shared again by points, so a lone caller gets the whole day.</dd></div>
+    <div><dt>Payout</dt><dd>WETH on Robinhood Chain with the weekly drop. Claim it in My QHooks.</dd></div>
+    <div><dt>Gain on a stake</dt><dd>Call cards show the caller’s stake and the gain on it. That is information only: it is not a payout and not points.</dd></div>
+   </dl>
+   <p class="cr-note qst-links"><a class="qx-link" href="/community.html#callout-points">Today’s points →</a> · <a class="qx-link" href="/me">Claim in My QHooks →</a></p>
+  </section>
+ </main><dialog id="qhc-dialog" class="qhc-dialog" aria-labelledby="qhc-title">
+ <div class="qhc-heading"><h2 id="qhc-title">Your wallet</h2><button id="qhc-close" type="button" aria-label="Close wallet dialog">×</button></div>
+ <section class="qhc-login"><button id="qhc-email-login" type="button" class="qhc-choice">Continue with email or Google</button><p>No wallet extension needed. Your QWallet quantum key stays separate.</p><button id="qhc-email-logout" type="button" class="qhc-secondary" hidden>Sign out of QHooks login</button><p id="qhc-login-status" role="status" aria-live="polite"></p></section><section class="qhc-mobile">
+ <label for="qhc-mobile-chain">Mobile wallet network</label><select id="qhc-mobile-chain"></select>
+ <button id="qhc-mobile-login" type="button" class="qhc-choice">MetaMask Mobile</button>
+ <p id="qhc-mobile-status" role="status" aria-live="polite">Connect your phone with a QR code.</p>
+ <button id="qhc-mobile-disconnect" type="button" class="qhc-secondary" hidden>Disconnect mobile session</button>
+ <p class="qhc-sdk-notice">Uses MetaMask Connect, copyright ConsenSys. <a href="/metamask/LICENSE.txt" target="_blank" rel="noopener">License</a></p>
+</section>
+<div id="qhc-choices">
+  <p>Choose an EVM wallet.</p>
+  <div id="qhc-wallets" class="qhc-wallets"></div>
+  <div id="qhc-empty"><p>No wallet detected in this browser.</p><p>Open <strong>qhooks.com</strong> in Chrome with your wallet extension enabled, or in your wallet app’s built-in browser.</p><p>The in-app preview cannot access Chrome’s wallet extensions. Use MetaMask Mobile above to pair your phone.</p></div>
+  <button id="qhc-rescan" type="button" class="qhc-secondary">Detect wallets again</button>
+ </div>
+ <div id="qhc-account" hidden><p id="qhc-address" class="qhc-address"></p><p id="qhc-chain"></p><p id="qhc-remembered"></p><button id="qhc-forget" type="button" class="qhc-secondary">Disconnect and forget</button></div>
+ <div id="qhc-email-network" hidden><label for="qhc-embedded-chain">Embedded wallet network</label><select id="qhc-embedded-chain"></select><button id="qhc-embedded-switch" type="button" class="qhc-secondary">Switch network</button></div><p id="qhc-status" role="status" aria-live="polite"></p>
+ <p class="qhc-footnote">Connecting does not authorize spending. Review the launch steps before confirming. Keep your recovery phrase private.</p>
+</dialog><script src="/wallet-early.js"></script><script type="module" src="/wallet-site.mjs"></script><script type="module" src="/wallet-page-resume.mjs"></script><script type="module" src="/wallet-login.mjs"></script><script type="module" src="/l121-mobile-login.mjs"></script><script type="module" src="/qx-shell.mjs"></script></body></html>

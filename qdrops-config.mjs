@@ -35,7 +35,7 @@ export const DROPS = {
       stakeLocks: {address: '0x807390f11e52e8508636bac3c54b47b17a66dae3', fromBlock: 110600000},
       windows: [
         {id: 'launch', start: '2026-11-08', end: '2026-11-14', pot: '1000000000000000000000000', callouts: false}, // 1M QHOOKS; publishes right after the window, without waiting a day for callout points
-        {id: 'bridge', start: '2026-11-14', end: '2026-11-17', pot: '0'}, // no holder drop; lines the weekly drops up to start Nov 17 (main thread 2026-11-09)
+        {id: 'bridge', start: '2026-11-14', end: '2026-11-17', pot: '0', calloutsFrom: '2026-11-08'}, // also pays launch-week calls (11-08..11-13; the launch window skips callouts) — main thread 2026-11-12 // no holder drop; lines the weekly drops up to start Nov 17 (main thread 2026-11-09)
       ],
       // 250,000 QHOOKS a week from the community-rewards lock (QLocks v1 #4), Randall approved 2026-11-09. First week
       // Nov 17 → Nov 24. Funded each week through /safe-drops-fund (withdraw + deposit + announce next week).

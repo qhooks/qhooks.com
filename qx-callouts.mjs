@@ -1,13 +1,13 @@
 import {profileUrl,resolveProfileAddress} from './qx-profile-address.mjs';
 // Callouts on the site: "Call it" in the terminal, Follow on profiles, the callout inbox in My QHooks and
 // the callout points board on Community. Mounts itself on whichever of those pages loads it.
-import {holderMinTokens,shortText} from '/qx-holder-min.mjs';
 import {clampInto} from '/qx-more-text.mjs';
 import {boardSession,authHeaders,signIn,sessionWallet} from '/qx-board-session.mjs';
 import {publishCommunityCall} from '/qx-community-intent.mjs';
 import {connectedAddress,onWalletChange,signMessage} from '/qx-chain.mjs';
 import {communityFollowing} from '/qx-community-follow.mjs';
 import {memberIdentity} from './qx-member-identity.mjs';
+import {captureCallRef,sendCallRefs} from './qx-call-ref.mjs';
 
 const ADDRESS=/^0x[0-9a-fA-F]{40}$/;
 const short=w=>w.slice(0,6)+'…'+w.slice(-4);
@@ -109,22 +109,21 @@ function mountInbox(before){
 
 // ---------- Community: callout points ----------
 const dayString=offset=>new Date(Date.now()-offset*86400000).toISOString().slice(0,10);
-const LABEL={diamond:'Diamond',holder:'1M+ QHOOKS',small_cap:'Small cap'};
+const LABEL={diamond:'Diamond',still_holds:'Still holds',small_cap:'Small cap'};
 // The holder bonus goes to wallets the flywheel counts as holders (isHolder), so its threshold is holderMin on chain.
-holderMinTokens().then(n=>{if(!n)return;LABEL.holder=shortText(n)+'+ QHOOKS';document.querySelectorAll('[data-qco-holdermin]').forEach(e=>{e.textContent=shortText(n);});}).catch(()=>{});
 function mountBoard(after){
  const body=h('div',{class:'qco-board'}),tabs=h('div',{class:'qco-tabs',role:'tablist','aria-label':'Choose a day'});
  const section=h('section',{class:'cx-sec',id:'callout-points','aria-labelledby':'cx-callout-points'},
   h('div',{class:'cx-sec-head'},h('h2',{id:'cx-callout-points',class:'cx-h2'},'Callout points.'),
-   h('p',{},'Call a token you hold. When your followers buy it within 24 hours, you earn points from what they made, marked at the next day’s close. Anyone can call.')),
+   h('p',{},'Call a token you hold. When people buy it because of your call within 24 hours, you get points from what they made, marked at the next day’s close. Each day 10% of terminal fees is shared by points.')),
   tabs,body,h('details',{class:'qco-rules'},h('summary',{},'How points work'),h('ul',{},
-   h('li',{},'1 point = 1 cent your followers made on the call, after the adjustments below. Losing calls score zero.'),
-   h('li',{},'Only followers count: wallets that followed you at least a day before buying, are at least a week old on QHooks, and put in at least $10.'),
-   h('li',{},'Your own wallets, and wallets you funded, never count.'),
+   h('li',{},'1 point = 1 cent made by people who bought because of the call, after the adjustments below. Losing calls score zero.'),
+   h('li',{},'They count when they bought through the call’s Buy button or link while signed in, or followed you at least a day before buying. Wallets must be at least a week old on QHooks and put in at least $10.'),
+   h('li',{},'Your own wallets, wallets you funded, and calls on your own launch never count. Your own gain is not points.'),
    h('li',{},'Your first 3 calls a day count fully; later calls count less.'),
    h('li',{},'Small-cap calls count less. Diamond calls (market cap over $1M) count 1.5×, over $10M count 2×.'),
-   h('li',{},'Holders of ',h('span',{'data-qco-holdermin':''},'1M'),'+ QHOOKS get 1.25×. Points are capped at 100,000 per caller per day.'),
-   h('li',{},'Scored on QHooks launches, where every trade is indexed.'))));
+   h('li',{},'Still holding the token you called when the day is scored: 1.25×. Points are capped at 100,000 per caller per day.'),
+   h('li',{},h('a',{href:'/callouts/how'},'The full method')))));
  after.after(section);
  const days=[['Today',0],['Yesterday',1],['2 days ago',2],['3 days ago',3]];let active=1;
  async function load(){
@@ -135,16 +134,25 @@ function mountBoard(after){
    const settle=new Date(r.window.callsTo+86400000).toUTCString().slice(5,11);
    const head=h('p',{class:'qco-day'},'Calls made '+r.day+(r.status==='final'?' · Final':' · Live · settles '+settle+', 00:00 UTC'));
    if(!r.callers.length){body.replaceChildren(head,h('p',{class:'qco-empty'},'No points yet for this day. Points appear once followers buy a called token.'));return;}
-   const table=h('table',{class:'qco-table'},h('thead',{},h('tr',{},h('th',{},'#'),h('th',{},'Caller'),h('th',{class:'n'},'Points'),h('th',{class:'n'},'Followers counted'),h('th',{class:'n'},'Calls'))),
+   const table=h('table',{class:'qco-table'},h('thead',{},h('tr',{},h('th',{},'#'),h('th',{},'Caller'),h('th',{class:'n'},'Points'),h('th',{class:'n'},'Share of the day’s pool'),h('th',{class:'n'},'Buyers counted'),h('th',{class:'n'},'Calls'))),
     h('tbody',{},...r.callers.map((c,i)=>{const who=memberIdentity(c.wallet);
-     return h('tr',{},h('td',{},String(i+1)),h('td',{},who,...c.labels.filter(l=>LABEL[l]).map(l=>h('span',{class:'qco-tag'},LABEL[l]))),h('td',{class:'n'},num(c.points)),h('td',{class:'n'},num(c.followersCounted)),h('td',{class:'n'},num(c.calls)));})));
+     return h('tr',{},h('td',{},String(i+1)),h('td',{},who,...c.labels.filter(l=>LABEL[l]).map(l=>h('span',{class:'qco-tag'},LABEL[l]))),h('td',{class:'n'},num(c.points)),h('td',{class:'n'},c.poolShare>0?(Math.round(c.poolShare*1000)/10)+'%':'—'),h('td',{class:'n'},num(c.followersCounted)),h('td',{class:'n'},num(c.calls)));})));
    body.replaceChildren(head,h('div',{class:'qco-table-wrap'},table));
   }catch{body.replaceChildren(h('p',{class:'qco-empty'},'Refreshing…'));setTimeout(load,15000);}
  }
  load();
 }
 
+function watchCallRefs(doc){
+ try{captureCallRef(location);}catch{}
+ const send=()=>{sendCallRefs({headers:authHeaders,wallet:sessionWallet}).catch(()=>{});};
+ setTimeout(send,1500);doc.addEventListener('qhooks:traded',()=>setTimeout(send,500));
+ try{onWalletChange(()=>setTimeout(send,1500));}catch{}
+ addEventListener('storage',e=>{if(e.key==='qhooks:board-session:v1')send();});
+}
+
 export function mountCallouts(doc=document){
+ watchCallRefs(doc);
  const share=doc.getElementById('qxt-share');if(share)mountTerminal(share);
  const identity=doc.getElementById('qp-member-identity');if(identity)mountProfile(identity);
  const root=doc.getElementById('qa-root');if(root&&doc.getElementById('qa-rewards'))mountInbox(root);

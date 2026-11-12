@@ -1,0 +1,23 @@
+/* Callout rewards on a profile (qx-callout-rewards.mjs). Open floor like the profile: hairlines, no boxed cards, no pills,
+   no monospace, no italics. */
+.qcr { margin: 22px 0 0; display: grid; gap: 12px; }
+.qcr :is(h2, b, span, p, a) { font-style: normal; }
+.qcr-h { margin: 0; font-size: 13px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: var(--qa-tx-3); }
+.qcr-strip { margin-top: 0; }
+.qcr-strip b { font-size: 22px; }
+.qcr-strip b.qa-up { color: var(--qa-buy); }
+.qcr-strip b.qa-down { color: var(--qa-sell); }
+.qcr-weeks { display: grid; font-size: 14px; font-variant-numeric: tabular-nums; }
+.qcr-row { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1.4fr); gap: 10px; padding: 9px 0; box-shadow: 0 1px 0 var(--qa-rule); color: var(--qa-tx); }
+.qcr-row > span:not(:first-child) { text-align: right; }
+.qcr-row .qa-up { color: var(--qa-buy); }
+.qcr-th { padding-top: 0; font-size: 12px; font-weight: 650; color: var(--qa-tx-3); }
+.qcr-best { list-style: none; margin: 0; padding: 0; display: grid; }
+.qcr-best a { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 0; box-shadow: 0 1px 0 var(--qa-rule); color: var(--qa-tx); text-decoration: none; }
+.qcr-best a:hover b { color: var(--qa-gold-hi); }
+.qcr-best b { font-size: 15px; font-weight: 750; }
+.qcr-best span { font-size: 13.5px; color: var(--qa-tx-2); text-align: right; overflow-wrap: anywhere; }
+.qcr-note { margin: 0; max-width: 58ch; font-size: 13px; line-height: 1.45; color: var(--qa-tx-3); }
+.qcr-note a { color: var(--qa-gold); font-weight: 650; }
+.qcr-card { margin: 8px 0 0; font-size: 13px; line-height: 1.45; color: var(--qa-tx-2); }
+.qcr-card b { font-weight: 700; color: var(--qa-tx); }

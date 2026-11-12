@@ -29,3 +29,10 @@ export function decodeGrant(h) {
 /// Creators who already have a founding grant from the Safe (revoked ones included: never granted twice).
 export const grantedSet = (grants, f = FOUNDING) => new Set(grants.filter(g => g.token === f.grant.token && g.grantor === f.grant.grantor && g.total > 0n).map(g => g.recipient));
 export {QHOOKS, SAFE};
+/// The top-up amount field (main thread 2026-11-12: prefilled 0.05 WETH). Plain decimal WETH → wei; null when not a number.
+export const DEFAULT_WETH = '0.05';
+export function parseWeth(text) {
+  const m = /^\s*(\d{0,3})(?:\.(\d{0,18}))?\s*$/.exec(String(text ?? ''));
+  if (!m || (!m[1] && !m[2])) return null;
+  return BigInt(m[1] || '0') * 10n ** 18n + BigInt((m[2] || '').padEnd(18, '0'));
+}
