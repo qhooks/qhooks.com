@@ -59,7 +59,9 @@
       <tr><td><code>quote</code></td><td><code>GET quote</code></td><td><code>chain, pool, zeroForOne, amountIn, trader</code>. The existing V4Quoter simulation; amounts are raw integer base units.</td></tr>
       <tr><td><code>prepare_launch</code></td><td><code>POST prepare-launch</code></td><td><code>name, ticker</code>, optional <code>chain, style</code>. A prefilled <code>/create</code> link, chain, style and signing notes. The default style is <code>fair</code>.</td></tr>
       <tr><td><code>prepare_trade</code></td><td><code>POST prepare-trade</code></td><td><code>chain, token, side, amountIn, slippageBps, trader</code>, optional <code>referrer</code>. Ordered unsigned transactions, the quote and minimum output. <code>side</code> is <code>buy</code> or <code>sell</code>; input is raw base units.</td></tr>
+      <tr><td><code>send_feedback</code></td><td><code>POST feedback</code></td><td><code>text</code> (up to 2,000 characters), optional <code>kind</code> (<code>missing_tool</code>, <code>bug</code>, <code>data</code>, <code>docs</code>, <code>other</code>), <code>tool</code> and <code>client</code>. Returns <code>{ok, id, note}</code>. Also at <code>POST https://qhooks.com/api/agent/feedback</code>. Up to 10 an hour and 30 a day per visitor.</td></tr>
     </tbody></table></div>
+    <p>Your agent can send feedback with <code>send_feedback</code>. We read it every day.</p>
     <p>Launch preparation opens the one-tap panel for review. The post-quantum key is made in the user’s browser and stays on by default. The user’s wallet signs on qhooks.com. Trade preparation checks the fee router on the chosen chain and includes an ERC-20 approval only when the current allowance needs it. Review each <code>{to,data,value}</code> before asking the user’s wallet to sign and send.</p>
     <pre><code>curl 'https://qhooks.com/api/v1/agent/prepare-launch' \
   -H 'Content-Type: application/json' \
