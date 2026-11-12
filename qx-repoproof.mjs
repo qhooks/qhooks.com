@@ -35,7 +35,7 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
  const id='qpr-'+(++widgetId),status=h('p',{class:'qpr-status',role:'status','aria-live':'polite'}),reportHost=h('div',{class:'qpr-report'}),badge=h('span',{class:'qpr-state'},'Reading cache');
  const check=h('button',{type:'button',class:'qpr-check'},'Check with QProof'),refresh=h('button',{type:'button',class:'qpr-refresh'},'Refresh cached report');
  check.setAttribute('aria-describedby',id+'-privacy');
- const privacy=h('p',{class:'qpr-privacy',id:id+'-privacy'},'This check sends the displayed public address and chain to our proof service, QProof (repoproof.online).');
+ const privacy=h('p',{class:'qpr-privacy',id:id+'-privacy'},'This check sends the displayed public address and chain to our proof service, QProof.');
  const identity=h('p',{class:'qpr-identity'},h('span',{},CHAIN_NAMES[target.chainId]+' · '+label(target.kind)),h('code',{},target.address));
  const element=h('section',{class:'qpr','aria-label':'QProof report'},h('div',{class:'qpr-head'},h('h3',{},'QProof'),badge),identity,h('div',{class:'qpr-actions'},check,refresh),privacy,status,reportHost);
  // Keep native report-control activation inside this component. In a terminal,

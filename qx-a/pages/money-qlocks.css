@@ -4,7 +4,7 @@
 .mn-qlk__mark svg { width: 30px; height: 30px; }
 .mn-free { color: var(--qa-buy); font-weight: 760; }
 .mn-qlk__free { display: flex; align-items: baseline; gap: 10px; margin-top: 18px; font-size: 16px; color: var(--qa-tx-2); }
-.mn-qlk__free strong { font-size: 24px; font-weight: 830; font-stretch: 116%; letter-spacing: -.03em; color: var(--qa-buy); }
+.mn-qlk__free strong { flex: none; white-space: nowrap; font-size: 24px; font-weight: 830; font-stretch: 116%; letter-spacing: -.03em; color: var(--qa-buy); }
 #qlk-root { max-width: 980px; }
 .qlk-recent > li > a::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 10px; border-radius: 50%; background: var(--qa-gold); vertical-align: 2px; box-shadow: var(--qa-glow-gold); }
 .qlk-connect { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }

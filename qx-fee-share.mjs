@@ -109,9 +109,17 @@ export function readoutLines(state) {
   if (!r) return ['Refreshing'];
   return [`Share: ${percent(r.shareBps)}`, r.pendingAt > 0n ? `Pending change: ${percent(r.pendingBps)} · ${new Date(Number(r.pendingAt) * 1000).toISOString().replace('T', ' ').replace('.000Z', ' UTC')}` : 'No pending change', `Total to liquidity: ${amount(r.totalToLiquidity)}`, `Total WETH to creator: ${amount(r.totalWethToCreator)}`, `Active: ${state.active ? 'Yes' : 'No'}`];
 }
+// No launch in the link: keep the site shell and point to the creator's launches.
+export function renderNoLaunch(doc) {
+  const root = doc.getElementById('qfs-root');
+  if (!root) return;
+  const h = doc.createElement('h1'); h.textContent = 'Open a launch to set its fee share';
+  const a = doc.createElement('a'); a.className = 'qa-btn qfs-empty__go'; a.href = '/me'; a.textContent = 'My QHooks';
+  root.classList.add('qfs-empty'); root.removeAttribute('aria-busy'); root.replaceChildren(h, a);
+}
 export function mountFeeShare({document: doc, search, hub, io, pollMs = 30000, sleep = ms => new Promise(r => setTimeout(r, ms))}) {
   const root = doc.getElementById('qfs-root');
-  if (!allowedPool(search)) { doc.body.replaceChildren('Not available'); return {ready: Promise.resolve(), dispose() {}}; }
+  if (!allowedPool(search)) { renderNoLaunch(doc); return {ready: Promise.resolve(), dispose() {}}; }
   let state, bps = 5000, reading = false, busy = false, stopped = false, message = '', revision = 0, focusKey;
   const el = (tag, attrs = {}, ...kids) => { const n = doc.createElement(tag); for (const [k, v] of Object.entries(attrs)) if (v !== false && v != null) n.setAttribute(k, v === true ? '' : String(v)); n.append(...kids.flat().filter(k => k != null)); return n; };
   const button = (text, fn, focus = text) => { const b = el('button', {type: 'button', disabled: reading || busy, 'data-focus': focus}, text); b.addEventListener('click', fn); return b; };

@@ -1,3 +1,4 @@
+import { isTestToken } from '/qx-test-tokens.mjs'; // a test token is never the hero (Randall, 2026-11-12)
 import { heroArt } from '/qx-a/herocard.mjs'; // design audit #4: the token as a flat card, no coin
 // /profile v4 (2026-11-12, overhaul polish): caller and trader profiles get the same lit set as /create, Portfolio and
 // /community. Phones: the top band (.pv-banner) becomes the set; wide screens: the band is the set's still plate and the live
@@ -27,7 +28,8 @@ function start({ main, banner, hero }) {
   }
   const probe = (src) => new Promise((ok) => { if (!src) return ok(''); const im = new Image(), t = setTimeout(() => ok(''), 4000);
     im.onload = () => { clearTimeout(t); ok(im.naturalWidth ? src : ''); }; im.onerror = () => { clearTimeout(t); ok(''); }; im.src = src; });
-  const face = (c) => heroArt(stage, { src: c.src, sym: c.sym });
+  const testSrc = (s) => { const m = /\/api\/token-profiles\/([^/]+)\/([^/]+)\/image/.exec(s || ''); return !!m && isTestToken(m[1], m[2]); };
+  const face = (c) => heroArt(stage, { src: testSrc(c.src) ? '' : c.src, sym: c.sym });
   function update() {
     // the result can arrive after the line itself: re-read on change, re-form the coin only when the call changes
     const c = read(); if (!c || c.key + c.res === key) return;

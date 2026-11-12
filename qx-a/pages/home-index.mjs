@@ -227,6 +227,7 @@ async function loadFeed() {
   Pm.vol = live.reduce((a, m) => a + (num(m.summary?.volume24Usd) || 0), 0);
   const qm = markets.find((m) => lower(m.token) === QH); if (qm && Pm.holders == null) Pm.holders = num(qm.summary?.holders);
   pulse.update(!first); count('launches', live.length);
+  calls.forEach((x) => x.paintChip?.()); // the feed brings the logos the call cards wait for
   drawLaunches(fresh);
   if (!S.q && qm) paintTag(qm.summary);
   for (const k of fresh) {
@@ -413,14 +414,18 @@ function callPost(c, enter) {
   const sym = c.board?.symbol || c.board?.name || 'token';
   const nowP = () => callNow(c);
   const out = nowP() != null ? callOutcome({ callPrice: c.call.price, nowPrice: nowP() }) : null;
-  const p = post({ w: c.author, name: fmt.short(c.author), age: fmt.age((Date.now() - c.createdAt) / 1000), what: h('span', null, 'called', tokenChip('$' + sym, boardLogo(c.board))), text: c.text, media: out ? [out] : [], enter });
+  // the token chip: the token's real image (the market logo the token page uses) once the feed has it; the initial letter until then
+  const chip = tokenChip('$' + sym, boardLogo(c.board));
+  const paintChip = () => { const i = chip.querySelector('i'), src = boardLogo(c.board); if (!i) return; if (src) { i.style.setProperty('background-image', `url("${src}")`); i.textContent = ''; i.classList.remove('is-letter'); } else { i.textContent = String(sym).replace(/^\$/, '').slice(0, 1).toUpperCase(); i.classList.add('is-letter'); } };
+  paintChip();
+  const p = post({ w: c.author, name: fmt.short(c.author), age: fmt.age((Date.now() - c.createdAt) / 1000), what: h('span', null, 'called', chip), text: c.text, media: out ? [out] : [], enter });
   const href = c.links?.path || (c.id ? '/call/' + c.id : null);
   if (href) p.querySelector('.qa-post__body').append(h('a', { class: 'hm-call-go', href }, 'Open the call →'));
   // The caller's face and name open their profile (components.post draws them as plain text).
   const prof = profileUrl({ wallet: c.author }), label = 'Open profile of ' + fmt.short(c.author), ava = p.querySelector(':scope > .qa-ava'), nm = p.querySelector('.qa-post__name');
   if (ava) { const link = h('a', { class: 'cx-face', href: prof, 'aria-label': label }); ava.replaceWith(link); link.append(ava); }
   if (nm) nm.replaceWith(h('a', { class: 'qa-post__name cx-who__link', href: prof, title: 'Open profile', 'aria-label': label }, h('span', { class: 'cx-who__t' }, nm.textContent), h('span', { class: 'cx-who__chev', 'aria-hidden': 'true' }, '›')));
-  return { el: p, update: () => { const v = nowP(); if (out && v != null) out.update(v); } };
+  return { el: p, update: () => { const v = nowP(); if (out && v != null) out.update(v); }, paintChip };
 }
 // The scene's extruded figure: the latest call that has a real outcome (the same unit on both sides), its real move.
 // The 3D caption never sets a wallet address: the caller's profile name when they have one, otherwise just the time.
@@ -432,8 +437,8 @@ function callerName(w) {
 }
 function pushCall() {
   if (!scene) return;
-  const c = S.calls.find((x) => callNow(x) != null); if (!c) { scene.setCall({ pct: null, label: '' }); return; }
-  const now = callNow(c), pct = (now / c.call.price - 1) * 100, who = callerName(c.author);
+  const c = S.calls[0], now = c ? callNow(c) : null; if (!c || now == null) { scene.setCall({ pct: null, label: '' }); return; } // the card's own call and value, or nothing
+  const pct = (now / c.call.price - 1) * 100, who = callerName(c.author);
   scene.setCall({ pct, label: `$${c.board?.symbol || 'token'} · called ${who ? 'by ' + who + ' · ' : ''}${fmt.age((Date.now() - c.createdAt) / 1000)} ago` });
 }
 async function loadCalls() {

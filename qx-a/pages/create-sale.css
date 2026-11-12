@@ -6,6 +6,7 @@
 .sa-root > p:only-child { font-size: 26px; line-height: 1.1; font-weight: 800; font-stretch: var(--qa-wd-head); letter-spacing: -.025em; color: var(--qa-tx); padding: 8px 0 0; max-width: 24ch; }
 .sa-start { display: none; margin: 18px 0 0; }
 .sa:has(.sa-root > p:only-child:not(.sa-wait)) .sa-start { display: block; }
+.sa-root > p.sa-intro:only-child { font-size: 22px; font-weight: 760; color: var(--qa-tx-2); }
 .sa .qsa-head h1 { font-size: 44px; line-height: .95; font-weight: 850; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); overflow-wrap: anywhere; }
 .sa .qsa-sym { display: block; margin-top: 6px; font-size: 17px; font-weight: 760; letter-spacing: -.01em; font-stretch: 100%; color: var(--qa-gold-hi); }
 .sa .qsa-meta { margin: 12px 0 0; font-size: 14px; font-weight: 580; color: var(--qa-tx-2); }

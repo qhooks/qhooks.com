@@ -113,9 +113,12 @@ export function renderBoard(body,{watch=[],tray=[]}={}) {
 const GROUP_GLYPH=['directional','impactFee','pool2','circuit','hook'];
 export const groupGlyph=hook=>`<span class="hl-gt hl-gt--sm qd-g" aria-hidden="true"><svg class="hl-g" viewBox="0 0 24 24"><use href="#hl-g-${GROUP_GLYPH[capabilityGroup(hook)]}"/></svg></span>`;
 export function compactNumber(value){const n=Number(value);if(!Number.isFinite(n))return '–';const a=Math.abs(n);return a>=1e9?(n/1e9).toFixed(2)+'B':a>=1e6?(n/1e6).toFixed(2)+'M':a>=1e4?(n/1e3).toFixed(1)+'K':n.toLocaleString('en-US');}
+// Amounts without token decimals: compact base units (745T, 1.63×10¹⁶); the exact raw value stays in the row's title.
+const SUP='⁰¹²³⁴⁵⁶⁷⁸⁹';
+function baseUnits(x){if(x<1e12)return compactNumber(x);if(x<1e15)return (x/1e12).toFixed(2).replace(/\.?0+$/,'')+'T';const [m,e]=x.toExponential(2).split('e');return m.replace(/\.?0+$/,'')+'×10'+String(Number(e)).split('').map(d=>SUP[d]).join('');}
 export function tokenAmount(value,token){
   try{if(value==null||String(value).trim()==='')return '–';const n=BigInt(value),neg=n<0n,abs=neg?-n:n;
-    if(!token||!Number.isInteger(token.decimals)){const x=Number(abs);return (neg?'−':'+')+(x>=1e12?x.toExponential(2).replace('e+','e'):compactNumber(x))+' raw';}
+    if(!token||!Number.isInteger(token.decimals)){const x=Number(abs);return (neg?'−':'+')+baseUnits(x);}
     const v=Number(abs)/10**token.decimals;return (neg?'−':'+')+(v>=1?compactNumber(Math.round(v*100)/100):v.toPrecision(3))+(token.symbol?' '+token.symbol:'');
   }catch{return '–';}
 }

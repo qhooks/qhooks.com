@@ -25,3 +25,8 @@
 .qfs-message:empty { min-height: 0; margin: 0; }
 @media (max-width: 560px) { .qfs-card button { width: 100%; } }
 @media (min-width: 1100px) { .qfs-card h1 { font-size: 60px; } .mn-fs { padding-top: 48px; } }
+/* No launch in the link: one line and a way to the creator's launches. */
+.qfs-card.qfs-empty { padding: 8px 0 32px; }
+.qfs-card.qfs-empty h1 { max-width: 16ch; }
+.qfs-card .qfs-empty__go { margin-top: 26px; min-width: 200px; }
+@media (max-width: 560px) { .qfs-card .qfs-empty__go { width: 100%; } }

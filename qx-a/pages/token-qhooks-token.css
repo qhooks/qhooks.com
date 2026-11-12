@@ -86,3 +86,10 @@ body.qa.tp-qhooks-token .qdw-rules > div { display: grid; gap: 4px; padding: 13p
 body.qa.tp-qhooks-token .qdw-rules dt { font-size: 13px; font-weight: 650; color: var(--qa-tx-3); }
 body.qa.tp-qhooks-token .qdw-rules dd { margin: 0; max-width: 62ch; font-size: 15px; line-height: 1.5; color: var(--qa-tx-2); }
 @media (min-width: 760px) { body.qa.tp-qhooks-token .qdw-rules > div { grid-template-columns: 170px minmax(0, 1fr); column-gap: 24px; } }
+/* Fact tiles: never break inside a value; two tiles per row, labels wrap between words only. */
+body.qa.tp-qhooks-token dl.rm-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+body.qa.tp-qhooks-token dl.rm-tiles :is(dt, dd) { overflow-wrap: normal; word-break: normal; hyphens: none; }
+@media (max-width: 420px) {
+  body.qa.tp-qhooks-token dl.rm-tiles div { padding: 14px 12px; }
+  body.qa.tp-qhooks-token dl.rm-tiles dd { font-size: clamp(18px, 5.2vw, 24px); }
+}

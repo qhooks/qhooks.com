@@ -1,3 +1,4 @@
+import { isTestToken } from '/qx-test-tokens.mjs'; // a test token is never the hero (Randall, 2026-11-12)
 import { heroArt } from '/qx-a/herocard.mjs'; // design audit #4: the token as a flat card, no coin
 // /community v4 (2026-11-12, site overhaul polish): the same lit set as /create and Portfolio. One object under light: a
 // gold coin carrying the token of the latest real call (the top of the page's own call feed, #cx-community-activity,
@@ -25,7 +26,8 @@ if (hero && !hero.querySelector('.cv4-stage')) {
   // the token's art, if it loads within 4 s (a profile may not exist; a slow image never holds the coin back)
   const probe = (src) => new Promise((ok) => { if (!src) return ok(''); const im = new Image(), t = setTimeout(() => ok(''), 4000);
     im.onload = () => { clearTimeout(t); ok(im.naturalWidth ? src : ''); }; im.onerror = () => { clearTimeout(t); ok(''); }; im.src = src; });
-  const face = (c) => heroArt(stage, { src: c.src, sym: c.sym });
+  const testSrc = (s) => { const m = /\/api\/token-profiles\/([^/]+)\/([^/]+)\/image/.exec(s || ''); return !!m && isTestToken(m[1], m[2]); };
+  const face = (c) => heroArt(stage, { src: testSrc(c.src) ? '' : c.src, sym: c.sym });
   function update() {
     const c = read(); if (!c || c.id === key) return;
     const fresh = !!key; key = c.id; last = c;

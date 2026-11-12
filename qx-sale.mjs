@@ -27,6 +27,8 @@ const call = data => rpc('eth_call', [{to: address, data}, 'latest']);
 const word = v => BigInt(v).toString(16).padStart(64, '0');
 
 async function load() {
+  // Bare /sale (no chain, no id): a neutral intro. The error is only for a malformed or unknown link.
+  if (!q.has('chain') && !q.has('id')) { show(el('p', {class: 'sa-intro'}, 'Open a sale link to see it here')); return; }
   if (!chain || !address || saleId === null) { show(el('p', {}, 'This sale link is not valid.')); return; }
   try {
     const [h, block] = await Promise.all([call(SEL.saleOf + word(saleId)), rpc('eth_getBlockByNumber', ['latest', false]), readUsd()]);

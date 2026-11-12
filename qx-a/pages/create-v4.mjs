@@ -1,3 +1,4 @@
+import { isTestToken } from '/qx-test-tokens.mjs'; // a test token is never the hero (Randall, 2026-11-12)
 import { heroArt } from '/qx-a/herocard.mjs';
 // /create v4 (2026-11-12): the launch scene. One object under light: a gold coin, its face the latest real launch on
 // QHooks, standing on a lit floor in a shaft of light with gold dust falling through it. Motion follows real events:
@@ -125,7 +126,8 @@ if (hero && !hero.querySelector('.cr4-stage')) {
   const go = () => { if (!raf) raf = requestAnimationFrame(frame); };
   // the latest launch from the page's own list
   function readList(isUpdate) {
-    const li = list?.querySelector('li'); if (!li) return;
+    // the newest launch with real art (main: never a letter tile at hero size); the rail below still lists every launch
+    const li = [...(list?.querySelectorAll('li') || [])].find((x) => x.querySelector('img')?.getAttribute('src') && !isTestToken(...String(x.dataset.key || ':').split(':'))); if (!li) return;
     const key = li.dataset.key || '', sym = li.querySelector('b')?.textContent || '', when = li.querySelector('small')?.textContent || '', src = li.querySelector('img')?.getAttribute('src') || '';
     if (key === faceKey) return;
     faceKey = key; faceLetter = sym.slice(0, 1).toUpperCase();

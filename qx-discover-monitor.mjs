@@ -9,7 +9,10 @@ const note=text=>`<p class="qd-note">${escapeHTML(text)}</p>`;
 const chainName=id=>MONITORED_CHAINS.find(c=>c.chainId===Number(id))?.name||`Chain ${id}`;
 const integer=value=>known(value)&&/^\d+$/.test(String(value))?Number(value):null;
 function number(value){if(!known(value)||!Number.isFinite(Number(value)))return '';try{return new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(typeof value==='bigint'?value:/^-?\d+$/.test(String(value))?BigInt(value):Number(value));}catch{return '';}}
-const placeholder=value=>typeof value==='string'&&/^(?:not[ _-]?reported|unknown|undefined|null)$/i.test(value.trim());
+const placeholder=value=>typeof value==='string'&&/^(?:not[ _-]?(?:reported|set)|unknown|undefined|null)$/i.test(value.trim());
+// Long hex (hashes, addresses, code) reads as 0x1234…abcd; the full value stays in the title.
+const shortHex=text=>String(text).replace(/0x[\da-f]{14,}/gi,h=>`${h.slice(0,6)}…${h.slice(-4)}`);
+const valueCode=text=>`<code title="${escapeHTML(text)}">${escapeHTML(shortHex(text))}</code>`;
 const timeValue=value=>{if(!known(value)||placeholder(value))return null;const numeric=typeof value==='number'||/^\d+(?:\.\d+)?$/.test(String(value))?Number(value):null;const n=+new Date(numeric===null?value:numeric<1e12?numeric*1000:numeric);return Number.isFinite(n)&&n>0?n:null;};
 export function monitorTime(value){
   const time=timeValue(value);if(time===null)return '';
@@ -22,8 +25,7 @@ export function monitorSource(record={}){
 }
 const CHANGE_KINDS=Object.freeze({code:'Runtime code',owner:'Owner',implementation:'Implementation',admin:'Admin',lp_fee:'LP fee',new_pool:'New pool'});
 function stableValue(value){
-  if(value===null)return 'Not set';
-  if(value===undefined||placeholder(value))return '';
+  if(value===null||value===undefined||placeholder(value))return '';
   if(typeof value==='string'||typeof value==='number'||typeof value==='bigint'||typeof value==='boolean')return String(value);
   if(Array.isArray(value))return value.map(stableValue).filter(Boolean).join(', ');
   if(typeof value==='object')return Object.keys(value).sort().flatMap(key=>{const v=stableValue(value[key]);return v?[`${key}: ${v}`]:[];}).join(' · ');
@@ -93,7 +95,7 @@ export function renderChangeLog(body={}, options={}){
   const empty=!changes.length&&recent?note('No changes seen in the watched set.'):'';
   const events=changes.length?`<ol class="qd-changes${recent?' qd-changes-recent':''}">${changes.map(change=>{
     const f=formatChange(change),evidence=[f.block?`Block ${f.block}`:'',f.time,f.source].filter(Boolean).join(' · ');
-    const values=f.before&&f.after?`<code>${escapeHTML(f.before)}</code><span aria-label="changed to"> → </span><code>${escapeHTML(f.after)}</code>`:f.before?`<code>${escapeHTML(f.before)}</code>`:f.after?`<code>${escapeHTML(f.after)}</code>`:'';
+    const values=f.before&&f.after?`${valueCode(f.before)}<span aria-label="changed to"> → </span>${valueCode(f.after)}`:f.before?valueCode(f.before):f.after?valueCode(f.after):'';
     return `<li class="qd-change"><div class="qd-change-heading">${recent?changeHookLink(change):''}<strong>${escapeHTML(f.kind)}</strong></div>${values?`<p class="qd-change-values">${values}</p>`:''}${evidence?note(evidence):''}</li>`;
   }).join('')}</ol>`:'';
   return `<div class="qd-monitor">${badge?'<span class="qd-status-chip qd-status-neutral">Upgradeable</span>':''}${coverage?note(coverage):''}${watching}${empty}${events}${sourceNote}</div>`;
@@ -195,7 +197,7 @@ export function tapeStatusRows(body={}, options={}){
     let status=['healthy','catching_up','initializing'].includes(reported)?reported:'initializing';
     if(reported==='degraded'||reported==='needs_attention')status=fresh.recentSuccess?(catching?'catching_up':'healthy'):'needs_attention';
     else if(!reported&&catching)status='catching_up';
-    const states={healthy:{label:'Healthy',tone:'success'},catching_up:{label:'Catching up',tone:'neutral'},needs_attention:{label:'Needs attention',tone:'warning'},initializing:{label:'Initializing',tone:'neutral'}};
+    const states={healthy:{label:'Healthy',tone:'success'},catching_up:{label:'Refreshing',tone:'neutral'},needs_attention:{label:'Needs attention',tone:'warning'},initializing:{label:'Initializing',tone:'neutral'}};
     const label=states[status];
     const cursors=cursorFields(raw),hasCursor=cursors.some(c=>integer(c.value)!==null);
     const notStarted=cursors.some(c=>c.present&&(c.value===null||known(c.value)&&Number.isFinite(Number(c.value))&&Number(c.value)<0))||(!fresh.hasSuccess&&!hasCursor);

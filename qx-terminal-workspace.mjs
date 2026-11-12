@@ -221,7 +221,7 @@ export function renderWorkspaceContext({h,selection,snapshot,chainName=id=>id,on
  const address=asset.token||asset.controller,links=workspaceLinks(asset),route=asset.kind==='launch'?'QHooks pool':asset.chainId==='solana'?'Jupiter route':'0x route';
  const identity=h('div',{class:'qxt-identity-context'},
   h('span',{class:'qxt-chain-label'},chainName(asset.chainId)),h('span',{class:'qxt-route-label'},route),
-  h('span',{class:'qxt-contract-kind'},asset.token?'Token contract':'Launch contract'),h('code',{class:'qxt-contract',title:address},address),
+  h('span',{class:'qxt-contract-kind'},asset.token?'Token contract':'Launch contract'),h('code',{class:'qxt-contract',title:address},String(address||'').length>14?String(address).slice(0,6)+'\u2026'+String(address).slice(-4):address),
   h('button',{type:'button',class:'qxt-context-action',ariaLabel:'Copy contract '+address,onclick:()=>onCopy(address)},'Copy'),
   h('a',{class:'qxt-context-action',href:links.board},'Board'),h('a',{class:'qxt-context-action qxt-call-action',href:links.call},'Make a call'));
  const indexed=clock(health.indexedAt),data=h('div',{class:'qxt-data-health '+health.status,role:'status'},

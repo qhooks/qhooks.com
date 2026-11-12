@@ -28,10 +28,16 @@ async function tile(src, sym, px, label) {
 const size = (stage, f) => Math.round(Math.max(64, Math.min(168, Math.min(stage.clientWidth * .3, stage.clientHeight * .42) * f)));
 let seq = 0;
 // one token: the latest launch / call / your launch
+// (main, 2026-11-12: never a letter tile at hero size) → resolves true when real art is shown, false (card cleared) otherwise
 export async function heroArt(stage, { src = '', sym = '' } = {}) {
-  const box = ensure(stage), my = ++seq, el = await tile(src, sym, size(stage, 1));
-  if (my !== seq) return; box.replaceChildren(el);
+  const box = ensure(stage), my = ++seq, ok = await probe(src);
+  if (my !== seq) return false;
+  if (!ok) { box.replaceChildren(); return false; }
+  const el = await tile(ok, sym, size(stage, 1)); if (my !== seq) return false;
+  box.replaceChildren(el); return true;
 }
+// the first candidate whose art loads (newest first), or null
+export async function firstWithArt(list) { for (const c of list) if (c?.src && await probe(c.src)) return c; return null; }
 // several tokens in one row, largest first in the middle, sized by value (Portfolio)
 export async function heroRow(stage, items = []) {
   const box = ensure(stage), my = ++seq, list = items.slice(0, 5), max = Math.max(1, ...list.map((i) => i.v || 1));

@@ -74,3 +74,17 @@ body.qa.qxt #qtz .qtb-now b { white-space: nowrap; }
   body.qa.qxt #qtz .qtb-now > div + div { box-shadow: 0 -1px 0 var(--qa-rule); }
   body.qa.qxt #qtz .qtb-now b { font-size: clamp(20px, 6.4vw, 26px); text-align: right; }
 }
+
+/* auditB #31 (2026-11-12): phone token page chrome. (1) While the Buy / Sell bar shows, it takes the bottom edge alone: the
+   site tab bar is hidden on the token page (the header's back and menu stay), the bar sits on the safe area and the page keeps
+   room under its last row. The bar and the ticket it opens are unchanged. (2) The trade table always fits at 390 / 360: before
+   the tape styling lands (or if it doesn't), the plain trades table drops its Price column and wraps instead of clipping. */
+@media (max-width: 1099px) {
+  body.qa.qxt.ta-token:not(.ta-sheet-open) nav.qa-tabbar { display: none; }
+  body.qa.qxt.ta-token:not(.ta-sheet-open) .ta-dock { bottom: 0; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  body.qa.qxt.ta-token:not(.ta-sheet-open) { padding-bottom: calc(var(--qa-dock-h) + 16px + env(safe-area-inset-bottom)); --qa-toast-bottom: var(--qa-dock-h); }
+  body.qa.qxt.ta-token:not(.ta-sheet-open) .qa-getapp { bottom: calc(var(--qa-dock-h) + env(safe-area-inset-bottom)); }
+  body.qa.qxt #qxt-pane[data-mode="trades"] table.qxt-table:not(.ta-tape) { display: table; table-layout: fixed; width: 100%; }
+  body.qa.qxt #qxt-pane[data-mode="trades"] table.qxt-table:not(.ta-tape) :is(th, td):nth-child(3) { display: none; }
+  body.qa.qxt #qxt-pane[data-mode="trades"] table.qxt-table:not(.ta-tape) td { white-space: normal; overflow-wrap: anywhere; }
+}

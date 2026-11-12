@@ -87,3 +87,6 @@
   .hk4 .hk-build { padding-top: 72px; }
   .hk4 .hk-how-rail li b { font-size: 22px; }
 }
+
+/* design audit #30 (main, Batch B): phones: headline and buttons first, the hook band after them, shorter */
+@media (max-width: 899px) { .hk4 .hk-hero-copy { order: 1; } .hk4 .hk4-stage { order: 2; height: 300px; margin-top: 18px; } .hk4 .hk4-hero > :not(.hk4-stage):not(.hk-hero-copy) { order: 3; } }
