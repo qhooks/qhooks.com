@@ -12,9 +12,9 @@ async function simulateSol(serialized){
 }
 export async function solApi(path,body){const r=await fetch('/api/sol-launch/'+path,{...(body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{}),cache:'no-store'}),v=await r.json();if(!r.ok)throw Error(v.error||'Solana request failed.');return v;}
 export async function solRuntime(){const s=await import('/vendor/dbc.mjs'),connection=new s.Connection(new URL('/api/sol-launch/rpc',location.origin).href,'confirmed');return {...s,connection,client:new s.DynamicBondingCurveClient(connection,'confirmed')};}
-export async function prepareSolTransaction(runtime,transaction,signers=[],owner=solAddress(),{walletFirst=false}={}){
+export async function prepareSolTransaction(runtime,transaction,signers=[],owner=solAddress(),{walletFirst=false,fixedLast=null}={}){
  if(!owner||owner!==solAddress())throw Error('Connect the wallet for this transaction.');
- const {connection,PublicKey}=runtime,last=await connection.getLatestBlockhash('confirmed');transaction.feePayer=new PublicKey(owner);transaction.recentBlockhash=last.blockhash;
+ const {connection,PublicKey}=runtime,last=fixedLast||await connection.getLatestBlockhash('confirmed');transaction.feePayer=new PublicKey(owner);transaction.recentBlockhash=last.blockhash;
  // Phantom must sign first. Clear stale signatures when refreshing a review;
  // required signer accounts already come from the instruction account metadata.
  transaction.signatures=[];

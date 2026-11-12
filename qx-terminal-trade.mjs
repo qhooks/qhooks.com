@@ -1,3 +1,4 @@
+import {solOrderFeeCopy} from './qx-sol-referral-payout-core.mjs';
 import {sellPortion} from './qx-position-core.mjs';
 import {poolQuoteInfo} from './qx-best-pool.mjs';
 import {chainById} from './chains.mjs';
@@ -427,7 +428,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       s(moved === null ? 'Trade confirmed. Refresh balances.' : (c.side === 'buy' ? 'Bought ' : 'Sold ') + formatUnits(moved, st.decimals, 4) + ' ' + st.symbol + '.');if (c.side === 'buy' && moved !== null) afterBuy();
       amount.value = ''; thesis.value=''; document.dispatchEvent(new CustomEvent('qhooks:traded')); try { await onTraded({ side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s, ext: true }); } catch {}
   }
-  // ---- Solana: Jupiter orders signed in the trader's Solana wallet; 1% referral fee in SOL or USDC ----
+  // ---- Solana: server-priced Jupiter orders signed in the trader’s wallet ----
   const solMints = () => {
     const quoteSide = pay === 'native' ? SOL_MINT : SOL_USDC;
     return side === 'buy' ? { input: quoteSide, output: st.token, outDec: st.decimals, outSym: st.symbol } : { input: st.token, output: quoteSide, outDec: quoteSide === SOL_MINT ? 9 : 6, outSym: quoteSide === SOL_MINT ? 'SOL' : 'USDC' };
@@ -456,7 +457,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       presentQuote(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
         h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4)),
         ...impactNodes(o.priceImpact != null && Number.isFinite(Number(o.priceImpact)) ? Math.abs(Number(o.priceImpact)) : null),
-        h('span', { class: 'qxt-fee' }, o.route==='dbc'?'Direct Meteora DBC · fee includes the launch anti-snipe schedule · 30% of the QHooks share as cashback':'Jupiter route · 1% integrator fee plus pool fees'));
+        h('span', { class: 'qxt-fee' }, o.route==='dbc'?'Direct Meteora DBC · fee includes the launch anti-snipe schedule · 30% of the QHooks share as cashback':solOrderFeeCopy(o)));
       go.disabled = busy || (st.safety?.verdict === 'danger' && !risk.querySelector('input')?.checked);
     } catch (e) { if (mine === qseq) {current=null;go.disabled=true;out.textContent = e.message;} }
   }

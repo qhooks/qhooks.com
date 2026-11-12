@@ -60,7 +60,7 @@ async function refresh() {
   const status=h('p',{role:'status','aria-live':'polite'});
   const copy=h('button',{type:'button',class:actionClass},'Copy Solana referral link');
   copy.onclick=async()=>{
-   try {await navigator.clipboard.writeText('https://qhooks.com/terminal?ref='+wallet);status.textContent='Referral link copied. You earn 20% of the QHooks share from eligible referred Solana trades.';}
+   try {await navigator.clipboard.writeText('https://qhooks.com/terminal?ref='+wallet);status.textContent='Referral link copied. Earn 0.20% of eligible Jupiter trade value, paid weekly.';}
    catch {status.textContent='https://qhooks.com/terminal?ref='+wallet;}
   };
   const rows=[];
@@ -73,13 +73,14 @@ async function refresh() {
    button.onclick=()=>void claim(owners[i],balance);
    rows.push(h('div',{class:'qsr-row'},h('div',{},h('span',{},format(balance.amount,decimals)+' '+symbol+(i?' · EVM referral wallet':'')),h('small',{},state.label+'. '+state.detail)),button));
   }
+  const summaries=[h('h4',{},'Saved by cashback'),...([SOL,USDC].map(mint=>{const amount=(all[0].savedByCashback||[]).find(r=>r.mint===mint)?.amount||'0';return h('p',{},format(amount,mint===SOL?9:6)+' '+(mint===SOL?'SOL':'USDC'));})),h('h4',{},'Referral rewards: pending / paid'),...owners.flatMap((owner,i)=>[SOL,USDC].map(mint=>{const row=(all[i].referralRewards||[]).find(r=>r.mint===mint)||{pending:'0',paid:'0'};return h('p',{},format(row.pending,mint===SOL?9:6)+' / '+format(row.paid,mint===SOL?9:6)+' '+(mint===SOL?'SOL':'USDC')+(i?' · EVM referral wallet':''));}))];
   const pendingRows=active.map(claim=>h('p',{},format(claim.amount,claim.mint===SOL?9:6)+' '+(claim.mint===SOL?'SOL':'USDC')+' payout pending. This amount is reserved until the payment confirms or safely expires.'));
   const check=h('button',{type:'button',class:actionClass,onclick:()=>{polls=0;void refresh();}},'Check rewards');
-  panel.replaceChildren(h('h3',{},'Solana rewards'),h('p',{},'On QHooks Solana launches, traders get 30% of the QHooks share back; referrers get 20%. Jupiter integrator rewards, when enabled, use their separate confirmed fee.'),...rows,...pendingRows,...(!rows.length&&!pendingRows.length?[h('p',{},recovery.read().length?'Confirming your recent swap before crediting rewards…':'Your cashback appears after a confirmed trade.')]:[]),copy,check,status);
+  panel.replaceChildren(h('h3',{},'Solana rewards'),h('p',{},'Jupiter trades: 30% back, instantly, or 40% for verified QHOOKS holders. Referral rewards are paid weekly. Existing launch rewards and balances remain available below.'),...summaries,...rows,...pendingRows,...(!rows.length&&!pendingRows.length?[h('p',{},recovery.read().length?'Confirming your recent swap before crediting rewards…':'Your instant savings appear after a finalized Jupiter trade.')]:[]),copy,check,status);
   const notice=owners.map(owner=>notices.get(owner)).filter(Boolean).join(' ');
   if(notice)status.textContent=notice;
-  else if(all.some(value=>value.balances.some(balance=>!balance.enabled)))status.textContent='Rewards are recorded. Claims are temporarily unavailable.';
-  else status.textContent='Claim minimums: '+all[0].balances.map(balance=>format(balance.minimum,balance.mint===SOL?9:6)+' '+(balance.mint===SOL?'SOL':'USDC')).join(' or ')+'. QHooks pays the payout network cost.';
+  else if(rows.length&&all.some(value=>value.balances.some(balance=>!balance.enabled)))status.textContent='Rewards are recorded. Claims are temporarily unavailable.';
+  else if(rows.length)status.textContent='Claim minimums: '+all[0].balances.map(balance=>format(balance.minimum,balance.mint===SOL?9:6)+' '+(balance.mint===SOL?'SOL':'USDC')).join(' or ')+'. QHooks pays the payout network cost.';
  } catch(e) {
   if(serial===loading)panel.replaceChildren(h('p',{},e.message),h('button',{type:'button',class:actionClass,onclick:()=>{polls=0;void refresh();}},'Retry rewards'));
  } finally {
