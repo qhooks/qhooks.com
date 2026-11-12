@@ -1,0 +1,23 @@
+/* /profile v4 (2026-11-12, overhaul polish): the lit set instead of the olive avatar-colour wash (Randall: no olive or beige
+   midtones; blacks and gold). Phones: the top band is the set with the live coin; wide: the band is the set's still plate and
+   the coin stands in the identity column. Markers and flows untouched. */
+.pf5 .pv-banner__art { display: none; }
+.pf5 .pv-banner { background: #050505 url(/qx-a/set/set-create.webp) 50% 62% / cover no-repeat;
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent); mask-image: linear-gradient(180deg, #000 55%, transparent); }
+body:has(main.pf5) .qa-ambient__art { filter: blur(56px) saturate(.5) brightness(.42) !important; }
+.pf5 .pf5-stage { position: relative; overflow: hidden; pointer-events: none; }
+.pf5 .pf5-stage .qs3 { -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 14%, #000 80%, transparent 100%), linear-gradient(90deg, transparent 0, #000 12%, #000 88%, transparent 100%); -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(180deg, transparent 0, #000 14%, #000 80%, transparent 100%), linear-gradient(90deg, transparent 0, #000 12%, #000 88%, transparent 100%); mask-composite: intersect; }
+.pf5 .pf5-tag { position: absolute; z-index: 2; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; gap: 8px; align-items: baseline; margin: 0; white-space: nowrap;
+  font-size: 12.5px; font-weight: 600; color: var(--qa-tx-3); text-shadow: 0 1px 10px #000, 0 0 2px #000; }
+.pf5 .pf5-tag b { color: var(--qa-tx); font-weight: 760; } .pf5 .pf5-tag .is-up { color: var(--qa-up, #3ddc97); font-weight: 720; } .pf5 .pf5-tag .is-down { color: var(--qa-down, #ff5c5c); font-weight: 720; }
+@media (max-width: 1099px) { /* phones: the band itself is the stage */
+  .pf5 .pv-banner { height: 300px; background: #050505; -webkit-mask-image: none; mask-image: none; }
+  .pf5 .pv-banner .pf5-stage { position: absolute; inset: 0; }
+  .pf5 .pv-banner .pf5-tag { bottom: auto; top: 16px; }
+}
+@media (min-width: 1100px) { /* wide: the coin under the identity, in the column's empty space */
+  .pf5 .qp-hero > .pf5-stage { height: 340px; margin: 24px calc(var(--qa-pad) * -1) 0; }
+}
+/* headings on the overhaul scale (same words) */
+.pf5 #qp-calls-h { font-size: clamp(32px, 4.2vw, 56px); line-height: .9; font-weight: 880; font-stretch: 125%; letter-spacing: -.03em; text-transform: uppercase; }
