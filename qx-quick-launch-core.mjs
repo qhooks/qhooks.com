@@ -40,6 +40,10 @@ const CARDS = [
  {id: 'locked-pool', style: 'fair', snipe: 60, group: 'kits', kit: 'floor', name: 'One-tap locked pool',
   what: 'All your supply in one pool nobody can pull. A 50% anti-snipe charge fades to 0 over 60 seconds, with one buy cap per block shared by every wallet, then a 1% wallet cap and 30-second cooldown for ten minutes.',
   why: 'After launch, one more step turns your pool’s fees into a buy wall under the price.'},
+ // "range" (2026-11-12): the same launch also makes the launch's own QRange and points its LP fees there (qx-range-kit.mjs).
+ {id: 'auto-range', style: 'fair', snipe: 60, group: 'kits', kit: 'range', name: 'Auto-range liquidity',
+  what: 'Your LP fees become liquidity in bands around the price, and the bands move with it after big moves. Same Fair start: a 50% anti-snipe charge fades to 0 over 60 seconds.',
+  why: 'Fees keep liquidity around the price. Set up in the same launch; nobody can withdraw it.'},
  {id: 'bundle-shield', style: 'fair', snipe: 300, group: 'kits', name: 'Bundle shield',
   what: 'A 50% anti-snipe charge fades to 0 over five minutes, with one buy cap per block shared by every wallet, then a 1% wallet cap and 30-second cooldown for ten minutes.',
   why: 'Bundles of fresh wallets in the same block share one cap and pay the charge.'},

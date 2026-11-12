@@ -88,6 +88,22 @@ const ART = {
       op(r.root, fade(t));
     },
   },
+  // LP fees drop into three bands stacked around the price; the price runs, and the bands re-centre under it.
+  'auto-range': {
+    dur: 7200, still: 0.9,
+    build: (p, gl) => gl(
+      P('M20 152H300', 'm-hair') + G(R(-30, 82, 60, 70, 5, 'm-ghost') + P('M6 72H62', 'm-hair m-dash') + P('M56 67l6 5-6 5', 'm-hair'), 'was') +
+      G(R(-100, 128, 200, 24, 5, 'm-band') + R(-60, 108, 120, 44, 5, 'm-band') + R(-30, 82, 60, 70, 5, 'm-fill2', 'core'), 'bands') +
+      G(P('M0 62V156', 'm-tr') + C(0, 62, 4, 'm-gdot'), 'px') + [0, 1, 2].map((i) => C(0, 0, 3.5, 'm-gdot', 'f' + i)).join(''),
+    ) + T(20, 30, 'Fees → liquidity', 'm-v') + T(300, 30, 'Re-centres on big moves', 'm-t', null, END) + T(20, 186, 'Price', 'm-t'),
+    frame(r, t) {
+      const x0 = 120, dx = 80, run = ease(seg(t, 0.42, 0.58)), follow = ease(seg(t, 0.64, 0.84));
+      mv(r.px, x0 + dx * run, 0); mv(r.bands, x0 + dx * follow, 0); mv(r.was, x0, 0); op(r.was, seg(t, 0.6, 0.68));
+      for (let i = 0; i < 3; i++) { const u = seg(t, 0.04 + i * 0.1, 0.2 + i * 0.1); mv(r['f' + i], x0 - 10 + i * 10, lerp(44, 92, out(u))); op(r['f' + i], u > 0 && u < 1 ? 1 : 0); }
+      const fill = out(seg(t, 0.04, 0.4)); put(r.core, 'y', 96 - 14 * fill); put(r.core, 'height', 56 + 14 * fill);
+      op(r.root, fade(t));
+    },
+  },
   // Fresh wallets buying in the same block share one cap: one gets through, the rest bounce off.
   'bundle-shield': {
     dur: 4600, still: 0.6,

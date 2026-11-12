@@ -21,6 +21,7 @@ import {pqFactory,primeCleanFactory} from './qx-quick-launch-core.mjs';
 import {multiFactory,multiQuotes,primeMultiFactory,multiLive,alignTick,poolWeights} from './qx-quick-launch-core.mjs';
 import {pairsFactory,pairQuotes,primePairsFactory,pairsLive,pairStartAtCall,readPairStartAt,usdFromSqrt} from './qx-quick-launch-core.mjs';
 import {mountAccountQuantum} from './qx-account-quantum-control.mjs';
+import {rangeKitReady,planRange,makeCall,pointCall,pointCallPq,checkPqMessage,payoutOf,sendBatch,RANGE_SHARES,DEFAULT_RANGE_BPS,RANGE_GAS} from './qx-range-kit.mjs';
 import {ideaCards,ideaCard,visibleGroups,quickFactory,encodeQuickLaunch,validateQuick,launchFeeWei,quickCost,ethText,launchedToken,marketPath,randomSalt,PLANNING_GAS} from './qx-quick-launch-core.mjs';
 
 let banner='',bannerData='',bannerRevision=0,imageRevision=0;
@@ -39,6 +40,15 @@ function icon(block){const s=document.createElementNS(SVG,'svg');s.setAttribute(
  const p=document.createElementNS(SVG,'path');p.setAttribute('d',PATHS[block.id]||'M12 12h.01');s.append(p);return el('span',{class:'qq-icon',title:block.name,role:'img','aria-label':block.name},s);}
 
 const QUICK_CHAIN='4663';
+// ---- Auto-range liquidity kit (qx-range-kit.mjs): ready where QRangeMaker has code and knows this launch contract ----
+let rangeCfg=null,rangeBps=DEFAULT_RANGE_BPS;const rangeReady=new Map();
+const isRangeKit=()=>pick?.kit==='range';
+const rangeOn=id=>rangeReady.get(String(id))===true;
+async function primeRange(id){
+ rangeCfg||=await fetch('/full-launch/range-v1.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);if(!rangeCfg)return false;
+ const was=rangeOn(id),f=quickFactory(id);if(!f)return false;
+ const ok=await rangeKitReady(id,f,getCodeOn(id),rangeCfg);rangeReady.set(String(id),ok);return ok!==was;
+}
 let taken=null,tickerRun=0,tickerTimer=0;
 let costError='',chainId=null,group='all',pick=null,image='',cost=null,costRun=0,busy=false,usd=null,feeRead=new Map();
 const chainSelect=document.getElementById('qc-chainId');
@@ -75,16 +85,18 @@ function renderIdeas(){chainId=currentChain();renderPicker();if(chainId==='solan
  {const id=chainId;primeClean(id).then(r=>{if(r.changed&&id===chainId){costRun++;cost=null;renderIdeas();if(pick)void refreshCost();}}).catch(()=>{});}
  // Pairs launch contract (Robinhood): the pair picker appears once it has code on this chain.
  {const id=chainId;primePairs(id).then(r=>{if(r.changed&&id===chainId&&pick){renderPair();renderStart();renderQuick();}}).catch(()=>{});}
+ for(const id of new Set([chainId,QUICK_CHAIN]))primeRange(id).then(changed=>{if(changed)renderIdeas();}).catch(()=>{});
  {const id=chainId;primeMulti(id).then(r=>{if(r.changed&&id===chainId){renderIdeas();if(pick){renderPair();void readStartBase();renderStart();renderPq();renderQuick();costSoon();}}}).catch(()=>{});}
  chainId=currentChain();const own=ideaCards(chainId),offChain=!own.length,cards=offChain?ideaCards(QUICK_CHAIN).filter(card=>card.id!=='arb-burns'):own,groups=visibleGroups(cards),c=chainById(chainId);
  if(!groups.some(([id])=>id===group))group='all';
  $('chips').replaceChildren(...groups.map(([id,label])=>{const b=el('button',{type:'button','aria-pressed':String(id===group),'data-group':id},label);b.addEventListener('click',()=>{group=id;renderIdeas();});return b;}));
  $('chips').hidden=!cards.length;
  $('cards').replaceChildren(...cards.map(card=>{
-  const btn=el('button',{type:'button',class:'qq-launch-card','data-launch':card.id},'Launch this');btn.addEventListener('click',()=>launchCard(card.id));
+  const off=card.kit==='range'&&!rangeOn(offChain?QUICK_CHAIN:chainId);
+  const btn=el('button',{type:'button',class:'qq-launch-card','data-launch':card.id,disabled:off},off?'Not on '+(c?.name||'this chain')+' yet':'Launch this');btn.addEventListener('click',()=>launchCard(card.id));
   const blocks=card.blocks.length?el('div',{class:'qq-blocks'},...card.blocks.map(icon)):el('div',{class:'qq-blocks qq-blocks-none'},el('span',{},'No extra rules'));
   return el('article',{class:'qq-card','data-card':card.id,'data-group':card.group,hidden:group!=='all'&&card.group!==group},
-   el('h3',{},card.name),card.chip?el('span',{class:'qq-chip'},card.chip):null,el('p',{class:'qq-what'},card.what),el('p',{class:'qq-why'},card.why),blocks,btn);
+   el('h3',{},card.name),card.chip?el('span',{class:'qq-chip'},card.chip):null,el('p',{class:'qq-what'},card.what),el('p',{class:'qq-why'},card.why),blocks,off?el('p',{class:'qq-why qq-off-note'},'Auto-range liquidity isn’t set up on '+(c?.name||'this chain')+' yet.'):null,btn);
  }),saleKit(group));
  // Off Robinhood Chain the cards stay visible (lead, 2026-11-08); "Launch this" switches the chain first.
  $('none').hidden=!offChain;$('use-robinhood').hidden=true;$('open').hidden=false;
@@ -125,7 +137,7 @@ let geo={country:null,read:false};
 function readGeo(){if(geo.read)return;geo.read=true;fetch('/api/geo',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{const c=typeof j?.country==='string'&&/^[A-Z]{2}$/.test(j.country)?j.country:null;if(c!==geo.country){geo.country=c;if(pick){renderPair();renderQuick();}}}).catch(()=>{});}
 const stocksOk=()=>!!geo.country&&geo.country!=='US';
 const offeredPairs=()=>(multiLive(chainId)?multiQuotes(chainId):pairQuotes(chainId)).filter(q=>q.risk!=='stock'||stocksOk());
-const curPair=()=>pairIdx&&pick&&pick.style!=='flywheel'&&(multiLive(chainId)||pairsLive(chainId))?offeredPairs().find(q=>q.index===pairIdx)||null:null;
+const curPair=()=>pairIdx&&pick&&pick.style!=='flywheel'&&!isRangeKit()&&(multiLive(chainId)||pairsLive(chainId))?offeredPairs().find(q=>q.index===pairIdx)||null:null;
 const pairFactory=()=>multiLive(chainId)?multiFactory(chainId):pairsFactory(chainId);
 const launchFactory=()=>multiOn()?multiFactory(chainId):curPair()?pairFactory():quickFactory(chainId);
 const pqOnChain=()=>multiOn()||!!curPair()||pqFactory(chainId);
@@ -136,6 +148,7 @@ function renderPair(){
  if(!pick||!list.length||!multiLive(chainId)&&!pairsLive(chainId)){box?.remove();renderPools();return;}
  if(!box){box=el('div',{id:'qq-pair',class:'qq-startcap qq-pair'});$('pools').before(box);}
  if(pick.style==='flywheel'){box.replaceChildren(el('p',{class:'qq-start-k'},'Pair with'),el('p',{class:'qq-start-note'},'Stakers’ share launches pair with ETH. Pick another idea to pair with USDG or a stock token.'));renderPools();return;}
+ if(isRangeKit()){box.replaceChildren(el('p',{class:'qq-start-k'},'Pair with'),el('p',{class:'qq-start-note'},'Auto-range launches use one '+chainById(chainId).quote.symbol.replace(/^W/,'')+' pool.'));renderPools();return;}
  const opt=(idx,label)=>{const b=el('button',{type:'button',class:'qq-start-opt','aria-pressed':String(idx===pairIdx),'data-pair':String(idx)},label+(idx===pairIdx&&multiLive(chainId)&&extraPools.length?' · '+poolWeights(extraPools.length)[0]/100+'%':''));
   b.addEventListener('click',()=>{if(busy)return;pairIdx=idx;extraPools=extraPools.filter(i=>i!==idx);poolPrices=null;renderPair();void readStartBase();renderStart();renderPq();renderQuick();costSoon();});return b;};
  if(pairIdx&&!list.some(q=>q.index===pairIdx)){pairIdx=0;void readStartBase();renderStart();costSoon();} // not offered here: back to ETH
@@ -160,7 +173,7 @@ async function stockUsd(p){const c=chainById(chainId),usdg=pairQuotes(chainId).f
  const r=await rpc('eth_call',[{to:c.contracts.stateView,data:'0xc815641c'+p.usdPool.slice(2)},'latest']);return usdg?usdFromSqrt('0x'+r.slice(2,66),p.address,usdg):null;}
 // ---- Extra pools (v4 only, opt-in; prices and table bounds are read before enabling a chip) ----
 let extraPools=[],poolPrices=null,poolRun=0,poolReadKey='',poolDefaults=new Map(),anyQuotes=new Map(),anyPicker=null,anyPanel=null;
-const multiOn=()=>!!pick&&pick.style!=='flywheel'&&multiLive(chainId)&&extraPools.length>0;
+const multiOn=()=>!!pick&&pick.style!=='flywheel'&&!isRangeKit()&&multiLive(chainId)&&extraPools.length>0;
 const isAddressPool=q=>typeof q.index==='string';
 const anyOnChain=()=>[...(anyQuotes.get(chainId)?.values()||[])].filter(q=>q.risk!=='stock'||stocksOk());
 const allPoolQuotes=()=>[{index:0,...chainById(chainId).quote,risk:chainById(chainId).quote.wrapNative?'weth':'stable'},...offeredPairs(),...anyOnChain()];
@@ -205,8 +218,8 @@ function renderAdv(){
 }
 function renderPools(){
  const box=$('pools');if(!box)return;
- const show=!!pick&&pick.style!=='flywheel'&&multiLive(chainId)&&multiQuotes(chainId).length>0;box.hidden=!show;
- if(!show){if(pick?.style==='flywheel')extraPools=[];return;}
+ const show=!!pick&&pick.style!=='flywheel'&&!isRangeKit()&&multiLive(chainId)&&multiQuotes(chainId).length>0;box.hidden=!show;
+ if(!show){if(pick?.style==='flywheel'||isRangeKit())extraPools=[];return;}
  const list=allPoolQuotes().filter(q=>q.address.toLowerCase()!==mainQuote().address.toLowerCase()),choice=poolChoice();
  if(!poolDefaults.has(choice)){poolDefaults.set(choice,pick.id==='plain'?[]:[pairIdx===0?multiQuotes(chainId)[0].index:0]);costRun++;cost=null;}
  extraPools=poolDefaults.get(choice).filter(i=>list.some(q=>q.index===i));
@@ -278,11 +291,21 @@ function renderPq(){
 function renderPqStatus(){const p=$('pq-status');if(!p)return;const k=pqKeyHex();
  p.textContent=k?'Key ready: '+k.slice(0,10)+'…'+k.slice(-6)+'. It is set in the same launch transaction.':'Unlock your quantum key above, with its backup saved, to launch with it.';}
 
+// One line: how much of the LP fees stays as liquidity (the rest goes to the creator's wallet).
+function renderRangeShare(){
+ let box=$('rangeshare');
+ if(!isRangeKit()){box?.remove();return;}
+ if(!box){box=el('div',{id:'qq-rangeshare',class:'qq-startcap qq-rangeshare'});$('style-blocks').after(box);}
+ const opts=RANGE_SHARES.map(([v,label])=>{const b=el('button',{type:'button',class:'qq-start-opt','aria-pressed':String(v===rangeBps),disabled:busy,'data-range-bps':String(v)},label);
+  b.addEventListener('click',()=>{if(busy)return;rangeBps=v;renderRangeShare();});return b;});
+ box.replaceChildren(el('p',{class:'qq-start-k'},'LP fees kept as liquidity'),el('div',{class:'qq-start-opts',role:'group','aria-label':'LP fees kept as liquidity'},...opts),
+  el('p',{class:'qq-start-note'},rangeBps===10000?'All of your LP fees become liquidity around the price.':'The other '+(100-rangeBps/100)+'% of your LP fees comes to your wallet.'));
+}
 function openQuick(id,{scroll=false}={}){
  const card=ideaCard(chainId,id)||ideaCard(chainId,'fair');if(!card)return;pick=card;$('quick').hidden=false;
  renderPair();customUsd='';startTier=card.startUsd?'custom':DEFAULT_TIER[chainId]||'standard';startSteps=0;if(startCapOn()){void readStartBase().then(()=>{if(card.startUsd&&startBase?.usd){startSteps=stepsForUsd(card.startUsd,startBase.usd);renderStart();renderQuick();costSoon();}});}renderStart();
  renderPq();$('style-name').textContent=card.name;$('style-line').textContent=card.what;
- $('style-blocks').replaceChildren(...card.blocks.map(icon));
+ $('style-blocks').replaceChildren(...card.blocks.map(icon));renderRangeShare();
  for(const a of document.querySelectorAll('#qq-cards [data-launch]'))a.setAttribute('aria-pressed',String(a.dataset.launch===card.id));
  if(!$('done').hidden){$('done').hidden=true;$('launch').hidden=false;$('name').value='';$('symbol').value='';note('');}
  cost=null;renderQuick();void refreshCost();
@@ -297,10 +320,11 @@ function renderQuick(){
  const box=$('cost');
  if(!cost)box.replaceChildren(el('p',{class:'qq-total'},'Loading…'),...(costError?[el('p',{class:'qxc-fine'},costError)]:[]));
  else{const line=(k,v)=>el('div',{class:'qxc-summary-line'},el('span',{},k),el('b',{class:'qxc-number'},v));
-  const dollars=usd?' · about $'+(Number(BigInt(cost.totalWei))/1e18*usd).toFixed(2):'';
-  box.replaceChildren(el('p',{class:'qq-total qxc-number'},ethText(cost.totalWei)+' '+c.native+dollars),
-   line('Launch fee',ethText(cost.feeWei)+' '+c.native),line('Network gas · up to',ethText(cost.networkWei)+' '+c.native),
-   ...(cost.live&&!cost.quote.funded?[el('p',{class:'qxc-fine qq-short','data-error':'true'},'Add '+ethText(BigInt(cost.quote.requiredBalance)-BigInt(cost.quote.balance))+' '+c.native+' on '+c.name+' to launch.')]:[]),el('p',{class:'qxc-fine'},cost.live?'Priced for this launch from your wallet’s estimate. One transaction, one confirmation.':'Planning estimate. Connect a wallet for this launch’s own estimate. One transaction, one confirmation.'));}
+  const rangeWei=isRangeKit()&&cost.gasPriceWei?BigInt(RANGE_GAS.make+(pqOnChain()&&pqKeyHex()?RANGE_GAS.pointPq:RANGE_GAS.point))*BigInt(cost.gasPriceWei):0n,totalWei=BigInt(cost.totalWei)+rangeWei;
+  const dollars=usd?' · about $'+(Number(totalWei)/1e18*usd).toFixed(2):'';
+  box.replaceChildren(el('p',{class:'qq-total qxc-number'},ethText(totalWei)+' '+c.native+dollars),
+   line('Launch fee',ethText(cost.feeWei)+' '+c.native),line('Network gas · up to',ethText(cost.networkWei)+' '+c.native),...(rangeWei?[line('Range setup gas · about',ethText(rangeWei)+' '+c.native)]:[]),
+   ...(cost.live&&!cost.quote.funded?[el('p',{class:'qxc-fine qq-short','data-error':'true'},'Add '+ethText(BigInt(cost.quote.requiredBalance)-BigInt(cost.quote.balance))+' '+c.native+' on '+c.name+' to launch.')]:[]),el('p',{class:'qxc-fine'},isRangeKit()?(cost.live?'Priced for this launch from your wallet’s estimate. ':'Planning estimate. Connect a wallet for this launch’s own estimate. ')+'Launch, create its range, point its LP fees there: one approval where your wallet can batch, otherwise three.':cost.live?'Priced for this launch from your wallet’s estimate. One transaction, one confirmation.':'Planning estimate. Connect a wallet for this launch’s own estimate. One transaction, one confirmation.'));}
  appendArbRecaptureLine(box,c,pick.blocks||[],launchFactory());
  for(const id of ['name','symbol','image','banner'])if($(id))$(id).disabled=busy;
  const b=$('launch');
@@ -366,9 +390,11 @@ async function thumbnail(file){
 }
 
 const rememberLast=v=>{try{localStorage.setItem(LAST,JSON.stringify(v));}catch{/* the receipt is still shown on this page */}};
-function showDone(token,hash){
+function showDone(token,hash,kit=null){
  const c=chainById(chainId);$('done').hidden=false;$('launch').hidden=true;$('done-name').textContent=$('name').value.trim()+' ('+$('symbol').value.trim().toUpperCase()+') · '+c.name;
  $('token').textContent=token;$('open-market').href=marketPath(chainId,token);$('tx').href=c.explorer+'/tx/'+hash;{const x=launchPostLink({name:$('name').value,ticker:$('symbol').value,chainName:c.name,chainId,token}),px=$('post-x');if(px){px.hidden=!x;if(x)px.href=x;}}const fl=$('floor-next');if(fl)fl.remove();if(pick?.kit==='floor'){const a=el('a',{id:'qq-floor-next',class:'qxc-primary',href:'/floor?chain='+chainId+'&token='+token},'Next: turn fees into a buy wall →');$('open-market').after(a);}
+ $('range-next')?.remove();$('range-line')?.remove();if(kit?.range){const a=el('a',{id:'qq-range-next',class:kit.ok?'qxc-secondary':'qxc-primary',href:'/range?chain='+chainId+'&token='+token},kit.ok?'See your range →':'Finish the range →');$('open-market').after(a);
+  if(kit.ok)a.before(el('p',{id:'qq-range-line',class:'qxc-fine'},'LP fees go to its range '+kit.range.slice(0,6)+'…'+kit.range.slice(-4)+'. Liquidity starts after four price checks, 15 minutes apart.'));}
  $('done').focus?.();
 }
 async function receipt(provider,hash){
@@ -377,6 +403,56 @@ async function receipt(provider,hash){
   if(r)return r;await new Promise(res=>setTimeout(res,i<20?750:2000));
  }
  throw Error('The network took too long to confirm. Your transaction may still land; check it with the link below.');
+}
+// ---- Auto-range kit: launch + make the range + point the LP fees at it ----
+const callAt=tx=>rpc('eth_call',[tx,'latest']);
+/// One plain transaction after the launch (make or point): simulated, gas from the network's estimate, fees like /range.
+async function sendOne(provider,from,call){
+ const tx={from,to:call.to,data:call.data,value:call.value||'0x0'};
+ try{await callAt(tx);tx.gas='0x'+(BigInt(await rpc('eth_estimateGas',[tx]))*13n/10n).toString(16);}catch{throw Error('This step would fail right now. Nothing was sent.');}
+ try{const b=JSON.parse(await fetch(chainById(chainId).rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_getBlockByNumber',params:['latest',false]})}).then(r=>r.text())).result,tip=BigInt(await provider.request({method:'eth_maxPriorityFeePerGas'}).catch(()=>'0x0'));
+  if(b?.baseFeePerGas){tx.maxPriorityFeePerGas='0x'+tip.toString(16);tx.maxFeePerGas='0x'+(BigInt(b.baseFeePerGas)*2n+tip).toString(16);}}catch{}
+ const hash=await provider.request({method:'eth_sendTransaction',params:[tx]});
+ const r=await receipt(provider,hash);if(r.status!=='0x1')throw Error('The network refused this step. Only network gas was spent.');return r;
+}
+async function launchWithRange(conn,sent,factory,f){
+ const provider=conn.entry.provider,from=conn.owner,native=chainById(chainId).native,pq=pqOnChain()?pqKeyHex():null;
+ note('Working out your range address…');
+ const plan=await planRange({call:callAt,tx:sent,owner:from,bps:rangeBps});
+ let until=0n,point;
+ if(pq){note('Signing the fee step with your quantum key…');until=BigInt(Math.floor(Date.now()/1000)+840);point=pointCallPq(plan,{signer:pqSigner,chainId,nonce:0n,until});}
+ else point=pointCall(plan);
+ if(hub.snapshot().current!==conn)throw Error('Your wallet changed. Review your launch again.');
+ const calls=[{to:sent.to,data:sent.data,value:sent.value},makeCall(plan),point];
+ let hash=null,token=null,rangeErr='';
+ const receipts=await sendBatch(provider,{from,chainId,calls,onStatus:t=>{note(t);if(/^Sent/.test(t))$('waiting').hidden=false;}});
+ if(receipts){
+  hash=receipts.find(r=>r.transactionHash)?.transactionHash||null;token=launchedToken({logs:receipts.flatMap(r=>r.logs||[])},factory);
+  if(!token)throw Error('The launch confirmed, but its token could not be read. Check your wallet activity.');
+ }else{
+  // One by one: the launch first (as any one-tap launch), then the two range steps.
+  note('Step 1 of 3: confirm '+ethText(cost.totalWei)+' '+native+' or less in your wallet: the launch fee plus network gas.');
+  hash=await provider.request({method:'eth_sendTransaction',params:[sent]});
+  rememberLast({chainId,hash,name:f.name.trim(),symbol:f.symbol.trim().toUpperCase(),at:Date.now()});
+  $('tx-wait').href=chainById(chainId).explorer+'/tx/'+hash;$('waiting').hidden=false;note('Sent. Waiting for the network to confirm…');
+  const r=await receipt(provider,hash);
+  if(r.status!=='0x1')throw Error('The network refused this launch. Nothing was created; only network gas was spent.');
+  token=launchedToken(r,factory);if(!token)throw Error('The launch confirmed, but its token could not be read. Open the transaction link to see it.');
+  try{
+   note('Step 2 of 3: create the range. Confirm in your wallet.');await sendOne(provider,from,makeCall(plan));
+   let p3=point;
+   if(pq){until=BigInt(Math.floor(Date.now()/1000)+840);p3=pointCallPq(plan,{signer:pqSigner,chainId,nonce:0n,until});
+    if(!(await checkPqMessage({call:callAt,plan,until,messageHex:p3.messageHex})))throw Error('The signed message did not match the contract. Nothing was sent.');}
+   note('Step 3 of 3: point your LP fees at the range. Confirm in your wallet.');await sendOne(provider,from,p3);
+  }catch(e){rangeErr=launchError(e);}
+ }
+ rememberLast({chainId,hash,token,name:f.name.trim(),symbol:f.symbol.trim().toUpperCase(),at:Date.now()});
+ fetch('/api/range/register',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chain:chainId,range:plan.range})}).catch(()=>{});
+ const pays=rangeErr?'':await payoutOf({call:callAt,plan}).catch(()=>'');
+ $('waiting').hidden=true;
+ const ok=pays===plan.range;
+ note(ok?'Your token launched. Its LP fees go to its range.':'Your token launched. '+(rangeErr||'The range step did not finish.')+' Finish it on the range page.',!ok);
+ showDone(token,hash||'',{range:plan.range,ok});
 }
 async function launch(){
  if(busy||!pick||!quickFactory(chainId))return;if(!CREATE_EXECUTION_ENABLED){note(CREATE_EXECUTION_HOLD,true);return;}
@@ -399,6 +475,7 @@ async function launch(){
   await assertQuickStart({chainId,transaction:sent,expectedFactory:launchFactory(),expectedSteps:startSteps,expectedQuoteIndex:curPair()?.index||0,shownCapUsd,selectedCapUsd,quoteUsd:startBase?.quoteUsd,request:walletRequest(conn)});
   if(startReviewKey!==JSON.stringify([startTier,startSteps,customUsd,startBase])||priceBlocked()||poolsBlocked()||key!==costKey([fields(),pick.style,pick.snipe,startCapOn()?startSteps:0,pqOnChain()?pqKeyHex():null,launchFactory(),curPair()?.index||0,multiFields()])||hub.snapshot().current!==conn)throw Error(START_PRICE_HOLD);
   if(await uploadTokenBanner(bannerData)!==f.banner||hub.snapshot().current!==conn)throw Error('Your banner changed. Review your launch again.');
+  if(isRangeKit()){await launchWithRange(conn,sent,factory,f);return;}
   note('Confirm '+ethText(cost.totalWei)+' '+chainById(chainId).native+' or less in your wallet: the launch fee plus network gas.');
   const hash=await conn.entry.provider.request({method:'eth_sendTransaction',params:[sent]});
   rememberLast({chainId,hash,name:f.name.trim(),symbol:f.symbol.trim().toUpperCase(),at:Date.now()});
