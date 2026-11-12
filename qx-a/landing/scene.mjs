@@ -2,9 +2,9 @@
 //   0 hero · 1 builders · 2 callers · 3 holders · 4 traders · 5 close.
 // The look is the commercial's (work/qhooks-film-20261112/film.js): the same room environment, lights, brushed steel and
 // gold, the same bloom + grade pass (vignette, grain, aberration, light sweep). The gold hook (the film's model, packed to
-// hook.bin) forms out of sparks once at load, then each chapter gives it one hero object: launch blocks docking on the
-// shank, the latest call's outcome as extruded type, QHOOKS coins on the floor that burn into embers, the chain names
-// slamming in as type with one coin flipping. Every motion beyond the scroll choreography is a real event the page hands
+// hook.bin) forms out of sparks once at load, then each chapter gives it one hero object: the hook alone in its light (Builders),
+// the latest call's outcome as extruded type (Callers), the real QHOOKS-burned figure as extruded type in the burn colour, re-counted
+// with embers off the hook on a real burn (Holders), the chain names slamming in as extruded type (Traders). No props. Every motion beyond the scroll choreography is a real event the page hands
 // in (hit, call, burn). No rings, orbits, halos or node lines anywhere (Randall, 2026-11-12: they read as bubble maps).
 // Phone first: DPR capped, no DoF pass (dust fakes it by depth), a top band for the object in portrait so the words
 // never sit on it. three lives at /qx-a/vendor/three (shared with /create); the addons carry one patch: `from 'three'`
@@ -224,52 +224,21 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     g.userData.setOpacity = (o) => g.userData.planes.forEach((m) => { m.material.opacity = o; });
     g.visible = false; scene.add(g); return g;
   }
-  // a coin: a gold edge with two faces, no rim ring
-  const faceMat = new THREE.MeshPhysicalMaterial({ color: 0x151a18, metalness: .2, roughness: .35, clearcoat: 1 });
-  function makeCoin(tex, r = .32) {
-    const g = new THREE.Group();
-    const edge = new THREE.Mesh(new THREE.CylinderGeometry(r, r, .07, 48), goldMat); edge.rotation.x = Math.PI / 2; g.add(edge);
-    const faces = [];
-    [1, -1].forEach((s) => { const f = new THREE.Mesh(new THREE.CircleGeometry(r * .9, 48), faceMat); f.position.z = s * .0356; if (s < 0) f.rotation.y = Math.PI; g.add(f);
-      const ic = new THREE.Mesh(new THREE.CircleGeometry(r * .74, 48), new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false })); ic.position.z = s * .037; if (s < 0) ic.rotation.y = Math.PI; g.add(ic); faces.push(ic); });
-    g.userData.faces = faces; g.userData.setMap = (tx) => faces.forEach((f) => { f.material.map = tx; f.material.needsUpdate = true; });
-    return g;
-  }
-
-  /* ---------- builders: six launch blocks dock onto the hook (no links between them) ---------- */
-  const BLOCKS = ['ANTI-SNIPE', 'BUYBACK + BURN', 'AUTO BURN', 'BUY / SELL TAX', 'KING OF THE POOL', 'LAST BUYER WINS'];
-  const blocks = [], blockGroup = new THREE.Group(); scene.add(blockGroup);
-  const slabMat = new THREE.MeshPhysicalMaterial({ color: 0x14181a, metalness: .35, roughness: .32, clearcoat: 1, clearcoatRoughness: .25 });
-  const edgeMat = new THREE.LineBasicMaterial({ color: GOLD_HI, transparent: true, opacity: .75 });
-  {
-    const bw = 1.05, bh = .16, bd = .62, box = new THREE.BoxGeometry(bw, bh, bd), edges = new THREE.EdgesGeometry(box);
-    BLOCKS.forEach((label, i) => {
-      const g = new THREE.Group();
-      g.add(new THREE.Mesh(box, slabMat)); g.add(new THREE.LineSegments(edges, edgeMat));
-      const face = new THREE.Mesh(new THREE.PlaneGeometry(bw * .92, bd * .72), new THREE.MeshBasicMaterial({ map: textTex({ text: label, w: 512, h: 192, size: 54, weight: 760, color: '#F0DAAE', stretch: 'normal', tracking: .02 }), transparent: true, toneMapped: false, depthWrite: false }));
-      face.rotation.x = -Math.PI / 2; face.position.y = bh / 2 + .004; g.add(face);
-      const led = new THREE.Mesh(new THREE.SphereGeometry(.03, 10, 10), new THREE.MeshBasicMaterial({ color: GOLD_HI })); led.position.set(-bw / 2 + .09, bh / 2 + .02, bd / 2 - .09); g.add(led);
-      g.userData.i = i; g.userData.led = led; g.visible = false; blockGroup.add(g); blocks.push(g);
-    });
-  }
+  /* ---------- builders: the hook alone in its light; the six block names live in the DOM chips (Randall: the slabs read as dominos) ---------- */
 
   /* ---------- callers: the latest call's outcome as extruded type ---------- */
   const numberG = extruded(4.6, 1.44, 9, .05);
   const numberSub = new THREE.Mesh(new THREE.PlaneGeometry(4.6, .5), new THREE.MeshBasicMaterial({ transparent: true, toneMapped: false, depthWrite: false })); numberSub.visible = false; scene.add(numberSub);
   let callData = { pct: null, label: '' }, callTexKey = '', callShown = 0;
 
-  /* ---------- holders: QHOOKS coins drop onto the floor; a real burn takes one and it rises as embers ---------- */
-  const qTex = imgTex(logo);
-  const PILE = [[-.95, .35], [-.55, -.15], [-.15, .45], [.25, -.3], [.6, .25], [1.0, -.1], [-.75, .75], [.05, .85], [.8, .7]]; // x, z around the hook's bend
-  const coinPile = PILE.map(([x, z], k) => { const c = makeCoin(qTex, .3); c.userData = { ...c.userData, x, z, k, burn: null, gone: false, respawn: 0, rot: (k * 1.7) % 1 - .5 }; c.visible = false; scene.add(c); return c; });
-  let burnQueue = 0;
+  /* ---------- holders: the hook alone, and the real QHOOKS-burned figure as extruded type in the burn colour ---------- */
+  const burnedG = extruded(4.6, 1.44, 9, .05);
+  let burnedData = { text: '', value: 0 }, burnedShown = -1, burnedKey = '';
 
   /* ---------- traders: the chain names slam in as type; one coin flips as each lands ---------- */
   const nameG = extruded(5.8, 1.36, 7, .05);
   const nameTex = CHAIN_NAMES.map((n) => textTex({ text: n, w: 1536, h: 360, size: 236, weight: 900, color: '#F4F1E9', tracking: -.045 }));
-  const chainTex = icons.map(imgTex);
-  const chainCoin = makeCoin(chainTex[0] || qTex, .36); chainCoin.visible = false; scene.add(chainCoin);
-  let nameIdx = -1, coinFlash = 0;
+  let nameIdx = -1; // no chain coin in this scene: the 3D chain word carries it (a flat icon on a disc read as a broken image)
 
   /* ---------- layout ---------- */
   function resize() {
@@ -287,7 +256,7 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     hero:     { hook: [[1.75, .1, 1], [.1, 1.2, .68]], cam: [[.9, .2, 6.2], [0, .25, 7.4]] },
     builders: { hook: [[2.0, .1, .92], [.05, 1.35, .56]], cam: [[1.0, .2, 6.4], [0, .3, 7.8]] },
     callers:  { hook: [[-2.6, .9, .5], [-1.2, 2.4, .26]], cam: [[.6, .2, 6.4], [0, .3, 7.6]] },
-    holders:  { hook: [[1.9, .15, .8], [.05, 1.55, .42]], cam: [[1.0, .1, 6.4], [0, .3, 7.8]] },
+    holders:  { hook: [[-2.6, .9, .5], [-1.2, 2.4, .26]], cam: [[.6, .2, 6.4], [0, .3, 7.6]] },
     traders:  { hook: [[-2.6, .9, .5], [-1.25, 2.4, .26]], cam: [[.6, .2, 6.6], [0, .3, 8.0]] },
     close:    { hook: [[0, .3, .92], [0, 1.15, .7]], cam: [[0, .2, 5.6], [0, .25, 6.8]] },
   };
@@ -303,8 +272,7 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
       const ba = bands[i] || bands[bands.length - 1], bb = bands[Math.min(i + 1, 5)] || ba;
       const top = lerp(ba.top, bb.top, m), bot = lerp(ba.bottom, bb.bottom, m), Hw = 2 * cam.z * Math.tan(25 * Math.PI / 180);
       bandY = .15 + (.5 - (top + bot) / 2) * Hw; bandH = Math.max(0, (bot - top) - 32 / Math.max(1, H)) * Hw;
-      const ch = CH[i], ext = ch === 'holders' ? 2.75 : 2.32; // the object's height per unit of hook scale (holders: the coins under the bend)
-      hs = Math.min(hs, bandH / ext); hy = bandY + (ch === 'holders' ? .2 * hs : 0);
+      hs = Math.min(hs, bandH / 2.32); hy = bandY; // the hook's height per unit of scale
     }
     return { i, u, m, hx, hy, hs, bandY, bandH };
   }
@@ -322,9 +290,12 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
   const api = {
     hit(side, usd = 0) { tug(side, usd); const s = .5 + Math.min(1.6, Math.log10(1 + usd) / 2.2); burst(bendWorld(), { color: side, strength: s, up: side === 'sell' ? .2 : 1 }); if (side === 'burn') studFlash = 1; },
     call() { burst(bendWorld(), { color: 'call', strength: 1.3, up: 1.2 }); flashV = .2; zoomV = .04; },
-    // a real burn: one coin on the floor burns into rising embers (the number of coins taken scales with the QHOOKS burned)
-    burn(tok = 0) { tug('burn', tok); studFlash = 1; burnQueue += 1 + Math.min(2, Math.floor(Math.log10(1 + tok) / 3)); },
-    coin(i) { if (i === nameIdx) coinFlash = 1; },
+    // a real burn: embers rise off the hook, the studs flash, and the burned figure re-counts to its new value (setBurned)
+    burn(tok = 0) { tug('burn', tok); studFlash = 1; const b = bendWorld(); burst(b, { color: 'ember', strength: .45 + Math.min(1, Math.log10(1 + tok) / 5), up: 2.2, size: .5 }); burst(b, { color: 'burn', strength: .5, up: 1.2 }); },
+    // the real QHOOKS-burned total (units); fmt renders it the way the DOM does
+    setBurned(value, fmt) { if (!(value > 0)) return; const same = burnedData.value === value; burnedData = { value, fmt: fmt || ((v) => String(Math.round(v))), text: (fmt || String)(value), at: same ? burnedData.at : t }; },
+    coin(i) { if (i === nameIdx) { flashV = Math.max(flashV, .1); zoomV = Math.max(zoomV, .03); } },
+    get version() { return 'nodominos2'; },
     setCall({ pct, label }) { callData = { pct, label }; },
     setBands(arr) { bands = Array.isArray(arr) && arr.length ? arr : null; },
     setProgress(p) { Pt = clamp(p, 0, 5.999); if (!running) api.resume(); },
@@ -333,9 +304,9 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     dispose() { api.pause(); renderer.dispose(); },
     get running() { return running; },
     debug() { const low = new THREE.Vector3(0, -1.14, 0).applyMatrix4(hookRoot.matrixWorld).project(camera); const num = numberG.visible ? new THREE.Vector3(0, -.72, 0).applyMatrix4(numberG.matrixWorld).project(camera) : null;
-      const pile = coinPile.filter((c) => c.visible); const pileLow = pile.length ? Math.max(...pile.map((c) => (1 - new THREE.Vector3(0, -.32, 0).applyMatrix4(c.matrixWorld).project(camera).y) / 2 * H)) : null;
+      const bn = burnedG.visible ? (1 - new THREE.Vector3(0, -.72, 0).applyMatrix4(burnedG.matrixWorld).project(camera).y) / 2 * H : null;
       const nm = nameG.visible ? (1 - new THREE.Vector3(0, -.68, 0).applyMatrix4(nameG.matrixWorld).project(camera).y) / 2 * H : null;
-      return { P, forgeT, hook: { visible: hookRoot.visible, pos: hookRoot.position.toArray(), scale: hookRoot.scale.x, bottomPx: (1 - low.y) / 2 * H }, numberBottomPx: num ? (1 - num.y) / 2 * H : null, vaultBottomPx: Math.max(pileLow || 0, nm || 0) || null, cam: camera.position.toArray(), parts: model.children.length, dpr: DPR, bands }; },
+      return { version: 'nodominos2', P, forgeT, hook: { visible: hookRoot.visible, pos: hookRoot.position.toArray(), scale: hookRoot.scale.x, bottomPx: (1 - low.y) / 2 * H }, numberBottomPx: num ? (1 - num.y) / 2 * H : null, vaultBottomPx: Math.max(bn || 0, nm || 0) || null, cam: camera.position.toArray(), parts: model.children.length, dpr: DPR, bands }; },
   };
 
   /* ---------- the frame ---------- */
@@ -372,37 +343,18 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     // the set follows the hook
     key.target.position.copy(hookPos); key.position.set(hookPos.x - 4, 6, 6);
     rim.position.set(hookPos.x + 4, 2, -3);
-    shaft.position.set(hookPos.x, 0, 0); shaftMat.opacity = (.1 + .02 * Math.sin(t * .37)) * (ch === 'callers' ? .6 : 1) + .15 * heat;
-    dustMat.uniforms.uTime.value = t; dustMat.uniforms.uCenter.value.set(hookPos.x, .2, 0); dustMat.uniforms.uFocus.value = cam.z; dustMat.uniforms.uOpacity.value = ch === 'callers' ? .5 : 1;
+    shaft.position.set(hookPos.x, 0, 0); shaftMat.opacity = (.1 + .02 * Math.sin(t * .37)) * (ch === 'callers' || ch === 'holders' ? .6 : 1) + .15 * heat;
+    dustMat.uniforms.uTime.value = t; dustMat.uniforms.uCenter.value.set(hookPos.x, .2, 0); dustMat.uniforms.uFocus.value = cam.z; dustMat.uniforms.uOpacity.value = ch === 'callers' || ch === 'holders' ? .5 : 1;
     pool.position.x = plinth.position.x = hookPos.x; pool.scale.setScalar(hs); plinth.scale.set(hs, 1, hs);
-    const plinthOn = ch !== 'callers' && ch !== 'traders' && !PORT; plinth.visible = pool.visible = plinthOn && hs > .55;
+    const plinthOn = ch !== 'callers' && ch !== 'traders' && ch !== 'holders' && !PORT; plinth.visible = pool.visible = plinthOn && hs > .55;
     floor.visible = !PORT;
     reflection.visible = hookRoot.visible && plinth.visible;
     if (reflection.visible) { reflection.position.set(hookRoot.position.x, 2 * PLINTH_TOP - hookRoot.position.y, hookRoot.position.z); reflection.scale.set(hookRoot.scale.x, -hookRoot.scale.y, hookRoot.scale.z); reflection.rotation.set(0, 0, -hookRoot.rotation.z); reflection.children.forEach((c) => { c.rotation.copy(hookSpin.rotation); c.position.copy(model.position).applyEuler(hookSpin.rotation); }); }
     backMat.uniforms.uGlow.value = (ch === 'close' ? .5 : .35) + .5 * heat; backMat.uniforms.uCenter.value.set(.5 + hookPos.x * .05, .5 + hookPos.y * .05);
-    backMat.uniforms.uTint.value.setHex(ch === 'callers' ? 0x3edd8f : GOLD);
+    backMat.uniforms.uTint.value.setHex(ch === 'callers' ? 0x3edd8f : ch === 'holders' ? 0xff9a45 : GOLD);
     bloom.strength = .3 + .4 * heat + .25 * studFlash;
 
-    // ---- builders: blocks fly in and dock on the shank, one by one, by scroll
-    const bOn = ch === 'builders' || (ch === 'callers' && u < .2) || (ch === 'hero' && u > .8);
-    blockGroup.visible = bOn;
-    if (bOn) {
-      const bu = ch === 'builders' ? u : ch === 'callers' ? 1 : 0;
-      const leave = ch === 'callers' ? easeInOut(span(u, 0, .2)) : 0;
-      hookRoot.updateWorldMatrix(true, false);
-      blocks.forEach((g, k) => {
-        const dock = easeOutQuint(span(bu, .05 + k * .085, .3 + k * .085));
-        const side = k % 2 ? 1 : -1, yy = .85 - k * .27;
-        tmpV.set(.45 + side * .78, yy, .12).applyMatrix4(hookRoot.matrixWorld);
-        const outX = side * (PORT ? 3.2 : 5.5), outY = hookPos.y + yy + (k % 3 - 1) * 1.2 - 1.6, outZ = 1.5;
-        g.position.set(lerp(hookPos.x + outX, tmpV.x, dock), lerp(outY, tmpV.y, dock), lerp(outZ, tmpV.z, dock));
-        g.position.x += leave * side * 6 * easeInOut(leave); g.position.y -= leave * 2;
-        g.rotation.set(lerp(.9, .42, dock), lerp(side * 1.4, side * -.62, dock), lerp(side * .3, 0, dock));
-        g.scale.setScalar(lerp(.55, 1, dock) * hs / .92 * (1 - leave * .5)); g.visible = dock > 0 && leave < 1;
-        g.userData.led.material.color.setHex(dock >= .999 ? 0x9ff0c2 : GOLD_HI);
-        if (dock > .999 && !g.userData.snapped) { g.userData.snapped = true; burst(g.position, { color: 'gold', strength: .45, up: .5 }); flashV = Math.max(flashV, .05); } if (dock < .5) g.userData.snapped = false;
-      });
-    }
+    // ---- builders: the hook alone (the block names are the DOM chips)
 
     // ---- callers: the number rises as extruded type and counts to the real value
     const cOn = ch === 'callers' || (ch === 'builders' && u > .85) || (ch === 'holders' && u < .15);
@@ -425,50 +377,34 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
       numberSub.position.set(nx, ny - 1.02 * sc, numberG.position.z + .02); numberSub.scale.setScalar(sc); numberSub.rotation.copy(numberG.rotation); numberSub.material.opacity = easeOut(span(cu, .15, .35)) * (1 - leave);
     }
 
-    // ---- holders: QHOOKS coins drop onto the floor under the hook by scroll; a real burn takes one and it rises as embers
+    // ---- holders: the burned figure rises as extruded type (fire) and counts up to the real value; a real burn re-counts it
     const hOn = ch === 'holders' || (ch === 'callers' && u > .85) || (ch === 'traders' && u < .15);
-    if (hOn) {
-      const vu = ch === 'holders' ? u : ch === 'callers' ? 0 : 1, leave = ch === 'traders' ? easeInOut(span(u, 0, .15)) : 0;
-      const pileY = PORT ? hookPos.y - 1.16 * hs - .02 : PLINTH_TOP + .035, spread = PORT ? hs * 2.1 : hs * 1.1, cs = PORT ? Math.max(.5, hs * 1.25) : .95;
-      coinPile.forEach((c) => {
-        const d = c.userData;
-        if (vu < .03 && d.gone) { d.gone = false; d.burn = null; } // scrolling back in drops a fresh set
-        const drop = easeOutQuint(span(vu, .04 + d.k * .06, .3 + d.k * .06));
-        if (d.gone && d.respawn && t > d.respawn) { d.gone = false; d.respawn = 0; d.redrop = t; }
-        const re = d.redrop ? easeOutQuint(span(t - d.redrop, 0, .8)) : 1;
-        const fall = Math.min(drop, re);
-        c.visible = fall > 0 && !d.gone && leave < 1;
-        if (!c.visible) return;
-        const x = hookPos.x + d.x * spread, z = d.z * spread * (PORT ? .35 : 1) + (PORT ? .5 : .2);
-        c.position.set(x, pileY + (1 - fall) * 3.2 + (PORT ? .3 * cs : .12 * cs), z);
-        c.rotation.set(PORT ? -1.3 + d.rot * .2 : Math.PI / 2 - .55 + d.rot * .3, d.rot * 1.3, 0);
-        c.scale.setScalar(cs * (1 - leave * .6));
-        if (fall > .999 && !d.landed) { d.landed = true; burst(c.position, { color: 'gold', strength: .1, up: .3, size: .3 }); } if (fall < .5) d.landed = false;
-        // burning: the coin lifts, shrinks and goes dark while embers rise from it
-        if (d.burn != null) {
-          const bt = t - d.burn, e = span(bt, 0, 1.3);
-          c.position.y += e * .5; c.scale.setScalar(cs * (1 - e * .85)); c.rotation.y += bt * 2.5;
-          if (bt > .02 && !d.embered) { d.embered = true; burst(c.position, { color: 'ember', strength: .28, up: 2.2, size: .4 }); }
-          if (e >= 1) { d.gone = true; d.burn = null; d.embered = false; d.landed = false; d.redrop = 0; d.respawn = t + 9; c.visible = false; }
-        }
-      });
-      if (burnQueue > 0 && vu > .3) { const cand = coinPile.filter((c) => c.visible && c.userData.burn == null && !c.userData.gone); if (cand.length) { const c = cand[Math.floor(Math.random() * cand.length)]; c.userData.burn = t; burnQueue--; flashV = Math.max(flashV, .12); } else burnQueue = 0; }
-    } else coinPile.forEach((c) => (c.visible = false));
+    burnedG.visible = hOn && !!burnedData.text;
+    if (burnedG.visible) {
+      const vu = ch === 'holders' ? u : ch === 'callers' ? 0 : 1;
+      const rise = easeOutQuint(span(vu, 0, .22)), leave = ch === 'traders' ? easeInOut(span(u, 0, .15)) : 0;
+      const shown = burnedData.value * easeOut(span(vu, .08, .62)) * easeOut(span(t - burnedData.at, 0, 1.2));
+      if (Math.abs(shown - burnedShown) > Math.max(1, burnedData.value * .004) || burnedKey !== burnedData.text) {
+        burnedShown = shown; burnedKey = burnedData.text;
+        burnedG.userData.planes.forEach((pl) => pl.material.map?.dispose());
+        burnedG.userData.setMap(textTex({ text: burnedData.fmt(shown), w: 1536, h: 480, size: 380, weight: 900, color: '#FF9A45', tracking: -.06 }));
+      }
+      const nx = PORT ? 0 : 1.45, ny = PORT ? (bandY != null ? bandY + .25 : 1.5) : .35, sc = PORT ? Math.min(.56, bandH ? bandH / 2.1 : .56) : .74;
+      burnedG.position.set(nx, ny + (1 - rise) * -1.6 + leave * 1.4, lerp(-1.5, .2, rise) - leave * 3); burnedG.scale.setScalar(sc * lerp(.86, 1, rise));
+      burnedG.rotation.set(-.08 + pointer.y * .05, PORT ? 0 : -.22 + pointer.x * .08, 0);
+      burnedG.userData.setOpacity(rise * (1 - leave));
+    }
 
     // ---- traders: the chain names slam in as type, one after another, by scroll; the coin flips to each chain as it lands
     const tOn = ch === 'traders' || (ch === 'holders' && u > .85) || (ch === 'close' && u < .2);
-    nameG.visible = chainCoin.visible = tOn;
+    nameG.visible = tOn;
     if (tOn) {
       const tu = ch === 'traders' ? u : ch === 'holders' ? 0 : 1, leave = ch === 'close' ? easeInOut(span(u, 0, .2)) : 0;
       const slot = .112, k = clamp(Math.floor((tu - .04) / slot), 0, CHAIN_NAMES.length - 1), at = .04 + k * slot, slam = easeOutQuint(span(tu, at, at + .06));
-      if (k !== nameIdx) { nameIdx = k; nameG.userData.setMap(nameTex[k]); chainCoin.userData.setMap(chainTex[k] || qTex); flashV = Math.max(flashV, .08); zoomV = Math.max(zoomV, .03); }
+      if (k !== nameIdx) { nameIdx = k; nameG.userData.setMap(nameTex[k]); flashV = Math.max(flashV, .08); zoomV = Math.max(zoomV, .03); }
       const sc = PORT ? Math.min(.5, bandH ? bandH / 2.9 : .5) : .8, nx = PORT ? .25 : 1.6, ny = PORT ? (bandY != null ? bandY - .15 * sc : 1.3) : .1;
       nameG.position.set(nx, ny, lerp(-.8, .3, slam) - leave * 3); nameG.scale.setScalar(sc * lerp(1.3, 1, slam)); nameG.userData.setOpacity(slam * (1 - leave) * (tu > .02 ? 1 : 0));
       nameG.rotation.set(-.06 + pointer.y * .04, PORT ? 0 : -.18 + pointer.x * .06, 0);
-      const cs = PORT ? sc * 1.15 : 1.0;
-      chainCoin.position.set(nx + (PORT ? 0 : .1), ny + (PORT ? 1.02 * sc : 1.45), .6); chainCoin.scale.setScalar(cs * (1 - leave * .5) * (1 + .25 * coinFlash));
-      chainCoin.rotation.set(.12, Math.PI * 2 * slam + .25 + Math.sin(t * .7) * .12, 0); chainCoin.visible = tu > .02 && leave < 1;
-      coinFlash = Math.max(0, coinFlash - dt * 1.5); chainCoin.children[0].material = coinFlash > .05 ? studMat : goldMat;
     } else nameIdx = -1;
 
     bursts.forEach((b) => { if (!b.visible) return; b.material.uniforms.uT.value += dt; if (b.material.uniforms.uT.value > 1.4) b.visible = false; });

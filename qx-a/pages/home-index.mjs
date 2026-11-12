@@ -90,8 +90,8 @@ if (glCanvas && !RM && !navigator.connection?.saveData && canGL()) {
     await (document.fonts?.load?.('900 100px "Mona Sans"') || Promise.resolve()).catch(() => {});
     scene = await mountScene(glCanvas, { icons: COIN_ICONS, logo: QLOGO });
     document.body.classList.add('l3-live'); globalThis.__l3 = scene;
-    measure(); scene.setProgress(P); pushCall();
-    sceneQ.splice(0).filter((q) => Date.now() - q.at < 180000).forEach((q, i) => setTimeout(() => scene[q.name]?.(...q.args), 400 + i * 420));
+    measure(); scene.setProgress(P); pushCall(); if (Pm.burned != null) scene.setBurned(Pm.burned, fmt.tok);
+    sceneQ.splice(0).filter((q) => q.name === 'setBurned' || Date.now() - q.at < 180000).forEach((q, i) => setTimeout(() => scene[q.name]?.(...q.args), 400 + i * 420));
   }).catch((e) => { console.warn('landing scene', e?.message || e); });
   if (document.readyState === 'complete') requestAnimationFrame(() => setTimeout(start, 60)); else addEventListener('load', () => requestAnimationFrame(() => setTimeout(start, 60)), { once: true });
 }
@@ -358,7 +358,7 @@ function drawHolders(update = false) {
   buildHolders();
   const fig = (k, v) => flash(H.fig.querySelector(`[data-f="${k}"]`), v);
   const dead = S.burns?.dead?.balanceWei ? units(S.burns.dead.balanceWei) : num(S.qSum?.burned);
-  if (dead != null) { fig('burned', fmt.tok(dead)); Pm.burned = dead; }
+  if (dead != null) { fig('burned', fmt.tok(dead)); Pm.burned = dead; sceneCall('setBurned', dead, fmt.tok); }
   if (num(S.burns?.burns?.count) != null) fig('burns', S.burns.burns.count.toLocaleString('en-US'));
   if (num(S.qSum?.holders) != null) fig('holders', String(S.qSum.holders));
   pulse.update(update);
