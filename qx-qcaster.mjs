@@ -3,6 +3,7 @@
 // Design ends at a "Review in Create" link.
 import {QCASTER} from '/qcaster-name.mjs';
 import {h, tabs, button, state, tag} from '/qx-a/components.mjs';
+import {artPanel} from '/qx-qcaster-art.mjs';
 
 const d = document, $ = id => d.getElementById(id), N = QCASTER.name;
 d.title = N + ' · Beta | QHooks';
@@ -92,6 +93,7 @@ designForm.addEventListener('submit', async e => {
 function renderDesign(j) {
  if (!j.plan) { designOut.replaceChildren(h('div', {class: 'qc-a'}, h('p', null, j.answer)), h('div', {class: 'qc-meta'}, modeNote(j))); return; }
  const p = j.plan, START = {standard: 'Standard', floor: '$20K start', high: '$50K start'};
+ const panel = artPanel(p, j.link, {post});
  const rows = [['Chain', p.chainName], ['Idea', p.idea.name], ['Rules', p.idea.blocks?.length ? p.idea.blocks.map(b => b.name).join(' · ') : p.idea.id === 'sale-first' ? 'Fair sale, then a locked pool' : 'No tax, caps or launch games'],
   p.start ? ['Start', START[p.start]] : null, p.pq ? ['Quantum key', 'On'] : null].filter(Boolean);
  designOut.replaceChildren(...[
@@ -101,10 +103,12 @@ function renderDesign(j) {
    h('p', {class: 'qc-plan__w'}, p.idea.what),
    h('dl', {class: 'qc-dl'}, rows.map(([k, v]) => [h('dt', null, k), h('dd', null, v)])),
    p.wants?.length ? h('ul', {class: 'qc-wants'}, p.wants.map(w => h('li', {class: w.met ? 'is-met' : 'is-miss'}, (w.met ? '' : 'Not in this idea: ') + w.label))) : null,
-   h('div', {class: 'qc-plan__go'}, button('Review in Create', {href: j.link}), p.studio ? button('Every rule in Studio', {kind: 'secondary', href: p.studio}) : null),
+   panel.el,
+   h('div', {class: 'qc-plan__go'}, panel.go, p.studio ? button('Every rule in Studio', {kind: 'secondary', href: p.studio}) : null),
    h('p', {class: 'qc-plan__note'}, j.review)),
   p.alternatives?.length ? h('p', {class: 'qc-alt'}, 'Also close: ', p.alternatives.map((a, i) => [i ? ' · ' : '', h('a', {href: a.href}, a.name)])) : null,
   h('div', {class: 'qc-meta'}, modeNote(j)), sourceList(j.sources)].filter(Boolean));
+ panel.start();
 }
 
 // ---- Ideas ----

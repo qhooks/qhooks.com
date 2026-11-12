@@ -5,6 +5,7 @@ import {assertQuickStart,startTierLabel,startCapText} from './qx-quick-start-che
 import {mountAnyTokenPicker,ANY_TOKEN_NOTE} from './qx-launch-any-token.mjs';
 import {appendArbRecaptureLine} from './qx-create-display.mjs';
 import {readLaunchPrefill,launchPostLink} from './qx-launch-prefill.mjs';
+import {readHandoff} from './qcaster-handoff.mjs';
 // Quick launch and launch-idea cards on /create. An extra path beside the guided flow, which it never changes.
 // One transaction: QSimpleLaunch.launch with the card's preset. The person types name and ticker and picks an image.
 import {checkTicker,assertTickerFree,TickerTaken,tickerBlockNodes} from '/qx-ticker-guard.mjs';
@@ -495,6 +496,16 @@ async function launch(){
  finally{busy=false;renderQuick();}
 }
 
+// QCaster's "Review in Create" (?art=<banner sha256>): the image and banner made or picked there. readHandoff re-checks the
+// formats and that the banner bytes hash to the reference; the launch still re-uploads the banner and re-checks it.
+async function applyArtHandoff(){
+ const ref=new URLSearchParams(location.search).get('art');if(!ref)return;
+ const art=await readHandoff(ref).catch(()=>null);if(!art)return;
+ ++imageRevision;++bannerRevision;
+ image=art.image;$('preview').src=image;$('preview').hidden=false;$('image-status').textContent='Image ready.';
+ banner=art.banner;bannerData=art.bannerData;$('banner-preview').src=bannerData;$('banner-preview').hidden=false;$('banner-status').textContent='Banner ready.';
+ cost=null;renderQuick();costSoon();
+}
 function mount(){
  if(!$('ideas'))return;
  {const u=urlChain();if(u&&ideaCards(u).length)quickChain=u;}
@@ -520,6 +531,7 @@ function mount(){
   if(prefill.ticker!==undefined)$('symbol').value=prefill.ticker;
   openQuick(prefill.style,{scroll:true});checkTickerSoon();costSoon();
  }else{const h=/^#quick(?:-([a-z-]+))?$/.exec(location.hash);if(h)openQuick(h[1]||'fair',{scroll:true});}
+ void applyArtHandoff();
  void probeQuickChains();
 }
 mount();

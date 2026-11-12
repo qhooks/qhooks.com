@@ -90,3 +90,24 @@
 .qc-entry { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; background: var(--qa-wash-2, rgba(255,255,255,.08)); color: var(--qa-tx, #F4F1E9); font-size: 13.5px; font-weight: 720; text-decoration: none; }
 .qc-entry::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--qa-gold, #D2AD72); box-shadow: var(--qa-glow-gold); }
 .qc-entry:hover { background: var(--qa-rule-2, rgba(255,255,255,.12)); }
+
+/* v3: name, ticker, look and the generated art */
+.qc-art { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--qa-rule-row); }
+.qc-art__fields { display: grid; grid-template-columns: 1fr 140px; gap: 10px 12px; }
+.qc-art__fields label:last-child { grid-column: 1 / -1; }
+.qc-art__f { display: grid; gap: 6px; min-width: 0; }
+.qc-art__f span { font-size: 12px; font-weight: 760; letter-spacing: .06em; text-transform: uppercase; color: var(--qa-tx-3); }
+.qc-art__f input { min-width: 0; height: 44px; padding: 0 12px; border: 0; border-radius: var(--qa-r-m); background: var(--qa-wash); box-shadow: inset 0 0 0 1px var(--qa-rule); color: var(--qa-tx); font: inherit; font-size: 16px; outline: 0; }
+.qc-art__f input:focus { box-shadow: inset 0 0 0 1px var(--qa-gold-lo), 0 0 0 3px var(--qa-gold-wash); }
+.qc-art__previews { display: grid; grid-template-columns: minmax(72px, 112px) 1fr; gap: 12px; align-items: center; margin-top: 16px; }
+.qc-art__icon, .qc-art__banner { position: relative; overflow: hidden; background: var(--qa-wash); }
+.qc-art__icon { aspect-ratio: 1; border-radius: 50%; }
+.qc-art__banner { aspect-ratio: 3 / 1; border-radius: var(--qa-r-m); }
+.qc-art__icon img, .qc-art__banner img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.qc-art__icon[data-state=busy], .qc-art__banner[data-state=busy] { background: linear-gradient(100deg, var(--qa-wash) 30%, var(--qa-wash-2) 50%, var(--qa-wash) 70%) 0 0 / 300% 100%; animation: qc-shimmer 1.4s linear infinite; }
+@keyframes qc-shimmer { to { background-position: -300% 0; } }
+@media (prefers-reduced-motion: reduce) { .qc-art__icon[data-state=busy], .qc-art__banner[data-state=busy] { animation: none; } }
+.qc-art__status { min-height: 1.4em; margin: 10px 0 0; font-size: 13.5px; color: var(--qa-tx-3); }
+.qc-art__acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.qc-art__note { margin: 8px 0 0; font-size: 13px; color: var(--qa-tx-3); }
+@media (max-width: 520px) { .qc-art__fields { grid-template-columns: 1fr 110px; } }
