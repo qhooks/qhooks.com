@@ -3,8 +3,9 @@ import {tokenProfilePresentation,needsCreatorArtwork} from './qx-token-profile-p
 import {getWalletHub} from './wallet-hub-fresh.mjs';
 import {chainById} from './chains.mjs';
 import {mountGetListed} from './qx-get-listed.mjs';
+import {shown} from './qx-shown.mjs';
 const head=document.getElementById('qxt-head');let revision=0;
-const h=(tag,text)=>{const e=document.createElement(tag);if(text)e.textContent=text;return e;};
+const h=(tag,text)=>{const e=document.createElement(tag);const t=shown(text);if(t)e.textContent=t;return e;}; // walletpos: never the text "null"
 // Profiles change rarely: one read per market per 5 minutes, and a 404 (not listed) is kept for 10 minutes, so the
 // market poll's qhooks:pool events don't re-ask every few seconds (2026-11-10).
 const seen=new Map();
@@ -49,9 +50,10 @@ async function load(){
     const got=await read(match[1]+'/'+address);if(turn!==revision)return;const body=got.body;
     if(!body){section.remove();announce(null);return;}
     const {profile:value,banner}=tokenProfilePresentation(body);section.replaceChildren();
-    if(banner){const img=h('img');img.width=1500;img.height=500;img.src=banner;img.alt=body.name+' banner';section.append(img);}
-    const identity=h('div');identity.className='qxt-profile-identity';if(value.image){const img=h('img');img.src=value.image;img.alt=body.name+' profile picture';identity.append(img);}identity.append(h('strong',body.name));section.append(identity);
-    if(value.description)section.append(h('p',value.description));
+    const name=shown(body.name)||shown(body.symbol)||'';
+    if(banner){const img=h('img');img.width=1500;img.height=500;img.src=banner;img.alt=(name?name+' ':'')+'banner';section.append(img);}
+    const identity=h('div');identity.className='qxt-profile-identity';if(value.image){const img=h('img');img.src=value.image;img.alt=(name?name+' ':'')+'profile picture';identity.append(img);}if(name)identity.append(h('strong',name));section.append(identity);
+    if(shown(value.description))section.append(h('p',value.description));
     const links=h('div');links.className='qxt-profile-links';for(const [key,label]of [['website','Website'],['x','X'],['discord','Discord'],['telegram','Telegram']]){if(value.links[key]){const a=h('a',label+' ↗');a.href=value.links[key];a.target='_blank';a.rel='ugc noopener noreferrer';links.append(a);}}
     section.append(links);const pool=window.__qhooksPool,panel=mountGetListed({chainId:body.chainId,token:body.token,pool:String(pool?.chainId)===match[1]&&pool?.controller===address?pool.poolId:null,profile:value});current={body,section,listing:panel||null};announce({...value,banner,image:value.image||'',links:value.links||{}});void creatorCard();
   }catch{if(turn===revision)section.remove();}

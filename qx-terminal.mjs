@@ -5,6 +5,7 @@ import {shapeCandles} from './qx-chart-shape.mjs';
 import {tokenAvatar,bindTokenAvatar} from '/qx-token-avatar.mjs';
 import {positionChart} from '/qx-position-core.mjs';
 import {mountMarketPosition} from '/qx-market-position.mjs';
+import {outsideCosts} from '/qx-wallet-pnl.mjs'; // walletpos: the connected wallet's own on-chain position, any venue
 import {mountChartLayers} from '/qx-chart-layers.mjs';
 import {tradeRecordHeaders} from '/qx-trade-record.mjs';
 import {mountRecapturePanel} from '/qx-recapture-panel.mjs';
@@ -482,6 +483,9 @@ function nativeEmpty(d,part) {
  return d.hasTraded?'No trades in this window yet.':part==='chart'?'The chart starts with the first trade. Buys and sells will appear automatically.':'Waiting for the first trade. Buys and sells will appear automatically.';
 }
 function renderChart() {
+  // walletpos: a trade by the connected wallet in this token's tape (any venue) re-reads the position now, and the header
+  // balance with it (qx-a/balance.mjs listens for qhooks:wallet-moved). No timer: only when the tape shows a new trade.
+  if(marketPosition?.noticeTrades(state.data?.trades))dispatchEvent(new CustomEvent('qhooks:wallet-moved'));
   const d = marketDisplay(); if (!d) return;
   const ownChart=ownChartView(d);
   for(const b of $('qxt-tf').querySelectorAll('button')){b.disabled=!!d.ext&&Number(b.dataset.tf)<60;if(b.disabled)b.title='Outside-token candles start at one minute';}
@@ -1158,10 +1162,13 @@ document.addEventListener('keydown',createTerminalShortcutHandler({document,isDi
 // ---- Start ----
 ticket = mountTicket($('qxt-ticket'), { onTraded: async ({ side, moved, status,ext,chainId,token,owner }) => {
   setTimeout(loadMarket, 1500); setTimeout(loadPositions, 3000);
+  // walletpos: the receipt is in: the held amount, entry and markers re-read from the chain now and once more as the
+  // public RPC catches up (two reads, no loop)
+  void marketPosition?.refresh({force:true,rescan:true}); setTimeout(()=>void marketPosition?.refresh({force:true,rescan:true}),4000);
   // Auto TP/SL: a buy can set the saved take-profit and stop on exactly what it bought.
   if (!ext&&side === 'buy') try { if (await afterBuy(moved, status,{chainId,token,owner})) { status('TP/SL set on the ' + compact(Number(moved) / 1e18) + ' bought.'); toast('TP/SL placed on your buy.'); } } catch (e) { toast('TP/SL was not placed: ' + (e.message || 'error')); }
 } });
-marketPosition=mountMarketPosition({h,after:$('qxt-ticket'),getSelection:selectedContext,getOwner:()=>selectedContext()?.chainId==='solana'?solAddress():state.me,ticket,onChange:p=>{myPosition=p;if(state.data)renderChart();}});
+marketPosition=mountMarketPosition({h,after:$('qxt-ticket'),getSelection:selectedContext,getOwner:()=>selectedContext()?.chainId==='solana'?solAddress():state.me,ticket,chainPosition:args=>outsideCosts().position(args),onChange:p=>{myPosition=p;if(state.data)renderChart();}});
 chartLayers=mountChartLayers({h,chartElement:$('qxt-chart'),getOwner:chain=>chain==='solana'?solAddress():state.me,headersFor:tradeRecordHeaders,onChange:()=>{if(state.data)renderChart();}});
 marketWorkspace=createMarketWorkspace({getSelection:selectedContext,isBusy:()=>!ticket.canSelect(),onChange:renderWorkspace,onRetry:refreshSelectedMarket,onBlocked:()=>{$('qxt-sync').textContent='Current trade retained. Finish it or resolve the funded recovery before refreshing.';}});
 positionsPanel=createPositionsPanel({h,pane:$('qxt-pane'),getOwner:()=>state.me,getSolOwner:solAddress,getSelection:selectedContext,isVisible:()=>state.pane==='positions',

@@ -112,6 +112,7 @@ export function mountBalance(end, before) {
   addEventListener('qhooks:chain-switch', (e) => { if (who && e.detail?.chainId) use({ owner: who.owner, chainId: String(e.detail.chainId) }, 'chain'); });
   doc.addEventListener('qhooks:traded', () => use(who, 'trade'));
   addEventListener('qhooks:traded', () => use(who, 'trade'));
+  addEventListener('qhooks:wallet-moved', () => use(who, 'trade')); // walletpos: the terminal saw this wallet trade elsewhere
   doc.addEventListener('visibilitychange', () => { if (doc.visibilityState === 'visible') readChain(false); });
   addEventListener('storage', (e) => { if (e.key === PREF) use(remembered(), 'storage'); });
   return btn;

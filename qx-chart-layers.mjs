@@ -100,7 +100,7 @@ export function mountChartLayers({h,chartElement,getOwner,onChange,fetcher=(...a
     series=activeSeries;bars=activeBars;multiplier=k;symbol=data.meta.symbol||'';
     const owner=getOwner(selection.chainId),same=(a,b)=>selection.chainId==='solana'?a===b:String(a||'').toLowerCase()===String(b||'').toLowerCase();
     const local={you:(position?.markers||[]).map(r=>({...r,layer:'you',wallet:owner,label:'You'})),following:[],smart:[],calls:[],dev:[]};
-    for(const t of data.trades||[]){const layer=same(t.trader,data.meta.owner)?'dev':tracked[t.trader]?'following':null;if(!layer||same(t.trader,owner))continue;
+    for(const t of data.trades||[]){const layer=t.trader&&data.meta.owner&&same(t.trader,data.meta.owner)?'dev':t.trader&&tracked[t.trader]?'following':null;if(!layer||same(t.trader,owner))continue; // walletpos: a trade with no trader (outside tape) is no "Dev" trade
       local[layer].push({id:t.tx+':'+t.idx,tx:t.tx,wallet:t.trader,at:t.ts*1000,side:t.buy?'buy':'sell',quantity:t.token,label:tracked[t.trader]||short(t.trader)});
     }
     const merged={};for(const [id]of CHART_LAYERS){const seen=new Set();merged[id]=[...(rows?.[id]||[]),...local[id]].filter(row=>{const id=[row.tx||row.id,row.wallet,row.side].join(':');if(seen.has(id))return false;seen.add(id);return true;}).sort((a,b)=>b.at-a.at).slice(0,200);}

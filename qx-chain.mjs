@@ -1,3 +1,4 @@
+import {shownKids} from './qx-shown.mjs';
 import { guardWalletChain, assertWalletChain, guardedSend, asTradeError } from './qx-chain-guard.mjs';
 // Shared chain plumbing for the Trade page's extra panels (Buy with ETH, limit orders, team locks):
 // public-RPC reads, a small ABI codec, the pool's live key, and wallet sends with chain switching.
@@ -247,4 +248,6 @@ export async function ensureAllowance(chainId,token,spender,amount,onStatus,asse
 }
 
 // ---- Small DOM helper shared by the panels ----
-export const h = (t, a = {}, ...k) => { const n = document.createElement(t); for (const [key, v] of Object.entries(a)) { if (key === 'class') n.className = v; else if (key.startsWith('on')) n.addEventListener(key.slice(2), v); else if (key in n) n[key] = v; else n.setAttribute(key, v); } n.append(...k.flat().filter(x => x != null && x !== false)); return n; };
+// walletpos (2026-11-12): a null/undefined prop is left unset (a title of undefined printed "undefined" on every outside
+// trade row), and null/"null"/"undefined" children never become text (qx-shown.mjs).
+export const h = (t, a = {}, ...k) => { const n = document.createElement(t); for (const [key, v] of Object.entries(a || {})) { if (v == null) continue; if (key === 'class') n.className = v; else if (key.startsWith('on')) n.addEventListener(key.slice(2), v); else if (key in n) n[key] = v; else n.setAttribute(key, v); } n.append(...shownKids(k)); return n; };

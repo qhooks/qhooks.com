@@ -557,6 +557,7 @@ body.qx.qxt{font-size:13px;line-height:1.4}
 .qxt-market-position dl>div{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .qxt-market-position dt{color:var(--qx-muted)}
 .qxt-market-position dd{margin:0;font-family:var(--qx-mono)}
+.qxt-position-note{margin:-6px 0 14px;font-size:12px;line-height:1.4;color:var(--qx-muted)} /* walletpos: where the chain position comes from */
 .qxt-position-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .qxt-position-actions button{min-height:44px;border:1px solid var(--qx-line-2);border-radius:8px;background:var(--qx-bg);font-size:12px;color:var(--qxt-down)}
 .qxt-position-actions button:hover{background:var(--qx-panel-2)}

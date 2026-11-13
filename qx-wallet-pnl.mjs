@@ -26,6 +26,8 @@ export const PNL_CHAINS = Object.freeze({
     router: '0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff', // QHooks fee router (trade event below)
     pons: '0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e', // PonsV2LaunchFactory (facts: MKTSEARCH-DELTA.md)
     skip: Object.freeze(['0x5fc5360d0400a0fd4f2af552add042d716f1d168']), // USDG: a dollar, not a position
+    // walletpos: a position bought with the chain's dollar is costed in it (one quote per position; a mix stays unknown)
+    stable: Object.freeze({address: '0x5fc5360d0400a0fd4f2af552add042d716f1d168', symbol: 'USDG', decimals: 6}),
   }),
 });
 export const TOPIC = Object.freeze({
@@ -37,7 +39,7 @@ export const TOPIC = Object.freeze({
   curveSell: '0x8113d738abdcb6b38357e9d53a54a7157861a09031b453651f0fe7fe151f59df', // CurveSell(seller, recipient, tokensIn, quoteOut, fee, tax)
   v4Swap: '0x40e9cecb9f5f1f1c5b9c97dec2917b7ee92e57ba5563708daca94dd84ad7112f', // Swap(id, sender, amount0, amount1, …)
 });
-export const LIMITS = Object.freeze({MAX_TOKENS: 3, MAX_TXS: 12, WORK_MS: 12_000, CALL_MS: 4000, RESCAN_MS: 60_000, MIN_USD: 1, BATCH: 6, BAD_RETRY_MS: 86_400_000, PONS_MS: 600_000, PRICE_MS: 300_000});
+export const LIMITS = Object.freeze({MAX_TOKENS: 3, MAX_TXS: 12, WORK_MS: 12_000, CALL_MS: 4000, GAP_MS: 300, RESCAN_MS: 60_000, MIN_USD: 1, BATCH: 6, BAD_RETRY_MS: 86_400_000, PONS_MS: 600_000, PRICE_MS: 300_000});
 const ADDR = /^0x[0-9a-f]{40}$/, ZERO = '0x' + '0'.repeat(40);
 const pad = a => '0x' + a.slice(2).padStart(64, '0');
 const addrOf = topic => '0x' + String(topic || '').slice(-40).toLowerCase();
@@ -48,46 +50,57 @@ const big = s => { try { return BigInt(s ?? 0); } catch { return 0n; } };
 const num = (raw, decimals) => Number(raw) / 10 ** decimals;
 const known = n => typeof n === 'number' && Number.isFinite(n);
 
-/// One tx's effect on the wallet's position in `token`: {paid, got} in quote wei, or null when it can't be costed.
+/// One tx's effect on the wallet's position in `token`: {paid, got} in quote base units, the quote ('ETH' or the chain's
+/// stable symbol), or null when it can't be costed.
 export function classifyTx({tx, receipt, wallet, token, cfg, unitsIn = 0n, unitsOut = 0n}) {
   if (!tx || !receipt || receipt.status === '0x0') return null;
-  const logs = Array.isArray(receipt.logs) ? receipt.logs : [], W = wallet, isQuote = a => a === ZERO || a === cfg.wrapped;
-  let paid = 0n, got = 0n, how = null;
+  const logs = Array.isArray(receipt.logs) ? receipt.logs : [], W = wallet, stable = cfg.stable?.address || null;
+  const quoteOf = a => a === ZERO || a === cfg.wrapped ? 'ETH' : stable && a === stable ? cfg.stable.symbol : null;
+  let paid = 0n, got = 0n, how = null, quote = null;
   for (const l of logs) {
     if (String(l.address).toLowerCase() !== cfg.router || l.topics?.[0] !== TOPIC.routed || addrOf(l.topics[1]) !== W) continue;
     const tokenIn = addrOf(l.topics[2]), tokenOut = addrOf(l.topics[3]), [amountIn = 0n, amountOut = 0n] = words(l.data);
-    if (tokenOut === token && isQuote(tokenIn)) { paid += amountIn; how = 'router'; }
-    else if (tokenIn === token && isQuote(tokenOut)) { got += amountOut; how = 'router'; }
+    const q = tokenOut === token ? quoteOf(tokenIn) : tokenIn === token ? quoteOf(tokenOut) : null;
+    if (!q || (quote && quote !== q)) continue;
+    if (tokenOut === token) { paid += amountIn; how = 'router'; quote = q; }
+    else { got += amountOut; how = 'router'; quote = q; }
   }
   if (!how) for (const l of logs) {
     if (addrOf(l.topics?.[2]) !== W) continue;
-    if (l.topics?.[0] === TOPIC.curveBuy && unitsIn > 0n) { paid += words(l.data)[0] ?? 0n; how = 'curve'; }
-    if (l.topics?.[0] === TOPIC.curveSell && unitsOut > 0n) { got += words(l.data)[1] ?? 0n; how = 'curve'; }
+    if (l.topics?.[0] === TOPIC.curveBuy && unitsIn > 0n) { paid += words(l.data)[0] ?? 0n; how = 'curve'; quote = 'ETH'; }
+    if (l.topics?.[0] === TOPIC.curveSell && unitsOut > 0n) { got += words(l.data)[1] ?? 0n; how = 'curve'; quote = 'ETH'; }
   }
   if (!how && String(tx.from).toLowerCase() === W) {
-    let wethOut = 0n, wethIn = 0n, other = false;
+    let wethOut = 0n, wethIn = 0n, usdOut = 0n, usdIn = 0n, other = false;
     for (const l of logs) {
       if (l.topics?.[0] !== TOPIC.transfer || l.topics.length !== 3) continue;
       const a = String(l.address).toLowerCase(), from = addrOf(l.topics[1]), to = addrOf(l.topics[2]), v = words(l.data)[0] ?? 0n;
       if (a === cfg.wrapped) { if (from === W) wethOut += v; if (to === W) wethIn += v; }
+      else if (stable && a === stable) { if (from === W) usdOut += v; if (to === W) usdIn += v; }
       else if (a !== token && from !== ZERO && to !== ZERO) other = true;
     }
     if (unitsIn > unitsOut) {
       const cost = big(tx.value) + wethOut - wethIn;
-      if (cost > 0n) { paid = cost; how = 'tx'; }
+      if (cost > 0n) { paid = cost; how = 'tx'; quote = 'ETH'; }
+      else if (usdOut > usdIn) { paid = usdOut - usdIn; how = 'tx'; quote = cfg.stable.symbol; }
     } else if (unitsOut > unitsIn) {
-      if (wethIn > wethOut) { got = wethIn - wethOut; how = 'tx'; }
+      if (wethIn > wethOut) { got = wethIn - wethOut; how = 'tx'; quote = 'ETH'; }
+      else if (usdIn > usdOut) { got = usdIn - usdOut; how = 'tx'; quote = cfg.stable.symbol; }
       else if (!other) {
         // A native-ETH v4 pool: ETH is currency0, and nothing but the token moved as an ERC-20, so the pool's positive
         // amount0 is the ETH that left it for this sell (any router fee comes off after; approximate).
         let eth = 0n;
         for (const l of logs) if (l.topics?.[0] === TOPIC.v4Swap) { const [a0 = 0n, a1 = 0n] = words(l.data).map(signed); if (a0 > 0n && a1 < 0n) eth += a0; }
-        if (eth > 0n) { got = eth; how = 'pool'; }
+        if (eth > 0n) { got = eth; how = 'pool'; quote = 'ETH'; }
       }
     }
   }
-  return how ? {paid, got, how, pool: tradedPool(logs, unitsIn - unitsOut, paid > 0n ? paid : got)} : null;
+  if (!how) return null;
+  const at = parseInt(tx.blockTimestamp ?? receipt.blockTimestamp ?? logs[0]?.blockTimestamp ?? '', 16);
+  return {paid, got, how, quote, at: Number.isSafeInteger(at) && at > 0 ? at : null, pool: tradedPool(logs, unitsIn - unitsOut, paid > 0n ? paid : got)};
 }
+/// Decimals of a position's quote ('ETH' or the chain's stable).
+export const quoteDecimals = (cfg, quote) => quote && cfg.stable && quote === cfg.stable.symbol ? cfg.stable.decimals : 18;
 
 /// The v4 pool this trade went through: the Swap whose token side matches the wallet's units (hooks and taxes allowed:
 /// ½× to 2×) and whose other side matches the ETH paid or got (±25%). {pm, id, tokenIs0} or null.
@@ -108,12 +121,12 @@ export function tradedPool(logs, units, quote) {
   return best && {pm: best.pm, id: best.id, tokenIs0: best.tokenIs0};
 }
 
-/// ETH per token from a v4 pool's slot0 word (extsload): sqrtPriceX96 is the low 160 bits; price = token1 per token0.
-export function poolPrice(word, tokenIs0, decimals) {
+/// Quote per token from a v4 pool's slot0 word (extsload): sqrtPriceX96 is the low 160 bits; price = token1 per token0.
+export function poolPrice(word, tokenIs0, decimals, qd = 18) {
   const sqrtP = Number(big(word) & ((1n << 160n) - 1n));
   if (!(sqrtP > 0)) return null;
   const raw = (sqrtP / 2 ** 96) ** 2; // token1 per token0, raw units
-  const p = tokenIs0 ? raw * 10 ** (decimals - 18) : 1 / (raw * 10 ** (18 - decimals));
+  const p = tokenIs0 ? raw * 10 ** (decimals - qd) : 1 / (raw * 10 ** (qd - decimals));
   return Number.isFinite(p) && p > 0 ? p : null;
 }
 const slot0Key = id => '0x' + [...keccak_256(Uint8Array.from((id.slice(2) + '6'.padStart(64, '0')).match(/../g).map(h => parseInt(h, 16))))].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -123,7 +136,7 @@ export async function poolPrices({tokens, state, rpc, now = Date.now}) {
   const live = tokens.filter(t => state[t.address]?.pool && Number.isInteger(t.decimals));
   if (!live.length) return false;
   const r = await rpc(live.map(t => ['eth_call', [{to: state[t.address].pool.pm, data: '0x1e2eaeaf' + slot0Key(state[t.address].pool.id).slice(2)}, 'latest']]));
-  live.forEach((t, i) => { const p = poolPrice(String(r[i] || '0x').slice(0, 66), state[t.address].pool.tokenIs0, t.decimals); if (p) state[t.address].px = {eth: p, at: now()}; });
+  live.forEach((t, i) => { const s = state[t.address], p = poolPrice(String(r[i] || '0x').slice(0, 66), s.pool.tokenIs0, t.decimals, s.pool.qd ?? 18); if (p) s.px = {eth: p, at: now()}; }); // eth: quote per token (ETH or the stable)
   return true;
 }
 
@@ -134,7 +147,7 @@ export function costFromState(s, token, quoteUsd, quoteSymbol) {
   // chain shows would pair the wrong amount with the basis. Within a millionth, for rounding.
   const held = big(token.balance), net = big(s.bought) - big(s.sold), gap = held > net ? held - net : net - held;
   if (net <= 0n || gap * 1_000_000n > net) return null;
-  const spentQuote = num(big(s.spent), 18), receivedQuote = num(big(s.received), 18);
+  const qd = s.qd ?? 18, spentQuote = num(big(s.spent), qd), receivedQuote = num(big(s.received), qd);
   const boughtUnits = num(big(s.bought), token.decimals), soldUnits = num(big(s.sold), token.decimals);
   if (!(boughtUnits > 0) || !(spentQuote > 0)) return null;
   const valueQuote = known(token.valueUsd) && known(quoteUsd) && quoteUsd > 0 ? token.valueUsd / quoteUsd : null;
@@ -147,10 +160,21 @@ export function costFromState(s, token, quoteUsd, quoteSymbol) {
 // HTTP 429, so a 429 is retried after a growing pause while the pass has time (WORK_MS); then the pass stops and the
 // next view continues from what was kept.
 const PAUSES = [500, 900, 1400, 2000, 2600, 3200, 3800];
-function rpcClient(url, fetchImpl, deadline) {
+// walletpos: every pass on the page shares one pace per endpoint (a request start every gapMs at most). Bursts from the
+// wallet view, the holdings panel and the token page together drew 429s (answered without CORS headers, so the browser
+// saw a failed request) on about half the calls on 2026-11-13; paced, the same reads land on the first try.
+const paceAt = new Map();
+async function paced(url, gapMs) {
+  if (!gapMs) return;
+  const now = Date.now(), at = Math.max(now, paceAt.get(url) || 0);
+  paceAt.set(url, at + gapMs);
+  if (at > now) await new Promise(res => setTimeout(res, at - now));
+}
+function rpcClient(url, fetchImpl, deadline, gapMs = 0) {
   let id = 0;
   const post = async part => {
     for (let attempt = 0; ; attempt++) {
+      await paced(url, gapMs);
       const left = deadline - Date.now();
       if (left < 150) throw new Error('budget');
       // qhooksPublicOnly: the page's RPC fallback (qx-rpc-fallback.mjs) would send this through the site relay, which
@@ -199,7 +223,7 @@ const net = (logs, wallet) => logs.reduce((n, l) => { const v = words(l.data)[0]
 
 /// Advances each token's state by one step of chain reads. Mutates `state` (token → state); returns true if it changed.
 /// Steps commit only when every read they need answered, so a 429 or the budget never leaves half a range behind.
-export async function advance({cfg, wallet, tokens, state, rpc, now = Date.now}) {
+export async function advance({cfg, wallet, tokens, state, rpc, now = Date.now, rescanMs = LIMITS.RESCAN_MS}) {
   let changed = false;
   const [head] = await rpc([['eth_blockNumber', []]]), B = parseInt(head, 16);
   if (!Number.isSafeInteger(B) || B <= 0) return false;
@@ -210,7 +234,7 @@ export async function advance({cfg, wallet, tokens, state, rpc, now = Date.now})
     if (s.bad) Object.assign(s, fresh());
     if (s.hi === null) plan.push({t, s, kind: 'first', lo: Math.max(0, B - cfg.span + 1), hi: B});
     else {
-      if (B > s.hi && now() - s.at >= LIMITS.RESCAN_MS) plan.push({t, s, kind: 'forward', lo: s.hi + 1, hi: Math.min(B, s.hi + cfg.span)});
+      if (B > s.hi && now() - s.at >= rescanMs) plan.push({t, s, kind: 'forward', lo: s.hi + 1, hi: Math.min(B, s.hi + cfg.span)});
       if (s.prior !== '0' && s.lo > 0) plan.push({t, s, kind: 'back', lo: Math.max(0, s.lo - cfg.span), hi: s.lo - 1});
     }
   }
@@ -244,10 +268,17 @@ export async function advance({cfg, wallet, tokens, state, rpc, now = Date.now})
       const unitsIn = big(p.i), unitsOut = big(p.o);
       const c = classifyTx({tx: res[2 * i], receipt: res[2 * i + 1], wallet, token: t.address, cfg, unitsIn, unitsOut});
       s.pending = s.pending.filter(x => x.tx !== p.tx);
-      if (!c) { s.bad = true; s.at = now(); changed = true; return; }
+      // one quote per position: a buy in ETH and a sell for the stable (or the reverse) can't share one average
+      if (!c || (s.quote && c.quote !== s.quote)) { s.bad = true; s.at = now(); changed = true; return; }
+      s.quote = c.quote; s.qd = quoteDecimals(cfg, c.quote);
       s.bought = (big(s.bought) + unitsIn).toString(); s.sold = (big(s.sold) + unitsOut).toString();
       s.spent = (big(s.spent) + c.paid).toString(); s.received = (big(s.received) + c.got).toString();
-      if (c.pool && (!s.poolBlock || p.b >= s.poolBlock)) { s.pool = c.pool; s.poolBlock = p.b; } // the newest trade's pool
+      if (c.pool && (!s.poolBlock || p.b >= s.poolBlock)) { s.pool = {...c.pool, qd: s.qd}; s.poolBlock = p.b; } // the newest trade's pool
+      // walletpos: each costed trade, for the chart's "You" markers (newest 200)
+      const rows = [];
+      if (unitsIn > 0n && c.paid > 0n) rows.push({tx: p.tx, b: p.b, t: c.at, side: 'buy', units: unitsIn.toString(), quote: c.paid.toString()});
+      if (unitsOut > 0n && c.got > 0n) rows.push({tx: p.tx, b: p.b, t: c.at, side: 'sell', units: unitsOut.toString(), quote: c.got.toString()});
+      s.trades = [...(s.trades || []).filter(r => r.tx !== p.tx), ...rows].sort((a, b) => a.b - b.b).slice(-200);
       changed = true;
     });
   }
@@ -302,23 +333,25 @@ const THIN = 'Liquidity below $1,000';
 /// Returns true if anything in the chain changed (the caller recomputes totals).
 export function applyState(chain, cfg, state, now = Date.now) {
   let touched = false;
-  const quoteUsd = known(chain.native?.priceUsd) ? chain.native.priceUsd : null;
+  const ethUsd = known(chain.native?.priceUsd) ? chain.native.priceUsd : null;
+  const usdOf = s => s?.quote && cfg.stable && s.quote === cfg.stable.symbol ? 1 : ethUsd; // a position in the stable is in dollars
   for (const t of chain.tokens || []) {
+    const quoteUsd = ethUsd;
     const p = state.pons?.[t.address];
     if (p?.curve && !p.graduated && known(p.price) && now() - (p.priced || 0) < LIMITS.PONS_MS && quoteUsd && t.spam && t.spamReason === THIN) {
       t.priceUsd = p.price * quoteUsd; t.valueUsd = known(t.units) ? t.units * t.priceUsd : t.valueUsd;
       t.liquidityUsd = known(p.reserve) ? p.reserve * quoteUsd : t.liquidityUsd;
       t.spam = false; t.spamReason = null; t.venue = {kind: 'pons-curve', curve: p.curve}; touched = true;
     }
-    const s = state.tokens?.[t.address];
-    if (!t.qhooks && s?.px && known(s.px.eth) && now() - s.px.at < LIMITS.PRICE_MS && quoteUsd && known(t.units)) {
+    const s = state.tokens?.[t.address], posUsd = usdOf(s);
+    if (!t.qhooks && s?.px && known(s.px.eth) && now() - s.px.at < LIMITS.PRICE_MS && posUsd && known(t.units)) {
       // the pool the wallet traded in, read on chain this pass: trackers lag or misprice thin RH tokens (GeckoTerminal had
       // ROOQ at 5× its pool price on 2026-11-12)
-      t.priceUsd = s.px.eth * quoteUsd; t.valueUsd = t.units * t.priceUsd; t.priceSource = 'pool'; touched = true;
+      t.priceUsd = s.px.eth * posUsd; t.valueUsd = t.units * t.priceUsd; t.priceSource = 'pool'; touched = true;
     }
     if (!t.qhooks && (t.cost == null || t.cost.source === 'chain')) {
       // re-derived on every apply: a new trade pending its price clears an earlier basis instead of leaving it wrong
-      const cost = costFromState(s, t, quoteUsd, cfg.quoteSymbol);
+      const cost = costFromState(s, t, posUsd, s?.quote || cfg.quoteSymbol);
       if (cost || t.cost) { t.cost = cost; touched = true; }
     }
   }
@@ -332,10 +365,41 @@ export function candidates(chain, cfg) {
     .sort((a, b) => (b.valueUsd ?? 0) - (a.valueUsd ?? 0));
 }
 
-const KEY = 'qhooks:wallet-pnl:v1:';
+/// walletpos: a wallet's position in one token, average-cost basis, from its kept history and fresh chain reads.
+/// held/supply are raw base units read now; priceQuote is quote per token now; quoteUsd is USD per quote unit now.
+/// Basis fields are null unless the history explains the whole balance (complete).
+export function positionFrom({s, decimals, heldRaw, supplyRaw, priceQuote = null, quoteUsd = null}) {
+  if (!Number.isInteger(decimals) || heldRaw == null) return null;
+  const heldBig = big(heldRaw), held = num(heldBig, decimals), supply = big(supplyRaw);
+  const supplyPct = supply > 0n ? Number(heldBig * 10_000_000_000n / supply) / 1e8 : null; // percent, 8 decimals
+  const netBig = s ? big(s.bought) - big(s.sold) : 0n, gap = heldBig > netBig ? heldBig - netBig : netBig - heldBig;
+  const complete = !!s && !s.bad && s.prior === '0' && !(s.pending || []).length && netBig > 0n && gap * 1_000_000n <= netBig;
+  const qd = s?.qd ?? 18, quoteSymbol = s?.quote || 'ETH';
+  const bought = s ? num(big(s.bought), decimals) : 0, sold = s ? num(big(s.sold), decimals) : 0;
+  const spent = s ? num(big(s.spent), qd) : 0, received = s ? num(big(s.received), qd) : 0;
+  const avg = complete && bought > 0 && spent > 0 ? spent / bought : null;
+  const usd = v => v === null || !known(quoteUsd) ? null : v * quoteUsd;
+  const unrealizedQuote = avg !== null && known(priceQuote) ? held * (priceQuote - avg) : null;
+  const realizedQuote = avg !== null ? received - sold * avg : null;
+  const markers = (s?.trades || []).filter(r => Number.isSafeInteger(r.t)).map(r => {
+    const units = num(big(r.units), decimals), quote = num(big(r.quote), qd);
+    return {id: r.tx + ':' + r.side, tx: r.tx, at: r.t * 1000, side: r.side, quantity: units, priceQuote: units > 0 ? quote / units : null,
+      priceUsd: units > 0 && known(quoteUsd) ? quote / units * quoteUsd : null};
+  });
+  return {quantity: held, supplyPct, quoteSymbol, complete, bought, sold, spentQuote: spent, receivedQuote: received,
+    priceQuote: known(priceQuote) ? priceQuote : null, priceUsd: usd(known(priceQuote) ? priceQuote : null),
+    valueQuote: known(priceQuote) ? held * priceQuote : null, valueUsd: known(priceQuote) ? usd(held * priceQuote) : null,
+    averageEntryQuote: avg, averageEntryUsd: usd(avg),
+    unrealizedQuote, unrealizedUsd: usd(unrealizedQuote), unrealizedPercent: avg !== null && known(priceQuote) ? (priceQuote / avg - 1) * 100 : null,
+    realizedQuote, realizedUsd: usd(realizedQuote), realizedPercent: avg !== null && sold > 0 ? (received / (sold * avg) - 1) * 100 : null,
+    markers, source: 'chain'};
+}
+
+// v2 (walletpos): per-trade rows and the position's quote. A v1 state has neither, so it is read again from the chain.
+const KEY = 'qhooks:wallet-pnl:v2:';
 const defaultStorage = () => { try { return globalThis.localStorage || null; } catch { return null; } };
 function loadState(storage, k) {
-  try { const s = JSON.parse(storage?.getItem(KEY + k) || 'null'); return s && s.v === 1 ? s : {v: 1, tokens: {}, pons: {}}; } catch { return {v: 1, tokens: {}, pons: {}}; }
+  try { const s = JSON.parse(storage?.getItem(KEY + k) || 'null'); return s && s.v === 2 ? s : {v: 2, tokens: {}, pons: {}}; } catch { return {v: 2, tokens: {}, pons: {}}; }
 }
 function saveState(storage, k, s) { try { storage?.setItem(KEY + k, JSON.stringify(s)); } catch { /* private browsing: no kept state */ } }
 const plainFetch = (...args) => globalThis.fetch(...args);
@@ -344,7 +408,7 @@ const plainFetch = (...args) => globalThis.fetch(...args);
 ///  - apply(report): fills costs and chain prices from what this device already knows (sync, no reads); true if changed.
 ///  - refresh(report): one demand-driven pass of chain reads (bounded: MAX_TOKENS tokens, MAX_TXS txs, workMs), then
 ///    apply; resolves true if the report changed. One pass per wallet at a time; a second caller shares it.
-export function createOutsideCosts({fetchImpl = plainFetch, storage = defaultStorage(), now = Date.now, chains = PNL_CHAINS, workMs = LIMITS.WORK_MS} = {}) {
+export function createOutsideCosts({fetchImpl = plainFetch, priceFetch = plainFetch, storage = defaultStorage(), now = Date.now, chains = PNL_CHAINS, workMs = LIMITS.WORK_MS, gapMs = fetchImpl === plainFetch ? LIMITS.GAP_MS : 0} = {}) {
   const flights = new Map();
   const wallet = report => String(report?.address || '').toLowerCase();
   function apply(report) {
@@ -373,7 +437,7 @@ export function createOutsideCosts({fetchImpl = plainFetch, storage = defaultSto
       const thin = chain.tokens.filter(t => t.spam && t.spamReason === THIN && !t.qhooks && ADDR.test(t.address || '') && big(t.balance) > 0n).slice(0, LIMITS.MAX_TOKENS);
       const held = candidates(chain, cfg).filter(t => state.tokens[t.address]?.pool || due.includes(t)).slice(0, LIMITS.MAX_TOKENS * 2);
       if (!due.length && !thin.length && !held.length) continue;
-      const rpc = rpcClient(cfg.rpc, fetchImpl, Date.now() + workMs);
+      const rpc = rpcClient(cfg.rpc, fetchImpl, Date.now() + workMs, gapMs);
       let changed = false;
       try { if (due.length) changed = await advance({cfg, wallet: w, tokens: due, state: state.tokens, rpc, now}) || changed; } catch {}
       try { if (thin.length) changed = await ponsCurves({cfg, tokens: thin, state, rpc, now}) || changed; } catch {}
@@ -389,7 +453,53 @@ export function createOutsideCosts({fetchImpl = plainFetch, storage = defaultSto
     await flights.get(w);
     return apply(report);
   }
-  return {apply, refresh};
+  // ETH in dollars for a position's USD figures: the site's native price read (60 s server cache), kept a minute here.
+  let eth = null;
+  async function ethUsd() {
+    if (eth && Date.now() - eth.at < 60_000) return eth.v;
+    try { const r = await priceFetch('/api/funding/native-prices?symbols=ETH', {cache: 'no-store'}); const v = r.ok ? (await r.json())?.prices?.ETH : null; if (known(v) && v > 0) eth = {v, at: Date.now()}; } catch {}
+    return eth?.v ?? null;
+  }
+  const posFlights = new Map();
+  /// walletpos: the connected wallet's position in one token on its page, any venue. Reads now: its balance, the supply
+  /// and decimals (one batch), the history past the cursor only when the balance moved since (a new trade, ours or
+  /// elsewhere) or force, then the price (the traded pool or the Pons curve; hintPriceUsd otherwise). Null off-chain.
+  async function position({chainId, token, wallet: who, force = false, hintPriceUsd = null}) {
+    const cfg = chains[String(chainId)], t = String(token || '').toLowerCase(), w = String(who || '').toLowerCase();
+    if (!cfg || !ADDR.test(t) || !ADDR.test(w)) return null;
+    const k = String(chainId) + ':' + w, fk = k + ':' + t + (force ? ':f' : '');
+    if (posFlights.has(fk)) return posFlights.get(fk);
+    const run = (async () => {
+      const state = loadState(storage, k), rpc = rpcClient(cfg.rpc, fetchImpl, Date.now() + workMs, gapMs);
+      const [bal, sup, dec] = await rpc([['eth_call', [{to: t, data: '0x70a08231' + pad(w).slice(2)}, 'latest']],
+        ['eth_call', [{to: t, data: '0x18160ddd'}, 'latest']], ['eth_call', [{to: t, data: '0x313ce567'}, 'latest']]]);
+      const decimals = Number(big(dec));
+      if (!(decimals >= 0 && decimals <= 36) || !/^0x[0-9a-f]+$/i.test(String(bal || ''))) return null;
+      const heldRaw = big(bal), row = {address: t, decimals}, s0 = state.tokens[t];
+      const explained = !!s0 && !s0.bad && s0.prior === '0' && !(s0.pending || []).length && heldRaw === big(s0.bought) - big(s0.sold);
+      let changed = false;
+      if (heldRaw > 0n || s0) {
+        // a balance the kept history doesn't explain means a trade since the cursor: read past it now, not in a minute
+        for (let pass = 0; pass < 2; pass++) {
+          const s1 = state.tokens[t], open = !s1 || (s1.pending || []).length || (s1.prior !== '0' && !s1.bad);
+          if (pass && !open) break;
+          try { changed = await advance({cfg, wallet: w, tokens: [row], state: state.tokens, rpc, now, rescanMs: force || !explained ? 0 : LIMITS.RESCAN_MS}) || changed; } catch { break; }
+        }
+        try { changed = await poolPrices({tokens: [row], state: state.tokens, rpc, now}) || changed; } catch {}
+        try { changed = await ponsCurves({cfg, tokens: [row], state, rpc, now}) || changed; } catch {}
+        if (changed) saveState(storage, k, state);
+      }
+      const s = state.tokens[t], p = state.pons?.[t], usdEth = await ethUsd();
+      const quoteUsd = s?.quote && cfg.stable && s.quote === cfg.stable.symbol ? 1 : usdEth;
+      const priceQuote = s?.px && now() - s.px.at < LIMITS.PRICE_MS ? s.px.eth
+        : p?.curve && !p.graduated && known(p.price) ? p.price
+        : known(hintPriceUsd) && known(quoteUsd) && quoteUsd > 0 ? hintPriceUsd / quoteUsd : null;
+      return positionFrom({s, decimals, heldRaw: heldRaw.toString(), supplyRaw: big(sup).toString(), priceQuote, quoteUsd});
+    })().catch(() => null).finally(() => posFlights.delete(fk));
+    posFlights.set(fk, run);
+    return run;
+  }
+  return {apply, refresh, position};
 }
 let shared = null;
 /// The page's one instance (wallet view, portfolio page and holdings panel share its passes and its kept state).

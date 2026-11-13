@@ -4,6 +4,7 @@
 // calls, buybacks). Nothing is replayed or invented: motion only fires when a new trade, holder or call arrives.
 import { h, icon, RM, fmt, avatar, keeperAvatar, setArt, absUrl, bigPrice, changeLine, ticker, toast, toastHost, liveLabel, tabs, dock, supplyMap, countdown, restart, tag } from '/qx-a/components.mjs';
 import { mountShell } from '/qx-a/shell.mjs';
+import { shown, shownKids } from '/qx-shown.mjs';
 import { activityQuery } from '/qx-community-activity.mjs';
 import { profileUrl } from '/qx-profile-address.mjs';
 
@@ -554,8 +555,12 @@ function renderAbout(d) {
   if (!d.ext && feed.kind === 'simple') rows.push(['Launch', [feed.style ? feed.style[0].toUpperCase() + feed.style.slice(1) : 'Simple', feed.bonded ? 'bonded' : feed.progressBps != null ? (feed.progressBps / 100).toFixed(1) + '% to bond' : ''].filter(Boolean).join(' · ')]);
   if (m.token) rows.push(['Contract', h('span', { class: 'ta-who' }, EXPLORER[chainId] ? h('a', { href: EXPLORER[chainId] + (chainId === 'solana' ? '/token/' : '/token/') + m.token, target: '_blank', rel: 'noopener' }, fmt.short(m.token), icon('out')) : fmt.short(m.token))]);
   rows.push(['Chain', CHAIN[chainId] || chainId]);
-  aboutEl.replaceChildren(h('dl', { class: 'qa-kv ta-kv' }, rows.map(([k, v]) => h('div', null, h('dt', null, k), h('dd', null, v)))),
-    !d.ext ? h('p', { class: 'ta-builder-cta' }, h('a', { class: 'qa-btn qa-btn--secondary qa-btn--sm', href: '/create' }, 'Launch your own'), h('a', { class: 'qa-link', href: '/community#make-a-call' }, 'Make a call', icon('out'))) : null);
+  // walletpos: replaceChildren() prints null as the text "null" (an outside token has no launch CTA): only nodes go in, and
+  // rows whose value is missing are left out; with nothing to say the block hides.
+  const shownRows = rows.filter(([, v]) => v != null && (typeof v === 'object' || shown(v) !== null));
+  aboutEl.replaceChildren(...shownKids(shownRows.length ? h('dl', { class: 'qa-kv ta-kv' }, shownRows.map(([k, v]) => h('div', null, h('dt', null, k), h('dd', null, v)))) : null,
+    !d.ext ? h('p', { class: 'ta-builder-cta' }, h('a', { class: 'qa-btn qa-btn--secondary qa-btn--sm', href: '/create' }, 'Launch your own'), h('a', { class: 'qa-link', href: '/community#make-a-call' }, 'Make a call', icon('out'))) : null));
+  aboutEl.hidden = !aboutEl.childNodes.length;
 }
 
 /* ================= ticker band (desktop): other QHooks markets, live ================= */

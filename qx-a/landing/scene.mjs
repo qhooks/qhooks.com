@@ -91,14 +91,16 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
   const dustGeo = new THREE.BufferGeometry();
   { const rnd = seeded(5), p = new Float32Array(DUST * 3), s = new Float32Array(DUST); for (let i = 0; i < DUST; i++) { p[i * 3] = (rnd() - .5) * 7; p[i * 3 + 1] = -1.6 + rnd() * 7; p[i * 3 + 2] = (rnd() - .5) * 6; s[i] = rnd(); } dustGeo.setAttribute('position', new THREE.BufferAttribute(p, 3)); dustGeo.setAttribute('aSeed', new THREE.BufferAttribute(s, 1)); }
   const dustMat = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uPx: { value: 1 }, uFocus: { value: 6 }, uCenter: { value: new THREE.Vector3() }, uOpacity: { value: 1 } },
-    vertexShader: `attribute float aSeed; uniform float uTime, uPx, uFocus; uniform vec3 uCenter; varying float vA; varying float vS;
+    uniforms: { uTime: { value: 0 }, uPx: { value: 1 }, uFocus: { value: 6 }, uCenter: { value: new THREE.Vector3() }, uOpacity: { value: 1 }, uHook: { value: new THREE.Vector4(0, 0, 1, 1) } },
+    vertexShader: `attribute float aSeed; uniform float uTime, uPx, uFocus; uniform vec3 uCenter; uniform vec4 uHook; varying float vA; varying float vS;
       void main(){ vec3 p = position + uCenter; float w = uTime * (0.03 + 0.05 * aSeed);
         p.x += sin(w * 1.7 + aSeed * 31.0) * 0.35; p.y += sin(w * 1.1 + aSeed * 17.0) * 0.25 - mod(uTime * (0.02 + 0.03 * aSeed), 7.0) + 3.5; p.z += cos(w * 1.3 + aSeed * 11.0) * 0.3;
         vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * mv;
         float d = abs(-mv.z - uFocus); float blur = clamp(d / 3.0, 0.0, 1.0);
         float beam = exp(-position.x * position.x * 0.9) * (0.45 + 0.55 * smoothstep(-1.6, 3.0, p.y));
-        vA = (0.35 + 0.65 * aSeed) * beam * (1.0 - 0.85 * blur); vS = blur;
+        // clear of the hook: fade to nothing inside a capsule around the hook (x, y, scale in uHook.xyz), so no sprite sits on the barb
+        float hy = clamp(p.y, uHook.y - 1.15 * uHook.z, uHook.y + 1.2 * uHook.z); float dh = length(vec2(p.x - uHook.x, p.y - hy)); float keep = smoothstep(0.55 * uHook.z, 1.1 * uHook.z, dh);
+        vA = (0.35 + 0.65 * aSeed) * beam * (1.0 - 0.85 * blur) * keep; vS = blur;
         gl_PointSize = uPx * (1.0 + 1.4 * aSeed) * (1.0 + 1.6 * blur) * 20.0 / -mv.z; }`,
     fragmentShader: `uniform float uOpacity; varying float vA; varying float vS; void main(){ vec2 d = gl_PointCoord - 0.5; float r = length(d); if (r > 0.5) discard;
       float core = exp(-r * r * mix(22.0, 6.0, vS)); gl_FragColor = vec4(vec3(1.0, 0.92, 0.74) * core, core * vA * uOpacity * 0.55); }`,
@@ -138,6 +140,7 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
       for (let i = 0; i < p.vc * 3; i++) { const k = i % 3; pos[i] = (q[i] + 32767) / 65534 * (p.max[k] - p.min[k]) + p.min[k]; nor[i] = qn[i] / 127; }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); g.setIndex(new THREE.BufferAttribute(new Uint16Array(ix), 1));
       if (p.uv != null) { const quv = new Int16Array(buf, base + p.uv, p.vc * 2), uv = new Float32Array(p.vc * 2); for (let i = 0; i < p.vc * 2; i++) uv[i] = quv[i] / 32767 * 4; g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); }
+      if (p.material === 'GoldLit') continue; // the stud strip is not loaded: a second mesh on the shank z-fought and read as dashed segments
       model.add(new THREE.Mesh(g, MATS[p.material] || steelMat));
       if (p.material !== 'Thread') { const m = new THREE.Mesh(g, reflMat); m.renderOrder = 2; reflection.add(m); }
       if (p.material === 'Steel' || p.material === 'Gold') for (let i = 0; i < (p.material === 'Steel' ? 5600 : 1400); i++) { const vi = Math.floor(rnd() * p.vc) * 3; surface.push(pos[vi], pos[vi + 1], pos[vi + 2]); }
@@ -185,7 +188,8 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
   }
 
   /* ---------- post: bloom + the film's grade (vignette, grain, aberration, sweep, flash) ---------- */
-  const composer = new EffectComposer(renderer);
+  const msaaTarget = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: renderer.capabilities.isWebGL2 ? 4 : 0 }); // MSAA 4×: no shimmer along the hook's edges
+  const composer = new EffectComposer(renderer, msaaTarget);
   composer.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), .3, .4, .96); composer.addPass(bloom);
   composer.addPass(new OutputPass());
@@ -329,7 +333,7 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     // the real QHOOKS-burned total (units); fmt renders it the way the DOM does
     setBurned(value, fmt) { if (!(value > 0)) return; const same = burnedData.value === value; burnedData = { value, fmt: fmt || ((v) => String(Math.round(v))), text: (fmt || String)(value), at: same ? burnedData.at : t }; },
     coin(i) { if (i === nameIdx) { flashV = Math.max(flashV, .1); zoomV = Math.max(zoomV, .03); } },
-    get version() { return 'solid6'; },
+    get version() { return 'daymode7'; },
     setWord(txt) { forcedWord = txt ? String(txt) : null; nameIdx = -1; }, // the glyph gate renders each letter alone (null restores the chain words)
     setCall({ pct, label }) { callData = { pct, label }; },
     setBands(arr) { bands = Array.isArray(arr) && arr.length ? arr : null; },
@@ -347,7 +351,7 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
       const hookRightPx = px(new THREE.Vector3(.72, 0, 0).applyMatrix4(hookRoot.matrixWorld).project(camera)).x, hookLeftPx = px(new THREE.Vector3(-.72, 0, 0).applyMatrix4(hookRoot.matrixWorld).project(camera)).x;
       const burnBox = burnedG.visible ? { left: corner(burnedG, -2.3, 0).x, right: corner(burnedG, 2.3, 0).x, top: corner(burnedG, 0, .72).y, bottom: corner(burnedG, 0, -.72).y } : null;
       const hookBox = { left: hookLeftPx, right: hookRightPx, top: px(new THREE.Vector3(0, 1.18, 0).applyMatrix4(hookRoot.matrixWorld).project(camera)).y, bottom: px(new THREE.Vector3(0, -1.14, 0).applyMatrix4(hookRoot.matrixWorld).project(camera)).y };
-      return { version: 'solid6', nameBox, numBox, burnBox, hookBox, hookRightPx, hookLeftPx, P, forgeT, hook: { visible: hookRoot.visible, pos: hookRoot.position.toArray(), scale: hookRoot.scale.x, bottomPx: (1 - low.y) / 2 * H }, numberBottomPx: num ? (1 - num.y) / 2 * H : null, vaultBottomPx: Math.max(bn || 0, nm || 0) || null, cam: camera.position.toArray(), parts: model.children.length, dpr: DPR, bands }; },
+      return { version: 'daymode7', nameBox, numBox, burnBox, hookBox, hookRightPx, hookLeftPx, P, forgeT, hook: { visible: hookRoot.visible, pos: hookRoot.position.toArray(), scale: hookRoot.scale.x, bottomPx: (1 - low.y) / 2 * H }, numberBottomPx: num ? (1 - num.y) / 2 * H : null, vaultBottomPx: Math.max(bn || 0, nm || 0) || null, cam: camera.position.toArray(), parts: model.children.length, dpr: DPR, bands }; },
   };
 
   /* ---------- the frame ---------- */
@@ -385,7 +389,7 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     key.target.position.copy(hookPos); key.position.set(hookPos.x - 4, 6, 6);
     rim.position.set(hookPos.x + 4, 2, -3);
     shaft.position.set(hookPos.x, 0, 0); shaftMat.opacity = (.1 + .02 * Math.sin(t * .37)) * (ch === 'callers' || ch === 'holders' ? .6 : 1) + .15 * heat;
-    dustMat.uniforms.uTime.value = t; dustMat.uniforms.uCenter.value.set(hookPos.x, .2, 0); dustMat.uniforms.uFocus.value = cam.z; dustMat.uniforms.uOpacity.value = ch === 'callers' || ch === 'holders' ? .5 : 1;
+    dustMat.uniforms.uTime.value = t; dustMat.uniforms.uCenter.value.set(hookPos.x, .2, 0); dustMat.uniforms.uHook.value.set(hookPos.x, hookPos.y, hs, 1); dustMat.uniforms.uFocus.value = cam.z; dustMat.uniforms.uOpacity.value = ch === 'callers' || ch === 'holders' ? .5 : 1;
     pool.position.x = plinth.position.x = hookPos.x; pool.scale.setScalar(hs); plinth.scale.set(hs, 1, hs);
     const plinthOn = ch !== 'callers' && ch !== 'traders' && ch !== 'holders' && !PORT; plinth.visible = pool.visible = plinthOn && hs > .55;
     floor.visible = !PORT;
