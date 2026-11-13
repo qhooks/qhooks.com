@@ -14,10 +14,15 @@ const signedMoney = n => known(n) ? (n > 0 ? '+' : '') + money(n) : '—';
 export const chainName = c => names[c.chainId] || c.name || c.chainId;
 export const tradeHref = row => '/terminal#' + (row.qhooks ? 'm=' + row.chainId + ':' + row.qhooks.controller : 't=' + row.chainId + ':' + row.address);
 // walletpos: the chain's coin and its wrapped form are cash, not a position: their PnL is "—", never "unknown".
+const COST_NOTE = {pending: 'Reading this wallet’s buys and sells of this token from the chain.',
+ limited: 'This chain’s free endpoint doesn’t serve history this old, so the cost basis isn’t available here.',
+ none: 'No buy of this token found in this wallet’s history (received by transfer, or bought with another token).'};
 export const cashRow = r => !!r && (r.native === true || (!!r.address && String(r.address).toLowerCase() === String(wrapped[r.chainId] || '').toLowerCase()));
+// walletchains: a basis still being read from the chain says so ("refreshing"); one that can't be known says "—" with
+// the reason in its title, never "unknown".
 export function pnlText(cost, row = null) {
  if (cashRow(row)) return '—';
- if (!cost || !known(cost.pnlQuote)) return 'unknown';
+ if (!cost || !known(cost.pnlQuote)) return row?.costState === 'pending' ? 'refreshing' : '—';
  return (cost.pnlQuote > 0 ? '+' : '') + quantity(cost.pnlQuote) + ' ' + (cost.quoteSymbol || 'unknown') + (known(cost.pnlUsd) ? ' (≈ ' + money(cost.pnlUsd) + ')' : ' (≈ —)');
 }
 export function mergePortfolios(reports) {
@@ -177,7 +182,8 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
     r.spam ? h('span', {class: 'qp-reason'}, r.spamReason || 'Spam') : null),
    cell('Balance', quantity(r.units), 'qp-c-bal'), cell('Price', priceText(r.priceUsd), 'qp-c-price'), cell('Value', money(r.valueUsd), 'qp-c-val'),
    cell('24h', percent(r.change24), 'qp-c-chg ' + (r.change24 > 0 ? 'qp-positive' : r.change24 < 0 ? 'qp-negative' : '')),
-   h('div', {class: 'qp-pnl' + (r.cost && known(r.cost.pnlUsd) ? (r.cost.pnlUsd >= 0 ? ' qp-positive' : ' qp-negative') : ''), ...(r.cost ? {title: r.qhooks ? "Approximate USD value at the quote’s current price. Cost basis uses indexed QHooks trades and the last indexed launch price." : "Approximate USD value at the quote’s current price. Cost basis uses this wallet’s on-chain buys and sells."} : {})}, h('span', {class: 'qp-cell-label'}, 'PnL'), h('span', {class: 'qp-cell-value'}, pnlText(r.cost, r))),
+   h('div', {class: 'qp-pnl' + (r.cost && known(r.cost.pnlUsd) ? (r.cost.pnlUsd >= 0 ? ' qp-positive' : ' qp-negative') : ''), ...(r.cost ? {title: r.qhooks ? "Approximate USD value at the quote’s current price. Cost basis uses indexed QHooks trades and the last indexed launch price." : "Approximate USD value at the quote’s current price. Cost basis uses this wallet’s on-chain buys and sells."}
+    : r.costState && COST_NOTE[r.costState] ? {title: COST_NOTE[r.costState]} : {})}, h('span', {class: 'qp-cell-label'}, 'PnL'), h('span', {class: 'qp-cell-value'}, pnlText(r.cost, r))),
    h('a', {class: 'qa-btn qp-trade', href: tradeHref(r), 'aria-label': 'Trade ' + (r.symbol || 'token') + ' on ' + r.chainName}, 'Trade')))
    : [h('p', {class: 'qa-empty'}, current.rows.length ? 'No holdings match these filters.' : 'No holdings found in this reading.')]));
  }

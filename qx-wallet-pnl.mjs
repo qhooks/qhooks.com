@@ -19,16 +19,31 @@
 // its cursor (at most once a minute per token) plus one batched price read.
 import {keccak_256} from './full-launch/prototypes/qpools/client/vendor/hashes/sha3.js';
 
+// walletchains (2026-11-13): every EVM chain QHooks supports. Each row is that chain's free public endpoint (the page CSP
+// lists them, chains.mjs) and what it serves, probed 2026-11-13 with an address+topic eth_getLogs filter:
+//  - span: the widest log range one request may ask for;
+//  - history: false where the endpoint refuses old ranges ("archive requests require a personal token"); the scan backs
+//    off at that wall and the basis waits ("—" with the reason) instead of guessing.
+// QHooks' fee router (trade event) has code on Robinhood, Base, Arbitrum, BNB and Ethereum; Pons only on Robinhood.
+const ROUTER = '0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff';
+const stable = (address, symbol, decimals) => Object.freeze({address, symbol, decimals});
+const row = r => Object.freeze({...r, skip: Object.freeze(r.stable ? [r.stable.address] : [])}); // the chain's dollar is cash, not a position
 export const PNL_CHAINS = Object.freeze({
-  '4663': Object.freeze({
-    rpc: 'https://rpc.mainnet.chain.robinhood.com', span: 10_000_000, quoteSymbol: 'ETH',
-    wrapped: '0x0bd7d308f8e1639fab988df18a8011f41eacad73',
-    router: '0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff', // QHooks fee router (trade event below)
-    pons: '0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e', // PonsV2LaunchFactory (facts: MKTSEARCH-DELTA.md)
-    skip: Object.freeze(['0x5fc5360d0400a0fd4f2af552add042d716f1d168']), // USDG: a dollar, not a position
-    // walletpos: a position bought with the chain's dollar is costed in it (one quote per position; a mix stays unknown)
-    stable: Object.freeze({address: '0x5fc5360d0400a0fd4f2af552add042d716f1d168', symbol: 'USDG', decimals: 6}),
-  }),
+  '4663': row({rpc: 'https://rpc.mainnet.chain.robinhood.com', span: 10_000_000, quoteSymbol: 'ETH', wrapped: '0x0bd7d308f8e1639fab988df18a8011f41eacad73',
+    router: ROUTER, pons: '0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e', // PonsV2LaunchFactory (facts: MKTSEARCH-DELTA.md)
+    stable: stable('0x5fc5360d0400a0fd4f2af552add042d716f1d168', 'USDG', 6)}),
+  '8453': row({rpc: 'https://base-rpc.publicnode.com', span: 50_000, quoteSymbol: 'ETH', wrapped: '0x4200000000000000000000000000000000000006', router: ROUTER,
+    stable: stable('0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', 'USDC', 6)}),
+  '42161': row({rpc: 'https://arb1.arbitrum.io/rpc', span: 10_000_000, quoteSymbol: 'ETH', wrapped: '0x82af49447d8a07e3bd95bd0d56f35241523fbab1', router: ROUTER,
+    stable: stable('0xaf88d065e77c8cc2239327c5edb3a432268e5831', 'USDC', 6)}),
+  '56': row({rpc: 'https://bsc-rpc.publicnode.com', span: 50_000, quoteSymbol: 'BNB', wrapped: '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c', router: ROUTER,
+    stable: stable('0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', 'USDC', 18)}),
+  '1': row({rpc: 'https://ethereum-rpc.publicnode.com', span: 10_000, quoteSymbol: 'ETH', wrapped: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', router: ROUTER,
+    stable: stable('0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', 'USDC', 6)}),
+  // Monad's endpoint serves 100-block log reads: the scan goes back at most maxBack blocks (about 87 min, 10 views)
+  '143': row({rpc: 'https://rpc.monad.xyz', span: 100, maxBack: 13_000, quoteSymbol: 'MON', wrapped: '0x3bd359c1119da7da1d913d1c4d2b7c461115433a',
+    stable: stable('0x754704bc059f8c67012fed69bc8a327a5aafb603', 'USDC', 6)}),
+  '99901': row({rpc: 'https://rpc.elysium.kinetiq.xyz', span: 10_000_000, quoteSymbol: 'HYPE', wrapped: '0xba876237b0f021a6c6d852d6c26e107997cc5e81'}),
 });
 export const TOPIC = Object.freeze({
   transfer: '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
@@ -39,7 +54,7 @@ export const TOPIC = Object.freeze({
   curveSell: '0x8113d738abdcb6b38357e9d53a54a7157861a09031b453651f0fe7fe151f59df', // CurveSell(seller, recipient, tokensIn, quoteOut, fee, tax)
   v4Swap: '0x40e9cecb9f5f1f1c5b9c97dec2917b7ee92e57ba5563708daca94dd84ad7112f', // Swap(id, sender, amount0, amount1, …)
 });
-export const LIMITS = Object.freeze({MAX_TOKENS: 3, MAX_TXS: 12, WORK_MS: 12_000, CALL_MS: 4000, GAP_MS: 300, RESCAN_MS: 60_000, MIN_USD: 1, BATCH: 6, BAD_RETRY_MS: 86_400_000, PONS_MS: 600_000, PRICE_MS: 300_000});
+export const LIMITS = Object.freeze({MAX_TOKENS: 3, MAX_TXS: 12, WINDOWS: 12, WORK_MS: 12_000, CALL_MS: 4000, GAP_MS: 300, RESCAN_MS: 60_000, MIN_USD: 1, BATCH: 6, BAD_RETRY_MS: 86_400_000, PONS_MS: 600_000, PRICE_MS: 300_000});
 const ADDR = /^0x[0-9a-f]{40}$/, ZERO = '0x' + '0'.repeat(40);
 const pad = a => '0x' + a.slice(2).padStart(64, '0');
 const addrOf = topic => '0x' + String(topic || '').slice(-40).toLowerCase();
@@ -55,7 +70,7 @@ const known = n => typeof n === 'number' && Number.isFinite(n);
 export function classifyTx({tx, receipt, wallet, token, cfg, unitsIn = 0n, unitsOut = 0n}) {
   if (!tx || !receipt || receipt.status === '0x0') return null;
   const logs = Array.isArray(receipt.logs) ? receipt.logs : [], W = wallet, stable = cfg.stable?.address || null;
-  const quoteOf = a => a === ZERO || a === cfg.wrapped ? 'ETH' : stable && a === stable ? cfg.stable.symbol : null;
+  const native = cfg.quoteSymbol || 'ETH', quoteOf = a => a === ZERO || a === cfg.wrapped ? native : stable && a === stable ? cfg.stable.symbol : null;
   let paid = 0n, got = 0n, how = null, quote = null;
   for (const l of logs) {
     if (String(l.address).toLowerCase() !== cfg.router || l.topics?.[0] !== TOPIC.routed || addrOf(l.topics[1]) !== W) continue;
@@ -67,8 +82,8 @@ export function classifyTx({tx, receipt, wallet, token, cfg, unitsIn = 0n, units
   }
   if (!how) for (const l of logs) {
     if (addrOf(l.topics?.[2]) !== W) continue;
-    if (l.topics?.[0] === TOPIC.curveBuy && unitsIn > 0n) { paid += words(l.data)[0] ?? 0n; how = 'curve'; quote = 'ETH'; }
-    if (l.topics?.[0] === TOPIC.curveSell && unitsOut > 0n) { got += words(l.data)[1] ?? 0n; how = 'curve'; quote = 'ETH'; }
+    if (l.topics?.[0] === TOPIC.curveBuy && unitsIn > 0n) { paid += words(l.data)[0] ?? 0n; how = 'curve'; quote = native; }
+    if (l.topics?.[0] === TOPIC.curveSell && unitsOut > 0n) { got += words(l.data)[1] ?? 0n; how = 'curve'; quote = native; }
   }
   if (!how && String(tx.from).toLowerCase() === W) {
     let wethOut = 0n, wethIn = 0n, usdOut = 0n, usdIn = 0n, other = false;
@@ -81,23 +96,34 @@ export function classifyTx({tx, receipt, wallet, token, cfg, unitsIn = 0n, units
     }
     if (unitsIn > unitsOut) {
       const cost = big(tx.value) + wethOut - wethIn;
-      if (cost > 0n) { paid = cost; how = 'tx'; quote = 'ETH'; }
+      if (cost > 0n) { paid = cost; how = 'tx'; quote = native; }
       else if (usdOut > usdIn) { paid = usdOut - usdIn; how = 'tx'; quote = cfg.stable.symbol; }
     } else if (unitsOut > unitsIn) {
-      if (wethIn > wethOut) { got = wethIn - wethOut; how = 'tx'; quote = 'ETH'; }
+      if (wethIn > wethOut) { got = wethIn - wethOut; how = 'tx'; quote = native; }
       else if (usdIn > usdOut) { got = usdIn - usdOut; how = 'tx'; quote = cfg.stable.symbol; }
       else if (!other) {
         // A native-ETH v4 pool: ETH is currency0, and nothing but the token moved as an ERC-20, so the pool's positive
         // amount0 is the ETH that left it for this sell (any router fee comes off after; approximate).
         let eth = 0n;
         for (const l of logs) if (l.topics?.[0] === TOPIC.v4Swap) { const [a0 = 0n, a1 = 0n] = words(l.data).map(signed); if (a0 > 0n && a1 < 0n) eth += a0; }
-        if (eth > 0n) { got = eth; how = 'pool'; quote = 'ETH'; }
+        if (eth > 0n) { got = eth; how = 'pool'; quote = native; }
       }
     }
   }
   if (!how) return null;
   const at = parseInt(tx.blockTimestamp ?? receipt.blockTimestamp ?? logs[0]?.blockTimestamp ?? '', 16);
   return {paid, got, how, quote, at: Number.isSafeInteger(at) && at > 0 ? at : null, pool: tradedPool(logs, unitsIn - unitsOut, paid > 0n ? paid : got)};
+}
+/// An ABI-encoded string return (symbol()), or null. Printable characters only, at most 24.
+export function abiString(hexData) {
+  try {
+    const h = String(hexData || '').replace(/^0x/, ''); if (h.length < 128) return null;
+    const off = Number(BigInt('0x' + h.slice(0, 64))) * 2, len = Number(BigInt('0x' + h.slice(off, off + 64)));
+    if (!(len > 0 && len <= 64)) return null;
+    const bytes = h.slice(off + 64, off + 64 + len * 2).match(/../g).map(b => parseInt(b, 16));
+    const text = new TextDecoder().decode(Uint8Array.from(bytes)).replace(/[^\p{L}\p{N}\p{P}\p{S} ]/gu, '').trim().slice(0, 24);
+    return text || null;
+  } catch { return null; }
 }
 /// Decimals of a position's quote ('ETH' or the chain's stable).
 export const quoteDecimals = (cfg, quote) => quote && cfg.stable && quote === cfg.stable.symbol ? cfg.stable.decimals : 18;
@@ -195,16 +221,25 @@ function rpcClient(url, fetchImpl, deadline, gapMs = 0) {
       return JSON.parse(text);
     }
   };
-  return async calls => {
+  // walletchains: {soft: true} hands back {error} per failed item instead of failing the batch, so the caller can tell
+  // "this range is past the endpoint's history" from "try again"
+  return async (calls, {soft = false} = {}) => {
     const out = [];
     for (let i = 0; i < calls.length; i += LIMITS.BATCH) {
       const part = calls.slice(i, i + LIMITS.BATCH).map(([method, params]) => ({jsonrpc: '2.0', id: ++id, method, params}));
       const j = await post(part), byId = new Map((Array.isArray(j) ? j : [j]).map(x => [x?.id, x]));
-      for (const c of part) { const x = byId.get(c.id); if (!x || x.error || !Object.hasOwn(x, 'result')) throw new Error('rpc_error'); out.push(x.result); }
+      for (const c of part) {
+        const x = byId.get(c.id);
+        if (x && !x.error && Object.hasOwn(x, 'result')) out.push(x.result);
+        else if (soft) out.push({error: String(x?.error?.message || 'no answer')});
+        else throw new Error('rpc_error');
+      }
     }
     return out;
   };
 }
+// An endpoint that won't serve this range at all ("archive requests require a personal token", "block range too large"…)
+export const HISTORY_WALL = /archive|personal token|historical state|pruned|block range too large|exceed maximum block range|only \d+ are allowed/i;
 
 const fresh = () => ({lo: null, hi: null, prior: null, bought: '0', sold: '0', spent: '0', received: '0', pending: [], bad: false, at: 0});
 const merge = (pending, logs, wallet) => {
@@ -223,40 +258,69 @@ const net = (logs, wallet) => logs.reduce((n, l) => { const v = words(l.data)[0]
 
 /// Advances each token's state by one step of chain reads. Mutates `state` (token → state); returns true if it changed.
 /// Steps commit only when every read they need answered, so a 429 or the budget never leaves half a range behind.
+/// walletchains: up to WINDOWS windows forward (catching up a long gap) and back (finding where the position started) per
+/// token per view, each window the chain's span; going back stops where the balance is explained (prior 0) or at the
+/// endpoint's history wall (s.wall: the basis can't be found on the free endpoint).
 export async function advance({cfg, wallet, tokens, state, rpc, now = Date.now, rescanMs = LIMITS.RESCAN_MS}) {
   let changed = false;
   const [head] = await rpc([['eth_blockNumber', []]]), B = parseInt(head, 16);
   if (!Number.isSafeInteger(B) || B <= 0) return false;
-  const plan = [];
+  const span = cfg.span, W = LIMITS.WINDOWS, backFrom = s => s.prior !== '0' && !s.bad && !s.wall && s.lo > 0;
+  const backPlan = (t, s, n) => { const out = []; for (let k = 0, hi = s.lo - 1; k < n && hi >= 0; k++, hi -= span) out.push({t, s, kind: 'back', lo: Math.max(0, hi - span + 1), hi}); return out; };
+  // walletchains: windows go out a few at a time (one request each) and each lands in the state as it comes, so a pass
+  // cut short by its time budget (BNB's 13 windows take ~16 s) keeps what it read for the next view
+  const stop = new Set(), bad = r => r && !Array.isArray(r) && typeof r === 'object' && 'error' in r;
+  const run = async plan => {
+    for (let i = 0; i < plan.length; i += 3) {
+      const chunk = plan.slice(i, i + 3).filter(p => !stop.has(p.t.address + ':' + p.kind));
+      if (!chunk.length) continue;
+      const calls = [];
+      for (const p of chunk) {
+        p.at = calls.length;
+        calls.push(['eth_getLogs', [{address: p.t.address, topics: [TOPIC.transfer, null, pad(wallet)], fromBlock: hex(p.lo), toBlock: hex(p.hi)}]],
+          ['eth_getLogs', [{address: p.t.address, topics: [TOPIC.transfer, pad(wallet)], fromBlock: hex(p.lo), toBlock: hex(p.hi)}]]);
+        if (p.kind === 'first') calls.push(['eth_call', [{to: p.t.address, data: '0x70a08231' + pad(wallet).slice(2)}, hex(p.hi)]]);
+      }
+      let res;
+      try { res = await rpc(calls, {soft: true}); } catch { return; } // out of time or rate-limited: what landed stays
+      land(chunk, res);
+    }
+  };
+  const land = (plan, res) => {
+    for (const p of plan) { // in plan order: forward windows ascending, back windows newest first; a failed window stops that run
+      const s = p.s, key = p.t.address + ':' + p.kind;
+      if (stop.has(key)) continue;
+      const a = res[p.at], b = res[p.at + 1], bal = p.kind === 'first' ? res[p.at + 2] : null;
+      if (bad(a) || bad(b) || bad(bal)) {
+        if (p.kind === 'back' && HISTORY_WALL.test([a, b].filter(bad).map(r => r.error).join(' '))) { s.wall = p.hi; s.at = now(); changed = true; } // the endpoint's history stops here
+        stop.add(key); continue;
+      }
+      if (p.kind === 'back' && (s.prior === '0' || p.hi !== s.lo - 1)) { stop.add(key); continue; } // explained, or windows don't join
+      if (p.kind === 'forward' && p.lo !== s.hi + 1) { stop.add(key); continue; }
+      const logs = [...a, ...b], n = net(logs, wallet);
+      s.pending = merge(s.pending, logs, wallet);
+      if (p.kind === 'first') { s.lo = p.lo; s.hi = p.hi; s.prior = (big(bal) - n).toString(); }
+      else if (p.kind === 'forward') s.hi = p.hi;
+      else { s.lo = p.lo; s.prior = (big(s.prior) - n).toString(); }
+      if (big(s.prior) < 0n || (s.lo === 0 && s.prior !== '0')) s.bad = true; // rebasing, fee-on-transfer or a mint we can't see
+      // a chain whose endpoint only serves narrow windows (Monad: 100 blocks) stops going back at maxBack blocks
+      if (cfg.maxBack && s.prior !== '0' && !s.bad && B - s.lo + 1 >= cfg.maxBack) s.wall = s.lo - 1;
+      s.at = now(); changed = true;
+    }
+  };
+  // round 1: the newest window for a new token; forward windows past the cursor; back windows still owed
+  const plan = [], fresh1 = [];
   for (const t of tokens) {
     const s = state[t.address] ||= fresh();
     if (s.bad && now() - s.at < LIMITS.BAD_RETRY_MS) continue;
     if (s.bad) Object.assign(s, fresh());
-    if (s.hi === null) plan.push({t, s, kind: 'first', lo: Math.max(0, B - cfg.span + 1), hi: B});
-    else {
-      if (B > s.hi && now() - s.at >= rescanMs) plan.push({t, s, kind: 'forward', lo: s.hi + 1, hi: Math.min(B, s.hi + cfg.span)});
-      if (s.prior !== '0' && s.lo > 0) plan.push({t, s, kind: 'back', lo: Math.max(0, s.lo - cfg.span), hi: s.lo - 1});
-    }
+    if (s.hi === null) { plan.push({t, s, kind: 'first', lo: Math.max(0, B - span + 1), hi: B}); fresh1.push(t); continue; }
+    if (B > s.hi && now() - s.at >= rescanMs) for (let k = 0, lo = s.hi + 1; k < W && lo <= B; k++, lo += span) plan.push({t, s, kind: 'forward', lo, hi: Math.min(B, lo + span - 1)});
+    if (backFrom(s)) plan.push(...backPlan(t, s, W));
   }
-  const calls = [];
-  for (const p of plan) {
-    p.at = calls.length;
-    calls.push(['eth_getLogs', [{address: p.t.address, topics: [TOPIC.transfer, null, pad(wallet)], fromBlock: hex(p.lo), toBlock: hex(p.hi)}]],
-      ['eth_getLogs', [{address: p.t.address, topics: [TOPIC.transfer, pad(wallet)], fromBlock: hex(p.lo), toBlock: hex(p.hi)}]]);
-    if (p.kind === 'first') calls.push(['eth_call', [{to: p.t.address, data: '0x70a08231' + pad(wallet).slice(2)}, hex(p.hi)]]);
-  }
-  if (calls.length) {
-    const res = await rpc(calls);
-    for (const p of plan) {
-      const logs = [...res[p.at], ...res[p.at + 1]], s = p.s, n = net(logs, wallet);
-      s.pending = merge(s.pending, logs, wallet);
-      if (p.kind === 'first') { s.lo = p.lo; s.hi = p.hi; s.prior = (big(res[p.at + 2]) - n).toString(); }
-      else if (p.kind === 'forward') s.hi = p.hi;
-      else { s.lo = p.lo; s.prior = (big(s.prior) - n).toString(); }
-      if (big(s.prior) < 0n || (s.lo === 0 && s.prior !== '0')) s.bad = true; // rebasing, fee-on-transfer or a mint we can't see
-      s.at = now(); changed = true;
-    }
-  }
+  await run(plan);
+  // round 2: a new token the newest window didn't explain goes further back now, not on the next view
+  await run(fresh1.flatMap(t => { const s = state[t.address]; return backFrom(s) ? backPlan(t, s, W - 1) : []; }));
   // Price the txs: at most MAX_TXS per view, the rest on the next one.
   const work = tokens.flatMap(t => { const s = state[t.address]; return s && !s.bad ? s.pending.map(p => ({t, s, p})) : []; }).slice(0, LIMITS.MAX_TXS);
   if (work.length) {
@@ -353,28 +417,42 @@ export function applyState(chain, cfg, state, now = Date.now) {
       // re-derived on every apply: a new trade pending its price clears an earlier basis instead of leaving it wrong
       const cost = costFromState(s, t, posUsd, s?.quote || cfg.quoteSymbol);
       if (cost || t.cost) { t.cost = cost; touched = true; }
+      const state = isCandidate(t, cfg) ? (cost ? 'complete' : costState(s, t)) : null;
+      if ((t.costState ?? null) !== state) { if (state) t.costState = state; else delete t.costState; touched = true; }
     }
   }
   return touched;
 }
 
-/// Tokens worth a cost basis this view: held outside tokens with a value, most valuable first.
+/// A held outside token worth a cost basis: valued at MIN_USD or more, not the chain's coin or dollar, not a QHooks launch.
+export const isCandidate = (t, cfg) => ADDR.test(t.address || '') && !t.qhooks && (t.cost == null || t.cost.source === 'chain') && t.address !== cfg.wrapped && !cfg.skip.includes(t.address)
+  && big(t.balance) > 0n && Number.isInteger(t.decimals) && (known(t.valueUsd) ? t.valueUsd >= LIMITS.MIN_USD : false);
+/// Tokens worth a cost basis this view, most valuable first.
 export function candidates(chain, cfg) {
-  return (chain.tokens || []).filter(t => ADDR.test(t.address || '') && !t.qhooks && (t.cost == null || t.cost.source === 'chain') && t.address !== cfg.wrapped && !cfg.skip.includes(t.address)
-    && big(t.balance) > 0n && Number.isInteger(t.decimals) && (known(t.valueUsd) ? t.valueUsd >= LIMITS.MIN_USD : false))
-    .sort((a, b) => (b.valueUsd ?? 0) - (a.valueUsd ?? 0));
+  return (chain.tokens || []).filter(t => isCandidate(t, cfg)).sort((a, b) => (b.valueUsd ?? 0) - (a.valueUsd ?? 0));
+}
+/// walletchains: where a token's basis stands, so no view says "unknown" for good:
+///  'pending' — being read (or a pass will read it): "PnL refreshing";  'limited' — older than the chain's free endpoint
+///  serves; 'none' — the wallet got it some other way than a buy (transfer, airdrop) or in another quote.
+export function costState(s, token) {
+  if (!s) return 'pending';
+  if (s.bad) return 'none';
+  if (s.wall && s.prior !== '0') return 'limited';
+  if (s.prior !== '0' || (s.pending || []).length || s.hi === null) return 'pending';
+  const held = big(token?.balance), net = big(s.bought) - big(s.sold);
+  return held === net || (net > 0n && (held > net ? held - net : net - held) * 1_000_000n <= net) ? 'complete' : 'pending'; // a trade since the cursor
 }
 
 /// walletpos: a wallet's position in one token, average-cost basis, from its kept history and fresh chain reads.
 /// held/supply are raw base units read now; priceQuote is quote per token now; quoteUsd is USD per quote unit now.
 /// Basis fields are null unless the history explains the whole balance (complete).
-export function positionFrom({s, decimals, heldRaw, supplyRaw, priceQuote = null, quoteUsd = null}) {
+export function positionFrom({s, decimals, heldRaw, supplyRaw, priceQuote = null, quoteUsd = null, nativeSymbol = 'ETH'}) {
   if (!Number.isInteger(decimals) || heldRaw == null) return null;
   const heldBig = big(heldRaw), held = num(heldBig, decimals), supply = big(supplyRaw);
   const supplyPct = supply > 0n ? Number(heldBig * 10_000_000_000n / supply) / 1e8 : null; // percent, 8 decimals
   const netBig = s ? big(s.bought) - big(s.sold) : 0n, gap = heldBig > netBig ? heldBig - netBig : netBig - heldBig;
   const complete = !!s && !s.bad && s.prior === '0' && !(s.pending || []).length && netBig > 0n && gap * 1_000_000n <= netBig;
-  const qd = s?.qd ?? 18, quoteSymbol = s?.quote || 'ETH';
+  const qd = s?.qd ?? 18, quoteSymbol = s?.quote || nativeSymbol;
   const bought = s ? num(big(s.bought), decimals) : 0, sold = s ? num(big(s.sold), decimals) : 0;
   const spent = s ? num(big(s.spent), qd) : 0, received = s ? num(big(s.received), qd) : 0;
   const avg = complete && bought > 0 && spent > 0 ? spent / bought : null;
@@ -386,7 +464,8 @@ export function positionFrom({s, decimals, heldRaw, supplyRaw, priceQuote = null
     return {id: r.tx + ':' + r.side, tx: r.tx, at: r.t * 1000, side: r.side, quantity: units, priceQuote: units > 0 ? quote / units : null,
       priceUsd: units > 0 && known(quoteUsd) ? quote / units * quoteUsd : null};
   });
-  return {quantity: held, supplyPct, quoteSymbol, complete, bought, sold, spentQuote: spent, receivedQuote: received,
+  const state = complete ? 'complete' : !s ? 'pending' : s.bad ? 'none' : s.wall && s.prior !== '0' ? 'limited' : 'pending';
+  return {quantity: held, supplyPct, quoteSymbol, complete, state, bought, sold, spentQuote: spent, receivedQuote: received,
     priceQuote: known(priceQuote) ? priceQuote : null, priceUsd: usd(known(priceQuote) ? priceQuote : null),
     valueQuote: known(priceQuote) ? held * priceQuote : null, valueUsd: known(priceQuote) ? usd(held * priceQuote) : null,
     averageEntryQuote: avg, averageEntryUsd: usd(avg),
@@ -422,29 +501,31 @@ export function createOutsideCosts({fetchImpl = plainFetch, priceFetch = plainFe
     if (touched) report.totals = portfolioTotals(report.chains);
     return touched;
   }
+  // walletchains: each chain's pass runs at once (separate endpoints, separate paces)
   async function pass(report, w) {
-    let any = false;
-    for (const chain of report.chains) {
+    const done = await Promise.all(report.chains.map(async chain => {
       const cfg = chains[String(chain.chainId)];
-      if (!cfg || !Array.isArray(chain.tokens)) continue;
+      if (!cfg || !Array.isArray(chain.tokens)) return false;
       const k = String(chain.chainId) + ':' + w, state = loadState(storage, k);
       const due = candidates(chain, cfg).filter(t => {
         const s = state.tokens[t.address];
         if (!s) return true;
         if (s.bad) return now() - (s.at || 0) >= LIMITS.BAD_RETRY_MS;
+        if (s.wall && s.prior !== '0') return now() - (s.at || 0) >= LIMITS.RESCAN_MS; // past the endpoint's history: new trades only
         return s.pending?.length || s.prior !== '0' || now() - (s.at || 0) >= LIMITS.RESCAN_MS;
       }).slice(0, LIMITS.MAX_TOKENS);
-      const thin = chain.tokens.filter(t => t.spam && t.spamReason === THIN && !t.qhooks && ADDR.test(t.address || '') && big(t.balance) > 0n).slice(0, LIMITS.MAX_TOKENS);
+      const thin = cfg.pons ? chain.tokens.filter(t => t.spam && t.spamReason === THIN && !t.qhooks && ADDR.test(t.address || '') && big(t.balance) > 0n).slice(0, LIMITS.MAX_TOKENS) : [];
       const held = candidates(chain, cfg).filter(t => state.tokens[t.address]?.pool || due.includes(t)).slice(0, LIMITS.MAX_TOKENS * 2);
-      if (!due.length && !thin.length && !held.length) continue;
+      if (!due.length && !thin.length && !held.length) return false;
       const rpc = rpcClient(cfg.rpc, fetchImpl, Date.now() + workMs, gapMs);
       let changed = false;
       try { if (due.length) changed = await advance({cfg, wallet: w, tokens: due, state: state.tokens, rpc, now}) || changed; } catch {}
       try { if (thin.length) changed = await ponsCurves({cfg, tokens: thin, state, rpc, now}) || changed; } catch {}
       try { changed = await poolPrices({tokens: held, state: state.tokens, rpc, now}) || changed; } catch {}
-      if (changed) { saveState(storage, k, state); any = true; }
-    }
-    return any;
+      if (changed) saveState(storage, k, state);
+      return changed;
+    }));
+    return done.some(Boolean);
   }
   async function refresh(report) {
     const w = wallet(report);
@@ -453,12 +534,14 @@ export function createOutsideCosts({fetchImpl = plainFetch, priceFetch = plainFe
     await flights.get(w);
     return apply(report);
   }
-  // ETH in dollars for a position's USD figures: the site's native price read (60 s server cache), kept a minute here.
-  let eth = null;
-  async function ethUsd() {
-    if (eth && Date.now() - eth.at < 60_000) return eth.v;
-    try { const r = await priceFetch('/api/funding/native-prices?symbols=ETH', {cache: 'no-store'}); const v = r.ok ? (await r.json())?.prices?.ETH : null; if (known(v) && v > 0) eth = {v, at: Date.now()}; } catch {}
-    return eth?.v ?? null;
+  // The chain's coin in dollars for a position's USD figures (ETH, BNB, MON, HYPE): the site's native price read (60 s
+  // server cache), kept a minute here.
+  const natives = new Map();
+  async function nativeUsd(symbol = 'ETH') {
+    const hit = natives.get(symbol);
+    if (hit && Date.now() - hit.at < 60_000) return hit.v;
+    try { const r = await priceFetch('/api/funding/native-prices?symbols=' + encodeURIComponent(symbol), {cache: 'no-store'}); const v = r.ok ? (await r.json())?.prices?.[symbol] : null; if (known(v) && v > 0) natives.set(symbol, {v, at: Date.now()}); } catch {}
+    return natives.get(symbol)?.v ?? null;
   }
   const posFlights = new Map();
   /// walletpos: the connected wallet's position in one token on its page, any venue. Reads now: its balance, the supply
@@ -471,8 +554,9 @@ export function createOutsideCosts({fetchImpl = plainFetch, priceFetch = plainFe
     if (posFlights.has(fk)) return posFlights.get(fk);
     const run = (async () => {
       const state = loadState(storage, k), rpc = rpcClient(cfg.rpc, fetchImpl, Date.now() + workMs, gapMs);
-      const [bal, sup, dec] = await rpc([['eth_call', [{to: t, data: '0x70a08231' + pad(w).slice(2)}, 'latest']],
-        ['eth_call', [{to: t, data: '0x18160ddd'}, 'latest']], ['eth_call', [{to: t, data: '0x313ce567'}, 'latest']]]);
+      const [bal, sup, dec, sym] = await rpc([['eth_call', [{to: t, data: '0x70a08231' + pad(w).slice(2)}, 'latest']],
+        ['eth_call', [{to: t, data: '0x18160ddd'}, 'latest']], ['eth_call', [{to: t, data: '0x313ce567'}, 'latest']], ['eth_call', [{to: t, data: '0x95d89b41'}, 'latest']]], {soft: true});
+      if ([bal, sup, dec].some(r => r && typeof r === 'object' && 'error' in r)) return null;
       const decimals = Number(big(dec));
       if (!(decimals >= 0 && decimals <= 36) || !/^0x[0-9a-f]+$/i.test(String(bal || ''))) return null;
       const heldRaw = big(bal), row = {address: t, decimals}, s0 = state.tokens[t];
@@ -486,15 +570,17 @@ export function createOutsideCosts({fetchImpl = plainFetch, priceFetch = plainFe
           try { changed = await advance({cfg, wallet: w, tokens: [row], state: state.tokens, rpc, now, rescanMs: force || !explained ? 0 : LIMITS.RESCAN_MS}) || changed; } catch { break; }
         }
         try { changed = await poolPrices({tokens: [row], state: state.tokens, rpc, now}) || changed; } catch {}
-        try { changed = await ponsCurves({cfg, tokens: [row], state, rpc, now}) || changed; } catch {}
+        if (cfg.pons) try { changed = await ponsCurves({cfg, tokens: [row], state, rpc, now}) || changed; } catch {}
         if (changed) saveState(storage, k, state);
       }
-      const s = state.tokens[t], p = state.pons?.[t], usdEth = await ethUsd();
-      const quoteUsd = s?.quote && cfg.stable && s.quote === cfg.stable.symbol ? 1 : usdEth;
+      const s = state.tokens[t], p = state.pons?.[t], usdNative = await nativeUsd(cfg.quoteSymbol);
+      const quoteUsd = s?.quote && cfg.stable && s.quote === cfg.stable.symbol ? 1 : usdNative;
       const priceQuote = s?.px && now() - s.px.at < LIMITS.PRICE_MS ? s.px.eth
         : p?.curve && !p.graduated && known(p.price) ? p.price
         : known(hintPriceUsd) && known(quoteUsd) && quoteUsd > 0 ? hintPriceUsd / quoteUsd : null;
-      return positionFrom({s, decimals, heldRaw: heldRaw.toString(), supplyRaw: big(sup).toString(), priceQuote, quoteUsd});
+      const out = positionFrom({s, decimals, heldRaw: heldRaw.toString(), supplyRaw: big(sup).toString(), priceQuote, quoteUsd, nativeSymbol: cfg.quoteSymbol});
+      if (out) out.symbol = abiString(sym); // the token's own symbol(), for a page whose market didn't load
+      return out;
     })().catch(() => null).finally(() => posFlights.delete(fk));
     posFlights.set(fk, run);
     return run;

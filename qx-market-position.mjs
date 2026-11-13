@@ -11,11 +11,16 @@ const dollars=v=>v==null?'—':new Intl.NumberFormat('en-US',{style:'currency',c
 const gain=(usd,pct)=>dollars(usd)+(pct==null?'':' · '+(pct>0?'+':'')+pct.toFixed(2)+'%');
 const amount=(v,sym)=>v==null||!Number.isFinite(v)?null:(v>0?'+':v<0?'−':'')+Math.abs(v).toLocaleString('en-US',{maximumSignificantDigits:4})+' '+sym;
 const perUnit=(v,sym)=>v==null||!Number.isFinite(v)?null:priceDigits(v)+' '+sym;
-const percentOf=v=>v==null||!Number.isFinite(v)?'—':(v>0&&v<0.0001?'<0.0001':v.toLocaleString('en-US',{maximumSignificantDigits:4}))+'%';
+const percentOf=(v,held=0)=>v==null||!Number.isFinite(v)?'—':((v>0||held>0)&&v<0.0001?'<0.0001':v.toLocaleString('en-US',{maximumSignificantDigits:4}))+'%';
 const sameTx=(a,b)=>String(a||'').toLowerCase()===String(b||'').toLowerCase();
+// walletchains: what the chain position can say about its basis (qx-wallet-pnl.mjs costState)
+const NOTE={complete:sym=>'From this wallet’s on-chain buys and sells of '+sym+', any venue. Approximate.',
+  pending:sym=>'Balance read now. Entry and PnL refreshing: reading this wallet’s '+sym+' history.',
+  limited:sym=>'Balance read now. This chain’s free endpoint doesn’t serve history this old, so entry and PnL aren’t available here.',
+  none:sym=>'Balance read now. No buy of '+sym+' found in this wallet’s history (received by transfer, or bought with another token).'};
 export function mountMarketPosition({h,after,getSelection,getOwner,ticket,onChange=()=>{},fetcher=(...a)=>fetch(...a),now=Date.now,headersFor=tradeRecordHeaders,chainPosition=null}) {
   const panel=h('section',{class:'qxt-card qxt-market-position',ariaLabel:'My position',hidden:true});after.after(panel);
-  let key='',value=null,flight=0,lastRead=0,server=null,chain=null,seen=new Set(),seeded=false;
+  let key='',value=null,flight=0,lastRead=0,server=null,chain=null,seen=new Set(),seeded=false,paintedSym=null;
   function clear(){key='';value=null;server=null;chain=null;seen=new Set();seeded=false;flight++;lastRead=0;panel.hidden=true;panel.replaceChildren();onChange(null);}
   function combine(){
     if(chain?.complete)return {...chain,markers:mergeMarkers(chain.markers,server?.markers)};
@@ -26,7 +31,8 @@ export function mountMarketPosition({h,after,getSelection,getOwner,ticket,onChan
   function mergeMarkers(a=[],b=[]){const out=[...(a||[])];for(const m of b||[])if(!out.some(x=>sameTx(x.tx,m.tx)&&x.side===m.side))out.push(m);return out.sort((x,y)=>x.at-y.at);}
   function paint(s,owner,next){
     const same=(a,b)=>s.chainId==='solana'?a===b:a?.toLowerCase()===b?.toLowerCase();
-    const p=combine();value=p;panel.hidden=!(p?.quantity>0);panel.replaceChildren();
+    const p=combine();value=p;paintedSym=s.symbol||'';panel.hidden=!(p?.quantity>0);panel.replaceChildren();
+    const sym=s.symbol||p?.symbol||(s.token?s.token.slice(0,6)+'…'+s.token.slice(-4):'');
     if(!panel.hidden){
       const cell=(label,text,cls='')=>h('div',{},h('dt',{},label),h('dd',{class:cls},text));
       const actions=h('div',{class:'qxt-position-actions'},...[25,50,100].map(percent=>h('button',{type:'button',onclick:async()=>{
@@ -39,14 +45,14 @@ export function mountMarketPosition({h,after,getSelection,getOwner,ticket,onChan
       // the quote figure beside the dollars (chain positions): "+$108.42 · +20.03% · +0.05408 ETH"
       const withQuote=(text,v)=>[text,amount(v,q)].filter(Boolean).join(' · ');
       const rows=[];
-      if(p.supplyPct!=null)rows.push(cell('Of supply',percentOf(p.supplyPct)));
+      if(p.supplyPct!=null)rows.push(cell('Of supply',percentOf(p.supplyPct,p.quantity)));
       rows.push(cell('Avg entry',[dollars(p.averageEntryUsd),q&&p.averageEntryQuote!=null?perUnit(p.averageEntryQuote,q):null].filter(Boolean).join(' · ')));
       rows.push(cell(est+'Unrealised PnL',withQuote(gain(p.unrealizedUsd,p.unrealizedPercent),q?p.unrealizedQuote:null),p.unrealizedUsd<0?'down':'up'));
       rows.push(cell(est+'Realised PnL',withQuote(gain(p.realizedUsd,p.realizedPercent),q?p.realizedQuote:null),p.realizedUsd<0?'down':'up'));
       // DOM append() prints null as the text "null": only real nodes go in
-      panel.append(...[h('h2',{},'My position'),h('p',{class:'qxt-position-size'},p.quantity.toLocaleString('en-US',{maximumSignificantDigits:8})+' '+s.symbol,h('strong',{},dollars(p.valueUsd))),
+      panel.append(...[h('h2',{},'My position'),h('p',{class:'qxt-position-size'},p.quantity.toLocaleString('en-US',{maximumSignificantDigits:8})+' '+sym,h('strong',{},dollars(p.valueUsd))),
         h('dl',{},...rows),
-        p.source==='chain'?h('p',{class:'qxt-position-note'},p.complete?'From this wallet’s on-chain buys and sells of '+(s.symbol||'this token')+', any venue. Approximate.':'Balance read now. Entry and PnL need this wallet’s full history for '+(s.symbol||'this token')+'.'):null,
+        p.source==='chain'?h('p',{class:'qxt-position-note'},NOTE[p.state||(p.complete?'complete':'pending')](s.symbol||p.symbol||'this token')):null,
         actions].filter(Boolean));
     }
     onChange(value);
@@ -58,7 +64,8 @@ export function mountMarketPosition({h,after,getSelection,getOwner,ticket,onChan
     const same=(a,b)=>s.chainId==='solana'?a===b:a?.toLowerCase()===b?.toLowerCase();
     const next=[s.chainId,s.controller,s.token,account].join(':');
     if(next!==key){clear();key=next;}
-    if(!force&&!rescan&&now()-lastRead<5000)return;
+    // the market's name can land after the position (an outside token's header loads on its own): repaint, don't re-read
+    if(!force&&!rescan&&now()-lastRead<5000){if(value&&paintedSym!==null&&(s.symbol||'')!==paintedSym)paint(s,owner,next);return;}
     lastRead=now();const turn=++flight,live=()=>turn===flight&&next===key;
     const serverRead=(async()=>{
       try {

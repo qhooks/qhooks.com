@@ -29,6 +29,7 @@ export function buildWalletView(portfolio, activity) {
         address: native ? null : item.address, symbol: item.symbol || '—', name: item.name || item.symbol || '—',
         chainId, chainName: name, native, units: number(units), valueUsd,
         change24: number(item.change24), pnlUsd: number(item.cost?.pnlUsd), approximate: item.cost?.approximate === true,
+        pnlState: native ? null : item.costState || null, // walletchains: 'pending' reads "Refreshing", never "unknown"
         open: item.qhooks?.controller ? {chainId: String(item.qhooks.chainId ?? chainId), controller: item.qhooks.controller} : null,
       });
     };
@@ -216,7 +217,7 @@ export function renderWalletPanel(container, view, handlers = {}) {
     const row = el(holding.open ? 'button' : 'div', {class: 'qxfd-wallet-holding', ...(holding.open ? {type: 'button', 'aria-label': 'Open ' + holding.symbol + ' on ' + holding.chainName} : {})},
       el('span', {class: 'qxfd-wallet-identity'}, el('b', {}, holding.symbol), el('span', {class: 'qxfd-wallet-chip'}, holding.chainName)),
       metric('Amount', compact(holding.units)), metric('Value', usd(holding.valueUsd)),
-      metric('P&L', (holding.approximate && holding.pnlUsd !== null ? '≈ ' : '') + signedUsd(holding.pnlUsd), tone(holding.pnlUsd)),
+      metric('P&L', holding.pnlUsd === null && holding.pnlState === 'pending' ? 'Refreshing' : (holding.approximate && holding.pnlUsd !== null ? '≈ ' : '') + signedUsd(holding.pnlUsd), tone(holding.pnlUsd)),
       metric('24h', change(holding.change24), tone(holding.change24)));
     if (holding.open) row.addEventListener('click', () => handlers.onOpen?.(holding.open));
     return row;

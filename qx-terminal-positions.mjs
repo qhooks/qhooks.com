@@ -41,7 +41,7 @@ function holding(input, chain, owner, at) {
   return { chainId: chain, token, owner, native: false, balance, decimals: dec, units: amount,
     symbol: text(input.symbol, token.slice(0, 6) + '…' + token.slice(-4)), name: text(input.name), priceUsd,
     valueUsd: amount === 0 ? 0 : amount !== null && priceUsd !== null ? amount * priceUsd : null,
-    kind: controller ? 'launch' : 'external', controller, cost: controller || input.cost?.approximate === true ? input.cost || null : null,
+    kind: controller ? 'launch' : 'external', controller, cost: controller || input.cost?.approximate === true ? input.cost || null : null, costState: input.costState || null,
     flagged: input.spam === true, flagReason: text(input.spamReason), at };
 }
 
@@ -173,7 +173,7 @@ export function createPositionsPanel({ h, pane, getOwner, getSolOwner = () => nu
           ...(!row.native ? [h('code', { title: row.token }, row.token)] : [])),
         h('div', { class: 'qxpos-stats' }, cell(row.stale ? 'Last balance' : 'Available', quantity(row.units)), cell('Est. price', money(row.priceUsd)), cell('Est. value', money(row.valueUsd)),
           cell(row.kind === 'launch' ? 'Indexed avg buy' : 'Avg buy', cost ? quantity(cost.average) + ' ' + cost.quoteSymbol : 'Unavailable'),
-          cell('Est. P&L', cost ? (cost.pnlQuote > 0 ? '+' : '') + quantity(cost.pnlQuote) + ' ' + cost.quoteSymbol : 'Unavailable')),
+          cell('Est. P&L', cost ? (cost.pnlQuote > 0 ? '+' : '') + quantity(cost.pnlQuote) + ' ' + cost.quoteSymbol : row.costState === 'pending' ? 'Refreshing' : 'Unavailable')),
         row.flagged ? h('p', { class: 'qxpos-note' }, 'Needs review: ' + (row.flagReason || 'flagged by the data source')) : null,
         cost ? h('p', { class: 'qxpos-note' }, row.kind === 'launch' ? 'Approximate P&L from indexed QHooks trades only. It is not complete wallet history.' : 'Approximate P&L from this wallet’s on-chain buys and sells of this token.') : null,
         h('p', { class: 'qxpos-note' }, (row.stale ? 'Last observed balance ' : row.direct ? 'Balance checked ' : 'Portfolio snapshot read ') + (readTime || 'time unavailable') + '. Price and P&L estimates may have different coverage.'),
