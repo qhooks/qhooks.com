@@ -410,7 +410,7 @@ $("setup-agent").addEventListener("click", () => run(async () => {
   note("Fast trading is on.");
 }));
 $("forget-agent").addEventListener("click", () => run(async () => {
-  wallet.turnOff();
+  await wallet.turnOff();
   note("Local trading key removed. You can also remove QHooks in Hyperliquid\u2019s API wallet settings.");
 }));
 $("deposit-form").addEventListener("submit", (e) => {

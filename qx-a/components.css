@@ -555,3 +555,29 @@ a.qa-row:hover, button.qa-row:hover { background: var(--qa-wash); }
 /* solidbars (2026-11-12): sticky and fixed bars are solid like the header and tab bar, so nothing shows through them */
 :root :is(.qa-tabs--section, .qa-ribbon, .hd-toc, .hd--changelog .qcl-date, .ey-jump, .mn-me-nav, .qst-ws .studio-steps, .qst-studio .qj-nav, .qst-dock) {
   background: var(--qa-floor); -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* rowtight (2026-11-12, Randall: "make every horizontal token row a little narrower so more fit on the screen - maybe start 15-20%").
+   Phones only: about 18% less row height from vertical padding, line gaps and avatar size. Token name and price font sizes unchanged;
+   every row stays a tap target of at least 44 px. Phone-only and narrowly scoped, so !important beats the page rules. */
+@media (max-width: 699px) {
+  /* Portfolio holdings (105 → ~86) */
+  .mn-pf-list .qp-holding { padding-top: 8px !important; padding-bottom: 8px !important; row-gap: 1px !important; }
+  .mn-pf-list .qp-holding .qp-art { width: 36px !important; height: 36px !important; }
+  .mn-pf-list .qp-holding :is(.qp-c-bal, .qp-c-price, .qp-c-chg, .qp-pnl) { line-height: 16px !important; }
+  /* Token feed on the trading screen and Markets home (68 → ~56) */
+  html body.qa .qxfd-table tbody tr[data-key], html body table tbody tr:has(> td.qxfd-token) { padding-top: 7px !important; padding-bottom: 7px !important; row-gap: 0 !important; min-height: 50px !important; }
+  html body.qa .qxfd-table tbody tr[data-key] > td, html body.qa .qxfd-table tbody tr[data-key] :is(.qxfd-identity, .qxfd-age) { line-height: 1.12 !important; }
+  td.qxfd-token .qxfd-avatar { width: 36px !important; height: 36px !important; }
+  td.qxfd-token .qxfd-open { min-height: 36px !important; }
+  /* Markets cards (72 → ~58) */
+  .mkm-list .mk-card, section.mkm-list > .market-card { padding-top: 8px !important; padding-bottom: 8px !important; min-height: 0 !important; }
+  .mk-card .mk-card__coin { width: 36px !important; height: 36px !important; }
+  .mk-card .mk-card__id { row-gap: 0 !important; }
+  /* Discover hook rows (136 → ~116) */
+  .qd-rows .qd-row.qd-brow { padding-top: 9px !important; padding-bottom: 9px !important; row-gap: 2px !important; }
+  .qd-row.qd-brow .qd-board-meta { margin-top: 1px !important; }
+  .qd-row.qd-brow .qd-marks { margin-top: 3px !important; }
+  /* Smart-money buys (/wallets, 62 → ~52) */
+  li > a.qsm-buy { padding-top: 7px !important; padding-bottom: 7px !important; }
+  a.qsm-buy .qsm-buy-t > b, a.qsm-buy .qsm-buy-v > b { line-height: 19px !important; }
+}
