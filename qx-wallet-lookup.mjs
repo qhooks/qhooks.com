@@ -1,5 +1,6 @@
 import {profileUrl} from './qx-profile-address.mjs';
 import {chainById} from './chains.mjs';
+import {outsideCosts} from './qx-wallet-pnl.mjs';
 
 const EVM = /^0x[0-9a-fA-F]{40}$/;
 const SOLANA = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -47,28 +48,92 @@ export function buildWalletView(portfolio, activity) {
 }
 
 // Completed lookups are reused for a minute; cancellation never stores an incomplete response.
-export function createWalletLookup({fetcher = (...args) => fetch(...args), now = () => Date.now()} = {}) {
+// walletpnl (2026-11-12, Randall: "My balances don't load quickly"): the server answers a wallet from its last reading at
+// once and refreshes it in the background ("Refreshing"). When the caller passes onFresh, a Refreshing answer is read again
+// once that refresh has had time to land (FOLLOW_MS, at most twice); onFresh and the minute cache get the new view.
+// The last view per wallet is kept on this device, so a wallet seen before paints at once (lastWalletView).
+const VIEW_KEY = 'qhooks:wallet-view:v1:', VIEW_DAYS = 7, FOLLOW_MS = [3500, 7000];
+const defaultStorage = () => { try { return globalThis.localStorage || null; } catch { return null; } };
+export function lastWalletView(address, storage = defaultStorage(), now = Date.now()) {
+  try {
+    const kept = JSON.parse(storage?.getItem(VIEW_KEY + walletKey(String(address).trim())) || 'null');
+    return kept?.view && now - kept.at < VIEW_DAYS * 86400000 && Array.isArray(kept.view.holdings) ? kept.view : null;
+  } catch { return null; }
+}
+function keepWalletView(storage, key, view, now) {
+  try {
+    storage?.setItem(VIEW_KEY + key, JSON.stringify({at: now, view}));
+    const list = JSON.parse(storage?.getItem(VIEW_KEY + 'recent') || '[]').filter(k => k !== key);
+    list.unshift(key);
+    for (const old of list.splice(8)) storage?.removeItem(VIEW_KEY + old); // the 8 most recent wallets only
+    storage?.setItem(VIEW_KEY + 'recent', JSON.stringify(list));
+  } catch { /* private browsing: no kept view */ }
+}
+/// A wallet this device already knows (the connected one, a tracked one, or one opened here before): a pasted copy of
+/// it opens the wallet view at once, without first asking every chain whether it is a token.
+export function knownWallet(address, storage = defaultStorage()) {
+  const key = walletKey(String(address ?? '').trim());
+  if (!EVM.test(key) && !SOLANA.test(key)) return false;
+  try {
+    if (JSON.parse(storage?.getItem('qhooks:wallet-connection:v1') || 'null')?.owner === key) return true;
+    if (Object.keys(JSON.parse(storage?.getItem(TRACKED) || '{}') || {}).some(value => walletKey(value) === key)) return true;
+    return !!storage?.getItem(VIEW_KEY + key);
+  } catch { return false; }
+}
+// The demand cache marks an answer it served from its last reading with this header (and refreshing:true in the body).
+const refreshingAnswer = response => response.headers?.get?.('x-qhooks-cache') === 'refreshing';
+
+export function createWalletLookup({fetcher = (...args) => fetch(...args), now = () => Date.now(), storage = defaultStorage(), followMs = FOLLOW_MS, costs = null, wait = (ms, signal) => new Promise(resolve => { const t = setTimeout(resolve, ms); signal?.addEventListener?.('abort', () => { clearTimeout(t); resolve(); }, {once: true}); })} = {}) {
   const cache = new Map();
-  return async function lookup(address, {signal} = {}) {
+  return async function lookup(address, {signal, onFresh} = {}) {
     const kind = classifyQuery(address), key = walletKey(address.trim());
     if (kind === 'text') throw new TypeError('A full wallet address is required.');
     signal?.throwIfAborted();
     const cached = cache.get(key);
     if (cached && now() - cached.at < 60000) return cached.view;
-    const get = async path => {
+    let refreshing = false, last = null;
+    const get = async (path, portfolio = false) => {
       const response = await fetcher(path, {signal, cache: 'no-store'});
       if (!response.ok) throw new Error('Could not load this wallet.');
-      return response.json();
+      const body = await response.json();
+      if (portfolio && refreshingAnswer(response)) refreshing = true;
+      return body;
     };
-    const [portfolio, activity] = await Promise.all([
-      get('/api/portfolio/' + kind + '/' + encodeURIComponent(key)),
-      kind === 'evm' ? get('/api/terminal/activity?w=' + encodeURIComponent(key)) : null,
-    ]);
-    signal?.throwIfAborted();
-    if (!Array.isArray(portfolio?.chains) || (kind === 'evm' && !Array.isArray(activity?.trades))) throw new Error('Could not load this wallet.');
-    const view = buildWalletView({...portfolio, address: key}, activity);
-    cache.set(key, {at: now(), view});
-    if (cache.size > 40) cache.delete(cache.keys().next().value);
+    const read = async () => {
+      refreshing = false;
+      const [portfolio, activity] = await Promise.all([
+        get('/api/portfolio/' + kind + '/' + encodeURIComponent(key), true),
+        kind === 'evm' ? get('/api/terminal/activity?w=' + encodeURIComponent(key)) : null,
+      ]);
+      signal?.throwIfAborted();
+      if (!Array.isArray(portfolio?.chains) || (kind === 'evm' && !Array.isArray(activity?.trades))) throw new Error('Could not load this wallet.');
+      // outside-token costs this device already worked out (qx-wallet-pnl.mjs); a pass for the rest runs below
+      if (kind === 'evm' && costs) costs.apply({...portfolio, address: key}); // mutates the answer's chains in place
+      last = {portfolio, activity};
+      const view = buildWalletView({...portfolio, address: key}, activity);
+      if (refreshing) view.refreshing = true;
+      keepWalletView(storage, key, view, now());
+      cache.set(key, {at: now(), view}); // a follow-up read below replaces it with the refreshed view
+      if (cache.size > 40) cache.delete(cache.keys().next().value);
+      return view;
+    };
+    const view = await read();
+    if (kind === 'evm' && costs && typeof onFresh === 'function') {
+      const {portfolio, activity} = last, report = {...portfolio, address: key};
+      void costs.refresh(report).then(changed => {
+        if (!changed || signal?.aborted) return;
+        const next = buildWalletView(report, activity);
+        if (view.refreshing) next.refreshing = true;
+        keepWalletView(storage, key, next, now()); cache.set(key, {at: now(), view: next}); onFresh(next);
+      }, () => {});
+    }
+    if (refreshing && typeof onFresh === 'function') void (async () => {
+      for (const ms of followMs) {
+        await wait(ms, signal);
+        if (signal?.aborted) return;
+        try { const next = await read(); onFresh(next); if (!refreshing) return; } catch { return; }
+      }
+    })();
     return view;
   };
 }

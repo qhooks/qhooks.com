@@ -9,6 +9,9 @@ if (typeof window !== 'undefined' && !window.__qxRpcFallback) {
   // from the start (2026-11-10). Elysium too: its public RPC answers bursts with 429, and the proxy reads via Alchemy.
   const base = window.fetch.bind(window), viaProxy = new Set(['4663', '99901']); // both: the proxy reads through the Worker's Alchemy route
   window.fetch = async function (input, init) {
+    // walletpnl (2026-11-12): a caller that must stay on the free public RPC (the proxy reads through the Worker's paid
+    // route) marks its request; it handles a failed read itself.
+    if (init?.qhooksPublicOnly === true) return base(input, init);
     let url; try { url = new URL(typeof input === 'string' ? input : input?.url || ''); } catch { return base(input, init); }
     const chain = HOSTS[url.hostname], method = (init?.method || input?.method || 'GET').toUpperCase();
     if (!chain || method !== 'POST' || !init || typeof init.body !== 'string') return base(input, init);

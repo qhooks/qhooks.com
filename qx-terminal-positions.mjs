@@ -1,5 +1,7 @@
-// Wallet holdings, not a synthetic trade ledger. Outside-token cost basis stays unavailable.
+// Wallet holdings, not a synthetic trade ledger. Outside tokens carry the portfolio's approximate cost from the wallet's
+// own on-chain buys and sells (walletpnl, 2026-11-12) when it explains the whole holding; otherwise it stays unavailable.
 import { chainById } from './chains.mjs';
+import { outsideCosts } from './qx-wallet-pnl.mjs';
 const EVM = /^0x[0-9a-f]{40}$/i, SOL = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const known = n => typeof n === 'number' && Number.isFinite(n);
 const positive = n => known(n) && n > 0 ? n : null;
@@ -39,7 +41,7 @@ function holding(input, chain, owner, at) {
   return { chainId: chain, token, owner, native: false, balance, decimals: dec, units: amount,
     symbol: text(input.symbol, token.slice(0, 6) + '…' + token.slice(-4)), name: text(input.name), priceUsd,
     valueUsd: amount === 0 ? 0 : amount !== null && priceUsd !== null ? amount * priceUsd : null,
-    kind: controller ? 'launch' : 'external', controller, cost: controller ? input.cost || null : null,
+    kind: controller ? 'launch' : 'external', controller, cost: controller || input.cost?.approximate === true ? input.cost || null : null,
     flagged: input.spam === true, flagReason: text(input.spamReason), at };
 }
 
@@ -102,7 +104,7 @@ export async function readSelectedHolding({ selection, owner, signal }, { fetchI
 export function createPositionsPanel({ h, pane, getOwner, getSolOwner = () => null, getSelection = () => null,
   onOpen, onSell, onConnect, isVisible = () => true, fetchImpl = (...args) => globalThis.fetch(...args),
   readSelectedBalance = input => readSelectedHolding(input, { fetchImpl, now }), now = Date.now,
-  document = pane?.ownerDocument || globalThis.document } = {}) {
+  document = pane?.ownerDocument || globalThis.document, costs = outsideCosts() } = {}) {
   let revision = 0, actionRevision = 0, disposed = false, aborter, signature = null, selectionSignature = null;
   let reports = [], direct = null, pending = 0, failures = [], actionMessage = '', actionBusy = false, limit = 20;
   if (document?.head && !document.getElementById('qxt-positions-style')) document.head.append(h('link', {
@@ -170,10 +172,10 @@ export function createPositionsPanel({ h, pane, getOwner, getSolOwner = () => nu
         h('div', { class: 'qxpos-identity' }, h('b', {}, row.symbol), h('span', {}, chainName(row.chainId), row.native ? ' · Network coin' : rowKey(row) === chosen ? ' · Selected token' : ''),
           ...(!row.native ? [h('code', { title: row.token }, row.token)] : [])),
         h('div', { class: 'qxpos-stats' }, cell(row.stale ? 'Last balance' : 'Available', quantity(row.units)), cell('Est. price', money(row.priceUsd)), cell('Est. value', money(row.valueUsd)),
-          cell('Indexed avg buy', cost ? quantity(cost.average) + ' ' + cost.quoteSymbol : 'Unavailable'),
+          cell(row.kind === 'launch' ? 'Indexed avg buy' : 'Avg buy', cost ? quantity(cost.average) + ' ' + cost.quoteSymbol : 'Unavailable'),
           cell('Est. P&L', cost ? (cost.pnlQuote > 0 ? '+' : '') + quantity(cost.pnlQuote) + ' ' + cost.quoteSymbol : 'Unavailable')),
         row.flagged ? h('p', { class: 'qxpos-note' }, 'Needs review: ' + (row.flagReason || 'flagged by the data source')) : null,
-        cost ? h('p', { class: 'qxpos-note' }, 'Approximate P&L from indexed QHooks trades only. It is not complete wallet history.') : null,
+        cost ? h('p', { class: 'qxpos-note' }, row.kind === 'launch' ? 'Approximate P&L from indexed QHooks trades only. It is not complete wallet history.' : 'Approximate P&L from this wallet’s on-chain buys and sells of this token.') : null,
         h('p', { class: 'qxpos-note' }, (row.stale ? 'Last observed balance ' : row.direct ? 'Balance checked ' : 'Portfolio snapshot read ') + (readTime || 'time unavailable') + '. Price and P&L estimates may have different coverage.'),
         h('div', { class: 'qxpos-actions' },
           row.native ? h('span', { class: 'qxpos-note' }, 'Native balance is separate from wrapped-token holdings.') :
@@ -208,7 +210,12 @@ export function createPositionsPanel({ h, pane, getOwner, getSolOwner = () => nu
       const report = await boundedRead(async signal => {
         const response = await fetchImpl('/api/portfolio/' + family + '/' + owner, { cache: 'no-store', signal });
         if (!response.ok) throw new Error((family === 'evm' ? 'EVM' : 'Solana') + ' holdings are unavailable. Refresh to try again.');
-        return portfolioHoldings(await response.json(), { family, owner });
+        const body = await response.json();
+        if (family === 'evm' && costs) {
+          costs.apply(body); // outside-token costs this device knows; a pass for the rest repaints when it lands
+          void costs.refresh(body).then(changed => { if (changed && alive()) { try { reports = [...reports.filter(p => p.family !== family), { ...portfolioHoldings(body, { family, owner }), family }]; paint(); } catch {} } }, () => {});
+        }
+        return portfolioHoldings(body, { family, owner });
       }, aborter.signal);
       if (alive()) reports = [...reports.filter(previous => previous.family !== family), { ...report, family }];
     });

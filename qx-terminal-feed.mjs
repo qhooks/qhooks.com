@@ -5,7 +5,8 @@ import {fetchDexPairs,pickPair,rowPatch,applyRowPatch,DEX_CHAINS} from './qx-dex
 import {renderFeedFeedback} from './qx-terminal-feed-presentation.mjs';
 import {browserFeed,browserSearch,readCachedFeed,writeCachedFeed} from './qx-browser-market.mjs';
 import {applyTokenQuery} from './qx-tg-prefill.mjs';
-import {classifyQuery, createWalletLookup, renderWalletPanel} from './qx-wallet-lookup.mjs';
+import {classifyQuery, createWalletLookup, renderWalletPanel, knownWallet, lastWalletView} from './qx-wallet-lookup.mjs';
+import {outsideCosts} from './qx-wallet-pnl.mjs';
 import {tokenFacts} from './qx-token-venue.mjs';
 globalThis.__qxTokenQuery = globalThis.__qxTokenQuery || applyTokenQuery();
 import {
@@ -26,7 +27,7 @@ try { storage = window.localStorage; } catch {}
 const prefs = preferences(storage);
 const state = { ...prefs, tab: prefs.tab === 'launches' ? 'trending' : prefs.tab, markets: [], data: null,
   loading: false, error: null, query: '', hits: [], searching: false, searchError: null, wallet: null };
-const lookupWallet = createWalletLookup();
+const lookupWallet = createWalletLookup({costs: outsideCosts()}); // walletpnl: outside-token P&L from the wallet's own chain history
 let savedWindow;try{savedWindow=storage?.getItem('qxt:discover:window');}catch{}state.window=WINDOWS.some(([k])=>k===savedWindow)?savedWindow:'h6'; /* first open: 6h (Randall, 2026-11-09) */state.filters=validateDiscoveryFilters();
 if(WINDOWS.some(([key])=>key===state.sort.key)){state.window=state.sort.key;state.sort={...state.sort,key:'move'};savePreference(storage,'window',state.window);savePreference(storage,'sort',state.sort);}
 const savedViews=createMarketViews(storage);
@@ -442,15 +443,19 @@ function showWallet(wallet) {
   });
   renderRows();
 }
+// walletpnl (2026-11-12): a wallet opened here before paints its last view at once ("Refreshing") while the read runs; a
+// refreshing server answer is replaced once its refresh lands (onFresh), as long as this wallet is still the one shown.
 async function loadWallet(address, controller, mine) {
   loader.cancel();
-  showWallet({address, loading: true});
+  const kept = lastWalletView(address, storage);
+  showWallet(kept ? {address, view: {...kept, refreshing: true}} : {address, loading: true});
   const timer = setTimeout(() => controller.abort(), 12000);
+  const current = () => mine === searchGeneration && state.wallet?.address === address;
   try {
-    const view = await lookupWallet(address, {signal: controller.signal});
+    const view = await lookupWallet(address, {signal: controller.signal, onFresh: next => { if (current()) showWallet({address, view: next}); }});
     if (mine === searchGeneration) showWallet({address, view});
   } catch {
-    if (mine === searchGeneration) showWallet({address, error: true});
+    if (mine === searchGeneration && !kept) showWallet({address, error: true});
   } finally { clearTimeout(timer); }
 }
 // mktsearch (2026-11-12): a pasted contract is a token when symbol() and decimals() answer on a supported chain. The
@@ -481,6 +486,12 @@ async function runSearch({walletOnly = false} = {}) {
   state.searching = true; renderRows();
   const ceiling = setTimeout(() => controller.abort(), 12000);
   try {
+    // walletpnl: a wallet this device knows (connected, tracked or opened here before) is no token: open it at once.
+    if (kind !== 'text' && !walletOnly && knownWallet(query, storage)) {
+      clearTimeout(ceiling);
+      await loadWallet(query, controller, mine);
+      return;
+    }
     if (kind === 'evm' && !walletOnly) {
       const found = await tokenChain(query, chain, controller.signal);
       if (mine !== searchGeneration) return;

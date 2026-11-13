@@ -1,6 +1,7 @@
 import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
 import {profileUrl} from './qx-profile-address.mjs';
 import {LIVE} from './chains.mjs';
+import {outsideCosts} from './qx-wallet-pnl.mjs';
 
 const known = n => typeof n === 'number' && Number.isFinite(n);
 const names = Object.fromEntries(LIVE.map(c => [c.id, c.short]));
@@ -105,13 +106,15 @@ export function applyLive(state, feed) {
  }
  return {moved, delta, logos};
 }
-export const qhooksPnl = rows => sumKnown(rows.filter(r => !r.spam && r.cost).map(r => r.cost.pnlUsd));
+// QHooks launches only: tokens bought elsewhere carry a cost too since walletpnl (2026-11-12), and this line says "on QHooks trades".
+export const qhooksPnl = rows => sumKnown(rows.filter(r => !r.spam && r.cost && r.qhooks).map(r => r.cost.pnlUsd));
 
 export async function startPortfolio({document = globalThis.document, fetchImpl = (...args) => globalThis.fetch(...args),
  loadChain = () => import('/qx-chain.mjs'), loadWallet = () => import('/qx-account-wallet.mjs'),
  loadSol = () => import('/qx-solana.mjs'), loadEarningsModule = () => import('/qx-earnings.mjs'),
  storage = (() => { try { return globalThis.localStorage; } catch { return null; } })(), clipboard = globalThis.navigator?.clipboard,
- loadFeed = () => fetchImpl('/api/terminal/feed?chain=all', {cache: 'no-store'}).then(r => r.ok ? r.json() : null), liveMs = 15000} = {}) {
+ loadFeed = () => fetchImpl('/api/terminal/feed?chain=all', {cache: 'no-store'}).then(r => r.ok ? r.json() : null), liveMs = 15000,
+ costs = outsideCosts()} = {}) {
  const $ = id => document.getElementById(id);
  const root = $('qp-content'); if (!root) return;
  // Paint a working connect prompt before loading the heavier earnings and wallet code.
@@ -171,7 +174,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
     r.spam ? h('span', {class: 'qp-reason'}, r.spamReason || 'Spam') : null),
    cell('Balance', quantity(r.units), 'qp-c-bal'), cell('Price', priceText(r.priceUsd), 'qp-c-price'), cell('Value', money(r.valueUsd), 'qp-c-val'),
    cell('24h', percent(r.change24), 'qp-c-chg ' + (r.change24 > 0 ? 'qp-positive' : r.change24 < 0 ? 'qp-negative' : '')),
-   h('div', {class: 'qp-pnl' + (r.cost && known(r.cost.pnlUsd) ? (r.cost.pnlUsd >= 0 ? ' qp-positive' : ' qp-negative') : ''), ...(r.cost ? {title: "Approximate USD value at the quote’s current price. Cost basis uses indexed QHooks trades and the last indexed launch price."} : {})}, h('span', {class: 'qp-cell-label'}, 'PnL'), h('span', {class: 'qp-cell-value'}, pnlText(r.cost))),
+   h('div', {class: 'qp-pnl' + (r.cost && known(r.cost.pnlUsd) ? (r.cost.pnlUsd >= 0 ? ' qp-positive' : ' qp-negative') : ''), ...(r.cost ? {title: r.qhooks ? "Approximate USD value at the quote’s current price. Cost basis uses indexed QHooks trades and the last indexed launch price." : "Approximate USD value at the quote’s current price. Cost basis uses this wallet’s on-chain buys and sells."} : {})}, h('span', {class: 'qp-cell-label'}, 'PnL'), h('span', {class: 'qp-cell-value'}, pnlText(r.cost))),
    h('a', {class: 'qa-btn qp-trade', href: tradeHref(r), 'aria-label': 'Trade ' + (r.symbol || 'token') + ' on ' + r.chainName}, 'Trade')))
    : [h('p', {class: 'qa-empty'}, current.rows.length ? 'No holdings match these filters.' : 'No holdings found in this reading.')]));
  }
@@ -299,8 +302,21 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   if (!res.ok) throw new Error('unavailable');
   const report = await res.json();
   if (report.version !== 1 || report.address !== address || !Array.isArray(report.chains) || !report.totals) throw new Error('unavailable');
+  report.refreshing = res.headers?.get?.('x-qhooks-cache') === 'refreshing'; // served from the last reading, refresh running
+  keep(family, address, report);
+  if (family === 'evm') costs?.apply(report); // outside-token costs this device already knows (qx-wallet-pnl.mjs)
   return report;
  }
+ // walletpnl (2026-11-12, Randall: "My balances don't load quickly"): the last reading per wallet is kept on this device
+ // and painted at once while the fresh read runs; a reading the server marks Refreshing is read again once its refresh
+ // has had time to land (3.5 s, then 7 s; no more), so the page settles on fresh balances without a reload.
+ const KEEP = 'qhooks:portfolio:last:v1:';
+ function keep(family, address, report) { try { storage?.setItem(KEEP + family + ':' + address, JSON.stringify({at: Date.now(), report: {...report, refreshing: false}})); } catch { /* no kept reading */ } }
+ function kept(family, address) {
+  try { const v = JSON.parse(storage?.getItem(KEEP + family + ':' + address) || 'null'); return v?.report?.version === 1 && v.report.address === address && Date.now() - v.at < 7 * 86400000 ? {...v.report, refreshing: true} : null; }
+  catch { return null; }
+ }
+ let follow = 0, followTimer = 0;
  async function load(quiet = false) {
   if (disposed) return;
   const me = connectedAddress(), solana = sol.solAddress(), mine = ++sequence;
@@ -310,20 +326,40 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   if (!me && !solana) { current = null; stopLive(); earningsSequence++; return; }
   addresses(me, solana);
   if (changed) { current = null; stopLive(); $('qp-chains').replaceChildren(); }
-  if (changed || !quiet || !current) skeleton();
-  $('qp-refresh').disabled = true;
   const jobs = [...(me ? [['evm', me, 'EVM chains']] : []), ...(solana ? [['solana', solana, 'Solana']] : [])];
+  if (!quiet) { follow = 0; clearTimeout(followTimer); }
+  const last = (changed || !current) ? jobs.map(([family, address]) => kept(family, address)) : [];
+  const shownKept = last.length > 0 && last.every(Boolean);
+  if (shownKept) {
+   for (const r of last) if (r.address === me) costs?.apply(r);
+   current = mergePortfolios(last); if (feed) applyLive(current, feed);
+   paintOverview(); paintChips(); paintHoldings(); $('qp-at').textContent = 'Refreshing';
+  } else if (changed || !quiet || !current) skeleton();
+  $('qp-refresh').disabled = true;
   const timer = setTimeout(() => controller.abort(), 45000);
   try {
    const results = await Promise.allSettled(jobs.map(([family, address]) => read(family, address, controller.signal)));
    if (mine !== sequence || disposed) return;
    const reports = results.filter(r => r.status === 'fulfilled').map(r => r.value), failed = results.flatMap((r, i) => r.status === 'rejected' ? [jobs[i][2] + ': Refreshing balances'] : []);
+   if (!reports.length && shownKept) { $('qp-status').textContent = 'Refreshing portfolio. Refresh to try again.'; return; } // keep the kept reading
    current = mergePortfolios(reports);
    if (failed.length) { current.partial = true; current.change24 = null; current.change24Usd = null; }
    if (feed) applyLive(current, feed);
    paintOverview(failed); paintChips(); paintHoldings();
+   const refreshing = reports.some(r => r.refreshing);
+   if (refreshing) $('qp-at').textContent = 'Refreshing';
    $('qp-status').textContent = reports.length ? 'Portfolio updated.' : 'Refreshing portfolio. Refresh to try again.';
    if (reports.length) startLive();
+   clearTimeout(followTimer);
+   if (refreshing && follow < 2) followTimer = setTimeout(() => { follow++; void load(true); }, follow ? 7000 : 3500);
+   // outside tokens' cost basis and chain prices: one pass of reads from this device, then a quiet repaint
+   const evm = reports.find(r => r.address === me);
+   if (evm && costs) void costs.refresh(evm).then(changed => {
+    if (!changed || mine !== sequence || disposed) return;
+    current = mergePortfolios(reports); if (failed.length) { current.partial = true; current.change24 = null; current.change24Usd = null; }
+    if (feed) applyLive(current, feed);
+    paintOverview(failed); paintChips(); paintHoldings(); if (refreshing) $('qp-at').textContent = 'Refreshing';
+   }, () => {});
   } finally { clearTimeout(timer); if (mine === sequence) $('qp-refresh').disabled = false; }
  }
  $('qp-refresh').addEventListener('click', () => { void load(true); void earnings(connectedAddress()); });
@@ -333,7 +369,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
  onWalletChange(walletChanged);
  const stopSol = sol.onSolChange(() => { solPicker(); if (walletKey !== [connectedAddress(), sol.solAddress()].join(':')) walletChanged(); });
  solPicker(); walletChanged();
- return {refresh: () => load(true), dispose() { disposed = true; sequence++; earningsSequence++; aborter?.abort(); stopSol?.(); stopLive(); }};
+ return {refresh: () => load(true), dispose() { disposed = true; sequence++; earningsSequence++; aborter?.abort(); stopSol?.(); stopLive(); clearTimeout(followTimer); }};
 }
 if (typeof document !== 'undefined' && document.getElementById('qp-content')) startPortfolio().catch(() => {
  const line = document.getElementById('qp-status'); if (line) line.textContent = 'Could not load wallet tools. Reload to try again.';
