@@ -48,6 +48,7 @@ import {renderMarketHolders,holderSource} from '/qx-terminal-holders.mjs';
 import {renderChartHistory,renderTapeHistory,tapeHistoryState,refreshHistoryPresentation} from '/qx-terminal-history.mjs';
 import {createOnchainEvmFallback,renderOnchainHolderSample} from '/qx-terminal-onchain.mjs';
 import { parseTerminalHash, applyTradePrefill, readTokenBalance, openTerminalView, applyTokenQuery } from '/qx-tg-prefill.mjs';
+import {curveStatCells,curveSyncLine} from '/qx-curve-market.mjs';
 // ?chain=&token= deep links become #t= before anything reads the hash (shared with qx-terminal-feed.mjs).
 let paneReady=false;
 globalThis.__qxTokenQuery = globalThis.__qxTokenQuery || applyTokenQuery();
@@ -127,11 +128,12 @@ function selectedContext() {
  return Object.freeze({kind:state.sel.ext?'external':'launch',chainId:state.sel.chainId,token,controller:state.sel.controller||null,
   revision:selectionFlow?.current()?.intent?.revision??mseq,symbol:meta?.symbol||'',name:meta?.name||'',decimals:state.data?.token?.decimals??null,
   priceUsd:summary.priceUsd??(state.data?.ext||stable(meta?.quoteSymbol)?summary.price??null:null),priceQuote:summary.price??null,quoteSymbol:meta?.quoteSymbol||'',
-  liquidityUsd:state.data?.ext?summary.liquidity??null:null,change24:summary.change24??null});
+  liquidityUsd:state.data?.ext?summary.liquidity??null:null,change24:summary.change24??null,
+  route:(c=>c?(c.venue?.name||'Launchpad')+(c.phase==='pool'?' pool':' curve'):null)(state.data?.ext?state.data.token?.curve:null)});
 }
 function renderWorkspace() {
  if(!marketWorkspace)return;
- const selected=selectedContext(),asset=workspaceAsset(selected),key=asset?asset.key+':'+asset.token+':'+selected.revision:null,same=key===renderedWorkspaceKey;
+ const selected=selectedContext(),asset=workspaceAsset(selected),key=asset?asset.key+':'+asset.token+':'+selected.revision+':'+(selected.route||''):null,same=key===renderedWorkspaceKey;
  const prior=$('qxt-check-coverage').querySelector('details'),keepOpen=same&&prior?.open,summaryFocused=same&&prior?.querySelector('summary')===document.activeElement;
  const view=renderWorkspaceContext({h,selection:selected,snapshot:marketWorkspace.snapshot(),chainName:id=>CHAIN_NAME[id]||id,
   onRetry:()=>marketWorkspace.retry(),onCopy:async address=>{try{await navigator.clipboard.writeText(address);$('qxt-sync').textContent='Contract copied.';}catch{$('qxt-sync').textContent='Select and copy the displayed contract address.';}}});
@@ -610,11 +612,15 @@ function renderHead() {
   if (d.ext) {
     headTrust();
     const checks=marketWorkspace?.snapshot().checks,verdict={limited:['Limited checks',''],caution:['Caution','warn'],danger:['High risk','down'],unknown:['Refreshing…',''],unavailable:['Refreshing…',''],stale:['Refreshing…',''],pending:['Pending','']}[checks?.status]||['Pending',''];
+    // curves: a launchpad token's numbers come from its curve (d.curveStats once the curve's trades are read), with the
+    // bonding-progress cell after the price; "In the curve" is what the curve holds, not a pool's liquidity.
+    const cv=d.token?.curve||null,cs=cv&&d.curveStats?{...s,...Object.fromEntries(Object.entries(d.curveStats).filter(([,v])=>v!=null))}:s;
     $('qxt-stats').replaceChildren(
-      ...cell('Price', s.price!=null?'$'+price(s.price):'—'), ...cell('24h', pct(s.change24), s.change24 > 0 ? 'up' : s.change24 < 0 ? 'down' : ''),
-      ...cell('MCap', money(s.mcap, 'USD')), ...cell('Liquidity', money(s.liquidity, 'USD')), ...cell('Vol 24h', money(s.volume24, 'USD')),
-      ...cell('Buys / sells · 24h', Number.isFinite(s.buys24)&&Number.isFinite(s.sells24)?s.buys24+' / '+s.sells24:'—'), ...cell('Checks', verdict[0], verdict[1]));
-    $('qxt-sync').textContent = 'Chart pool '+short(d.token?.pools?.[0]?.address)+' · execution via '+(m.chainId==='solana'?'Jupiter':hasDirectRoute(m.chainId)?'the pool · QHooks router':'0x');
+      ...cell('Price', cs.price!=null?'$'+price(cs.price):'—'), ...cell('24h', pct(cs.change24), cs.change24 > 0 ? 'up' : cs.change24 < 0 ? 'down' : ''),
+      ...curveStatCells(h,cv),
+      ...cell('MCap', money(cs.mcap, 'USD')), ...cell(cv?.phase==='curve'?'In the curve':'Liquidity', money(cs.liquidity, 'USD')), ...cell('Vol 24h', money(cs.volume24, 'USD')),
+      ...cell('Buys / sells · 24h', Number.isFinite(cs.buys24)&&Number.isFinite(cs.sells24)?cs.buys24+' / '+cs.sells24:'—'), ...cell('Checks', verdict[0], verdict[1]));
+    $('qxt-sync').textContent = cv ? curveSyncLine(cv) : 'Chart pool '+short(d.token?.pools?.[0]?.address)+' · execution via '+(m.chainId==='solana'?'Jupiter':hasDirectRoute(m.chainId)?'the pool · QHooks router':'0x');
     return;
   }
   headTrust();
@@ -990,9 +996,11 @@ async function loadExternal({signal,strict=false}={}) {
     const fillOnchain=panels=>onchainEvm.fill({selection,panels,signal,isCurrent,getData:()=>state.data,onData:updated=>{state.data=updated;paintMarket();}}).catch(()=>{});
     void fillOnchain(['holders']);
     // History is independent: a delayed chart/tape cannot hold up ticket setup.
-    void loadExternalHistory({chainId,pool,tf,signal,token:ext,quote:selection.quote}).then(history=>{
+    void loadExternalHistory({chainId,pool,tf,signal,token:ext,quote:selection.quote,curve:data.token.curve||null}).then(history=>{
       if(!isCurrent())return;
-      state.data={...state.data,...history,...(history.candles?.length?{chartSurface:null}:{})};paintMarket();
+      state.data={...state.data,...history,...(history.candles?.length?{chartSurface:null}:{})};
+      // curves: the curve's own 24h numbers (its trades) replace the header's until the next header read carries them.
+      if(history.curveStats)state.data.summary={...state.data.summary,...Object.fromEntries(Object.entries(history.curveStats).filter(([,v])=>v!=null))};paintMarket();
       void fillOnchain(['candles','trades']);
     }).catch(()=>{});
     return true;
@@ -1007,7 +1015,8 @@ function applyLiveHeader(data,patch){
  Object.assign(data.summary,{price:patch.priceUsd,change24:patch.change24??data.summary.change24,mcap:patch.mcapUsd??data.summary.mcap,fdv:patch.fdvUsd??data.summary.fdv,liquidity:patch.liquidityUsd??data.summary.liquidity,volume24:patch.volume24Usd??data.summary.volume24,buys24:patch.buys24??data.summary.buys24,sells24:patch.sells24??data.summary.sells24,trades24:patch.buys24!=null&&patch.sells24!=null?patch.buys24+patch.sells24:data.summary.trades24});
 }
 async function refreshLiveHeader(){
- if(liveBusy||document.hidden||!state.sel?.ext||!state.data?.ext)return;
+ // curves: a launchpad token on its curve has no DexScreener pool of its own (only third-party ones), so its numbers stay the curve's.
+ if(liveBusy||document.hidden||!state.sel?.ext||!state.data?.ext||(state.data.token?.curve&&state.data.token.curve.phase!=='pool'))return;
  const {chainId,ext}=state.sel,key=chainId+':'+ext,pool=state.data.token?.pools?.[0]?.address;liveBusy=true;
  try{
   const pairs=await fetchDexPairs(chainId,[ext]);if(!pairs||state.sel?.ext!==ext||state.sel?.chainId!==chainId||!state.data?.ext)return;
@@ -1023,7 +1032,7 @@ async function selectExternal(chainId,address,{quiet=false}={}) {
   return selectionFlow.open({kind:'external',chainId,address,quiet},async run=>{
     await loadExternal({signal:run.controller.signal,strict:true});if(!run.active()||!state.data)return false;
     const t=state.data.token;
-    if(!await ticket.setExternal({chainId,address,symbol:t.symbol,decimals:t.decimals,pools:t.pools||[]},run.intent)||!run.active())return false;
+    if(!await ticket.setExternal({chainId,address,symbol:t.symbol,decimals:t.decimals,pools:t.pools||[],curve:t.curve||null},run.intent)||!run.active())return false;
     ticket.setPriceUsd(state.data.summary.price,run.intent);
     refreshSelectedChecks();
     poll=setInterval(()=>{if(!document.hidden)loadExternal();},15000);liveHeader=null;void refreshLiveHeader();

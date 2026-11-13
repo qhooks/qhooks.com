@@ -81,8 +81,10 @@ export async function outsideFacts(chainId, token, opts = {}) {
   } catch { return {symbol: null, decimals: null, pons: null}; }
 }
 
-/// Plain line for an ungraduated curve token: "AEON trades on a Pons bonding curve (not graduated yet, 40% of the way)."
+/// Plain line for an ungraduated curve token while its curve market is refreshing.
 export function curveLine(symbol, pons) {
   const pct = pons.progress == null ? '' : ', ' + Math.round(pons.progress * 100) + '% of the way';
-  return (symbol || 'This token') + ' trades on a ' + pons.venue + ' bonding curve (not graduated yet' + pct + '). Buy it on ' + pons.venue + ', or wait for it to graduate to a pool.';
+  // curves (2026-11-12): the page normally opens a curve token as a full market (qx-curve-market.mjs). This line shows only
+  // while that read is refreshing.
+  return (symbol || 'This token') + ' trades on a ' + pons.venue + ' bonding curve (not graduated yet' + pct + '). Refreshing its market…';
 }

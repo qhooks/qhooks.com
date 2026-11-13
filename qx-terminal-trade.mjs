@@ -8,6 +8,7 @@ import {homePicker, homeConfig, loadHomePref, instantHomeEnabled, withHomeRails}
 import {loadLocalHome, homeTicketDefault, homeName, homeToken, homeSlippage, homeReturnNeeded} from './qx-home-core.mjs';
 import {encodeBuyFor} from './qx-pro-xbuy.mjs';
 import { tradeError } from './qx-chain-guard.mjs';
+import {curveBuyQuote, curveNoRoute, curveFeeText} from './qx-curve-market.mjs';
 import { executeTicketSwap } from './qx-ticket-execution.mjs';
 import {pendingHomeBuy, dismissHomeBuy, homeBuyRecoveryView, finishHomeBuy} from './qx-home-buy-step.mjs';
 import {prepareTradeThesis,recordTerminalTrade} from './qx-trade-record.mjs';
@@ -375,12 +376,22 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   // Outside tokens go through our fee router too (swapVia), so they pay the same 30% cashback and 20% referral: the
   // router takes 1% (from the input on a buy, so 0x is quoted for the other 99%) and hands the rest to 0x.
   const xSpend = a => side === 'buy' ? a - a * FEE_BPS / 10000n : a;
+  // curves (2026-11-12): a token still on its launchpad curve (Pons V2) buys straight from the curve through the same fee
+  // router (QFeeRouter.swapVia → 0x AllowanceHolder.exec → curve.buy, recipient = the router), quoted from a fresh on-chain
+  // read; its sells and any non-native buy go through 0x, which must route them through the curve itself (never a
+  // third-party pool such as AEON's 56%-fee one).
+  const onCurve = () => st?.curve?.phase === 'curve';
   async function fetchXQuote(a,tolerance=tol) {
+    if (onCurve() && side === 'buy' && pay === 'native' && st.curve.quote?.native) {
+      const router = await extraAddress('feeRouter', st.chainId);
+      return curveBuyQuote({c: st.curve, amountIn: a, slippageBps: tolerance, router, feeBps: FEE_BPS, rpc, formatUnits});
+    }
     const me = connectedAddress(), { sell, buy } = xTokens();
     const q = new URLSearchParams({ chain: st.chainId, sell, buy, amount: xSpend(a).toString(), taker: me, side, slippageBps: String(tolerance), via: 'router' });
     const r = await fetch('/api/terminal/x/quote?' + q, { cache: 'no-store' });
     const body = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(body.error === 'official_pool' ? (body.detail || 'Trade this token through its official QHooks pool.') + ' Open it from the terminal search.' : body.error === 'trading_off' ? 'Trading outside tokens is not switched on yet.' : body.error === 'no_route' ? 'No route for this trade right now.' : body.detail || 'No quote right now.');
+    if (onCurve() && !(body.sources || []).some(x => /^pons/i.test(String(x)))) throw new Error('No route through the curve for this trade right now.');
     return body;
   }
   async function extQuote(mine, a, read) {
@@ -397,7 +408,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       presentQuote(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
         h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4) + (q.sources?.length ? ' · via ' + q.sources.map(s => s.replace(/_/g, ' ')).join(', ') : '')),
         ...impactNodes(impactPct),
-        feeLine(st.chainId, ' · routed by 0x'));
+        feeLine(st.chainId, q.direct ? ' · straight to the curve' : ' · routed by 0x'), ...(st.curve ? [h('span', {class: 'qxt-fee qxt-curve-fee'}, curveFeeText(st.curve))] : []));
       await offerFunding(mine);
     } catch (e) { if (mine === qseq) {current=null;go.disabled=true;out.textContent = e.message;} }
   }
@@ -913,10 +924,11 @@ if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} amount.value = '
         await syncHome(true); renderRisk(); await layout(); if (st.noRoute) { out.textContent = st.noRoute; go.disabled = true; } return isSelection(intent);
       }
       const [qa, qs, qd] = STABLE[t.chainId] || [null, null, null];
-      st = { ext: true, chainId: String(t.chainId), token: t.address, symbol: t.symbol || 'token', decimals: Number(meta.decimals ?? 18), quote: qa, quoteSymbol: qs, quoteDecimals: qd, safety: t.safety || null };
+      st = { ext: true, chainId: String(t.chainId), token: t.address, symbol: t.symbol || 'token', decimals: Number(meta.decimals ?? 18), quote: qa, quoteSymbol: qs, quoteDecimals: qd, safety: t.safety || null, curve: t.curve || null };
+      if (curveNoRoute(t.curve)) st.noRoute = curveNoRoute(t.curve);
       paySel.replaceChildren(h('option', { value: 'native' }, NATIVE[t.chainId]), ...(qa ? [h('option', { value: 'quote' }, qs)] : []));
       pay = 'native'; paySel.value = pay;
-      await syncHome(true); renderRisk(); await layout();return isSelection(intent);
+      await syncHome(true); renderRisk(); await layout();if (st.noRoute) { out.textContent = st.noRoute; go.disabled = true; } return isSelection(intent);
     },
     setSafety(v,intent=selection) { if (isSelection(intent)&&(st?.ext||st?.direct)) { st.safety = v; renderRisk(); } },
     // The market poll updates this every few seconds; a price tick must not disarm a pending "Confirm $X".

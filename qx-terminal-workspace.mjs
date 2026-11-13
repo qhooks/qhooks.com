@@ -218,7 +218,7 @@ export function workspaceLinks(selection) {
 export function renderWorkspaceContext({h,selection,snapshot,chainName=id=>id,onRetry=()=>{},onCopy=()=>{}}) {
  const asset=workspaceAsset(selection),health=snapshot.health,checks=snapshot.checks;
  if(!asset)return {identity:h('p',{class:'qxt-context-empty'},'Open a token to build your trading workspace.'),data:h('p',{class:'qxt-context-empty'},'Market data, coverage and community stay with the selected token.'),checks:null};
- const address=asset.token||asset.controller,links=workspaceLinks(asset),route=asset.kind==='launch'?'QHooks pool':asset.chainId==='solana'?'Jupiter route':'0x route';
+ const address=asset.token||asset.controller,links=workspaceLinks(asset),route=selection?.route||(asset.kind==='launch'?'QHooks pool':asset.chainId==='solana'?'Jupiter route':'0x route');
  const identity=h('div',{class:'qxt-identity-context'},
   h('span',{class:'qxt-chain-label'},chainName(asset.chainId)),h('span',{class:'qxt-route-label'},route),
   h('span',{class:'qxt-contract-kind'},asset.token?'Token contract':'Launch contract'),h('code',{class:'qxt-contract',title:address},String(address||'').length>14?String(address).slice(0,6)+'\u2026'+String(address).slice(-4):address),

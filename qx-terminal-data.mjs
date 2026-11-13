@@ -55,12 +55,33 @@ async function outsideVerdict({chainId,address,t,fetcher,signal,venue,early}){
  if(facts?.symbol)return venueError('No pool found for '+facts.symbol+' on '+chain+' yet.',{view:facts.symbol});
  return null;
 }
-export async function loadExternalHeader({chainId,address,tf,signal,fetcher=globalThis.fetch,retryMs=1200,dex,venue}){
- // On a launchpad chain the venue read starts beside the market read (one display-cached relay batch), so a curve token's
- // line doesn't wait for the market read to fail first.
+// curves (2026-11-12, Randall: "No I wanna buy it here"): a launchpad token (Pons V2 on Robinhood Chain) opens as a real
+// market built from the launchpad itself (/api/curve: price, market cap, bonding progress, the curve's own trades) with the
+// Buy/Sell ticket, instead of the "Buy it on Pons" line. Its curve read runs beside the market read; for any other token it
+// is one cached 404 and the page continues exactly as before.
+const curveHeaderData=(t,tf,chainId)=>headerData(t,tf,t.address,String(chainId));
+function headerData(t,tf,token,chainId){
+ return {ext:true,tf,token:t,receivedAt:Date.now(),safety:null,
+  meta:{symbol:t.symbol,name:t.name,token,chainId,quoteSymbol:'USD',owner:null},
+  summary:{price:t.priceUsd,change24:t.change24,mcap:t.mcapUsd??t.fdvUsd,supply:t.supply??null,fdv:t.fdvUsd,liquidity:t.liquidityUsd,volume24:t.volume24Usd,buys24:t.buys24,sells24:t.sells24,trades24:t.buys24!=null&&t.sells24!=null?t.buys24+t.sells24:null},
+  candles:[],trades:[],holders:[],traders:[],synced:{behind:0,at:0,block:0},
+  marketCoverage:{candles:'loading',trades:'loading'},historyFreshness:{candles:{loading:true},trades:{loading:true}}};
+}
+export async function loadExternalHeader({chainId,address,tf,signal,fetcher=globalThis.fetch,retryMs=1200,dex,venue,curves}){
+ const cm=String(chainId)==='solana'?null:curves||await import('./qx-curve-market.mjs').catch(()=>null);
+ const readCurve=()=>cm?cm.readCurve(chainId,address,{fetcher,signal}).catch(()=>undefined):Promise.resolve(null);
+ const curveP=readCurve();
+ // A curve's price and Buy don't wait on the DexScreener header: it gets 250 ms more (for a logo), then the page opens;
+ // the 15 s refresh picks it up later.
+ const headerP=serverHeader(chainId,address,signal,fetcher);
+ let curve=await curveP,got;
+ if(curve===undefined&&cm){await new Promise(r=>setTimeout(r,800));if(signal?.aborted)throw Error('aborted');curve=await readCurve();}
+ if(curve){got=await Promise.race([headerP,new Promise(r=>setTimeout(()=>r({status:-2}),250))]);return curveHeaderData(cm.curveHeader(curve,got.t||null),tf,chainId);}
+ got=await headerP;
+ // Not a launchpad curve: on a launchpad chain the venue read (a graduated or rescued launch, a dust pool) starts now,
+ // beside the retry below (one display-cached relay batch).
  let early=null;
  if(String(chainId)!=='solana'){const v=venue||await import('./qx-token-venue.mjs').catch(()=>null);if(v?.hasLaunchpad?.(chainId)){early=v.outsideFacts(chainId,address,{fetcher,signal});early.catch(()=>{});}}
- let got=await serverHeader(chainId,address,signal,fetcher);
  if(!got.t&&got.status!==404&&got.status!==-1){await new Promise(r=>setTimeout(r,retryMs));if(signal?.aborted)throw Error('aborted');got=await serverHeader(chainId,address,signal,fetcher);}
  if(!got.t){const t=await browserHeader({chainId,address,fetcher,dex}).catch(()=>null);if(t)got={t};}
  const verdict=await outsideVerdict({chainId,address,t:got.t,fetcher,signal,venue,early}).catch(e=>{if(signal?.aborted)throw e;return null;});
@@ -68,11 +89,7 @@ export async function loadExternalHeader({chainId,address,tf,signal,fetcher=glob
  if(!got.t)throw Error(got.status===404?'No market found for this token.':plainMarketError());
  const t=got.t,token=chainId==='solana'?t.address:t.address?.toLowerCase();
  if(token!==address||(t.chainId!=null&&String(t.chainId)!==chainId))throw Error('Token metadata does not match this selection. Choose the token again.');
- return {ext:true,tf,token:t,receivedAt:Date.now(),safety:null,
-  meta:{symbol:t.symbol,name:t.name,token,chainId,quoteSymbol:'USD',owner:null},
-  summary:{price:t.priceUsd,change24:t.change24,mcap:t.mcapUsd??t.fdvUsd,supply:t.supply??null,fdv:t.fdvUsd,liquidity:t.liquidityUsd,volume24:t.volume24Usd,buys24:t.buys24,sells24:t.sells24,trades24:t.buys24!=null&&t.sells24!=null?t.buys24+t.sells24:null},
-  candles:[],trades:[],holders:[],traders:[],synced:{behind:0,at:0,block:0},
-  marketCoverage:{candles:'loading',trades:'loading'},historyFreshness:{candles:{loading:true},trades:{loading:true}}};
+ return headerData(t,tf,token,chainId);
 }
 const GECKO_NET={'8453':'base','1':'eth','42161':'arbitrum','56':'bsc','4663':'robinhood','99901':'elysium','143':'monad',solana:'solana'};
 /// Recent swaps for one pool from GeckoTerminal, in the server's /x/trades shape. Null when unavailable.
@@ -125,7 +142,17 @@ export async function chainTrades({chainId,pool,token,quote,signal,fetcher=globa
   return {body:{trades:rows,coverage:{scope:'onchain_recent_swaps',provider:'QHooks RPC',windowBlocks:batches*windows*10000}},observedAt:Date.now(),stale:false};
  }catch{return null;}
 }
-export async function loadExternalHistory({chainId,pool,tf,signal,fetcher=globalThis.fetch,token=null,quote=null}){
+export async function loadExternalHistory({chainId,pool,tf,signal,fetcher=globalThis.fetch,token=null,quote=null,curve=null}){
+ // curves: the curve's own events. Graduated: the curve's history, then the pool's (read the usual way below).
+ if(curve&&token){
+  const cm=await import('./qx-curve-market.mjs'),body=await cm.curveHistory({chainId,token,tf,signal,fetcher}),own=body?cm.curveHistoryData(body,chainId):null;
+  if(curve.phase!=='pool'||!pool){if(own)return own;return {candles:[],trades:[],tradeCoverage:null,marketCoverage:{candles:'unavailable',trades:'unavailable'},historyFreshness:{candles:{available:false},trades:{available:false}}};}
+  const after=await loadExternalHistory({chainId,pool,tf,signal,fetcher,token,quote});
+  if(!own)return after;
+  const candles=mergeSwapCandles(own.candles,after.candles||[]),trades=[...(after.trades||[]),...own.trades];
+  return {...after,candles,trades,curveStats:null,marketCoverage:{candles:candles.length?'available':'unavailable',trades:trades.length?'available':'unavailable'},
+   historyFreshness:{candles:{...after.historyFreshness?.candles,available:candles.length>0},trades:{...after.historyFreshness?.trades,available:trades.length>0}}};
+ }
  async function read(kind){
   if(!pool||SERVER_SKIP.has(String(chainId)))return null;
   const controller=new AbortController(),abort=()=>controller.abort();

@@ -766,3 +766,13 @@ body.qa.qxt h1.ta-sym-h.ta-sym-wrap { white-space: normal; overflow-wrap: anywhe
 .ta-pcs-notes > summary { cursor: pointer; padding: 11px 0; color: var(--qa-tx-2); font-weight: 600; font-size: 13.5px; }
 .ta-proofpop__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--qa-rule); color: var(--qa-tx-3); font-size: 12.5px; }
 .ta-proofpop__full { display: inline-flex; align-items: center; gap: 6px; }
+
+/* curves (2026-11-12): a launchpad token still on its bonding curve. The progress stat takes the strip's first row, full
+   width, with a flat bar (no rounded pill, no rings); the curve fee line sits under the QHooks fee line in the ticket. */
+body.qa.qxt .qxt-stats:has(> .qxt-curve-cell) { flex-wrap: wrap; row-gap: 8px; }
+body.qa.qxt .qxt-stats > .qxt-curve-cell { order: -1; flex: 1 0 100%; min-width: 0; padding-left: 0; box-shadow: none; }
+body.qa.qxt .qxt-stats > .qxt-curve-cell dd { display: flex; flex-direction: column; gap: 8px; }
+.qxt-curve-bar { display: block; position: relative; height: 6px; border-radius: 1px; background: var(--qa-rule, rgba(255,255,255,.14)); overflow: hidden; }
+.qxt-curve-bar > i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--qa-buy, #2fd67b); }
+.qxt-curve-fee { display: block; }
+@media (min-width: 1100px) { body.qa.qxt .qxt-stats > .qxt-curve-cell { flex: 1 0 100%; padding: 4px 0 10px; } }
