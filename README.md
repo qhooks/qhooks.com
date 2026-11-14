@@ -14,8 +14,10 @@ QHOOKS token on Robinhood Chain (4663): 0x20429Af7cA3b0cE4d99EDBAA0693f26C5df051
 - **What changed:** <https://qhooks.com/changelog> (feed: <https://qhooks.com/changelog.xml>) · **What's next:** <https://qhooks.com/roadmap.html>
 
 ## What is and isn't here
-- Everything in this repository is served publicly at qhooks.com; nothing here is a secret. Wallet keys, post-quantum keys and
-  passphrases never leave the user's browser and are never sent to QHooks.
+- Everything in this repository is served publicly at qhooks.com; nothing here is a secret. Wallet keys and passphrases never
+  leave the user's browser. A post-quantum account key is encrypted in the browser; QHooks stores only that encrypted copy
+  (one per unlock method: passphrase, and Face ID / Touch ID via a passkey) and never receives anything that opens it.
+  The wallet or a QHooks sign-in alone cannot open it. Security reports: team@qhooks.com (see /.well-known/security.txt).
 - The server side (the Cloudflare Worker behind `/api/*`) and the core launch contracts are not included. The module template
   is public in the builder kit.
 - Third-party code keeps its own license: `vendor/lightweight-charts` (TradingView Lightweight Charts, Apache-2.0) and the

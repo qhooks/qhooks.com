@@ -9,15 +9,19 @@ export function encryptedQuantumBackup(backup,publicKey){
  if(typeof backup!=='string'||new TextEncoder().encode(backup).length>20000)throw Error('Choose an encrypted QHooks backup up to 20 KB.');
  const envelope=parseBackup(backup);if(publicKey&&publicKey!==envelope.publicKey)throw Error('The backup public key does not match.');return envelope;
 }
-const apiError=body=>({sign_in:'Sign in again to open your account key.',fresh_session_required:'Sign in again before replacing an account key.',different_key:'Your account already has a different quantum key. Import the matching key for this launch.',key_changed:'Your account key changed in another tab. Refresh the key before trying again.',wrong_origin:'Open QHooks directly to save your key.',quantum_unavailable:'Your account key could not be read or saved. Retry; your passphrase is still here.'})[body?.error]||'Your encrypted key could not be saved. Retry; your passphrase is still here.';
-// Wallet-signature wrap (2026-11-07). The account key's encrypted envelope is unlocked by a secret derived
-// from ONE fixed, domain-separated wallet signature, so a creator never handles a passphrase:
-// any device logged into the same wallet unlocks with one signature (Face ID for a Privy wallet).
-// Threat note: anyone able to sign this message with the wallet can unlock the key; they can already
-// move that wallet's funds, so the key adds no weaker link. The signature never leaves this tab and
-// is never stored; only the encrypted envelope goes to device storage and the account.
-// ECDSA wallets (RFC 6979) sign deterministically. Creation signs twice and refuses a wallet whose two
-// signatures differ (smart-contract/passkey wallets); those fall back to a passphrase.
+export const LEGACY_WRAP='Your key was kept with your QHooks sign-in, which no longer opens it. Import your backup file in Advanced, or make a new key below.';
+const apiError=body=>({sign_in:'Sign in again to open your account key.',fresh_session_required:'Sign in again before replacing an account key.',different_key:'Your account already has a different quantum key. Import the matching key for this launch.',key_changed:'Your account key changed in another tab. Refresh the key before trying again.',wrong_origin:'Open QHooks directly to save your key.',session_wrap_retired:'Reload QHooks: this page is out of date.',quantum_unavailable:'Your account key could not be read or saved. Retry; your passphrase is still here.'})[body?.error]||'Your encrypted key could not be saved. Retry; your passphrase is still here.';
+// Unlock methods (2026-11-13 security fix). The account key is a SECOND key: holding the wallet, or its
+// signed-in QHooks session, must never be enough to open it. The server stores only ciphertext, one copy per
+// unlock method, each sealed here in the browser:
+//  - Face ID / Touch ID: a passkey (WebAuthn PRF, or largeBlob) derives the wrapping key on the device;
+//    synced passkeys (iCloud Keychain, Google Password Manager) open it on the user's other devices.
+//  - Passphrase: the always-available backup (PBKDF2 in the browser).
+// Nothing that decrypts the key is ever sent to QHooks. The retired "session wrap" (a random secret stored
+// with the account) and "wallet-signature wrap" (a secret derived from one wallet signature) both let the
+// wallet alone open the key, so neither is created or used any more. Accounts left with only a session-wrapped
+// copy (server flag legacyWrap) are told to import a passphrase backup file or make a new key; launches tied
+// to the old key use the 30-day public recovery.
 export const WALLET_KEY_VERSION='w1';
 // Passphrase strength: any passphrase of 12+ characters whose estimated strength is about 70 bits or more.
 // The estimate is the character-pool size per character, minus long runs and repeats. Random
@@ -39,8 +43,8 @@ export async function walletKeySecret(signature,wallet,crypto=globalThis.crypto)
   const out=WALLET_KEY_VERSION+'.'+btoa(String.fromCharCode(...bits)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');bits.fill(0);return out;}
  finally{bytes.fill(0);}
 }
-export function createAccountQuantum({getConnection,sessions,fetcher=(...args)=>globalThis.fetch(...args),storage=()=>globalThis.localStorage,loadClient=()=>import('./qx-launch-engine.mjs').then(m=>m.loadStudioClient()),getExpectedKey=()=>null,passkeys=createQuantumPasskeyService(),sessionWrap=true}={}){
- let wallet=null,epoch=0,account=null,checked=false,signer=null,client=null,invalidSession=false,passphraseNeeded=false,walletUnsupported=false,pendingWalletSecret=null;
+export function createAccountQuantum({getConnection,sessions,fetcher=(...args)=>globalThis.fetch(...args),storage=()=>globalThis.localStorage,loadClient=()=>import('./qx-launch-engine.mjs').then(m=>m.loadStudioClient()),getExpectedKey=()=>null,passkeys=createQuantumPasskeyService(),}={}){
+ let wallet=null,epoch=0,account=null,checked=false,signer=null,client=null,invalidSession=false,passphraseNeeded=false,walletUnsupported=false;
  const owner=()=>validWallet(getConnection()?.owner);
  const deviceKey=()=>ACCOUNT_QUANTUM_PREFIX+wallet;
  const archiveKey=key=>deviceKey()+':'+key;
@@ -55,7 +59,7 @@ export function createAccountQuantum({getConnection,sessions,fetcher=(...args)=>
   try{write(archiveKey(publicKey),backup);if(!legacy)write(deviceKey(),backup);}catch{throw Error('Your encrypted key could not be saved on this device. Free browser storage and retry.');}
  }
  function select(){
-  if(owner()!==wallet){signer?.lock();signer=null;wallet=owner();account=null;checked=false;invalidSession=false;passphraseNeeded=false;walletUnsupported=false;pendingWalletSecret=null;epoch++;}
+  if(owner()!==wallet){signer?.lock();signer=null;wallet=owner();account=null;checked=false;invalidSession=false;passphraseNeeded=false;walletUnsupported=false;epoch++;}
  }
  function capture(){select();if(!wallet)throw Error('Connect your QHooks wallet first.');const expected=wallet,revision=epoch;
   return()=>{select();if(wallet!==expected||epoch!==revision)throw Error('Your wallet changed. Open the key for the connected account.');};
@@ -70,16 +74,16 @@ export function createAccountQuantum({getConnection,sessions,fetcher=(...args)=>
   const local=backup&&read(expected?archiveKey(expected):deviceKey())===backup;
   const onAccount=!!backup&&account?.backup===backup;
   const unlocked=!!matching&&signer.backupVerified&&!signer.locked,entry=devicePasskey(),supported=!!passkeys.support.available,passkeyVerified=supported&&testedPasskey(entry);
-  return {legacyLaunch:!!expected&&checked&&expected!==account?.publicKey,wallet,checked,backup,onAccount,onDevice:!!local,hasKey:!!backup,needsImport:!!expected&&!backup,needsSignIn:!!wallet&&(invalidSession||!sessions.boardSession()),unlocked,ready:unlocked&&!!local&&(onAccount||!!expected),signer:matching?signer:null,passkeySupported:supported,passkeyVerified,passphraseNeeded:passphraseNeeded||walletUnsupported,walletUnsupported,canEnrollPasskey:supported&&unlocked&&onAccount,canUnlockPasskey:passkeyVerified&&checked&&onAccount&&(!expected||entry.publicKey===expected)};
+  return {legacyLaunch:!!expected&&checked&&expected!==account?.publicKey,wallet,checked,backup,onAccount,onDevice:!!local,hasKey:!!backup,needsImport:!!expected&&!backup,needsSignIn:!!wallet&&(invalidSession||!sessions.boardSession()),unlocked,ready:unlocked&&!!local&&(onAccount||!!expected),signer:matching?signer:null,passkeySupported:supported,passkeyVerified,passphraseNeeded:passphraseNeeded||walletUnsupported,walletUnsupported,canEnrollPasskey:supported&&unlocked&&onAccount,canUnlockPasskey:supported&&!!entry&&checked&&onAccount&&(!expected||entry.publicKey===expected),hasPasskey:!!entry&&onAccount,legacyWrap:!!account?.legacyWrap&&onAccount,needsPassphraseBackup:unlocked&&!!account?.legacyWrap&&onAccount};
  }
- async function request(method='GET',backup,passkey,wrapSecret){
+ async function request(method='GET',backup,passkey,{replace=false}={}){
   const live=capture(),connection=sessions.capture();await connection.check();live();
   const auth=sessions.authHeaders();if(!auth.authorization)throw Error('Sign in to open your account key.');
-  const response=await fetcher('/api/account/quantum-key',{method,cache:'no-store',credentials:'omit',redirect:'error',headers:{...auth,...(backup?{'content-type':'application/json','if-match':String(account?.updatedAt??0)}:{})},...(backup?{body:JSON.stringify({backup,publicKey:encryptedQuantumBackup(backup).publicKey,...(passkey!==undefined?{passkey}:{}),...(wrapSecret!==undefined?{wrapSecret}:{})})}:{})});
+  const response=await fetcher('/api/account/quantum-key'+(replace?'?replace=1':''),{method,cache:'no-store',credentials:'omit',redirect:'error',headers:{...auth,...(backup?{'content-type':'application/json','if-match':String(account?.updatedAt??0)}:{})},...(backup?{body:JSON.stringify({backup,publicKey:encryptedQuantumBackup(backup).publicKey,...(passkey!==undefined?{passkey}:{})})}:{})});
   const value=await response.json().catch(()=>null);live();connection.assertCurrent();
   if(!response.ok){if(value?.error==='sign_in')invalidSession=true;throw Error(apiError(value));}
   if(value?.version!==1||value.wallet!==wallet||!Object.hasOwn(value,'key'))throw Error('The account key response did not match your wallet.');
-  if(value.key!==null){const key=value.key;encryptedQuantumBackup(key.backup,key.publicKey);if(key.passkey!==undefined)accountPasskey(key.passkey,key.publicKey);if(!Number.isSafeInteger(key.createdAt)||key.createdAt<=0||!Number.isSafeInteger(key.updatedAt)||key.updatedAt<key.createdAt)throw Error('The account key response was incomplete.');}
+  if(value.key!==null){const key=value.key;encryptedQuantumBackup(key.backup,key.publicKey);if(Object.hasOwn(key,'wrapSecret'))throw Error('The account key response was not accepted.');if(key.passkey!==undefined)accountPasskey(key.passkey,key.publicKey);if(!Number.isSafeInteger(key.createdAt)||key.createdAt<=0||!Number.isSafeInteger(key.updatedAt)||key.updatedAt<key.createdAt)throw Error('The account key response was incomplete.');}
   return value.key;
  }
  async function refresh({signIn=false}={}){
@@ -92,7 +96,7 @@ export function createAccountQuantum({getConnection,sessions,fetcher=(...args)=>
   if(next){remember(next.backup);rememberPasskey(next.passkey||null);}
   return snapshot();
  }
- async function save(backup,wrapSecret){
+ async function save(backup){
   const live=capture(),key=encryptedQuantumBackup(backup).publicKey,expected=getExpectedKey();
   if(expected&&key!==expected)throw Error('That key belongs to a different launch. Import the matching backup.');
   // An old in-progress launch can retain its own key without replacing the
@@ -102,7 +106,7 @@ export function createAccountQuantum({getConnection,sessions,fetcher=(...args)=>
   if(!checked)throw Error('Sign in and check your account key before saving.');
   // Keep a recovery copy even when the account write or connection fails.
   remember(backup,{legacy:!!account});
-  account=await request('PUT',backup,undefined,wrapSecret);live();remember(backup);
+  account=await request('PUT',backup);live();remember(backup);
  }
  function passphrases(passphrase,again){const bytes=new TextEncoder().encode(passphrase);
   if(!passphraseStrength(passphrase).ok)throw Error('Passphrase not strong enough yet: add a few more words.');
@@ -113,46 +117,40 @@ export function createAccountQuantum({getConnection,sessions,fetcher=(...args)=>
   if(getExpectedKey()&&!backup)throw Error('Import the encrypted key for this in-progress launch in Advanced.');
   client??=await loadClient();live();
   try{
-   if(backup){try{next=await client.restoreSigner(backup,passphrase);}catch{throw Error('That passphrase could not unlock this key. Try again.');}
-    // One-time move off the passphrase: re-wrap the same key with the wallet secret (same public key).
-    // One-time move off the passphrase: the same key is re-wrapped with a session secret (same public key).
-    if(sessionWrap&&!getExpectedKey()){try{const {wrapped,secret}=await sessionWrapped(next);live();await save(wrapped,secret);live();passphraseNeeded=false;signer?.lock();signer=next;next=null;return snapshot();}catch{}finally{pendingWalletSecret=null;}}}
+   if(backup){
+    if(account?.legacyWrap&&account.backup===backup)throw Error(LEGACY_WRAP);
+    try{next=await client.restoreSigner(backup,passphrase);}catch{throw Error('That passphrase could not unlock this key. Try again.');}
+    // The passphrase copy is saved as it is (syncs a device-only copy): no re-wrap, nothing that opens it leaves this tab.
+   }
    else{passphrases(passphrase,again);next=client.createSigner();backup=await next.exportBackup(passphrase);await next.verifyBackup(backup,passphrase);}
    live();await save(backup);live();signer?.lock();signer=next;next=null;return snapshot();
   }finally{next?.lock();}
  }
- const passphraseWalletKey=()=>ACCOUNT_QUANTUM_PREFIX+'passphrase-wallet:'+wallet;
- function markPassphraseWallet(){walletUnsupported=true;try{storage().setItem(passphraseWalletKey(),'1');}catch{}}
- function knownPassphraseWallet(){try{return storage().getItem(passphraseWalletKey())==='1';}catch{return false;}}
- async function walletSecret(){const c=sessions.capture();if(c.owner!==wallet)throw Error('Your wallet changed. Open the key for the connected account.');return walletKeySecret(await c.sign(walletKeyMessage(wallet)),wallet);}
- // The normal path: one wallet signature unlocks (or, first time, creates) the account key.
- // Session wrap: a random secret saved with the account and released only to this wallet's signed-in session.
- // The normal path for every wallet: no passphrase, no per-unlock signature beyond the session sign-in.
- const newWrapSecret=()=>{const b=crypto.getRandomValues(new Uint8Array(32));const t='s1.'+btoa(String.fromCharCode(...b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');b.fill(0);return t;};
- async function sessionWrapped(next){const secret=newWrapSecret(),wrapped=await next.exportBackup(secret);await next.verifyBackup(wrapped,secret);return{wrapped,secret};}
+ // Retired: the wallet or its sign-in alone never opens the key. Kept as a name so older callers get a clear answer.
  async function unlockWithWallet(){
-  const live=capture();await refresh({signIn:true});live();let backup=selectedBackup(),next;
-  if(getExpectedKey()&&!backup)throw Error('This unfinished launch used an older key that isn’t here. Use Start over to launch with your account key.');
-  // A launch started with the account key resumes; only launches that used their own older key need its passphrase.
-  if(getExpectedKey()&&getExpectedKey()!==account?.publicKey)throw Error('This unfinished launch used its own key. Enter that launch’s passphrase below, or use Start over.');
-  client??=await loadClient();live();
+  const live=capture();await refresh({signIn:true});live();passphraseNeeded=true;
+  const s=snapshot();
+  if(s.legacyWrap)throw Error(LEGACY_WRAP);
+  if(!s.hasKey)throw Error('Choose a passphrase to create your quantum key. Then add Face ID / Touch ID.');
+  throw Error(s.canUnlockPasskey?'Open your key with Face ID / Touch ID or your passphrase.':'Enter your key passphrase to open it.');
+ }
+ // A tab that holds the unlocked key while the account copy is still session-wrapped: seal it under a passphrase.
+ async function protectWithPassphrase(passphrase,again){
+  passphrases(passphrase,again);const live=capture();if(!signer||signer.locked)throw Error('Open your key first.');await refresh({signIn:true});live();
+  if(account&&account.publicKey!==signer.publicKeyHex)throw Error('Your account key changed. Refresh to use it.');
+  const encrypted=await signer.exportBackup(passphrase);await signer.verifyBackup(encrypted,passphrase);live();await save(encrypted);live();passphraseNeeded=false;return snapshot();
+ }
+ // An account whose only copy is session-wrapped cannot be opened any more: make a new passphrase key.
+ // Launches tied to the old key move to it through the contract's 30-day public recovery.
+ async function replaceKey(passphrase,again){
+  passphrases(passphrase,again);const live=capture();
+  await sessions.signIn();live();invalidSession=false;await refresh();live();
+  if(!account?.legacyWrap)throw Error('Your account key can still be opened. Use your passphrase or Face ID / Touch ID.');
+  client??=await loadClient();live();let next=client.createSigner();
   try{
-   if(backup&&account?.wrapSecret&&account.backup===backup){
-    try{next=await client.restoreSigner(backup,account.wrapSecret);}catch{throw Error('Your account key could not be opened. Refresh and try again.');}
-    live();passphraseNeeded=false;signer?.lock();signer=next;next=null;return snapshot();
-   }
-   if(backup){
-    // Keys made before the session wrap: wallet-signature keys open with one signature, then move to the session wrap.
-    let opened=null;
-    if(!knownPassphraseWallet()){try{const secret=await walletSecret();live();opened=await client.restoreSigner(backup,secret);}catch(e){if(/wallet changed/i.test(e?.message||''))throw e;}}
-    if(!opened){
-     // An old copy left only on this device while the account holds no key: start fresh (the old copy stays archived here).
-     if(!(checked&&!account)){passphraseNeeded=true;throw Error('This key was made with a passphrase. Enter it once below; after that it opens with your sign-in.');}
-     try{remember(backup,{legacy:true});}catch{}
-     next=client.createSigner();
-    }else next=opened;
-   }else next=client.createSigner();
-   const {wrapped,secret}=await sessionWrapped(next);live();await save(wrapped,secret);live();
+   const backup=await next.exportBackup(passphrase);await next.verifyBackup(backup,passphrase);live();
+   try{remember(account.backup,{legacy:true});}catch{}
+   remember(backup,{legacy:true});account=await request('PUT',backup,null,{replace:true});live();remember(backup);rememberPasskey(null);
    passphraseNeeded=false;signer?.lock();signer=next;next=null;return snapshot();
   }finally{next?.lock();}
  }
@@ -182,5 +180,5 @@ export function createAccountQuantum({getConnection,sessions,fetcher=(...args)=>
    signer?.lock();signer=next;next=null;return snapshot();
   }catch(error){try{storage().removeItem(attemptedProofKey);}catch{}throw error;}finally{next?.lock();}
  }
- return Object.freeze({snapshot,refresh,unlock,unlockWithWallet,importKey,changePassphrase,enablePasskey,unlockWithPasskey,async checkPasskeySupport(){await passkeys.detect();return snapshot();},exportCopy(){select();const backup=selectedBackup();if(!backup)throw Error('No encrypted key is available on this device. Sign in to read your account copy.');return backup;},lock(){signer?.lock();signer=null;epoch++;}});
+ return Object.freeze({snapshot,refresh,unlock,unlockWithWallet,protectWithPassphrase,replaceKey,importKey,changePassphrase,enablePasskey,unlockWithPasskey,async checkPasskeySupport(){await passkeys.detect();return snapshot();},exportCopy(){select();const backup=selectedBackup();if(!backup)throw Error('No encrypted key is available on this device. Sign in to read your account copy.');return backup;},lock(){signer?.lock();signer=null;epoch++;}});
 }
