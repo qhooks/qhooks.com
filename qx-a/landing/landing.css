@@ -230,3 +230,13 @@ body.l3-body { background: var(--qa-floor, #070807); }
   .l3-poster img { right: 16%; top: 4%; width: 320px; height: auto; max-width: none; }
   .l3-after { margin: 0; padding: 0; }
 }
+
+/* Give the font's painted glyphs room: tight line boxes clipped the gold S and crowded the close's descenders. */
+.l3-word { line-height: 1.08; padding-bottom: .06em; }
+.l3-ch__head, .l3-close { min-width: 0; }
+.l3-close h2 { line-height: 1.05; }
+.l3-close { gap: 24px; }
+@media (min-width: 1100px) {
+  .l3-ch__in, .l3-ch--traders .l3-ch__in, .l3-ch--close .l3-ch__in { grid-template-columns: minmax(0, 46fr) minmax(0, 54fr); }
+  .l3-close h2 { font-size: clamp(60px, 6.3vw, 100px); }
+}

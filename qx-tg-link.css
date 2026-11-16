@@ -1,6 +1,8 @@
 /* Telegram link sheet uses the terminal palette in both themes, independently of the selected token. */
 .qxt-tg-link{position:fixed;z-index:150;inset:auto 12px max(12px,env(safe-area-inset-bottom));width:auto;max-width:440px;max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));margin-inline:auto;overflow:auto;overscroll-behavior:contain;box-sizing:border-box;padding:20px max(20px,env(safe-area-inset-right)) 20px max(20px,env(safe-area-inset-left));border:1px solid var(--qx-line-2);border-radius:14px;background:var(--qx-panel);color:var(--qx-ink);box-shadow:0 12px 48px #0005;font:normal 14px/1.5 var(--qx-sans);overflow-wrap:anywhere}
 .qxt-tg-link h2{margin:0;font:600 18px/1.35 var(--qx-sans);letter-spacing:-.02em}
+.qxt-tg-head{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 -2px;padding:8px 2px;background:var(--qx-panel);touch-action:pan-x}
+.qxt-tg-head h2{min-width:0}.qxt-tg-link .qxt-tg-x{flex:none;width:44px;min-width:44px;height:44px;padding:0;border:0;border-radius:50%;font-size:24px}
 .qxt-tg-link .qxt-tg-description{margin:8px 0 18px;color:var(--qx-muted)}
 .qxt-tg-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
 .qxt-tg-link button{min-height:44px;padding:10px 14px;border:1px solid var(--qx-line-2);border-radius:8px;background:transparent;color:var(--qx-ink);font:500 14px/1.35 var(--qx-sans);white-space:normal;cursor:pointer}

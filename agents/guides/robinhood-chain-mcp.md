@@ -6,12 +6,12 @@ canonical: "https://qhooks.com/agents/guides/robinhood-chain-mcp"
 slug: "robinhood-chain-mcp"
 date: "2026-11-15"
 keywords: ["robinhood chain mcp"]
-draft: false
+draft: true
 ---
 
 # Robinhood Chain MCP in 2 minutes
 
-Connect your existing AI client to `https://qhooks.com/mcp`. QHooks needs no API key or sign-in. Start with a read; your wallet reviews, signs and sends any later transaction.
+Connect your existing AI client to `https://qhooks.com/mcp`. QHooks needs no API key or sign-in. Start with a read; Prepared for the signing wallet: the agent's own wallet or yours. No custody. We never hold keys.
 
 ## 1. Connect your client
 

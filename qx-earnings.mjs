@@ -9,6 +9,7 @@ import { chainMap, visibleChains } from '/chains.mjs';
 import { cashbackOf, claimCall, referralLink } from '/qx-swap.mjs';
 import { extraAddress } from '/qx-extras.mjs';
 import {connectedAddress} from '/qx-chain.mjs';
+import { isTestLaunch, orderLaunches, testTag } from '/qx-test-tag.mjs';
 import {readEvmRewardSnapshot,sameRewardOwner} from '/qx-reward-state.mjs';
 
 const ZERO = '0x' + '0'.repeat(40);
@@ -80,11 +81,13 @@ async function poolOf(chainId, controller) {
 export async function launchesSection(me, launches, refresh = () => {}) {
   const action = (label, run, options = {}) => sharedAction(label, run, {...options, refresh});
   const rows = [];
-  for (const L of launches) {
-    const head = h('div', { class: 'qa-launch-head' }, h('div', {}, h('h3', {}, L.name + ' ', h('small', {}, L.symbol)), chainTag(L.chainId)),
+  // walletmenu (2026-11-12): real launches first; a creator's test launches carry a "Test" tag (qx-test-tag.mjs, list in qx-test-tokens.mjs)
+  for (const L of orderLaunches(launches)) {
+    const test = isTestLaunch(L);
+    const head = h('div', { class: 'qa-launch-head' }, h('div', {}, h('h3', {}, L.name + ' ', h('small', {}, L.symbol), test ? testTag() : null), chainTag(L.chainId)),
       h('div', { class: 'qa-launch-links' }, h('a', { class: 'qa-btn qa-btn-primary', href: '/creator#m=' + L.chainId + ':' + L.controller }, 'Dashboard'), h('a', { class: 'qa-btn', href: '/terminal#m=' + L.chainId + ':' + L.controller }, 'Trade')));
     const body = h('div', { class: 'qa-launch-body' }), status = h('p', { class: 'qa-status', role: 'status' });
-    rows.push(h('article', { class: 'qa-launch' }, head, body, status));
+    rows.push(h('article', { class: 'qa-launch', ...(test ? { 'data-test': '' } : {}) }, head, body, status));
     (async () => {
       const facts = [];
       const [phase, eta] = await Promise.all([ethCall(L.chainId, L.controller, CTRL.phase).then(BigInt).catch(() => null), ethCall(L.chainId, L.controller, CTRL.recoveryEta).then(BigInt).catch(() => 0n)]);
@@ -189,6 +192,27 @@ export async function rewardsSection(me, refresh = () => {}) {
   copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(link);status.textContent='Referral link copied. Token-specific calls carry their own trade link.';}catch{status.replaceChildren('Copy your link: ',h('a',{href:link},link));}});
   const ref=h('div',{class:'qa-ref'},h('span',{},'Bring traders, get 20% of their fee. They get 30% back on EVM trades, 40% on Robinhood Chain if they hold 100K QHOOKS.'),h('code',{},link),copy,status);
   return{rows,partial:snapshot.partial,snapshot,coverage,ref};
+}
+
+// Portfolio v6 (2026-11-13): one launch's creator income as data, from the same on-chain reads launchesSection makes
+// (creatorQuote/creatorToken on the launch's blocks, payee shares, pool phase). Read-only; no wallet needed.
+export async function launchIncome(me, L) {
+  const X = L?.open; if (!X) return null;
+  const [[cq, ct], phase] = await Promise.all([
+    Promise.all([ethCall(L.chainId, X.blocks, BLK.creatorQuote), ethCall(L.chainId, X.blocks, BLK.creatorToken)]).then(v => v.map(BigInt)),
+    ethCall(L.chainId, L.controller, CTRL.phase).then(BigInt).catch(() => null)]);
+  const owner = String(me || '').toLowerCase();
+  const mine = X.payees.map((p, i) => String(p).toLowerCase() === owner ? Number(X.shares[i]) : 0).reduce((a, b) => a + b, 0);
+  const vestBps = findVests(X.payees, [me]).reduce((a, v) => a + Number(X.shares[v.index]), 0);
+  return { chainId: String(L.chainId), controller: L.controller, quoteSymbol: X.q.symbol, quoteDecimals: X.q.decimals, tokenSymbol: X.t.symbol, tokenDecimals: X.t.decimals,
+    quoteRaw: cq, tokenRaw: ct, quoteAmount: Number(cq) / 10 ** X.q.decimals, tokenAmount: Number(ct) / 10 ** X.t.decimals,
+    waiting: both(X.q, cq, X.t, ct) || '', shareBps: mine + vestBps, vestBps, phase: phase == null ? null : PHASE[Number(phase)] || null };
+}
+// The same payout launchesSection's "Pay out to every payee" sends: release() on the launch's blocks. The wallet confirms.
+export async function payOutLaunch(L, say = () => {}, assertContext = () => {}) {
+  assertContext();
+  const X = L?.open; if (!X) throw Error('Open the dashboard to pay out this launch.');
+  say('Confirm the payout in your wallet…'); return send(L.chainId, { to: X.blocks, data: BLK.release }, say, assertContext);
 }
 
 export function section(id, title, line, kids) {

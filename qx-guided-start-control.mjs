@@ -1,3 +1,5 @@
+const previews=new WeakMap();
+export const currentGuidedStart=container=>previews.get(container);
 import {START_TIERS,START_STEPS_MAX} from './qx-quick-launch-core.mjs';
 import {startTierLabel,startCapText} from './qx-quick-start-check.mjs';
 import {readGuidedStart} from './qx-guided-start.mjs';
@@ -15,12 +17,12 @@ export function mountGuidedStart({document:d,container,prefix,getState,onChange,
  const read=request|| (async(method,params,chainId)=>{const r=await fetch(chainById(chainId).rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});if(!r.ok)throw Error();const j=await r.json();if(j.error||j.result==null)throw Error();return j.result;});
  function refresh(){
   if(dead)return;const s=getState(),c=chainById(s.chainId);select.value=s.startTier||'standard';range.value=s.startSteps||'0';custom.value=s.startUsd||'';custom.hidden=range.hidden=select.value!=='custom';select.disabled=range.disabled=custom.disabled=!!s.disabled;
-  const quote=s.quote||c?.quote,key=JSON.stringify([s.chainId,quote?.address,select.value,range.value,custom.value]);if(key===identity)return;identity=key;const id=++run;
+  const quote=s.quote||c?.quote,key=JSON.stringify([s.chainId,quote?.address,select.value,range.value,custom.value]);if(key===identity)return;identity=key;previews.delete(container);const id=++run;d.dispatchEvent(new Event('qhooks:studio-pricing'));
   output.textContent='Checking starting market cap…';
   void resolveStart({chainId:s.chainId,quote,tier:select.value,steps:range.value,customUsd:custom.value,request:(m,p)=>read(m,p,s.chainId)}).then(p=>{if(id!==run||dead)return;for(const option of select.options)option.textContent=startTierLabel(option.value,p.standardUsd);
    range.value=String(p.steps);identity=JSON.stringify([s.chainId,quote?.address,select.value,range.value,custom.value]);
    if(String(s.startSteps||'0')!==range.value)onChange({startTier:select.value,startSteps:range.value,startUsd:custom.value});
-   output.textContent='Starts at '+startCapText(p.standardUsd,p.steps)+'. No quote liquidity required.';},()=>{if(id===run&&!dead)output.textContent='Starting price unavailable. Check again before launching.';});
+   previews.set(container,p);d.dispatchEvent(new Event('qhooks:studio-pricing'));output.textContent='Starts at '+startCapText(p.standardUsd,p.steps)+'. No quote liquidity required.';},()=>{if(id===run&&!dead)output.textContent='Starting price unavailable. Check again before launching.';});
  }
  select.addEventListener('change',()=>{onChange({startTier:select.value,startSteps:range.value,startUsd:custom.value});refresh();});range.addEventListener('input',()=>{custom.value='';onChange({startTier:select.value,startSteps:range.value,startUsd:custom.value});refresh();});
  custom.addEventListener('input',()=>{onChange({startTier:select.value,startSteps:range.value,startUsd:custom.value});refresh();});

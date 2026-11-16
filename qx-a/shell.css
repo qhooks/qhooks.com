@@ -310,6 +310,9 @@ footer.qa-foot::after { content: ""; position: absolute; left: 50%; top: -120px;
 .qa-hdr .qa-bal b { font-weight: 760; }
 .qa-hdr .qa-bal span { font-size: 10.5px; font-weight: 600; color: var(--qa-tx-3); letter-spacing: .01em; }
 .qa-hdr .qa-bal[data-mode="usd"] b { color: var(--qa-gold-hi); }
+/* headertotal: "Total excludes some tokens · Refreshing" wraps to two short lines instead of pushing the wallet button off a phone screen */
+.qa-hdr .qa-bal[data-partial] { height: auto; min-height: 38px; padding-top: 3px; padding-bottom: 3px; }
+.qa-hdr .qa-bal[data-partial] span { max-width: 9.5em; white-space: normal; line-height: 1.12; text-align: right; font-size: 9.5px; }
 @media (max-width: 430px) {
   .qa-hdr .qa-bal { height: 40px; padding: 0 9px; font-size: 13px; }
   /* connected: the wallet button is the 40 px icon so balance, wallet and menu fit at 360 */

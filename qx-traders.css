@@ -102,3 +102,7 @@
   .qt-round-info { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
   .qt-excluded li { flex-direction: row; justify-content: space-between; }
 }
+
+.qt-standing .compete-copy{align-self:flex-start;margin-top:6px;justify-self:start;width:max-content;max-width:100%;display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:64px;padding:8px 12px;border:1px solid var(--qa-line,#354438);border-radius:6px;background:transparent;color:var(--qa-accent,#b2ef72);font:inherit;font-size:12px;font-weight:600;text-decoration:none}.qt-standing .compete-copy:disabled{opacity:.55;cursor:default}.qt-standing .compete-copy:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+
+.qt-trader-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}.qt-trader-actions .qa-btn,.qt-trader-actions .compete-copy{min-height:44px;margin-top:0;align-self:auto}.qt-trader-actions .qa-btn{display:inline-flex;align-items:center;justify-content:center}

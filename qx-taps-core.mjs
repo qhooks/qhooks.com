@@ -37,7 +37,7 @@ export async function runtimeSha256(code) {
 export async function checkCode(step, chain, rpc) {
   if (!/^0x[0-9a-f]{40}$/i.test(step.address || '') || step.predict) return {status: 'unknown', reason: 'This step needs a wallet-specific address on its setup page'};
   const code = await rpc(String(chain), 'eth_getCode', [step.address, 'latest']);
-  if (code === '0x') return {status: 'pending'};
+  if (code === '0x') return {status: 'pending', reason: 'No deployed code at ' + step.address + '. Open setup to review prerequisites.'};
   if (!/^0x(?:[0-9a-f]{2})+$/i.test(code)) throw Error('Incomplete code read');
   if (step.runtimeSha256 && await runtimeSha256(code) !== step.runtimeSha256.toLowerCase()) return {status: 'pending', reason: 'Runtime differs from the setup manifest'};
   return {status: 'done'};
@@ -222,6 +222,9 @@ function ethereumEstimates(steps, gasPrice, ethUsd) {
 }
 
 export function setupHref(set, steps) {
+  if (set === 'agreements') return '/agreements-setup';
+  if (set === 'otc-escrow') return '/otc-escrow-setup';
+  if (set === 'prize-vault') return '/prize-vault-setup';
   if (set === 'flywheel2') return '/chain-setup?set=flywheel2&chain=4663&go=4663';
   const pending = steps.filter(s => s.status !== 'done');
   const chains = [...new Set(pending.map(s => s.chainId))];
@@ -236,7 +239,7 @@ const describe = (name, chains) => `${name} on ${chains.map(c => c.name).join(',
 export function groupSteps(steps) {
   const result = GROUPS.map(g => ({...g, rows: [], checking: steps.filter(s => s.group === g.id && s.reading).length}));
   const done = steps.filter(s => !s.reading && s.status === 'done' && s.counted !== false);
-  const pending = steps.filter(s => !s.reading && s.status !== 'done' && (s.counted !== false || s.optional));
+  const pending = steps.filter(s => (s.reading || s.status !== 'done') && (s.counted !== false || s.optional));
   const heads = new Map(), buckets = new Map();
   for (const s of pending) {
     const ethereum = s.kind === 'manifest' && s.catalogueId === 'base-setup' && s.chainId === '1';
@@ -259,7 +262,7 @@ export function groupSteps(steps) {
       const relevant = steps.filter(s => s.status !== 'done' && s.catalogueId === row.catalogueId && row.chains.some(c => c.id === s.chainId));
       row.href = row.ethereumSection ? ETHEREUM_SETUP_HREF : setupHref(row.set, relevant);
     }
-    row.status = row.steps.some(s => s.status === 'unknown') ? 'unknown' : row.steps[0].status;
+    row.status = row.steps.some(s => s.reading) ? 'checking' : row.steps.some(s => s.status === 'unknown') ? 'unknown' : row.steps[0].status;
     row.text = row.ethereumSection ? (row.ethereumSection === 'trading' ? 'Turn on one-click trading on Ethereum.' : 'Finish the chain setup on Ethereum.') : row.kind === 'balanceMin'
       ? (row.amount ? `Top up keeper gas on ${row.chain.name}: send ${row.amount} ${row.chain.symbol}` : `Top up keeper gas on ${row.chain.name}.`)
       : ['perpsBuilder', 'privyFlags', 'manual', 'jsonFlag'].includes(row.kind) ? row.sentence
@@ -271,7 +274,13 @@ export function groupSteps(steps) {
     // Name the step this row's button sends first (Monad review 2026-11-11: the row listed only the "Next" steps, so its
     // first step, the fee Safe, looked missing). Ethereum rows already list each step with its gas.
     if (row.kind === 'manifest' && !row.ethereumSection && row.next.length) row.first = `First: ${row.name} on ${row.chain.name}.`;
-    if (row.status === 'unknown') row.text += ' Refreshing…';
+    if (row.status === 'pending' && row.steps.some(s => s.reason)) row.note = row.steps.filter(s => s.reason).map(s => s.chain.name + ': ' + s.reason).join(' ');
+    if (row.status === 'checking') {
+      row.note = 'Checking ' + row.steps.filter(s => s.reading).slice(0, 3).map(s => s.name + ' on ' + s.chain.name).join('; ') + '. The setup page stays available to review each prerequisite.';
+      if (row.kind === 'balanceMin') row.button = 'Checking balance…';
+    } else if (row.status === 'unknown') {
+      row.note = row.steps.filter(s => s.status === 'unknown').map(s => s.chain.name + ': ' + (s.reason || 'The check did not complete.')).join(' ') + ' Use Check again to retry, or open setup for the full checklist.';
+    }
   }
   for (const group of result) {
     const first = group.rows.findIndex(r => r.ethereumSection);
@@ -368,6 +377,8 @@ export async function evaluateCatalogue(catalogue, io, {onUpdate} = {}) {
           const result = await checkCalls(checks, chain, io.rpc).catch(e => { if (open) throw e; return {status: 'pending'}; });
           return {...result, ...(open ? {} : {status: 'pending'}), waiting: !open};
         });
+      } else if (row.kind === 'splitterKick') {
+        add(base(chainIds[0]), async () => ({status: 'pending'}));
       } else if (row.kind === 'perpsBuilder') {
         add(base(chainIds[0]), () => checkPerpsBuilder(json, io.request || ((u, i) => fetch(u, i))));
       } else if (row.kind === 'privyFlags') {
@@ -404,7 +415,7 @@ export async function evaluateCatalogue(catalogue, io, {onUpdate} = {}) {
   const checks = steps.map(async step => {
     let value;
     try { value = await owners.get(step).check(); }
-    catch { value = {status: 'unknown', reason: 'Chain or funding read could not be completed'}; }
+    catch (error) { value = {status: 'unknown', reason: error?.status === 429 ? 'Read limit reached. Wait, then check again.' : error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'The network check timed out.' : 'The ' + step.name + ' check could not finish. Its code or funding state is still unconfirmed.'}; }
     Object.assign(step, value, {reading: false, counted: !step.optional && !(step.recurring && value.status === 'done')});
     emit();
   });

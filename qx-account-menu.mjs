@@ -76,6 +76,7 @@ if (dialog) {
   const account = $('qhc-account');
   if (account) { account.before(card); account.after(links); links.after(trades); trades.after(foot); }
   for (const b of trades.querySelectorAll('[data-mode]')) b.addEventListener('click', () => { if (cur && instantCapable(cur.entry)) { setTradePrefs(cur.owner, { mode: b.dataset.mode }); renderTrades(); } });
+  const approvalLabel=el('label','qwm-order-approval','Order approvals'),approvalSelect=el('select');approvalSelect.setAttribute('aria-label','Order approval mode');for(const[value,text]of[['once','Once per token'],['bounded','Bounded per order']]){const option=el('option',null,text);option.value=value;approvalSelect.append(option);}approvalLabel.append(approvalSelect);trades.append(approvalLabel);approvalSelect.addEventListener('change',()=>{if(cur)setTradePrefs(cur.owner,{orderApproval:approvalSelect.value});});
   const capInput = trades.querySelector('input');
   capInput.addEventListener('change', () => { if (cur) { setTradePrefs(cur.owner, { capUsd: capInput.value }); renderTrades(); } });
 
@@ -85,6 +86,7 @@ if (dialog) {
     const capable = instantCapable(cur.entry), p = tradePrefs(cur.owner), one = capable && p.mode === 'oneclick';
     trades.classList.toggle('is-off', !capable);
     for (const b of trades.querySelectorAll('[data-mode]')) { const on = (b.dataset.mode === 'oneclick') === one; b.setAttribute('aria-checked', String(on)); b.disabled = !capable; }
+    approvalSelect.value=p.orderApproval;
     capInput.value = String(p.capUsd); capInput.disabled = !one; trades.querySelector('.qwm-cap').hidden = !one;
     trades.querySelector('.qwm-note').textContent = !capable
       ? 'Your wallet asks before every transaction. One-click works with the QHooks email wallet.'
@@ -117,12 +119,14 @@ if (dialog) {
     for (const t of r.tokens || []) if (t.amount > 0) amts.append(line(t.amount, t.symbol, t.usd));
     // menufast (2026-11-12): a row still being read keeps its last amounts and says so; one that never answered says that
     if (r.refreshing || r.tokensPending) amts.append(el('small', 'qwm-err', 'Refreshing'));
+    else if(r.pricesRefreshing)amts.append(el('small','qwm-err','Prices refreshing'));
     else if (r.error) amts.append(el('small', 'qwm-err', 'Didn’t answer'));
     if (here) { b.setAttribute('aria-current', 'true'); b.title = 'Your wallet is on ' + r.name; }
     else { b.title = 'Switch your wallet to ' + r.name; b.disabled = !!switching; b.addEventListener('click', () => switchTo(r.chainId)); }
     b.append(img, name, amts); const li = el('li'); li.append(b);
     // Send / Unwrap for this chain's balances (the wallet confirms each one).
     const acts = walletActions(r, { explorer: chainById(String(r.chainId))?.explorer || null, onDone: () => { if (cur) { renderBalances(); refreshBalances(cur.owner).then(renderBalances, () => {}); } },
+      getContext: () => { const live = hub.snapshot().current; return {from: live?.owner, provider: live?.entry?.provider, open: dialog.open}; },
       wallet: cur && { provider: cur.entry?.provider, from: cur.owner, here, switchTo } });
     if (acts) li.append(acts);
     // One-tap Move from this chain (pro terminal phase A, 2026-11-10): opens the Relay move sheet with this chain as the
@@ -138,12 +142,16 @@ if (dialog) {
       // menufast (2026-11-12): the row already shows the amount and chain; the button just says what it does
       const back = el('button', 'qwm-act', 'Move home'); back.type = 'button'; back.setAttribute('aria-label', 'Move ' + fmtAmt(r.native.amount) + ' ' + r.native.symbol + ' on ' + r.name + ' home');
       back.addEventListener('click', async () => { try { const token = homeToken(pref); dialog.close(); await moveFunds.openMoveFunds({homeCurrency: true, from: {chainId: Number(r.chainId), token: moveFunds.NATIVE_TOKEN}, to: {chainId: pref.chainId, token: token.address}}); } catch { balStatus.textContent = 'Home asset is refreshing.'; } });
-      li.append(back);
+      // walletmenu4 (2026-11-13, "This Section could be better alligned"): Move home sits in the row's one action grid
+      const bar = li.querySelector('.qwm-act-bar');
+      if (bar) bar.append(back); else { const box = el('div', 'qwm-acts'), b = el('div', 'qwm-act-bar'); b.append(back); box.append(b); li.append(box); }
     }
     return li;
   }
   // An open Send/Unwrap form is never rebuilt under the user: a refresh that lands meanwhile waits until it closes.
-  let heldRender = false;
+  let heldRender = false, actionsOwner = null, actionsProvider = null;
+  const clearActions = () => { heldRender = false; list.replaceChildren(); };
+  dialog.addEventListener('close', clearActions);
   list.addEventListener('qwm:panel', () => { if (heldRender && !list.querySelector('.qwm-act-panel:not([hidden])')) { heldRender = false; renderBalances(); } });
   function renderBalances() {
     if (!cur) return;
@@ -154,11 +162,12 @@ if (dialog) {
     const here = String(cur.chainId), rows = [...data.rows].sort((a, b) => value(b) - value(a));
     const shown = rows.filter(r => showAll || !empty(r) || r.chainId === here), hidden = rows.length - rows.filter(r => !empty(r) || r.chainId === here).length;
     const held = rows.filter(r => !empty(r) && !r.error).length;
-    total.firstChild.textContent = fmtUsd(data.total) || '$0.00';
+    total.firstChild.textContent = fmtUsd(data.total) || '—';
     total.lastChild.textContent = (held ? 'across ' + held + (held === 1 ? ' chain' : ' chains') : 'on every chain') + balanceTotalNote(data);
     list.replaceChildren(...shown.map(r => chainRow(r, r.chainId === here)));
     more.hidden = !hidden; more.textContent = showAll ? 'Hide empty chains' : 'Show all (' + hidden + ' empty)';
   }
+  window.addEventListener('qhooks:portfolio-report',event=>{if(dialog.open&&cur&&event.detail?.family==='evm'&&event.detail.owner===cur.owner.toLowerCase())renderBalances();});
   function loadBalances() {
     if (!cur || !dialog.open) return;
     const owner = cur.owner, { fresh } = cachedBalances(owner); renderBalances();
@@ -228,7 +237,8 @@ if (dialog) {
   window.addEventListener('qhooks:trade-prefs', renderTrades);
   new MutationObserver(() => { if (dialog.open && cur) { if (!switching) balStatus.textContent = ''; probe(); loadBalances(); home.refresh(); } }).observe(dialog, { attributes: true, attributeFilter: ['open'] });
   hub.subscribe(s => {
-    const c = s.current;
+    const c = s.current, owner = String(c?.owner || '').toLowerCase(), provider = c?.entry?.provider;
+    if (owner !== actionsOwner || provider !== actionsProvider) { clearActions(); actionsOwner = owner; actionsProvider = provider; }
     if (c) {
       cur = { owner: c.owner, chainId: c.chainId, entry: c.entry };
       if (switching && String(c.chainId) === switching.chainId) { switching = null; balStatus.textContent = 'Your wallet is on ' + chainName(c.chainId) + '.'; }

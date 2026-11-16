@@ -1,10 +1,13 @@
+import {paintQuickLaunchResult} from './qx-quick-launch-result.mjs';
+import {QUICK_LAUNCH_DEFAULTS,quickLaunchEntry} from './qx-quick-launch-defaults.mjs';
+import {quickSplitPreview,splitPreviewNode} from './qx-create-split-preview.mjs';
 import {prepareTokenBanner,uploadTokenBanner,LAUNCH_ICON_LIMIT} from './qx-token-banner.mjs';
 import {readFactoryStart} from './qx-guided-start.mjs';
 import {selectedStart,START_PRICE_HOLD} from './qx-guided-start-core.mjs';
 import {assertQuickStart,startTierLabel,startCapText} from './qx-quick-start-check.mjs';
 import {mountAnyTokenPicker,ANY_TOKEN_NOTE} from './qx-launch-any-token.mjs';
 import {appendArbRecaptureLine} from './qx-create-display.mjs';
-import {readLaunchPrefill,launchPostLink} from './qx-launch-prefill.mjs';
+import {readLaunchPrefill} from './qx-launch-prefill.mjs';
 import {readHandoff} from './qcaster-handoff.mjs';
 // Quick launch and launch-idea cards on /create. An extra path beside the guided flow, which it never changes.
 // One transaction: QSimpleLaunch.launch with the card's preset. The person types name and ticker and picks an image.
@@ -23,9 +26,10 @@ import {multiFactory,multiQuotes,primeMultiFactory,multiLive,alignTick,poolWeigh
 import {pairsFactory,pairQuotes,primePairsFactory,pairsLive,pairStartAtCall,readPairStartAt,usdFromSqrt} from './qx-quick-launch-core.mjs';
 import {mountAccountQuantum} from './qx-account-quantum-control.mjs';
 import {rangeKitReady,planRange,makeCall,pointCall,pointCallPq,checkPqMessage,payoutOf,sendBatch,RANGE_SHARES,DEFAULT_RANGE_BPS,RANGE_GAS} from './qx-range-kit.mjs';
-import {ideaCards,ideaCard,visibleGroups,quickFactory,encodeQuickLaunch,validateQuick,launchFeeWei,quickCost,ethText,launchedToken,marketPath,randomSalt,PLANNING_GAS} from './qx-quick-launch-core.mjs';
+import {ideaCards,ideaCard,visibleGroups,quickFactory,encodeQuickLaunch,validateQuick,launchFeeWei,quickCost,ethText,launchedToken,randomSalt,PLANNING_GAS} from './qx-quick-launch-core.mjs';
 
-let banner='',bannerData='',bannerRevision=0,imageRevision=0;
+let banner='',bannerData='',bannerRevision=0,imageRevision=0,bannerSource='',lastImageFile=null;
+let simpleDefault=false;
 const $=id=>document.getElementById('qq-'+id),hub=getWalletHub(window),LAST='qhooks:create:quick:v1';
 const el=(tag,attrs={},...kids)=>{const n=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')n.className=v;else if(k in n)n[k]=v;else n.setAttribute(k,v);}n.append(...kids.filter(x=>x!=null));return n;};
 const SVG='http://www.w3.org/2000/svg';
@@ -58,9 +62,9 @@ const chainSelect=document.getElementById('qc-chainId');
 const urlChain=()=>new URLSearchParams(location.search).get('chain');
 let quickChain=null,solQuickPrevious=null;
 const currentChain=()=>quickChain||chainSelect?.value||urlChain()||'4663';
-const quickChains=()=>[...visibleChains().filter(c=>ideaCards(c.id).length),{id:'solana',name:'Solana',native:'SOL'}];
+const quickChains=()=>[...visibleChains().filter(c=>ideaCards(c.id).length).sort((a,b)=>Number(b.id==='4663')-Number(a.id==='4663')),{id:'solana',name:'Solana',native:'SOL'}];
 function setQuickChain(id){const wasSol=quickChain==='solana';if(id!==currentChain()){extraPools=[];poolPrices=null;pairIdx=0;}quickChain=id;if(id==='solana'||wasSol)document.dispatchEvent(new CustomEvent('qhooks:sol-create',{detail:{chain:id}}));try{const u=new URL(location.href);u.searchParams.set('chain',id);history.replaceState(history.state,'',u);}catch{}
- renderIdeas();if(pick)openQuick(pick.id);checkTickerSoon();costSoon();}
+ renderIdeas();if(pick)openQuick(pick.id);if(id==='solana'){const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;}checkTickerSoon();costSoon();}
 function renderPicker(){
  let sel=$('chain');
  if(!sel){const label=el('label',{class:'qq-chain'},el('span',{},'Chain'));sel=el('select',{id:'qq-chain','aria-label':'Chain for one-tap launch'});label.append(sel);$('chips').before(label);
@@ -98,7 +102,7 @@ function renderIdeas(){chainId=currentChain();renderPicker();if(chainId==='solan
   const blocks=card.blocks.length?el('div',{class:'qq-blocks'},...card.blocks.map(icon)):el('div',{class:'qq-blocks qq-blocks-none'},el('span',{},'No extra rules'));
   return tapCard(el('article',{class:'qq-card','data-card':card.id,'data-group':card.group,hidden:group!=='all'&&card.group!==group},
    el('h3',{},card.name),card.chip?el('span',{class:'qq-chip'},card.chip):null,el('p',{class:'qq-what'},card.what),el('p',{class:'qq-why'},card.why),blocks,off?el('p',{class:'qq-why qq-off-note'},'Adaptive liquidity isn’t set up on '+(c?.name||'this chain')+' yet.'):null,btn),btn);
- }),saleKit(group));
+ }),...[saleKit(group)].filter(Boolean));
  // Off Robinhood Chain the cards stay visible (lead, 2026-11-08); "Launch this" switches the chain first.
  $('none').hidden=!offChain;$('use-robinhood').hidden=true;$('open').hidden=false;
  if(offChain)$('none-text').textContent='One-tap launches run on Robinhood Chain';
@@ -121,6 +125,8 @@ function saleKit(group){
 }
 document.addEventListener('qsf:ready',()=>{if(document.getElementById('qq-cards'))renderIdeas();});
 function launchCard(id){
+ if(simpleDefault){simpleDefault=false;pqOptOut=false;}
+ const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;
  if(!ideaCards(currentChain()).length){setQuickChain(QUICK_CHAIN);}
  openQuick(id,{scroll:true});
 }
@@ -304,13 +310,13 @@ function renderRangeShare(){
  if(!isRangeKit()){box?.remove();return;}
  if(!box){box=el('div',{id:'qq-rangeshare',class:'qq-startcap qq-rangeshare'});$('style-blocks').after(box);}
  const opts=RANGE_SHARES.map(([v,label])=>{const b=el('button',{type:'button',class:'qq-start-opt','aria-pressed':String(v===rangeBps),disabled:busy,'data-range-bps':String(v)},label);
-  b.addEventListener('click',()=>{if(busy)return;rangeBps=v;renderRangeShare();});return b;});
+  b.addEventListener('click',()=>{if(busy)return;rangeBps=v;renderRangeShare();renderQuick();});return b;});
  box.replaceChildren(el('p',{class:'qq-start-k'},'LP fees kept as liquidity'),el('div',{class:'qq-start-opts',role:'group','aria-label':'LP fees kept as liquidity'},...opts),
   el('p',{class:'qq-start-note'},rangeBps===10000?'All of your LP fees become liquidity around the price.':'The other '+(100-rangeBps/100)+'% of your LP fees comes to your wallet.'));
 }
 function openQuick(id,{scroll=false}={}){
  const card=ideaCard(chainId,id)||ideaCard(chainId,'fair');if(!card)return;pick=card;$('quick').hidden=false;announcePick(card.id);
- renderPair();customUsd='';startTier=card.startUsd?'custom':URL_TIER||DEFAULT_TIER[chainId]||'standard';startSteps=0;if(startCapOn()){void readStartBase().then(()=>{if(card.startUsd&&startBase?.usd){startSteps=stepsForUsd(card.startUsd,startBase.usd);renderStart();renderQuick();costSoon();}});}renderStart();
+ renderPair();customUsd='';startTier=simpleDefault?QUICK_LAUNCH_DEFAULTS.startTier:card.startUsd?'custom':URL_TIER||DEFAULT_TIER[chainId]||'standard';startSteps=0;if(startCapOn()){void readStartBase().then(()=>{if(card.startUsd&&startBase?.usd){startSteps=stepsForUsd(card.startUsd,startBase.usd);renderStart();renderQuick();costSoon();}});}renderStart();
  renderPq();$('style-name').textContent=card.name;$('style-line').textContent=card.what;
  $('style-blocks').replaceChildren(...card.blocks.map(icon));renderRangeShare();
  for(const a of document.querySelectorAll('#qq-cards [data-launch]'))a.setAttribute('aria-pressed',String(a.dataset.launch===card.id));
@@ -320,7 +326,7 @@ function openQuick(id,{scroll=false}={}){
 }
 
 const costKey=v=>JSON.stringify(v,(_k,value)=>typeof value==='bigint'?value.toString():value);
-function fields(){return {name:$('name').value,symbol:$('symbol').value,image,banner};}
+function fields(){return {name:$('name').value,symbol:$('symbol').value,image,banner,description:$('description')?.value||'',x:$('x')?.value||'',telegram:$('telegram')?.value||'',website:$('website')?.value||''};}
 function renderQuick(){
  if(!pick)return;const c=chainById(chainId),conn=hub.snapshot().current;
  let ready=true;try{validateQuick(fields());}catch{ready=false;}
@@ -333,13 +339,16 @@ function renderQuick(){
    line('Launch fee',ethText(cost.feeWei)+' '+c.native),line('Network gas · up to',ethText(cost.networkWei)+' '+c.native),...(rangeWei?[line('Range setup gas · about',ethText(rangeWei)+' '+c.native)]:[]),
    ...(cost.live&&!cost.quote.funded?[el('p',{class:'qxc-fine qq-short','data-error':'true'},'Add '+ethText(BigInt(cost.quote.requiredBalance)-BigInt(cost.quote.balance))+' '+c.native+' on '+c.name+' to launch.')]:[]),el('p',{class:'qxc-fine'},isRangeKit()?(cost.live?'Priced for this launch from your wallet’s estimate. ':'Planning estimate. Connect a wallet for this launch’s own estimate. ')+'Launch, create its range, point its LP fees there: one approval where your wallet can batch, otherwise three.':cost.live?'Priced for this launch from your wallet’s estimate. One transaction, one confirmation.':'Planning estimate. Connect a wallet for this launch’s own estimate. One transaction, one confirmation.'));}
  appendArbRecaptureLine(box,c,pick.blocks||[],launchFactory());
- for(const id of ['name','symbol','image','banner'])if($(id))$(id).disabled=busy;
+ box.append(splitPreviewNode(quickSplitPreview(isRangeKit()?rangeBps:0),{quick:true}));
+ for(const id of ['name','symbol','image','banner','description','x','telegram','website'])if($(id))$(id).disabled=busy;
  const b=$('launch');
- b.textContent=busy?'Launching…':!conn?'Connect wallet':conn.chainId!==chainId?'Switch to '+c.short+' and launch':priceBlocked()||poolsBlocked()?'Refreshing price…':pqBlocked()?'Unlock your quantum key to launch':'Launch for '+(cost?ethText(cost.totalWei)+' '+c.native:'…');
+ b.textContent=busy?'Launching…':!conn?'Connect wallet to launch':conn.chainId!==chainId?'Switch to '+c.short+' and launch':priceBlocked()||poolsBlocked()?'Refreshing price…':pqBlocked()?'Unlock your quantum key to launch':document.querySelector('.cr5')?'Launch':'Launch for '+(cost?ethText(cost.totalWei)+' '+c.native:'…');
  // A token image is required (2026-11-10): no launch, or chain switch for one, until the image is ready.
- const needImage=!image,needBanner=!banner;$('need-image').hidden=!needImage||busy;$('need-banner').hidden=!needBanner||busy;
+ const needImage=!image,needBanner=!banner;$('need-image').hidden=true;$('need-banner').hidden=!image||!needBanner||busy;
  b.disabled=busy||!!taken||needImage||needBanner||!!conn&&(conn.chainId===chainId&&(!ready||!cost||priceBlocked()||poolsBlocked()||pqBlocked()||cost.live&&!cost.quote.funded));
- renderAdv();const adv=$('adv');if(!pqBlocked())advAuto=false;else if(adv&&!adv.hidden&&conn&&conn.chainId===chainId&&!advAuto){advAuto=true;adv.open=true;}
+ const total=document.getElementById('cr5-total');if(total)total.textContent=cost?(cost.live?'Total · ':'Estimate · ')+ethText(BigInt(cost.totalWei)+(isRangeKit()&&cost.gasPriceWei?BigInt(RANGE_GAS.make+(pqOnChain()&&pqKeyHex()?RANGE_GAS.pointPq:RANGE_GAS.point))*BigInt(cost.gasPriceWei):0n))+' '+c.native:'Refreshing fees…';
+ const defaults=document.getElementById('cr5-defaults');if(defaults)defaults.textContent=pick.name+' · '+(startSteps?'Custom start':'Standard start')+' · 100% in pool · LP locked';
+ renderAdv();const adv=$('adv');if(!pqBlocked())advAuto=false;else if(adv&&!adv.hidden&&conn&&conn.chainId===chainId&&!advAuto){advAuto=true;adv.open=true;const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;}
 }
 
 async function rpc(method,params){const c=chainById(chainId);const r=await fetch(c.rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});const j=await r.json();if(j.error||typeof j.result!=='string')throw Error(j.error?.message||'RPC error');return j.result;}
@@ -398,8 +407,7 @@ async function thumbnail(file){
 
 const rememberLast=v=>{try{localStorage.setItem(LAST,JSON.stringify(v));}catch{/* the receipt is still shown on this page */}};
 function showDone(token,hash,kit=null){
- const c=chainById(chainId);$('done').hidden=false;$('launch').hidden=true;$('done-name').textContent=$('name').value.trim()+' ('+$('symbol').value.trim().toUpperCase()+') · '+c.name;
- $('token').textContent=token;$('open-market').href=marketPath(chainId,token);$('tx').href=c.explorer+'/tx/'+hash;{const x=launchPostLink({name:$('name').value,ticker:$('symbol').value,chainName:c.name,chainId,token}),px=$('post-x');if(px){px.hidden=!x;if(x)px.href=x;}}const fl=$('floor-next');if(fl)fl.remove();if(pick?.kit==='floor'){const a=el('a',{id:'qq-floor-next',class:'qxc-primary',href:'/floor?chain='+chainId+'&token='+token},'Next: turn fees into a buy wall →');$('open-market').after(a);}
+ const c=chainById(chainId);paintQuickLaunchResult({chain:c,name:$('name').value,symbol:$('symbol').value,image,token,hash});const fl=$('floor-next');if(fl)fl.remove();if(pick?.kit==='floor'){const a=el('a',{id:'qq-floor-next',class:'qxc-primary',href:'/floor?chain='+chainId+'&token='+token},'Next: turn fees into a buy wall →');$('open-market').after(a);}
  $('range-next')?.remove();$('range-line')?.remove();if(kit?.range){const a=el('a',{id:'qq-range-next',class:kit.ok?'qxc-secondary':'qxc-primary',href:'/range?chain='+chainId+'&token='+token},kit.ok?'See your range →':'Finish the range →');$('open-market').after(a);
   if(kit.ok)a.before(el('p',{id:'qq-range-line',class:'qxc-fine'},'LP fees go to its range '+kit.range.slice(0,6)+'…'+kit.range.slice(-4)+'. Liquidity starts after four price checks, 15 minutes apart.'));}
  $('done').focus?.();
@@ -502,35 +510,47 @@ async function applyArtHandoff(){
  const ref=new URLSearchParams(location.search).get('art');if(!ref)return;
  const art=await readHandoff(ref).catch(()=>null);if(!art)return;
  ++imageRevision;++bannerRevision;
- image=art.image;$('preview').src=image;$('preview').hidden=false;$('image-status').textContent='Image ready.';
+ bannerSource='handoff';image=art.image;$('preview').src=image;$('preview').hidden=false;$('image-status').textContent='Image ready.';
  banner=art.banner;bannerData=art.bannerData;$('banner-preview').src=bannerData;$('banner-preview').hidden=false;$('banner-status').textContent='Banner ready.';
  cost=null;renderQuick();costSoon();
 }
+async function generateBanner(file,imageRev){
+ const rev=++bannerRevision;bannerSource='auto';banner='';bannerData='';cost=null;costRun++;$('banner-retry').hidden=true;$('banner-status').textContent='Making a banner from your image…';$('need-banner').textContent='Preparing your banner…';renderQuick();
+ try{const data=await prepareTokenBanner(file,{blur:true});if(rev!==bannerRevision||imageRev!==imageRevision)return;const hash=await uploadTokenBanner(data);if(rev!==bannerRevision||imageRev!==imageRevision)return;banner=hash;bannerData=data;$('banner-preview').src=data;$('banner-preview').hidden=false;$('banner-status').textContent='Made from your image. Edit it here or on your token page.';}
+ catch(e){if(rev!==bannerRevision||imageRev!==imageRevision)return;$('banner-status').textContent=e.message;$('need-banner').textContent='Your banner did not save. Retry under Customize launch.';$('banner-retry').hidden=false;}
+ renderQuick();costSoon();
+}
 function mount(){
  if(!$('ideas'))return;
- {const u=urlChain();if(u&&ideaCards(u).length)quickChain=u;}
+ const prefill=readLaunchPrefill(location),entry=quickLaunchEntry({chain:urlChain(),style:prefill?.style,start:URL_TIER,hash:location.hash});
+ simpleDefault=entry.simple;pqOptOut=simpleDefault;quickChain=entry.chain;
  renderIdeas();
  chainSelect?.addEventListener('change',()=>{renderIdeas();if(pick)openQuick(pick.id);checkTickerSoon();});
  $('use-robinhood')?.addEventListener('click',()=>setQuickChain('4663'));
  $('open').addEventListener('click',()=>launchCard(pick?.id||'fair'));
  for(const id of ['name','symbol'])$(id).addEventListener('input',()=>{if(id==='symbol'){$('symbol').value=$('symbol').value.toUpperCase();checkTickerSoon();}renderQuick();costSoon();});
- $('image').addEventListener('change',async()=>{const file=$('image').files?.[0];if(!file)return;const rev=++imageRevision;image='';renderQuick();
-  try{const data=await thumbnail(file);if(rev!==imageRevision)return;image=data;$('preview').src=image;$('preview').hidden=false;$('image-status').textContent='Image ready.';}
+ $('image').addEventListener('change',async()=>{const file=$('image').files?.[0];if(!file)return;lastImageFile=file;const rev=++imageRevision;image='';cost=null;costRun++;if(bannerSource!=='custom'&&bannerSource!=='handoff'){banner='';bannerData='';bannerRevision++;}renderQuick();
+  try{const data=await thumbnail(file);if(rev!==imageRevision)return;image=data;$('preview').src=image;$('preview').hidden=false;$('image-status').textContent='Image ready.';if(bannerSource!=='custom'&&bannerSource!=='handoff')void generateBanner(file,rev);}
   catch(e){if(rev!==imageRevision)return;image='';$('preview').hidden=true;$('image-status').textContent=e.message;}renderQuick();costSoon();});
- $('banner').addEventListener('change',async()=>{const file=$('banner').files?.[0];if(!file)return;const rev=++bannerRevision;banner='';bannerData='';cost=null;renderQuick();$('banner-status').textContent='Preparing your banner…';
+ $('banner-retry')?.addEventListener('click',()=>{if(!busy&&lastImageFile)void generateBanner(lastImageFile,imageRevision);});
+ $('banner').addEventListener('change',async()=>{const file=$('banner').files?.[0];if(!file)return;const rev=++bannerRevision;bannerSource='custom';banner='';bannerData='';cost=null;costRun++;renderQuick();$('banner-status').textContent='Preparing your banner…';
   try{const data=await prepareTokenBanner(file);if(rev!==bannerRevision)return;$('banner-preview').src=data;$('banner-preview').hidden=false;const hash=await uploadTokenBanner(data);if(rev!==bannerRevision)return;banner=hash;bannerData=data;$('banner-status').textContent='Banner ready.';}
   catch(e){if(rev!==bannerRevision)return;banner='';$('banner-preview').hidden=true;$('banner-status').textContent=e.message;}renderQuick();costSoon();});
  $('launch').addEventListener('click',()=>void launch());
- $('change').addEventListener('click',()=>$('ideas').scrollIntoView({block:'start'}));
+ $('change').addEventListener('click',()=>{const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;$('ideas').scrollIntoView({block:'start'});});
+ for(const id of ['description','x','telegram','website'])$(id)?.addEventListener('input',()=>{renderQuick();costSoon();});
+ const idea=document.getElementById('cr5-idea');const ideaLink=()=>{if(idea){const f=fields(),q=['Help me design a token',f.name&&'called '+f.name,f.symbol&&'($'+f.symbol+')',f.description].filter(Boolean).join(' ');idea.href='/qcaster?q='+encodeURIComponent(q)+'#design';}};
+ for(const id of ['name','symbol','description'])$(id)?.addEventListener('input',ideaLink);ideaLink();
  hub.subscribe(()=>{void pqControl?.refresh();renderQuick();if(pick)costSoon();checkTickerSoon();});
  readUsd();
- const prefill=readLaunchPrefill(location);
  if(prefill){
   if(prefill.chain&&ideaCards(prefill.chain).length){quickChain=prefill.chain;renderIdeas();}
   if(prefill.name!==undefined)$('name').value=prefill.name;
   if(prefill.ticker!==undefined)$('symbol').value=prefill.ticker;
   openQuick(prefill.style,{scroll:true});checkTickerSoon();costSoon();
- }else{const h=/^#quick(?:-([a-z-]+))?$/.exec(location.hash);if(h)openQuick(h[1]||'fair',{scroll:true});}
+ }else{openQuick(entry.card);if(!simpleDefault){const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;}}
+ ideaLink();
+ if(!pick){const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;}
  void applyArtHandoff();
  void probeQuickChains();
 }

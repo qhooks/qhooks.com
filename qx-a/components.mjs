@@ -1,4 +1,5 @@
 import { priceDigits } from '../qx-price.mjs'; // one price format sitewide (2026-11-12)
+import {installOverlayDismissal} from '../qx-overlays.mjs';
 // QHooks System A: component helpers. ES module, no dependencies, CSP-safe (no inline styles in markup; styles go through CSSOM).
 // Import what you need:  import { h, icon, toast, tape, bigPrice } from '/system-a/components.mjs';
 // Every motion here is tied to a call you make for a real event (a trade, a call, a new holder). Reduced motion is honoured.
@@ -358,13 +359,16 @@ export function dock({ onBuy, onSell } = {}) { return h('div', { class: 'qa-dock
 let sheetEls;
 export function openSheet(content, { label = 'Sheet', onClose } = {}) {
   closeSheet();
-  const scrim = h('div', { class: 'qa-scrim' }); const body = h('div'); const sh = h('div', { class: 'qa-sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': label }, h('span', { class: 'qa-sheet__grip', 'aria-hidden': 'true' }), body);
+  const opener=document.activeElement,scrim=h('div',{class:'qa-scrim'}),body=h('div'),close=h('button',{type:'button',class:'qa-sheet__x','aria-label':'Close '+label},'×');
+  const head=h('header',{class:'qa-sheet__head'},h('h2',null,label),close);
+  const sh=h('div',{class:'qa-sheet',role:'dialog','aria-modal':'true','aria-label':label},h('span',{class:'qa-sheet__grip','aria-hidden':'true'}),head,body);
   const home = content.parentElement, next = content.nextSibling; body.append(content);
   sheetEls = { scrim, sh, content, home, next, onClose };
-  scrim.addEventListener('click', closeSheet); document.body.append(scrim, sh);
-  const esc = (e) => { if (e.key === 'Escape') closeSheet(); }; addEventListener('keydown', esc, { once: true });
+  document.body.append(scrim,sh);
+  const owner=installOverlayDismissal().registerCustom(sh,{isOpen:()=>sheetEls?.sh===sh,close:()=>{closeSheet();return true;},opener:()=>opener});sheetEls.owner=owner;
+  close.addEventListener('click',()=>owner.requestClose('close'));scrim.addEventListener('click',()=>owner.requestClose('backdrop'));owner.sync();
 }
-export function closeSheet() { if (!sheetEls) return; const { scrim, sh, content, home, next, onClose } = sheetEls; if (home) home.insertBefore(content, next); scrim.remove(); sh.remove(); sheetEls = null; onClose && onClose(); }
+export function closeSheet() { if (!sheetEls) return; const { scrim, sh, content, home, next, onClose, owner } = sheetEls; sheetEls=null;if(home)home.insertBefore(content,next);owner?.sync();owner?.dispose();scrim.remove();sh.remove();onClose&&onClose(); }
 
 /* ================= brand line ================= */
 // "For the next generation of token builders / callers / holders / traders", resolving to "For the next generation."
@@ -460,9 +464,12 @@ export function supplyMap(parts, colors) {
     h('div', { class: 'qa-legend' }, parts.map((p) => h('div', null, h('i', { style: { background: colors[p.key] || 'var(--qa-rule-2)' } }), p.label, h('b', null, p.share.toFixed(1) + '%')))));
 }
 export function countdown({ label = 'until the next buyback', total = 900 } = {}) {
-  const num = h('b'), fuse = h('i');
-  const el = h('div', { class: 'qa-countdown' }, num, h('span', null, label), h('div', { class: 'qa-fuse' }, fuse));
-  el.set = (left) => { if (left <= 0) { num.textContent = 'Due'; fuse.style.setProperty('--qa-fuse', '100%'); return; } num.textContent = Math.floor(left / 60) + ':' + String(Math.floor(left % 60)).padStart(2, '0'); fuse.style.setProperty('--qa-fuse', ((1 - left / total) * 100).toFixed(1) + '%'); };
+  const num = h('b'), fuse = h('i'), cap = h('span', null, label);
+  const el = h('div', { class: 'qa-countdown' }, num, cap, h('div', { class: 'qa-fuse' }, fuse));
+  // auditC: once due, a plain sentence at body size in the text colour (no giant orange "Due").
+  const DUE = 'font-size:16px;line-height:1.35;font-weight:600;font-stretch:100%;letter-spacing:0;background:none;-webkit-text-fill-color:currentColor;color:var(--qa-tx)';
+  el.set = (left) => { const due = left <= 0; el.classList.toggle('is-due', due); cap.style.display = due ? 'none' : ''; num.style.cssText = due ? DUE : '';
+    if (due) { num.textContent = 'Buyback running now'; fuse.style.setProperty('--qa-fuse', '100%'); return; } num.textContent = Math.floor(left / 60) + ':' + String(Math.floor(left % 60)).padStart(2, '0'); fuse.style.setProperty('--qa-fuse', ((1 - left / total) * 100).toFixed(1) + '%'); };
   return el;
 }
 export function figures(list) { return h('div', { class: 'qa-figures' }, list.map((f) => h('div', null, h('b', { class: f.cls || '' }, f.value), h('span', null, f.label)))); }

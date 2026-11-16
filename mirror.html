@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en" data-theme="dark"><head><meta charset="utf-8">
+<link rel="modulepreload" href="/qx-a/shell.mjs" data-qx-preload>
+<link rel="modulepreload" href="/qx-a/components.mjs" data-qx-preload>
+<link rel="modulepreload" href="/qx-followed-wallets.mjs" data-qx-preload><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Copy review | QHooks</title><meta name="description" content="Choose copy limits for a followed wallet and review each buy before signing."><script src="/theme.js"></script><link rel="icon" href="/qhooks-logo.jpg" type="image/jpeg">
+<link rel="preload" href="/qx-a/fonts/mona-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/qx-a/tokens.css"><link rel="stylesheet" href="/qx-a/components.css"><link rel="stylesheet" href="/qx-a/shell.css">
+<link rel="stylesheet" href="/wallet-site.css"><link rel="stylesheet" href="/qx-a/pages/markets-common.css">
+<link rel="modulepreload" href="/wallet-site.mjs"><link rel="modulepreload" href="/wallet-hub.mjs"><link rel="modulepreload" href="/wallet-hub-fresh.mjs"><link rel="modulepreload" href="/full-launch/prototypes/qwallet/client/wallet-session.mjs"><link rel="modulepreload" href="/wallet-discovery.mjs"><link rel="modulepreload" href="/wallet-preference.mjs"><link rel="modulepreload" href="/wallet-rpc-compat.mjs"><link rel="modulepreload" href="/chain-catalog.mjs"><link rel="modulepreload" href="/wallet-login.mjs"><link rel="modulepreload" href="/embedded-wallet-provider.mjs"><meta property="og:type" content="website"><meta property="og:site_name" content="QHooks"><meta property="og:title" content="Trade | QHooks"><meta property="og:description" content="Buy and sell QHooks-launched tokens on your EVM chain."><meta property="og:image" content="https://qhooks.com/og/qhooks-card.png?v=2"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://qhooks.com/og/qhooks-card.png?v=2">
+<link rel="stylesheet" href="/qx-followed-wallets.css"><link rel="stylesheet" href="/qx-copy-review.css"></head>
+<body class="qa mkw" data-a-shell><a class="mk-skip" href="#main">Skip to content</a>
+<button type="button" id="qhc-trigger" class="qhc-trigger" aria-haspopup="dialog">Connect wallet</button>
+<main class="qa-page fw-page" id="main"><p id="qt-connection" class="qa-vh" aria-live="polite"></p><p class="fw-kicker">YOUR LIMITS / EACH TRADE</p><h1>Copy their<br>next move.</h1><p class="fw-intro">Choose a wallet and your limits. Review each buy in the terminal.</p><nav class="fw-nav" aria-label="Wallets"><a href="/wallets">Discover wallets</a><a href="/traders">Trader boards</a><a href="/terminal">Trade</a></nav><div id="copy-review"></div></main>
+<dialog id="qhc-dialog" class="qhc-dialog" aria-labelledby="qhc-title">
+ <div class="qhc-heading"><h2 id="qhc-title">Your wallet</h2><button id="qhc-close" type="button" aria-label="Close wallet dialog">×</button></div>
+ <section class="qhc-login"><button id="qhc-email-login" type="button" class="qhc-choice">Continue with email or Google</button><p>No wallet extension needed. Your QWallet quantum key stays separate.</p><button id="qhc-email-logout" type="button" class="qhc-secondary" hidden>Sign out of QHooks login</button><p id="qhc-login-status" role="status" aria-live="polite"></p></section><section class="qhc-mobile">
+ <label for="qhc-mobile-chain">Mobile wallet network</label><select id="qhc-mobile-chain"></select>
+ <button id="qhc-mobile-login" type="button" class="qhc-choice">MetaMask Mobile</button>
+ <p id="qhc-mobile-status" role="status" aria-live="polite">Connect your phone with a QR code.</p>
+ <button id="qhc-mobile-disconnect" type="button" class="qhc-secondary" hidden>Disconnect mobile session</button>
+ <p class="qhc-sdk-notice">Uses MetaMask Connect, copyright ConsenSys. <a href="/metamask/LICENSE.txt" target="_blank" rel="noopener">License</a></p>
+</section>
+<div id="qhc-choices">
+  <p>Choose an EVM wallet.</p>
+  <div id="qhc-wallets" class="qhc-wallets"></div>
+  <div id="qhc-empty"><p>No wallet detected in this browser.</p><p>Open <strong>qhooks.com</strong> in Chrome with your wallet extension enabled, or in your wallet app’s built-in browser.</p><p>The in-app preview cannot access Chrome’s wallet extensions. Use MetaMask Mobile above to pair your phone.</p></div>
+  <button id="qhc-rescan" type="button" class="qhc-secondary">Detect wallets again</button>
+ </div>
+ <div id="qhc-account" hidden><p id="qhc-address" class="qhc-address"></p><p id="qhc-chain"></p><p id="qhc-remembered"></p><button id="qhc-forget" type="button" class="qhc-secondary">Disconnect and forget</button></div>
+ <div id="qhc-email-network" hidden><label for="qhc-embedded-chain">Embedded wallet network</label><select id="qhc-embedded-chain"></select><button id="qhc-embedded-switch" type="button" class="qhc-secondary">Switch network</button></div><p id="qhc-status" role="status" aria-live="polite"></p>
+ <p class="qhc-footnote">Connecting does not authorize spending. Every signature and transaction needs your approval. Never enter your recovery phrase here.</p>
+</dialog><script src="/wallet-early.js"></script>
+<script type="module" src="/wallet-site.mjs"></script><script type="module" src="/wallet-page-resume.mjs"></script><script type="module" src="/wallet-login.mjs"></script><script type="module" src="/l121-mobile-login.mjs"></script>
+<script type="module" src="/qx-copy-review-boot.mjs"></script><script type="module" src="/qx-shell.mjs"></script>
+
+<script type="module" src="/qx-appbar.mjs"></script></body></html>

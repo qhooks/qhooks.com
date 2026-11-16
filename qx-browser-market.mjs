@@ -1,3 +1,5 @@
+import {priceObservation} from './qx-price-state.mjs';
+import {discoveryCandidate,rankDiscovery} from './qx-discovery-rank.mjs';
 // Token lists and search read by the visitor's own browser (2026-11-09). The server's copies of GeckoTerminal and
 // DexScreener share Cloudflare's egress and get rate limited (429/503 on every chain), which left the terminal's
 // Tokens list empty on Ethereum, Arbitrum and Elysium and thin on BNB and Robinhood. Both providers allow browser
@@ -6,18 +8,18 @@
 // view is kept on the device so a refresh never paints a blank list.
 export const NETWORKS = Object.freeze({
   '143': { gecko: 'monad', dex: 'monad', search: ['monad', 'WMON'] },
-  '8453': { gecko: 'base', dex: 'base', search: ['base', 'WETH base'] },
-  '1': { gecko: 'eth', dex: 'ethereum', search: ['ethereum', 'WETH'] },
-  '42161': { gecko: 'arbitrum', dex: 'arbitrum', search: ['arbitrum', 'ARB'] },
-  '56': { gecko: 'bsc', dex: 'bsc', search: ['bsc', 'WBNB'] },
+  '8453': { gecko: 'base', dex: 'base', search: ['aerodrome', 'WETH base'] },
+  '1': { gecko: 'eth', dex: 'ethereum', search: ['ethereum', '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'] },
+  '42161': { gecko: 'arbitrum', dex: 'arbitrum', search: ['camelot', 'arbitrum'] },
+  '56': { gecko: 'bsc', dex: 'bsc', search: ['pancakeswap', 'flap'] },
   '4663': { gecko: 'robinhood', dex: 'robinhood', search: ['robinhood'] },
   '99901': { gecko: 'elysium', dex: 'elysium', search: ['elysium', 'WHYPE'] },
-  solana: { gecko: 'solana', dex: 'solana', search: ['solana'] },
+  solana: { gecko: 'solana', dex: 'solana', search: ['So11111111111111111111111111111111111111112', 'solana'] },
 });
 const DEX_TO_ID = Object.fromEntries(Object.entries(NETWORKS).map(([id, n]) => [n.dex, id]));
 const GECKO_TO_ID = Object.fromEntries(Object.entries(NETWORKS).map(([id, n]) => [n.gecko, id]));
 // "All" reads these when the server has nothing: the chains QHooks trades on, EVM first.
-export const ALL_ORDER = ['8453', '4663', '56', '42161', '1', '99901', '143'];
+export const ALL_ORDER = ['solana', '8453', '4663', '56', '42161', '1', '99901', '143'];
 const GECKO = 'https://api.geckoterminal.com/api/v2';
 const DEX = 'https://api.dexscreener.com';
 export const MIN_ROWS = 12;
@@ -42,16 +44,20 @@ let geckoInBrowser = false;
 export function setGeckoInBrowser(on) { geckoInBrowser = !!on; memo.clear(); }
 async function getJson(provider, url, { fetcher, now, signal, ttl = 45000 }) {
   if (provider === 'gecko' && !geckoInBrowser) return null;
+  if(signal?.aborted)return null;
   const hit = memo.get(url);
+  // Keep the existing observation, never the retry time. Display statistics retain
+  // at most 15 minutes; the caller can label these rows Refreshing.
+  const lastGood=()=>{if(!hit||memo.get(url)!==hit||now()-hit.at<0||now()-hit.at>900000)return null;hit.stale=true;return hit.body;};
   if (hit && now() - hit.at < ttl) return hit.body;
-  if (now() < blocked[provider]) return null;
+  if (now() < blocked[provider]) return lastGood();
   const controller = new AbortController(), abort = () => controller.abort(), timer = setTimeout(abort, 5000);
   if (signal?.aborted) return null;
   signal?.addEventListener?.('abort', abort, { once: true });
   try {
     const r = await fetcher(url, { headers: { accept: 'application/json' }, signal: controller.signal, credentials: 'omit', referrerPolicy: 'no-referrer' });
-    if (r.status === 429 || r.status >= 500) { backoff[provider] = Math.min(backoff[provider] ? backoff[provider] * 2 : 20000, 180000); blocked[provider] = now() + backoff[provider]; return null; }
-    if (!r.ok) return null;
+    if (r.status === 429 || r.status >= 500) { backoff[provider] = Math.min(backoff[provider] ? backoff[provider] * 2 : 20000, 180000); blocked[provider] = now() + backoff[provider]; return lastGood(); }
+    if (!r.ok) return lastGood();
     const body = await r.json();
     backoff[provider] = 0; memo.set(url, { at: now(), body });
     if (memo.size > 80) memo.delete(memo.keys().next().value);
@@ -59,7 +65,7 @@ async function getJson(provider, url, { fetcher, now, signal, ttl = 45000 }) {
   } catch {
     // A provider's 429 often comes without CORS headers, so the browser reports it as a network error: back off too.
     if (!signal?.aborted && !controller.signal.aborted) { backoff[provider] = Math.min(backoff[provider] ? backoff[provider] * 2 : 20000, 180000); blocked[provider] = now() + backoff[provider]; }
-    return null;
+    return signal?.aborted?null:lastGood();
   } finally { clearTimeout(timer); signal?.removeEventListener?.('abort', abort); }
 }
 
@@ -116,6 +122,7 @@ export function dexRows(pairs, chainId, observedAt = Date.now()) {
       createdAt: num(p.pairCreatedAt), priceUsd: num(p.priceUsd), liquidityUsd: num(p.liquidity?.usd), marketCapUsd: num(p.marketCap), fdvUsd: num(p.fdv),
       volumeUsd: Object.fromEntries(windows.map(w => [w, num(p.volume?.[w])])), change: Object.fromEntries(windows.map(w => [w, frac(p.priceChange?.[w])])),
       txns: Object.fromEntries(windows.map(w => [w, { buys: num(p.txns?.[w]?.buys), sells: num(p.txns?.[w]?.sells) }])),
+      hasSocials:Array.isArray(p.info?.socials)||Array.isArray(p.info?.websites)?[...(Array.isArray(p.info.socials)?p.info.socials:[]),...(Array.isArray(p.info.websites)?p.info.websites:[])].some(x=>httpsOrNull(x?.url)!==null):null,
       makers: { h24: null }, lifecycle: null, safety: null, observedAt, stale: false,
       provenance: { provider: 'dexscreener', discoverySource: 'browser', sampling: 'browser_pair_sample' },
     };
@@ -132,22 +139,38 @@ function geckoUrl(tab, network, window) {
 
 // DexScreener has no per-chain trending list; boosts and profiles across chains, then pairs by address,
 // and finally a chain-name search, fill the list for one chain.
+const sourceAt=(url,opts)=>memo.get(url)?.at??opts.now();
+const sourceRows=(rows,url)=>rows.map(r=>({...r,stale:!!memo.get(url)?.stale}));
 async function dexFeed(chainId, opts) {
   const n = NETWORKS[chainId];
-  const lists = await Promise.all(['/token-boosts/top/v1', '/token-boosts/latest/v1', '/token-profiles/latest/v1'].map(p => getJson('dex', DEX + p, opts)));
-  const addresses = [...new Set(lists.flatMap(l => Array.isArray(l) ? l : []).filter(x => x?.chainId === n.dex && x.tokenAddress).map(x => low(chainId, x.tokenAddress)))].slice(0, 30);
-  let rows = [];
-  if (addresses.length) rows = dexRows(await getJson('dex', `${DEX}/tokens/v1/${n.dex}/${addresses.join(',')}`, opts), chainId, opts.now());
-  for (const q of n.search) {
-    if (rows.length >= MIN_ROWS) break;
-    const body = await getJson('dex', `${DEX}/latest/dex/search?q=${encodeURIComponent(q)}`, opts);
-    rows = mergeRows(rows, dexRows(body?.pairs, chainId, opts.now()));
-  }
-  return rows;
+  let organic=[],knownBoosts=new Set();
+  const searches=Promise.all(n.search.map(async q=>{
+    const url=`${DEX}/latest/dex/search?q=${encodeURIComponent(q)}`;
+    const body=await getJson('dex',url,opts);
+    const rows=sourceRows(dexRows(body?.pairs,chainId,sourceAt(url,opts)),url).map(r=>({...r,provenance:{...r.provenance,discoverySource:'dexscreener_search'}}));
+    organic=mergeRows(organic,rows);
+    if(rows.length)opts.onRows?.({rows:organic,source:'DexScreener pairs'});
+    return rows;
+  }));
+  // Start independently: an advertising-list timeout must not hide ready market pairs.
+  opts.advertising ||= Promise.all(['/token-boosts/top/v1','/token-boosts/latest/v1','/token-profiles/latest/v1'].map(p=>getJson('dex',DEX+p,opts)));
+  const promoted=(async()=>{
+    const lists=await opts.advertising;
+    const boosts=new Set(lists.slice(0,2).flatMap(l=>Array.isArray(l)?l:[]).filter(x=>x?.chainId===n.dex).map(x=>low(chainId,x.tokenAddress)));
+    knownBoosts=boosts;
+    const addresses=[...new Set(lists.flatMap(l=>Array.isArray(l)?l:[]).filter(x=>x?.chainId===n.dex&&x.tokenAddress).map(x=>low(chainId,x.tokenAddress)))].slice(0,30);
+    if(!addresses.length)return [];
+    const url=`${DEX}/tokens/v1/${n.dex}/${addresses.join(',')}`;
+    return sourceRows(dexRows(await getJson('dex',url,opts),chainId,sourceAt(url,opts)),url).map(r=>({...r,provenance:{...r.provenance,
+      discoverySource:boosts.has(r.token.address)?'dexscreener_token_boosts':'dexscreener_token_profiles',promoted:boosts.has(r.token.address)}}));
+  })();
+  const [searched,more]=await Promise.all([searches,promoted]);
+  return mergeRows(searched.flat(),more).map(r=>knownBoosts.has(r.token.address)?{...r,provenance:{...r.provenance,promoted:true}}:r);
 }
 
 export function sortForTab(rows, tab, window = 'h24') {
-  const list = [...rows], v = (r, k) => num(k(r));
+  const list = rows.filter(discoveryCandidate), v = (r, k) => num(k(r));
+  if(tab==='trending')return rankDiscovery(list,{window});
   const desc = k => (a, b) => (v(b, k) ?? -Infinity) - (v(a, k) ?? -Infinity);
   if (tab === 'new') list.sort(desc(r => r.createdAt));
   else if (tab === 'volume') list.sort(desc(r => r.volumeUsd?.h24));
@@ -180,19 +203,22 @@ async function chainFeed(tab, chainId, window, opts) {
 
 // The browser's own list for one Discover view, in the server's {version:1, rows} contract.
 export async function browserFeed({ tab = 'trending', chain = 'all', window = 'h24', fetcher = globalThis.fetch, now = Date.now, signal, onPartial } = {}) {
-  const partial = onPartial ? ({ rows, source }) => { try { onPartial({ version: 1, tab, chain, window, rows: sortForTab(rows, tab, window), observedAt: now(), stale: false, browser: true, source }); } catch {} } : null;
+  const partial = onPartial ? ({ rows, source }) => { try { onPartial({ version: 1, tab, chain, window, rows: sortForTab(rows, tab, window), observedAt: rows.length?Math.min(...rows.map(r=>r.observedAt||now())):now(), stale: rows.length>0&&rows.every(r=>r.stale===true), browser: true, source }); } catch {} } : null;
   const opts = { fetcher, now, signal, onRows: partial };
   let rows = [], sources = new Set();
   if (chain === 'all') {
     // One read per chain, in parallel (six calls, well inside GeckoTerminal's per-visitor allowance).
     // Per chain, in parallel: GeckoTerminal first (six calls); a chain it doesn't answer (429s arrive without CORS
     // headers) reads DexScreener's chain search instead, so one provider's limit never empties a chain.
-    const movers = ['gainers', 'losers'].includes(tab), per = movers ? 20 : 12;
+    const movers = ['gainers', 'losers'].includes(tab), per = 30;
+    const arrived=new Map();
+    const publish=(id,got)=>{arrived.set(id,got);partial?.({rows:[...arrived.values()].flat(),source:'DexScreener pairs'});};
     const lists = await Promise.all(ALL_ORDER.map(async id => {
       const got = geckoRows(await getJson('gecko', geckoUrl(movers ? 'trending' : tab, NETWORKS[id].gecko, window), opts), id, now()).slice(0, per);
       if (got.length >= 5) { sources.add('GeckoTerminal'); return got; }
-      const found = await Promise.all(NETWORKS[id].search.map(q => getJson('dex', `${DEX}/latest/dex/search?q=${encodeURIComponent(q)}`, opts).then(b => dexRows(b?.pairs, id, now()))));
-      const more = mergeRows(got, found.flat()).slice(0, per); if (more.length > got.length) sources.add('DexScreener');
+      const found=await dexFeed(id,{...opts,onRows:got=>publish(id,got.rows.slice(0,per)),get advertising(){return opts.advertising;},set advertising(value){opts.advertising=value;}});
+      const more=mergeRows(got,found).slice(0,per);if(more.length>got.length)sources.add('DexScreener');
+      publish(id,more);
       return more;
     }));
     for (const got of lists) rows = rows.concat(got);
@@ -201,14 +227,15 @@ export async function browserFeed({ tab = 'trending', chain = 'all', window = 'h
       const lists = await Promise.all(['/token-boosts/top/v1', '/token-profiles/latest/v1'].map(p => getJson('dex', DEX + p, opts)));
       const byChain = new Map();
       for (const x of lists.flatMap(l => Array.isArray(l) ? l : [])) { const id = DEX_TO_ID[x?.chainId]; if (!id || !x.tokenAddress) continue; const s = byChain.get(id) || new Set(); if (s.size < 30) s.add(low(id, x.tokenAddress)); byChain.set(id, s); }
-      const found = await Promise.all([...byChain].map(([id, set]) => getJson('dex', `${DEX}/tokens/v1/${NETWORKS[id].dex}/${[...set].join(',')}`, opts).then(p => dexRows(p, id, now()))));
+      const found = await Promise.all([...byChain].map(async([id,set])=>{const url=`${DEX}/tokens/v1/${NETWORKS[id].dex}/${[...set].join(',')}`;const body=await getJson('dex',url,opts);return sourceRows(dexRows(body,id,sourceAt(url,opts)),url);}));
       for (const got of found) { if (got.length) sources.add('DexScreener'); rows = mergeRows(rows, got); }
     }
   } else {
     const got = await chainFeed(tab, chain, window, opts); rows = got.rows; if (got.source) for (const s of got.source.split(' · ')) sources.add(s);
   }
-  rows = sortForTab(mergeRows(rows, []), tab, window);
-  return { version: 1, tab, chain, window, rows, observedAt: now(), stale: false, browser: true, source: [...sources].join(' · ') || null };
+  rows = sortForTab(mergeRows(rows, [],240), tab, window);
+  if(chain==='all'&&tab==='trending')rows=rankDiscovery(rows,{window,chain,limit:100});
+  return { version: 1, tab, chain, window, rows, observedAt: rows.length?Math.min(...rows.map(r=>r.observedAt||now())):now(), stale: rows.length>0&&rows.every(r=>r.stale===true), browser: true, source: [...sources].join(' · ') || null };
 }
 
 // Last good list per view, on this device only. Read failures are ignored: the page works without it.
@@ -222,7 +249,7 @@ export function readCachedFeed(storage, key, now = Date.now()) {
 export function writeCachedFeed(storage, key, data, now = Date.now()) {
   try {
     if (!storage?.setItem || !data?.rows?.length) return;
-    const all = JSON.parse(storage.getItem(CACHE_KEY) || '{}'), next = { ...all, [key]: { at: now, rows: data.rows.slice(0, 60), meta: { tab: data.tab, chain: data.chain, window: data.window, source: data.source || null } } };
+    const all = JSON.parse(storage.getItem(CACHE_KEY) || '{}'), next = { ...all, [key]: { at: now, rows: data.rows.slice(0, 60).map(r=>({...r,priceAt:priceObservation(r,data.observedAt??null)})), meta: { tab: data.tab, chain: data.chain, window: data.window, source: data.source || null } } };
     const keys = Object.keys(next).sort((a, b) => next[b].at - next[a].at).slice(0, 24);
     storage.setItem(CACHE_KEY, JSON.stringify(Object.fromEntries(keys.map(k => [k, next[k]]))));
   } catch {}

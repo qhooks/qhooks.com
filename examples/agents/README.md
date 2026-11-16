@@ -2,7 +2,7 @@
 
 Connect an agent to QHooks for Robinhood Chain market reads, stored QProof safety checks and wallet-reviewed OTC/agreement plans. MCP: https://qhooks.com/mcp · instructions: https://qhooks.com/skill.md · A2A card: https://qhooks.com/.well-known/agent-card.json.
 
-These examples make **read-only requests**. They contain no signer, key, wallet connector, transaction sender or vendored assets. QHooks needs no API key for these reads. The user's wallet signs every funds-moving step in a later user-authorised flow.
+These examples make **read-only requests**. They contain no signer, key, wallet connector, transaction sender or vendored assets. QHooks needs no API key for these reads. Prepared for the signing wallet: the agent's own wallet or yours. No custody. We never hold keys. Each later funds-moving step needs the intended wallet's signature.
 
 ## Quick start
 
@@ -57,8 +57,8 @@ For a later reviewed OTC flow: `otc_quote` → `otc_create` → buyer signature/
 
 ## Guides
 
-- [Robinhood Chain MCP in 2 minutes](https://qhooks.com/agents/guides/robinhood-chain-mcp?ref=guide-1)
-- [Token safety checks for your agent](https://qhooks.com/agents/guides/token-safety-mcp?ref=guide-2)
-- [Agent OTC escrow and pay-when-done agreements](https://qhooks.com/agents/guides/agent-escrow?ref=guide-3)
+- [Robinhood Chain MCP in 2 minutes](https://qhooks.com/agents/guides/robinhood-chain-mcp)
+- [Token safety checks for your agent](https://qhooks.com/agents/guides/token-safety-mcp)
+- [Agent OTC escrow and pay-when-done agreements](https://qhooks.com/agents/guides/agent-escrow)
 
 Client setup references: [Claude](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp), [Cursor](https://cursor.com/docs/mcp), [Codex](https://learn.chatgpt.com/docs/extend/mcp?surface=cli). Preserve existing configuration when adding the QHooks URL. Repository licensing applies.

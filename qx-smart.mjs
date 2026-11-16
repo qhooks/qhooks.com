@@ -89,7 +89,7 @@ export function createSmartBoard({ nameOf = short, isFollowing = () => false, to
     const fol = isFollowing(r.wallet);
     const f = el('button', { type: 'button', class: 'qsm-btn ' + (fol ? 'is-on' : 'qsm-primary') }, fol ? 'Following' : 'Follow');
     f.addEventListener('click', async e => { e.stopPropagation(); f.disabled = true; try { await toggleFollow?.(r.wallet); } catch (err) { say(err?.message || 'Sign-in cancelled.'); } f.disabled = false; draw(); });
-    const c = el('a', { class: 'qsm-btn', href: '/copy?w=' + r.wallet + (r.chains?.[0] && r.chains.length === 1 ? '&chain=' + r.chains[0] : ''), onclick: e => e.stopPropagation() }, 'Copy trades');
+    const c = el('a', { class: 'qsm-btn', href: '/mirror?w=' + r.wallet + (r.chains?.[0] && r.chains.length === 1 ? '&chain=' + r.chains[0] : ''), onclick: e => e.stopPropagation() }, 'Copy trades');
     return [f, c];
   }
   function who(r) {

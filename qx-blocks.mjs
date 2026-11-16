@@ -1,3 +1,8 @@
+import {studioImpact} from './qx-studio-impact.mjs';
+import {currentGuidedStart} from './qx-guided-start-control.mjs';
+import {STUDIO_KITS} from './qx-block-catalog.mjs';
+import {studioGas} from './qx-studio-gas.mjs';
+import {chainById} from './chains.mjs';
 import {blockQuoteBudget} from './qx-create-plan.mjs';
 // Studio launch-blocks picker. Writes the canonical blocks configuration into #ql-blocks,
 // with "@owner" standing for the connected wallet until the launch is opened.
@@ -145,53 +150,23 @@ if (root && out) {
   }
 
   // ---------------------------------------------------------------- simulator
-  function previewRate(c, minutes, isBuy, size) {
-    const t = minutes * 60, on = id => isOn(id), n = k => Number(c[k]), parts = [];
-    if (on('antiSnipe') && isBuy && t < n('guardSeconds')) {
-      const r = n('snipeDecay') === 0 ? n('snipeBps') : t >= n('snipeDecay') ? n('snipeFloorBps') : n('snipeBps') - (n('snipeBps') - n('snipeFloorBps')) * t / n('snipeDecay');
-      if (r) parts.push(['Snipe tax', r]);
-    }
-    if (on('exitClock') && !isBuy) { const r = t >= n('exitHorizon') ? n('exitFloorBps') : n('exitTopBps') - (n('exitTopBps') - n('exitFloorBps')) * t / n('exitHorizon'); if (r) parts.push(['Exit clock', r]); }
-    if (on('stormFee') && n('stormFloorBps')) parts.push(['Storm floor', n('stormFloorBps')]);
-    if (on('sessionFee')) { const s = session(Date.now() / 1000), r = [n('regularBps'), n('extendedBps'), n('overnightBps'), n('closedBps')][s]; if (r) parts.push([['Regular hours', 'Extended hours', 'Overnight', 'Weekend'][s], r]); }
-    if (on('tax')) { let base = isBuy ? n('buyTaxBps') : n('sellTaxBps'); if (n('launchTaxBps') && t < n('taxDecay')) base = n('launchTaxBps') - (n('launchTaxBps') - base) * t / n('taxDecay'); if (base) parts.push([isBuy ? 'Buy tax' : 'Sell tax', base]); }
-    if (on('sizeTiers')) { const [, dec] = quoteAsset(), q = BigInt(toBase(String(size), dec)); const r = q >= BigInt(c.tier2) ? n('tier2Bps') : q >= BigInt(c.tier1) ? n('tier1Bps') : 0; if (r) parts.push(['Whale tier', r]); }
-    let total = parts.reduce((s, p) => s + p[1], 0);
-    if (total > 5000) { parts.push(['Capped at 50%', 5000 - total]); total = 5000; }
-    if (on('autoBurn') && isBuy) parts.push(['Burned from tokens', n('burnBps')]);
-    return parts;
-  }
-  function session(ts) {
-    const y = new Date(ts * 1000).getUTCFullYear();
-    const sunday = (m, nth) => { const first = new Date(Date.UTC(y, m, 1)); const day = 1 + (7 - first.getUTCDay()) % 7 + 7 * (nth - 1); return Date.UTC(y, m, day) / 1000; };
-    const dst = ts >= sunday(2, 2) + 7 * 3600 && ts < sunday(10, 1) + 6 * 3600;
-    const local = new Date((ts - (dst ? 4 : 5) * 3600) * 1000), dow = local.getUTCDay(), minute = local.getUTCHours() * 60 + local.getUTCMinutes();
-    if (dow === 6) return 3; if (dow === 0) return minute >= 1200 ? 2 : 3; if (dow === 5 && minute >= 1200) return 3;
-    if (minute < 240 || minute >= 1200) return 2; if (minute >= 570 && minute < 960) return 0; return 1;
-  }
-
   // ---------------------------------------------------------------- render
   const summary = el('aside', { class: 'qxb-sim', 'aria-live': 'polite' });
-  const simTime = el('select', { 'aria-label': 'When the trade happens', onchange: () => renderSummary(config(), out.dataset.problem) },
-    ...[[0, 'at launch'], [1, 'after 1 minute'], [5, 'after 5 minutes'], [30, 'after 30 minutes'], [1440, 'after a day']].map(([v, t]) => el('option', { value: v, text: t })));
-  const simSize = el('input', { type: 'text', inputmode: 'decimal', value: '100', 'aria-label': 'Trade size', oninput: () => renderSummary(config(), out.dataset.problem) });
-
-  function renderSummary(c, issue) {
-    const [sym] = quoteAsset(), minutes = Number(simTime.value), size = Number(simSize.value) || 0;
-    const lp = Number(d.getElementById('ql-fee')?.value || 1), proto = lp / 5;
-    const row = (label, bps, cls = '') => el('li', { class: cls }, el('span', { text: label }), el('b', { text: (bps / 100).toFixed(bps % 100 ? 2 : 0) + '%' }));
-    const col = isBuy => {
-      const parts = previewRate(c, minutes, isBuy, size), blocks = parts.filter(p => p[0] !== 'Burned from tokens').reduce((s, p) => s + p[1], 0);
-      return el('div', { class: 'qxb-col' }, el('h4', { text: isBuy ? 'A buy pays' : 'A sell pays' }),
-        el('ul', {}, parts.length ? parts.map(p => row(p[0], p[1], p[0].startsWith('Burned') ? 'burn' : '')) : el('li', { class: 'none' }, el('span', { text: 'No block charges' })),
-          row('LP fee (yours)', lp * 100, 'base'), row('Protocol', proto * 100, 'base')),
-        el('p', { class: 'qxb-total' }, el('span', { text: 'Total' }), el('b', { text: ((blocks / 100) + lp + proto).toFixed(2) + '%' })));
-    };
-    summary.replaceChildren(
-      el('div', { class: 'qxb-sim-head' }, el('h3', { text: 'What a trade pays' }),
-        el('div', { class: 'qxb-sim-ctl' }, el('label', {}, 'A ', simSize, ' ' + sym + ' trade'), simTime)),
-      el('div', { class: 'qxb-cols' }, col(true), col(false)),
-      el('p', { class: issue ? 'qxb-issue' : 'qxb-ok', role: issue ? 'alert' : null, text: issue || (state.on.length ? state.on.length + (state.on.length === 1 ? ' block' : ' blocks') + ' set. Fixed at launch; nobody can change them later.' : 'No blocks: a plain protected pool.') }));
+  const simTime=el('input',{type:'number',min:'0',max:'43200',value:'0','aria-label':'Minute after launch',oninput:()=>renderSummary(config(),out.dataset.problem)});
+  const simSize=el('input',{type:'number',min:'0',step:'any',value:'0.01','aria-label':'Trade size',oninput:()=>renderSummary(config(),out.dataset.problem)});
+  const sinceBuy=el('input',{type:'number',min:'0',value:'0','aria-label':'Seconds since last buy',oninput:()=>renderSummary(config(),out.dataset.problem)});
+  const fmt=n=>Number(n).toLocaleString('en-US',{maximumSignificantDigits:5});
+  function renderSummary(c,issue){
+   const [sym,decimals]=quoteAsset(),lp=Number(d.getElementById('ql-fee')?.value??1),minutes=Number(simTime.value),size=Number(simSize.value);
+   const result=studioImpact({config:c,on:isOn,size,minutes,lpPercent:lp,quoteDecimals:decimals,supply:Number(d.getElementById('ql-supply')?.value),tokenAmount:d.getElementById('ql-token-funding')?.value,tokenDecimals:Number(d.getElementById('ql-decimals')?.value||18),quoteFunding:d.getElementById('ql-quote-funding')?.value||'0',pricing:currentGuidedStart(d.getElementById('ql-start-cap')),quote:(selectedPair(chainId())?stockPair(chainId(),selectedPair(chainId())):null)?.address||chainById(chainId())?.quote.address, sinceBuy:Number(sinceBuy.value)});
+   const row=(label,value)=>el('li',{},el('span',{text:label}),el('b',{text:value}));
+   const col=r=>el('div',{class:'qxb-col'},el('h4',{text:(r.isBuy?'Buy':'Sell')+' · '+fmt(size)+' '+sym+' at minute '+minutes}),
+    el('ul',{},r.parts.map(([label,bps])=>row(label,fmt(bps/100)+'%')),row('Creator LP',fmt(r.lpBps/100)+'%'),row('Protocol',fmt(r.protocolBps/100)+'%')),
+    el('p',{class:'qxb-total'},el('span',{text:'Nominal charges'}),el('b',{text:fmt(r.fees)+' '+sym})),
+    el('ul',{class:'qs-impact'},row('Average price impact',r.impact===null?'Needs starting price':fmt(r.impact)+'%'),row('Estimated spot move',r.move===null?'—':fmt(r.move)+'%'),row('Creator LP receives',fmt(r.lpAmount)+' '+sym),row('Protocol receives',fmt(r.protocolAmount)+' '+sym),r.buckets.map(b=>row(b.label,fmt(b.amount)+' '+sym)),r.payees.flatMap(pay=>{const module=moduleById(moduleIdOfPayee(pay.address)),cut=module?.builderBps?pay.amount*module.builderBps/10000:0;return [row(pay.address==='@owner'?'Launch wallet':pay.address===STAKERS_PAYEE?'Stakers':module?.name||pay.address.slice(0,8)+'…',fmt(pay.amount-cut)+' '+sym),...(cut?[row(module.builderName+' · builder',fmt(cut)+' '+sym)]:[])];})),
+    r.hits.map(text=>el('p',{class:'qs-hit',text})));
+   const gas=studioGas(state.on);
+   summary.replaceChildren(el('div',{class:'qxb-sim-head'},el('p',{class:'qx-eyebrow',text:'Impact simulator'}),el('h3',{text:'Try a buy. Try a sell.'}),el('div',{class:'qxb-sim-ctl'},el('label',{},'Size ('+sym+' equivalent)',simSize),el('label',{},'Minute after launch',simTime),el('label',{},'Seconds since last buy',sinceBuy))),result.error?el('p',{class:'qxb-issue',text:result.error}):el('div',{class:'qxb-cols'},result.cols.map(col)),el('p',{class:'qs-sim-note',text:'Hypothetical independent trades at the configured start price; a blocked swap reverts. Fees and recipient amounts are nominal quote-equivalents, not a live quote. Sell size is quote-equivalent. Same wallet bought the entered seconds ago; no earlier block volume or prior wallet buys. Price impact estimates use the initial liquidity range, not live quotes. Output-side impact/sandwich fees and changing volatility are shown separately.'}),el('p',{class:'qs-gas-total',text:gas.label}),el('p',{class:'qs-sim-note',text:'Gas estimates cover the added work from these rules. Actual gas depends on the trade and chain. Review the network fee before approval.'}),el('p',{class:issue?'qxb-issue':'qxb-ok',text:issue||'Edit any rule to see the change. Launch blocks are fixed at launch.'}));
   }
 
   function field(p, block) {
@@ -220,7 +195,7 @@ if (root && out) {
     return el('article', { class: 'qxb-card' + (active ? ' on' : ''), 'data-block': b.id },
       el('header', {}, el('div', {}, el('h4', { text: b.name }), el('p', { text: b.line })), toggle),
       active ? el('p', { class: 'qxb-how', text: b.how }) : null, blocked ? el('p', { class: 'qxb-how', text: 'Off while the opening auction is on: it would treat the whole batch as one trader.' }) : null, body, setup,
-      b.id === 'payees' ? payees() : null);
+      b.id === 'payees' ? payees() : null,el('small',{class:'qs-block-meta','data-qs-usage':b.id,text:studioGas([b.id]).label+' · Launch count not loaded'}));
   }
 
   function payees() {
@@ -239,7 +214,7 @@ if (root && out) {
     const stakers = state.payees.length < 8 && !state.payees.some(p => p.addr === STAKERS_PAYEE || moduleIdOfPayee(p.addr) === STAKING_MODULE)
       ? el('button', { type: 'button', class: 'qxb-add', onclick: () => addModule(STAKING_MODULE) }, '+ Share with stakers') : null;
     const pick = state.payees.length < 8 ? el('button', { type: 'button', class: 'qxb-add', 'aria-expanded': String(modulesOpen), 'aria-controls': 'qxb-modules', onclick: () => { modulesOpen = !modulesOpen; render(); } }, modulesOpen ? '− Modules' : '+ Modules') : null;
-    return el('div', { class: 'qxb-payees' }, rows, el('div', { class: 'qxb-payee-foot' }, el('span', { class: 'qxb-payee-adds' }, add, stakers, pick), el('small', { id: 'qxb-payee-total', text: 'Total ' + fixed(total, 2) + '%' })),
+    return el('div', { class: 'qxb-payees' },el('p',{class:'qs-split-help',text:'These percentages divide the creator block income after pots, buyback and referrals. Creator LP fees are separate. A module’s builder can keep up to 10% of that module’s allocation, fixed in code—not 10% of the trade. Example: a 20% module share with a 10% builder cut sends 2% of this bucket to the builder and 18% to the module.'}), rows, el('div', { class: 'qxb-payee-foot' }, el('span', { class: 'qxb-payee-adds' }, add, stakers, pick), el('small', { id: 'qxb-payee-total', text: 'Total ' + fixed(total, 2) + '%' })),
       modulesOpen && state.payees.length < 8 ? modulePicker() : null);
   }
   // Builder marketplace: reviewed modules a launch can pay. Each takes a share of the split like any payee; its builder
@@ -293,9 +268,8 @@ if (root && out) {
 
   function render() {
     const usesGuard = state.on.some(id => BLOCKS.find(b => b.id === id)?.guard);
-    const presets = el('div', { class: 'qxb-presets', role: 'group', 'aria-label': 'Start from a preset' },
-      PRESETS.filter(p => presetVisible(p) || state.preset === p.id).map(p => el('button', { type: 'button', class: 'qxb-preset', 'data-preset': p.id, 'aria-pressed': String(state.preset === p.id), onclick: () => applyPreset(p) },
-        el('b', { text: p.name }), el('span', { text: p.line }))));
+    const kitButton=p=>el('button',{type:'button',class:'qxb-preset','data-preset':p.id,'aria-pressed':String(state.preset===p.id),onclick:()=>applyPreset(p)},el('b',{text:p.name}),el('span',{text:p.line}),el('small',{text:'Use kit · then edit'}));
+    const presets=el('div',{},el('div',{class:'qxb-presets',role:'group','aria-label':'Fork a starter kit'},[PRESETS.find(p=>p.id==='fair'),...STUDIO_KITS].map(kitButton)),el('details',{class:'qs-more-kits'},el('summary',{text:'More starter kits'}),el('div',{class:'qxb-presets'},PRESETS.filter(p=>p.id!=='fair'&&(presetVisible(p)||state.preset===p.id)).map(kitButton))));
     const guard = usesGuard ? el('label', { class: 'qxb-guard' }, el('span', { text: 'Launch guard' }),
       el('span', { class: 'qxb-input' }, el('input', { type: 'text', inputmode: 'decimal', value: String(state.guardMin), 'aria-label': 'Launch guard length in minutes', oninput: e => { state.guardMin = e.target.value; write(); } }), el('i', { text: 'min' })),
       el('small', { text: 'Anti-snipe, wallet cap and cooldown run for this long after launch.' })) : null;
@@ -305,10 +279,11 @@ if (root && out) {
     root.replaceChildren(
       el('div', { class: 'qxb-head' }, el('div', {}, el('p', { class: 'qx-eyebrow', text: 'Launch blocks' }), el('h2', { text: 'What runs on every trade' }),
         el('p', { text: 'Pick blocks and tune them. They are fixed when you launch: no owner, no admin key, no changes later. Anyone can read them on chain.' }))),
-      presets,
+      el('section',{class:'qs-kits'},el('h3',{text:'Start with a kit'}),el('p',{text:'Pick a starting point, then tune every block. Your edits make it yours.'}),presets),
       el('div', { class: 'qxb-layout' }, el('div', { class: 'qxb-main' }, guard, groups), summary));
   }
 
+  d.addEventListener('qhooks:studio-pricing',()=>renderSummary(config(),out.dataset.problem));
   out.addEventListener('qx-blocks-load', () => {
     // A saved launch: show its exact blocks.
     if (!out.value) { state.on = []; quiet = true; render(); write(); quiet = false; return; }

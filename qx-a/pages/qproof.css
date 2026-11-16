@@ -1,0 +1,115 @@
+/* QProof page (/qproof). Noir + gold, System A tokens only. No italics, no circles or rings: status marks are squares,
+   the supply map is one horizontal bar. Phone first (390 px), 44 px targets. */
+.qp { max-width: 860px; margin: 0 auto; padding: 0 var(--qa-pad, 16px) 96px; overflow-wrap: anywhere; }
+.qp-tabs { margin: 8px 0 4px; }
+.qp-tabs .qa-tab { display: inline-flex; align-items: center; min-height: 44px; color: var(--qa-tx-2); }
+.qp-tabs .qa-tab[aria-current="page"] { color: var(--qa-tx); }
+.qp-hero { padding-top: 18px; }
+.qp-hero .hl-lede { color: var(--qa-tx-2); max-width: 62ch; }
+.qp-form { margin-top: 18px; display: grid; gap: 10px; }
+.qp-input { width: 100%; box-sizing: border-box; min-height: 52px; padding: 12px 14px; border-radius: var(--qa-r-m, 12px); border: 1px solid var(--qa-rule-2); background: var(--qa-wash); color: var(--qa-tx); font: inherit; font-size: 16px; font-weight: 600; }
+.qp-input:focus-visible, .qp-select:focus-visible { outline: 2px solid var(--qa-gold); outline-offset: 2px; }
+.qp-input::placeholder { color: var(--qa-tx-3); font-weight: 500; }
+.qp-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.qp-select { -webkit-appearance: none; appearance: none; flex: 1 1 180px; height: 44px; min-height: 44px; padding: 0 12px; border-radius: var(--qa-r-m, 12px); border: 1px solid var(--qa-rule-2); background: var(--qa-floor-2); color: var(--qa-tx); font: inherit; font-size: 15px; }
+.qp-go { flex: 0 0 auto; min-width: 120px; min-height: 44px; }
+.qp-detected { margin: 0; min-height: 1.2em; font-size: 13px; color: var(--qa-tx-2); }
+.qp-msg { margin: 0; min-height: 1.2em; font-size: 14px; font-weight: 600; color: var(--qa-warn); }
+.qp-tries { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.qp-try { min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--qa-rule-2); background: transparent; color: var(--qa-tx-2); font: inherit; font-size: 14px; cursor: pointer; }
+.qp-try b { color: var(--qa-tx); }
+.qp-try:hover { border-color: var(--qa-gold); }
+
+.qp-report { margin-top: 28px; display: grid; gap: 14px; }
+.qp-verdict, .qp-sec { position: relative; border-radius: var(--qa-r-slab, 18px); padding: 18px; background: var(--qa-slab); box-shadow: var(--qa-slab-edge), var(--qa-slab-shadow); }
+.qp-verdict { border-left: 4px solid var(--qa-tx-3); }
+.qp-verdict.is-clear { border-left-color: var(--qa-buy); }
+.qp-verdict.is-caution { border-left-color: var(--qa-warn); }
+.qp-verdict.is-danger { border-left-color: var(--qa-sell); }
+.qp-verdict.is-wait { border-left-color: var(--qa-gold); }
+.qp-k { margin: 0; font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--qa-gold); }
+.qp-verdict.is-clear .qp-k { color: var(--qa-buy); }
+.qp-verdict.is-caution .qp-k { color: var(--qa-warn); }
+.qp-verdict.is-danger .qp-k { color: var(--qa-sell); }
+.qp-headline { margin: 6px 0 0; font-size: clamp(22px, 6vw, 30px); font-weight: 820; font-stretch: 116%; letter-spacing: -.02em; line-height: 1.12; color: var(--qa-tx); }
+.qp-subject { margin: 10px 0 0; font-size: 14.5px; color: var(--qa-tx-2); }
+.qp-subject b { color: var(--qa-tx); }
+.qp-counts { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 12px 0 0; font-size: 14px; color: var(--qa-tx-2); }
+.qp-count { display: inline-flex; align-items: center; gap: 6px; }
+.qp-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; background: var(--qa-tx-3); flex: none; }
+.qp-dot.is-clear { background: var(--qa-buy); }
+.qp-dot.is-caution { background: var(--qa-warn); }
+.qp-dot.is-danger { background: var(--qa-sell); }
+.qp-when { margin: 8px 0 0; font-size: 13px; color: var(--qa-tx-2); }
+.qp-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
+.qp-actions .qa-btn { min-height: 44px; }
+.qp-note { margin: 10px 0 0; font-size: 14px; font-weight: 600; color: var(--qa-warn); }
+.qp-sec__h { margin: 0 0 10px; font-size: 17px; font-weight: 780; font-stretch: 112%; color: var(--qa-tx); }
+.qp-wait { margin: 0 0 8px; color: var(--qa-tx-2); font-size: 14px; }
+.qp-p { margin: 8px 0 0; font-size: 15px; line-height: 1.5; color: var(--qa-tx-2); }
+.qp-detail { margin: 8px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--qa-tx-2); }
+.qp-means { margin: 6px 0 0; font-size: 14px; line-height: 1.45; color: var(--qa-tx); }
+.qp-addr { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; color: var(--qa-gold); text-decoration: underline; text-underline-offset: 3px; }
+.qp-checklist { list-style: none; margin: 0; padding: 0; }
+.qp-check { padding: 12px 0; box-shadow: 0 -1px 0 var(--qa-rule); }
+.qp-check:first-child { box-shadow: none; padding-top: 0; }
+.qp-check__top { display: flex; gap: 10px; align-items: baseline; }
+.qp-check__top b { font-size: 15px; color: var(--qa-tx); }
+.qp-st { flex: none; min-width: 78px; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--qa-tx-2); }
+.qp-st.is-clear { color: var(--qa-buy); }
+.qp-st.is-caution { color: var(--qa-warn); }
+.qp-st.is-danger { color: var(--qa-sell); }
+.qp-reads { margin-top: 8px; font-size: 13px; color: var(--qa-tx-2); }
+.qp-reads summary, .qp-notes summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: var(--qa-gold); font-weight: 650; }
+.qp-reads ul { margin: 4px 0 0; padding-left: 18px; }
+.qp-reads li { margin: 4px 0; }
+.qp-sha { font-size: 12px; color: var(--qa-tx-2); }
+.qp-kv { margin-top: 6px; }
+.qp-kv dt { color: var(--qa-tx-2); }
+.qp-bar { display: flex; gap: 2px; height: 22px; border-radius: 4px; overflow: hidden; background: var(--qa-wash); }
+.qp-seg, .qp-sw { display: block; background: var(--qa-tx-3); }
+.qp-sw { width: 12px; height: 12px; border-radius: 2px; flex: none; }
+.is-pool { background: #3FB6A0; } .is-locked { background: var(--qa-gold); } .is-staked { background: var(--qa-gold-hi); }
+.is-burned { background: var(--qa-fire); } .is-wallets { background: var(--qa-info); } .is-creator { background: var(--qa-sell); }
+.is-contract { background: #8E86C8; } .is-rest { background: var(--qa-tx-3); }
+.qp-legend-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
+.qp-legend-list li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--qa-tx-2); }
+.qp-legend-list b { margin-left: auto; color: var(--qa-tx); font-variant-numeric: tabular-nums; }
+.qp-holders { list-style: none; margin: 8px 0 0; padding: 0; }
+.qp-holders li { display: grid; grid-template-columns: 22px minmax(56px, auto) auto 1fr 56px; gap: 8px; align-items: center; padding: 8px 0; font-size: 13.5px; color: var(--qa-tx-2); box-shadow: 0 -1px 0 var(--qa-rule-row); }
+.qp-holders b { text-align: right; color: var(--qa-tx); font-variant-numeric: tabular-nums; }
+.qp-rank { color: var(--qa-tx-2); }
+.qp-tag { font-weight: 650; color: var(--qa-tx); }
+.qp-hbar { height: 6px; background: var(--qa-wash); border-radius: 2px; overflow: hidden; }
+.qp-hbar i { display: block; height: 100%; background: var(--qa-info); }
+.qp-trades { margin: 8px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--qa-tx-2); }
+.qp-cmd { display: block; margin-top: 6px; padding: 8px 10px; border-radius: 8px; background: var(--qa-wash); font-size: 12.5px; color: var(--qa-tx); white-space: pre-wrap; }
+.qp-out { max-height: 320px; overflow: auto; padding: 10px; border-radius: 8px; background: var(--qa-wash); font-size: 12px; color: var(--qa-tx); white-space: pre-wrap; }
+.qp-in { animation: qp-up .38s var(--qa-ease-out, ease-out) both; }
+@keyframes qp-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .qp-in { animation: none; } }
+.qp-sec .qa-skel { margin-top: 6px; }
+
+.qp-h2 { margin: 0; font-size: clamp(22px, 5.6vw, 28px); font-weight: 820; font-stretch: 116%; letter-spacing: -.02em; color: var(--qa-tx); }
+.qp-h3 { margin: 22px 0 0; font-size: 18px; font-weight: 780; color: var(--qa-tx); }
+.qp-code, .qp-how { margin-top: 36px; }
+.qp-run { margin-top: 10px; }
+.qp-holder { margin: 10px 0 0; font-size: 14px; color: var(--qa-tx-2); }
+.qp-holder.is-on b { color: var(--qa-buy); }
+.qp-runstate { margin-top: 8px; }
+.qp-runstate.is-clear { color: var(--qa-buy); } .qp-runstate.is-danger { color: var(--qa-sell); }
+.qp-get { min-height: 44px; }
+.qp-checks { margin: 14px 0 0; padding-left: 22px; display: grid; gap: 12px; }
+.qp-checks li b { display: block; color: var(--qa-tx); font-size: 15.5px; }
+.qp-checks li span { display: block; margin-top: 3px; font-size: 14.5px; line-height: 1.5; color: var(--qa-tx-2); }
+.qp-legend { margin: 10px 0 0; display: grid; gap: 10px; }
+.qp-legend div { display: grid; grid-template-columns: 130px 1fr; gap: 10px; font-size: 14.5px; }
+.qp-legend dt { display: flex; align-items: center; gap: 8px; font-weight: 750; color: var(--qa-tx); }
+.qp-legend dd { margin: 0; color: var(--qa-tx-2); line-height: 1.45; }
+.qp-not { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 8px; font-size: 14.5px; line-height: 1.5; color: var(--qa-tx-2); }
+@media (max-width: 480px) {
+  .qp-legend div { grid-template-columns: 1fr; gap: 2px; }
+  .qp-holders li { grid-template-columns: 18px auto 1fr 52px; }
+  .qp-holders .qp-hbar { display: none; }
+  .qp-go { flex: 1 1 100%; }
+}

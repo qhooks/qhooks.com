@@ -1,0 +1,8 @@
+@import url("./setup-base.css");
+/* /qwerty-splitter: rows on the floor, one action per step, full-width taps on phones. */
+.qws .qws-facts { margin: 8px 0 28px; }
+.qws .qws-facts dd { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.qws .qws-step { padding: 24px 0; box-shadow: 0 -1px 0 var(--qa-rule); }
+.qws .qws-step h3 { margin-bottom: 8px; }
+.qws .qws-step .qas-go { min-height: 48px; padding-inline: 20px; }
+@media (max-width: 599px) { .qws .qws-step .qas-go { width: 100%; } .qws .qws-facts { grid-template-columns: minmax(0,1fr); } .qws .qws-facts dt { padding-bottom: 2px; } .qws .qws-facts dd { padding-top: 0; box-shadow: none; } }

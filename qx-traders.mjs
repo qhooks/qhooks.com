@@ -1,3 +1,4 @@
+import {competitionCopyControl} from './compete-copy.mjs';
 import {migrateCommunityFollowing,communityFollowing} from './qx-community-follow.mjs';
 import {profileUrl,resolveProfileAddress} from './qx-profile-address.mjs';
 import {memberWallet} from './qx-member-wallet.mjs';
@@ -94,9 +95,10 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
    if(row.thesis&&row.side==='buy')card.append(h('p',{class:'qt-thesis'},row.thesis));return card;
   }));
  }
+ function standingsTrader(row){const name=traderName(row),children=[...name.children],actions=h('div',{class:'qt-trader-actions'});actions.append(...children.filter(n=>String(n.tagName).toLowerCase()==='button'),competitionCopyControl(doc,row));name.replaceChildren(...children.filter(n=>String(n.tagName).toLowerCase()!=='button'),actions);return name;}
  function standings(rows,{competition=false}={}){
   if(!rows.length)return h('p',{class:'qa-empty'},competition?'No wallets meet this round’s entry requirements yet.':'No public traders have five recorded trades in this window yet.');
-  return h('ol',{class:'qt-standings'},...rows.map((row,index)=>h('li',{class:'qt-standing'},h('span',{class:'qt-rank','aria-label':'Rank '+(row.rank||index+1)},String(row.rank||index+1).padStart(2,'0')),traderName(row),h('dl',{class:'qt-metrics'},fact('PnL USD',traderUsd(row.pnlUsd),tone(row.pnlUsd)),fact('PnL %',percent(row.pnlPct),tone(row.pnlPct)),fact('Trades',row.trades??'—'),fact('Win rate',row.winRate==null?'—':percent(Number(row.winRate)*100))))));
+  return h('ol',{class:'qt-standings'},...rows.map((row,index)=>h('li',{class:'qt-standing'},h('span',{class:'qt-rank','aria-label':'Rank '+(row.rank||index+1)},String(row.rank||index+1).padStart(2,'0')),standingsTrader(row),h('dl',{class:'qt-metrics'},fact('PnL USD',traderUsd(row.pnlUsd),tone(row.pnlUsd)),fact('PnL %',percent(row.pnlPct),tone(row.pnlPct)),fact('Trades',row.trades??'—'),fact('Win rate',row.winRate==null?'—':percent(Number(row.winRate)*100))))));
  }
  function renderFilters(){
   filters.replaceChildren();
@@ -177,7 +179,7 @@ export function mountTraders(target,{client=createTradersClient(),auth,hub,solHu
     // The profile response already carries its current public trades. Following is optional metadata.
     const feed=filter==='all'&&Array.isArray(value.trades)?{trades:value.trades.map(row=>({...row,name:row.name||value.name||''}))}:await client.feed({filter,wallet:candidate});if(mine!==generation||disposed)return;const pnl=value.pnl,summary=pnl?h('dl',{class:'qt-metrics qt-profile-pnl'},fact('PnL USD',traderUsd(pnl.pnlUsd),tone(pnl.pnlUsd)),fact('PnL %',percent(pnl.pnlPct)),fact('Trades',pnl.trades??value.trades??'—'),fact('Win rate',pnl.winRate==null?'—':percent(Number(pnl.winRate)*100))):null;body.replaceChildren(...[summary,feedRows(feed.trades||[])].filter(Boolean));
    }else if(tab==='feed'){await follows();const value=await client.feed({filter});if(mine!==generation||disposed)return;body.replaceChildren(feedRows(value.trades||[]));}
-   else if(tab==='leaderboard'){const value=await client.leaderboard(windowKey);pendingProjection=!!value.refreshing;computedAt=value.refreshedAt||value.computedAt;if(mine!==generation||disposed)return;body.replaceChildren(h('p',{class:'qt-ranking-note'},'Ranked by real PnL, not followers.'),h('p',{class:'qt-help'},'Realized + unrealized PnL in USD. Trading fees included; network fees and rewards excluded. At least 5 trades in the selected window. A dash means a USD price is missing.'),value.refreshing&&!value.rows?.length?h('p',{class:'qa-empty'},'Refreshing leaderboard…'):standings(value.rows||[]));}
+   else if(tab==='leaderboard'){const value=await client.leaderboard(windowKey);pendingProjection=!!value.refreshing;computedAt=value.refreshedAt||value.computedAt;if(mine!==generation||disposed)return;body.replaceChildren(h('p',{class:'qt-help'},'PUBLIC TRADERS / RECORDED RESULTS'),h('p',{class:'qt-ranking-note'},'Ranked by real PnL, not followers.'),h('p',{class:'qt-help'},'Realized + unrealized PnL in USD. Trading fees included; network fees and rewards excluded. At least 5 trades in the selected window. A dash means a USD price is missing.'),value.refreshing&&!value.rows?.length?h('p',{class:'qa-empty'},'Refreshing leaderboard…'):standings(value.rows||[]));}
    else{const value=await client.competition();pendingProjection=!!value.refreshing;computedAt=value.refreshedAt||value.computedAt;if(mine!==generation||disposed)return;renderCompetition(value);}
    status.textContent=pendingProjection?'Refreshing trading records…'+(computedAt?' Last completed '+new Date(computedAt).toLocaleTimeString()+'.':''):'Updated '+new Date(computedAt||now()).toLocaleTimeString();
   }catch(error){if(mine===generation)status.textContent=error.message+' Your current view stays here. Use Refresh to retry.';}
@@ -204,8 +206,9 @@ async function boot(){
   // The competition tab and links appear only when the Worker turns it on (QHOOKS_TRADER_COMPETITION).
   const competition=target.id==='qp-trading'?false:await client.config().then(c=>!!c?.competition).catch(()=>false);
   // The competition link is not in the HTML at all (a [hidden] attribute loses to .qx-link's display rule); add it only when it's on.
-  if(competition){const feed=document.querySelector('.cx-actions a[href="#trading-feed"]');if(feed&&!document.querySelector('.cx-actions a[href="#competition"]')){const a=document.createElement('a');a.className='qx-link';a.href='#competition';a.textContent='Trading competition →';feed.after(a);}}
-  const mounted=mountTraders(target,{client,auth,hub,solHub,profile:target.id==='qp-trading',competition});addEventListener('pagehide',()=>{mounted.dispose();solHub.dispose();},{once:true});
+  if(competition){const feed=document.querySelector('.cx-actions a[href="#trading-feed"]');if(feed&&!document.querySelector('.cx-actions a[href="/compete"]')){const a=document.createElement('a');a.className='qx-link';a.href='/compete';a.textContent='Trading competition →';feed.after(a);}}
+  if(competition&&location.hash==='#competition'){location.replace('/compete');return;}
+  const mounted=mountTraders(target,{client,auth,hub,solHub,profile:target.id==='qp-trading',competition:false});addEventListener('pagehide',()=>{mounted.dispose();solHub.dispose();},{once:true});
  }catch{target.replaceChildren(Object.assign(document.createElement('p'),{className:'qa-empty',textContent:'Trading records could not load. Reload this page to retry.'}));}
 }
 if(typeof document!=='undefined')void boot();

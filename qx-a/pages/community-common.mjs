@@ -1,3 +1,5 @@
+import {bindCallPending,clearCallPending} from '/qx-call-pending.mjs';
+import {xAttachment} from '/qx-x-attachment.mjs';
 // Community lane (System A): the shared pieces of community, board, profile, creator and call pages.
 // Presentation only. Every read and write goes through the endpoints and modules the site already runs:
 // /api/community/* (boards, reactions), /api/community/post/<id>/thanks (via qx-community-thanks.mjs),
@@ -140,17 +142,18 @@ export function moveText(m) { if (!Number.isFinite(m)) return '—'; return m >=
 const dec = (u, d) => { try { const n = Number(BigInt(String(u || '0'))) / 10 ** (Number(d) || 0); return Number.isFinite(n) ? n : NaN; } catch { return NaN; } };
 
 /* ---------- the call outcome: Called -> Now, the move, and the timed checkpoints ---------- */
-export function outcome(c, { live } = {}) {
+export function outcome(c, { live,entryLabel='Called at',sinceLabel='since the call',pendingKey } = {}) {
   const entry = Number(c?.price), unit = c?.quoteSymbol || c?.quote || 'USD';
   if (!(entry > 0)) return null;
-  const nowB = h('b'), x = h('b'), xl = h('span', null, 'since the call');
+  const nowB = h('b'), x = h('b'), xl = h('span', null, sinceLabel),delta=h('div',{class:'qa-outcome__x'},x,xl);
   const el = h('div', { class: 'qa-outcome cx-outcome' },
-    h('div', { class: 'qa-outcome__col' }, h('span', null, 'Called at'), h('b', null, priceNode(entry, unit))),
+    h('div', { class: 'qa-outcome__col' }, h('span', null, entryLabel), h('b', null, priceNode(entry, unit))),
     h('div', { class: 'qa-outcome__col' }, h('span', null, 'Now'), nowB),
-    h('div', { class: 'qa-outcome__x' }, x, xl));
+    delta);
   let last = null;
   el.update = (now, { flash = false } = {}) => {
-    if (!(now > 0)) { nowB.textContent = 'Refreshing'; x.textContent = ''; return; }
+    if (!(now > 0)) { bindCallPending(nowB,pendingKey); x.textContent = '';delta.hidden=true; return; }
+    clearCallPending(nowB);delta.hidden=false;
     const m = moveOf(entry, now);
     nowB.replaceChildren(...[priceNode(now, unit)].flat()); x.textContent = moveText(m); x.className = m >= 1 ? 'qa-up' : 'qa-down';
     if (flash && last != null && now !== last) { flashOnce(nowB); flashOnce(x); }
@@ -256,7 +259,19 @@ export function reactRow(post, { replies = 0, replyHref, call, links, buyLabel }
 }
 
 /* ---------- a call, drawn as a post: face, name, X badge, time, "called $X", thesis, outcome, position ---------- */
+export function publishedPost(c,{enter=false}={}){
+ const b=c.board||{},buy=c.kind==='buy',sym=b.symbol?'$'+b.symbol:b.address?b.address.slice(0,6)+'…'+b.address.slice(-4):'token',k=c.call||{},href=c.links?.terminal||c.links?.trade||'/terminal';
+ const age=h('time',{datetime:new Date(c.createdAt).toISOString()},fmt.age((Date.now()-c.createdAt)/1000));age.dataset.ts=c.createdAt;
+ let record=c,out=null;const figures=buy?h('div',{class:'cx-buy-figures'}):null;
+ function paintFigures(){if(!buy)return;for(const node of figures.querySelectorAll('.qx-call-pending'))clearCallPending(node);const k=record.call||{},size=h('span'),entry=h('span');out=outcome(k,{live:k.nowPrice,entryLabel:'Bought at',sinceLabel:'since the buy',pendingKey:c.id+':now'});if(Number.isFinite(Number(record.receipt?.sizeUsd))&&record.receipt.sizeUsd>0)size.textContent=fmt.usd(Number(record.receipt.sizeUsd));else bindCallPending(size,c.id+':size');if(!out)bindCallPending(entry,c.id+':entry');figures.replaceChildren(h('p',{class:'qa-post__text cx-buy-size'},'Size · ',size,...(!out?[' · Entry · ',entry]:[])),...(out?[out]:[]));}
+ paintFigures();
+ const body=h('div',{class:'qa-post__body'},h('div',{class:'qa-post__head'},nameTag(c.author),agentBadge(c),age,h('span',{class:'qa-post__what'},buy?'bought ':'posted about ',h('a',{class:'qa-token-chip cx-chip',href},tokenMark(b,b.logo),sym))),h('p',{class:'qa-post__text'},c.text||''),figures,h('div',{class:'qa-actions'},h('a',{class:'qa-btn',href},'Open '+sym)));
+ const attachment=xAttachment(c.text,{hidden:!!c.hidden||!!c.folded});if(attachment)body.append(attachment);
+ const el=h('article',{class:'qa-post cx-post cx-published'+(enter&&!RM?' is-enter':''),id:'call-'+c.id,dataset:{id:c.id}},face(c.author,'lg'),body);el.call=c;el.refresh=()=>{if(out)out.update(livePrice(record.board,record.call?.quoteSymbol)??record.call?.nowPrice??record.call?.priceNow);};el.updateRecord=next=>{if(next?.id!==c.id||next.kind!==c.kind||next.author!==c.author)return false;try{if(communityKey(next.board)!==communityKey(c.board))return false;}catch{return false;}if(JSON.stringify([next.receipt,next.call])===JSON.stringify([record.receipt,record.call]))return false;const previous=record;record={...next,receipt:{...next.receipt,sizeUsd:next.receipt?.sizeUsd>0?next.receipt.sizeUsd:previous.receipt?.sizeUsd},call:{...next.call,...(!(next.call?.price>0)&&previous.call?.price>0?{price:previous.call.price,quoteSymbol:previous.call.quoteSymbol,quote:previous.call.quote}:{})}};el.call=record;paintFigures();return true;};return el;
+}
+const agentBadge=c=>c.agent&&c.agent.wallet===c.author?.toLowerCase()?h('a',{class:'qa-agent',href:'/agents/'+c.author.toLowerCase(),title:'Wallet-signed agent path. Client name is self-reported.'},'Agent · '+c.agent.client):null;
 export function callPost(c, { enter = false, onBoard = false, showToken = true } = {}) {
+  if(c.kind==='buy'||c.kind==='post')return publishedPost(c,{enter});
   const b = c.board || {}; let links = null; try { links = callLinks(b, c); } catch {}
   const k = c.call || {}, sym = b.symbol ? '$' + b.symbol : 'this token';
   const age = h('time', { datetime: new Date(c.createdAt).toISOString(), title: new Date(c.createdAt).toLocaleString() }, fmt.age((Date.now() - c.createdAt) / 1000));
@@ -264,12 +279,12 @@ export function callPost(c, { enter = false, onBoard = false, showToken = true }
   const what = showToken ? h('span', { class: 'qa-post__what' }, 'called ', h('a', { class: 'qa-token-chip cx-chip', href: links?.path || '#' }, tokenMark(b, b.logo), sym), labelsOf(k)) : h('span', { class: 'qa-post__what' }, 'called it', labelsOf(k));
   const text = h('p', { class: 'qa-post__text' }, c.text || '');
   const live = livePrice(b, k.quoteSymbol);
-  const out = outcome(k, { live });
+  const out = outcome(k, { live,pendingKey:c.id+':now' });
   const media = [out, checkpoints(k), positionBars(c.position, k.at || c.createdAt)].filter(Boolean);
   const actions = reactRow(c, { call: true, links, replyHref: links?.board || links?.path, buyLabel: b.symbol ? 'Buy ' + sym : 'Buy on this call' });
   const body = h('div', { class: 'qa-post__body' },
-    h('div', { class: 'qa-post__head' }, nameTag(c.author), age, holdingTag(c.position), what),
-    c.folded ? folded(c, text) : text,
+    h('div', { class: 'qa-post__head' }, nameTag(c.author), agentBadge(c), age, holdingTag(c.position), what),
+    c.folded ? folded(c, text) : text,xAttachment(c.text,{hidden:!!c.hidden||!!c.folded}),
     media.length ? h('a', { class: 'qa-post__media cx-media', href: '/call/' + c.id, 'aria-label': 'Open the call record' }, media) : null,
     actions);
   const el = h('article', { class: 'qa-post cx-post' + (enter && !RM ? ' is-enter' : ''), id: (onBoard ? 'cxp-' : 'call-') + c.id, dataset: { id: c.id } }, face(c.author, 'lg'), body);
@@ -290,7 +305,7 @@ function folded(c, text) {
 // Fill a set of call posts with their board's reaction and reply counts (one read per board).
 export async function hydrateReactions(posts) {
   const byBoard = new Map();
-  for (const el of posts) { if (!el.call) continue; let key; try { key = communityKey(el.call.board); } catch { continue; } if (!byBoard.has(key)) byBoard.set(key, { board: el.call.board, els: [] }); byBoard.get(key).els.push(el); }
+  for (const el of posts) { if (!el.call||el.call.kind==='buy'||el.call.kind==='post') continue; let key; try { key = communityKey(el.call.board); } catch { continue; } if (!byBoard.has(key)) byBoard.set(key, { board: el.call.board, els: [] }); byBoard.get(key).els.push(el); }
   await Promise.all([...byBoard.values()].map(async ({ board, els }) => {
     const map = await boardPosts(board);
     for (const el of els) { const p = map.get(el.call.id); if (!p) continue; el.actions.querySelector('.cx-reacts')?.setReactions?.(p); const r = el.actions.querySelector('a[aria-label="Reply on the board"] span'); if (r) r.textContent = p.replies?.length ? String(p.replies.length) : ''; }

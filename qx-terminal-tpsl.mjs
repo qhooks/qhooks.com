@@ -1,7 +1,12 @@
+import {silentActive,oneClickPlan,withOneClick,pressGate} from './qx-instant-bridge.mjs';
 import { placeTriggerExit } from './qx-trigger-execution.mjs';
-import { tradeError } from './qx-chain-guard.mjs';
+import {orderErrorText as tradeError} from './qx-order-errors.mjs';
+import {prepareOrderWallet} from './qx-order-approval.mjs';
+import {getWalletHub} from './wallet-hub.mjs';
 import {createExitPreferences} from '/qx-exit-preferences.mjs';
 import {bindNativeExit} from '/qx-native-exit-guard.mjs';
+import { loadMarket, placeBracket,orderValue } from '/qx-pro-orders.mjs';
+import { EXIT_CHAINS, consentRead, exitPlan } from '/qx-profile-exit.mjs';
 // Terminal: take-profit and stop-loss on a launch, through the ownerless QTriggerOrders contract (one
 // address on every chain). An order escrows the tokens to sell with a target above the price and a stop
 // below it; whichever is reached first sells everything, at no less than its minimum. Anyone can execute a
@@ -17,7 +22,7 @@ const STATE = ['Closed', 'Waiting', 'Take-profit reached', 'Stop reached', 'Stop
 const Q96 = 2 ** 96;
 const card = document.getElementById('qts');
 let exitStorage;try{exitStorage=localStorage;}catch{}const exitPreferences=createExitPreferences(exitStorage);
-const pref=(key,value)=>{if(!st)return undefined;try{if(value===undefined)return exitPreferences.read(st.chainId,key);exitPreferences.write(st.chainId,key,value);document.dispatchEvent(new CustomEvent('qhooks:trading-profile-edit'));}catch{if(value!==undefined){try{exitPreferences.write(st.chainId,'auto',false);document.dispatchEvent(new CustomEvent('qhooks:trading-profile-edit'));const note=card?.querySelector('.qtx-status');if(note)note.textContent='Invalid exit defaults. Automatic after-buy TP/SL is off until you re-enable it.';}catch{}}}return undefined;};
+const pref=(key,value)=>{if(!st)return undefined;try{if(value===undefined)return exitPreferences.read(st.chainId,key);exitPreferences.write(st.chainId,key,value);document.dispatchEvent(new CustomEvent('qhooks:trading-profile-edit'));}catch{if(value!==undefined){try{exitPreferences.write(st.chainId,'auto',false);document.dispatchEvent(new CustomEvent('qhooks:trading-profile-edit'));const note=card?.querySelector('.qtx-status');if(note)note.textContent='Invalid exit defaults. Reopen settings to review them.';}catch{}}}return undefined;};
 let st = null, seq = 0, renderSeq = 0, timer = null, notify = () => {}, lastDue = '', activeAction = null;
 const invalidateCard=()=>{renderSeq++;if(card){card.hidden=true;card.replaceChildren();}};
 function viewContext(state,owner,revision){
@@ -87,9 +92,13 @@ async function render() {
     h('p', { class: 'qtb-note' }, 'Sells when the price reaches your target or falls to your stop, whichever comes first, and never for less than the minimum shown. Anyone can execute a reached order and earns its tip; while this page is open it offers to do that for you.')];
   const live=await isLive(c.chainId,'triggerOrders');ctx.assert();
   if (!live) {
-    const b = h('button', { type: 'button', class: 'workspace-button', disabled:!me }, 'Set up TP/SL on ' + CHAIN_NAME[c.chainId]);
-    b.addEventListener('click', () => act(b,status,ctx,async s=>{ctx.assert();await setUp(c.chainId,'triggerOrders',s,ctx.assert);ctx.assert();}));
-    card.replaceChildren(...parts, h('p', { class: 'qtb-note' }, 'TP/SL has not been used on ' + CHAIN_NAME[c.chainId] + ' yet. Setting it up is one transaction anyone can send, once per chain.'), b, status);
+    // ordersready (2026-11-13): the retired QTriggerOrders contract is not on this chain; TP/SL is the signed-order bracket.
+    const ok = EXIT_CHAINS.includes(String(c.chainId)) && c.controller;
+    const b = h('button', { type: 'button', class: 'workspace-button', disabled: !ok }, 'Set TP / SL');
+    b.addEventListener('click', () => window.dispatchEvent(new CustomEvent('qhooks:order-open', { detail: { chainId: String(c.chainId), controller: c.controller, side: 'tpsl' } })));
+    card.replaceChildren(h('h2', { id: 'qts-heading' }, 'Take profit · stop loss'),
+      h('p', { class: 'qtb-note' }, ok ? 'Sells when the price reaches your target or falls to your stop, whichever comes first, never for less than the floor you choose. One press sets the signed exit; the QHooks keeper fills it, even with this page closed. Your tokens stay in your wallet until it fills.' : 'TP/SL is not available on ' + CHAIN_NAME[c.chainId] + ' yet.'),
+      b, status);
     card.hidden = false; return;
   }
   const p0=await sqrtPrice(c);ctx.assert();const price=priceAt(p0,c),bal=me?(await erc20(c.chainId,c.token,me)).balance:0n;ctx.assert();
@@ -111,17 +120,20 @@ async function render() {
   auto.addEventListener('change', () => {ctx.assert();pref('auto',auto.checked);});
   const presets = h('div', { class: 'qxt-presets' }, ...[25, 50, 100].map(pc => h('button', { type: 'button', onclick: () => {ctx.assert();amount.value = formatUnits(bal * BigInt(pc) / 100n, c.decimals, c.decimals).replace(/,/g, ''); } }, pc + '%')));
   const go = h('button', { type: 'button', class: 'workspace-button', disabled: !me }, 'Place TP/SL');
-  go.addEventListener('click', () => act(go,status,ctx,async s => {
-    const a = parseUnits(amount.value, c.decimals), t = pctOf(tp), s2 = pctOf(sl);
-    if (a === 0n || a > bal) throw new TypeError('Enter an amount you hold');
-    if (!t && !s2) throw new TypeError('Set a take-profit, a stop, or both');
-    if (s2 && s2 >= 100) throw new TypeError('A stop must be under 100%');
-    await place(a, t, s2, Number(floor.value), Number(tip.value),s,null,ctx);
-  }));
+  let armedAt=null;for(const field of[amount,tp,sl,floor,tip])field.addEventListener('input',()=>{armedAt=null;go.textContent='Place TP/SL';});
+  go.addEventListener('click',async()=>{
+   if(go.disabled)return;const fields=[amount,tp,sl,floor,tip];go.disabled=true;for(const field of fields)field.disabled=true;
+   try{ctx.assert();const a=parseUnits(amount.value,c.decimals),t=pctOf(tp),s2=pctOf(sl);if(a===0n||a>bal)throw Error('Enter an amount you hold');if(!t&&!s2)throw Error('Set a take-profit, a stop, or both');if(s2&&s2>=100)throw Error('A stop must be under 100%');
+    const m={chainId:c.chainId,tdec:c.decimals,qdec:c.quoteDecimals,price,quoteSymbol:c.quoteSymbol},usd=await orderValue(m,'sell',a),current=getWalletHub(window).snapshot().current,plan=oneClickPlan(me,current?.entry,usd);ctx.assert();
+    if(pressGate({plan,armedAt,now:Date.now()})==='arm'){armedAt=Date.now();go.textContent=usd?'Confirm $'+usd.toFixed(2):'Confirm TP/SL';return;}armedAt=null;await prepareOrderWallet(me,c.chainId,t=>{if(ctx.current())status.textContent=t;});ctx.assert();go.disabled=false;
+    const pressContext={...ctx,assert:()=>{ctx.assert();if(plan.silent&&!silentActive())throw Error('This one-click press expired. Review TP/SL again.');}};
+    await withOneClick(plan,()=>act(go,status,pressContext,s=>place(a,t,s2,Number(floor.value),Number(tip.value),s,null,pressContext)));
+   }catch(error){if(ctx.current())status.textContent=tradeError(error);}finally{for(const field of fields)field.disabled=false;go.disabled=false;}
+  });
   parts.push(h('div', { class: 'qtx-row' }, h('label', {}, h('span', {}, 'Sell (' + c.symbol + ', you hold ' + formatUnits(bal, c.decimals, 2) + ')'), amount)), presets,
     h('div', { class: 'qtx-row' }, h('label', {}, h('span', {}, 'Take profit, % up'), tp), h('label', {}, h('span', {}, 'Stop, % down'), sl)),
     h('div', { class: 'qtx-row' }, h('label', {}, h('span', {}, 'Floor below trigger'), floor), h('label', {}, h('span', {}, 'Tip to executor'), tip)),
-    summary, go, h('label', { class: 'qts-auto' }, auto, h('span', {}, 'After each buy here, set this TP/SL on what I bought')));
+    summary, go);
   // Your orders on this launch, and anyone's that are ready to execute.
   const mine = me ? uintArray(await ethCall(c.chainId, c.address, calldata(SEL.ordersBy, ['address'], [me]))).slice(-20) : [];
   ctx.assert();const ofPool = uintArray(await ethCall(c.chainId, c.address, calldata(SEL.ordersOf, ['bytes32'], [poolId(c.key)]))).slice(-30);
@@ -153,23 +165,33 @@ async function show(pool) {
   if (!card || !pool?.constructor) { if (card) card.hidden = true; return; }
   try {
     const c = pool.constructor, quote = c.quote, token = c.currency0 === quote ? c.currency1 : c.currency0;
-    const [key, t, q, address] = await Promise.all([livePoolKey(pool.chainId, pool.controller), erc20(pool.chainId, token), erc20(pool.chainId, quote), extraAddress('triggerOrders', pool.chainId)]);
+    // Simple launches (controller = token) have no key() to read: use the pool key the page already holds.
+    const [key, t, q, address] = await Promise.all([livePoolKey(pool.chainId, pool.controller).catch(e => { if (pool.key?.currency0 && pool.key?.currency1 && pool.key?.hooks) return pool.key; throw e; }), erc20(pool.chainId, token), erc20(pool.chainId, quote), extraAddress('triggerOrders', pool.chainId)]);
     if (mine !== seq) return;
-    st = { chainId: pool.chainId, key, token, quote, tokenIs0: key.currency0 === token, symbol: t.symbol, decimals: t.decimals, quoteSymbol: q.symbol, quoteDecimals: q.decimals, address };
+    st = { chainId: pool.chainId, controller: String(pool.controller || '').toLowerCase(), key, token, quote, tokenIs0: key.currency0 === token, symbol: t.symbol, decimals: t.decimals, quoteSymbol: q.symbol, quoteDecimals: q.decimals, address };
     await render();if(mine!==seq)return;
     timer = setInterval(() => { if (!document.hidden && !card.contains(document.activeElement)) render().catch(() => {}); }, 20000);
   } catch { if (mine === seq) card.hidden = true; }
 }
 
-/// Called by the terminal after a buy: sets the saved TP/SL on what was just bought, if that is switched on.
+/// Called by the terminal after a buy: when the active profile asks for it on this chain (and the trader opted in to the
+/// signed-order TP/SL), sets its take-profit and stop on exactly what was bought, at the pool price right now. The wallet
+/// asks for one signature per leg; both legs share one Permit2 nonce, so one exit cancels the other on chain.
 export async function afterBuy(amount, onStatus, trade=null) {
-  if (!st || !pref('auto') || typeof amount!=='bigint' || amount <= 0n) return false;
-  const c=st,assert=bindNativeExit({state:c,getState:()=>st,owner:connectedAddress(),getOwner:connectedAddress,trade});
-  const live=await isLive(c.chainId,'triggerOrders');assert();if(!live)return false;
-  const tp = Number(pref('tp')) || null, sl = Number(pref('sl')) || null;
-  if (!tp && !sl) return false;
-  await place(amount, tp, sl && sl < 100 ? sl : null, Number(pref('floor') ?? 500), Number(pref('tip') ?? 30), onStatus,trade);
-  await render();
+  if (!st || typeof amount!=='bigint' || amount <= 0n) return false;
+  const c=st,owner=connectedAddress();
+  const copied=trade?.copyExit,copyExit=copied&&Number.isInteger(copied.tpPct)&&copied.tpPct>=0&&copied.tpPct<=1000&&Number.isInteger(copied.slPct)&&copied.slPct>=0&&copied.slPct<=99?copied:null;
+  if(copied&&!copyExit)return false;
+  if(!owner||!c.controller||(!copyExit&&(!consentRead(exitStorage,c.chainId)||pref('auto')!==true)))return false;
+  if(copyExit&&!copyExit.tpPct&&!copyExit.slPct)return false;
+  const nativeAssert=bindNativeExit({state:c,getState:()=>st,owner,getOwner:connectedAddress,trade}),assert=()=>{nativeAssert();if(copyExit&&silentActive())throw Error('Finish the other one-click trade before signing copy exits.');};assert();
+  const price=priceAt(await sqrtPrice(c),c);assert();
+  const plan=exitPlan({exit:{autoAfterBuy:copyExit?true:pref('auto'),takeProfitPct:copyExit?copyExit.tpPct:pref('tp'),stopLossPct:copyExit?copyExit.slPct:pref('sl'),minimumBps:pref('floor')},consent:true,chainId:c.chainId,price});
+  if(!plan)return false;
+  const market=await loadMarket(c.chainId,c.controller);assert();
+  if(market.token!==String(c.token).toLowerCase())throw Error('Exit context changed. Set TP/SL from the TP / SL tab.');
+  market.price=price; // the TP above / stop below checks use the pool price read just now, not the cached summary
+  await placeBracket({market,owner,amountIn:amount,tp:plan.tp,sl:plan.sl,floorPct:plan.floorPct,days:plan.days,ticketConfirmed:silentActive(),allowOneClick:!copyExit,assertContext:assert,onStatus:t=>{assert();onStatus?.(t);}});
   return true;
 }
 export function onReached(cb) { notify = cb; }

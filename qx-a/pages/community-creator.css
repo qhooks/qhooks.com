@@ -100,3 +100,14 @@
   .qc .qa-tile:nth-child(even) { box-shadow: -1px 0 0 var(--qa-rule); padding-left: 16px; }
   .qc .qc-panels { grid-template-columns: 1fr 1fr; column-gap: 56px; }
 }
+
+/* Keep long rules and unlocked-token notices inside their own panel. */
+.qc .qc-panels > .trade-card { min-width: 0; }
+.qc .qc-panels :is(.qtb-note, .qtx-alert, .qtb-row, .qtx-status) { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.qc .qc-panels .qtx-alert { box-sizing: border-box; white-space: normal; }
+.qc .qc-panels .qtb-row > * { min-width: 0; }
+@media (min-width: 1100px) {
+  .qc .trade-workspace.qc-panels { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 56px; }
+}
+
+.qc-splitter-activity{margin:18px 0 28px}

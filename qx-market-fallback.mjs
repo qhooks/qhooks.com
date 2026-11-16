@@ -6,7 +6,7 @@ export function mountMarketFallback(host,{document:doc=globalThis.document,fetch
  let rows=null,request=null,revision=0,selection={};
  function render(){
   const chain=selection.chainId||'all',query=(selection.query||'').trim().toLowerCase(),filtered=(rows||[]).filter(row=>(chain==='all'||row.chainId===chain)&&(!query||[row.symbol,row.name,row.address].some(v=>v.toLowerCase().includes(query))));
-  list.replaceChildren(...tokenRows(doc,filtered));status.textContent=filtered.length?'Prices and changes cover the last 24 hours.':'No outside tokens match. Explore all tokens in the terminal.';
+  host.hidden=!filtered.length;list.replaceChildren(...tokenRows(doc,filtered));status.textContent=filtered.length?'Prices and changes cover the last 24 hours.':'No outside tokens match. Explore all tokens in the terminal.';
   if(!filtered.length){const terminal=h('a','Open the terminal →');terminal.href='/terminal';list.append(terminal);}
  }
  async function show(next={}){
@@ -16,7 +16,7 @@ export function mountMarketFallback(host,{document:doc=globalThis.document,fetch
   try{
    request??=readPublicJSON(TRENDING_URL,{fetcher}).then(body=>trendingTokens(body,30)).finally(()=>{request=null;});
    const found=await request;if(mine!==revision)return;rows=found;render();
-  }catch{if(mine!==revision)return;status.textContent='Outside tokens are refreshing. Launch a token or retry.';retry.hidden=false;}
+  }catch{if(mine!==revision)return;status.textContent='Outside tokens are unavailable. Browse trending or retry.';retry.hidden=false;}
  }
  retry.addEventListener('click',()=>void show(selection));
  return{show,hide(){revision++;host.hidden=true;},dispose(){revision++;host.hidden=true;}};

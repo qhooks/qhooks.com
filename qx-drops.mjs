@@ -66,7 +66,7 @@ export function renderDrops(root, d, {now = Date.now(), wallet = null, onClaim =
       const h = el('ul', 'qdr-hist'); for (const x of c.history.slice(0, 30)) { const li = el('li'); li.append(el('span', 'qdr-day', x.day), el('span', null, x.text)); h.append(li); }
       card.append(el('p', 'qdr-k', 'History'), h);
     }
-    if (c.epoch) { const a = el('a', 'qdr-link', 'Check the public list'); a.href = '/api/drops/epoch/' + c.chainId + '/' + c.epoch + '.json'; a.rel = 'noopener'; card.append(a); }
+    if (c.epoch) { const a = el('a', 'qdr-link', 'Check the public list'); a.href = '/drops/list/' + c.chainId + '/' + c.epoch; a.rel = 'noopener'; card.append(a); }
     root.append(card);
   }
   root.append(el('p', 'qdr-live', 'Live · ' + Math.max(0, Math.round((now - (d.observedAt || now)) / 1000)) + 's ago'));

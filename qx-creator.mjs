@@ -62,9 +62,7 @@ async function market(mine) {
   const tile = (k, v, sub) => h('div', { class: 'qa-tile' }, h('span', {}, k), h('b', {}, v), sub ? h('small', {}, sub) : null);
   // Dollars first with the quote amount after it (2026-11-10, quoteusd); quote alone only when USD is not known.
   const usd = (v, amt) => Number.isFinite(v) && !/^USD/.test(q || '') ? '$' + num(v) + ' · ' + num(amt) + ' ' + q : num(amt) + ' ' + q;
-  $('qc-stats').replaceChildren(tile('Price', usd(s.priceUsd, s.price), s.change24 ? (s.change24 >= 0 ? '+' : '') + (s.change24 * 100).toFixed(1) + '% in 24h' : null),
-    tile('Market cap', usd(s.mcapUsd, s.mcap)), tile('24h volume', usd(s.volume24Usd, s.volume24), (s.buys24 || 0) + ' buys · ' + (s.sells24 || 0) + ' sells'),
-    tile('Holders', String(s.holders ?? '—'), s.top10 ? 'top 10 hold ' + (s.top10 * 100).toFixed(1) + '%' : null), tile('Burned', num(s.burned) + ' ' + m.symbol), tile('Team locked', num(s.locked) + ' ' + m.symbol));
+  // Cached overview owns the live metric strip; the existing table/payout panels remain.
   const table = (title, head, rows) => h('section', { class: 'qc-table' }, h('h3', {}, title), rows.length ? h('div', { class: 'qa-table', role: 'table' },
     h('div', { class: 'qa-tr qa-th', role: 'row' }, ...head.map(t => h('span', { role: 'columnheader' }, t))), ...rows) : h('p', { class: 'qa-empty' }, 'No trades yet.'));
   const supply = Number(s.supply) || 0;
@@ -103,5 +101,6 @@ function route() {
   else pick();
 }
 window.addEventListener('hashchange', route);
+document.addEventListener('qhooks:creator-refresh',route);
 onWalletChange(() => { if (state && location.hash.includes('m=')) { market(seq); payouts(seq).catch(() => {}); } else if (!location.hash.includes('m=')) pick(); });
 route();

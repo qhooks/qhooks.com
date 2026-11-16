@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>News | QHooks</title><meta name="description" content="Token movers, new launches and trending launch ideas on QHooks."><link rel="icon" href="/qhooks-logo.jpg"><script src="/theme.js"></script>
+<link rel="preload" href="/qx-a/fonts/mona-sans-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/qx-a/tokens.css"><link rel="stylesheet" href="/qx-a/components.css"><link rel="stylesheet" href="/qx-a/shell.css"><link rel="stylesheet" href="/qx-news.css"><link rel="stylesheet" href="/qx-news-t4.css"><link rel="stylesheet" href="/qx-news-t3.css"><link rel="stylesheet" href="/qx-news-l5.css"><link rel="stylesheet" href="/qx-news-ux.css"></head>
+<body class="qa qn qn-no-tape" data-a-shell><a href="#movers-title" class="qn-skip">Skip to markets and launches</a>
+<main class="qa-page qn-page" id="qa-main">
+ <header class="qn-mast"><div><p class="qn-kicker">QHOOKS / INTELLIGENCE</p><h1>News</h1></div><div class="qn-mast-end"><time id="news-clock">UTC</time><p id="board-status" role="status">Connecting to the board…</p><button id="news-refresh" class="qn-button" type="button">Refresh ↻</button></div></header>
+ <section class="qn-markets" aria-label="Markets strip" id="markets-strip"><p class="qn-muted">Market quotes are loading…</p></section>
+ <div class="qn-toolbar"><p><span class="qn-square"></span> MARKETS / IDEAS</p><a class="qn-link" href="#trending">Find a launch idea ↓</a></div>
+ <div class="qn-board">
+  <section class="qn-panel qn-movers" aria-labelledby="movers-title"><header class="qn-panel-head"><h2 id="movers-title"><span>01</span> Movers</h2><span class="qn-stamp">24H / FEED SAMPLE</span></header><div id="mover-rows"><p class="qn-empty">Reading stored market snapshots…</p></div><a class="qn-panel-foot" href="/terminal">Explore all markets ↗</a></section>
+<section class="qn-panel" id="news-launch-alerts" hidden></section>
+  <section class="qn-panel qn-trending" id="trending" aria-labelledby="trending-title"><header class="qn-panel-head"><h2 id="trending-title"><span>03</span> Trending → Launch</h2><a href="/create" class="qn-link">Open Create ↗</a></header><p class="qn-note">A topic, an original idea, your next token. Draft with QCaster when you tap.</p><div id="news-trends"></div></section>
+<section class="qn-panel" id="news-quick-proof" hidden></section>
+<section class="qn-panel" id="news-dev-updates" hidden></section>
+  <aside class="qn-headline-stack" id="news-headline-stack" aria-label="Headlines" hidden>
+   <section class="qn-panel qn-aggregator" id="news-aggregator" aria-labelledby="aggregator-title" hidden><header class="qn-panel-head"><h2 id="aggregator-title"><span>02A</span> Crypto headlines</h2><span class="qn-stamp" role="status">INDEXED</span></header><div data-aggregator-rows></div><p class="qn-note">Via <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener noreferrer">GDELT Project ↗</a>. Times show indexing; coverage may be delayed. Open the publisher for the full story.</p></section>
+   <section class="qn-panel qn-headlines" aria-labelledby="headlines-title" hidden><header class="qn-panel-head"><h2 id="headlines-title"><span>02</span> Macro / Fed</h2><span class="qn-stamp" id="headlines-status">Source links</span></header><div id="headline-rows"><p class="qn-empty">Reading public headlines…</p></div><details class="qn-coverage"><summary>Publishers &amp; permissions</summary><div id="headline-sources"></div></details></section>
+  </aside>
+  <section class="qn-panel qn-calendar" aria-labelledby="calendar-title"><header class="qn-panel-head"><h2 id="calendar-title"><span>04</span> Calendar</h2><span class="qn-stamp">US / ET</span></header><p class="qn-session" id="market-session">Checking the next session…</p><div id="calendar-rows"></div><p class="qn-note" id="calendar-note"></p></section>
+  <section class="qn-panel qn-social" aria-labelledby="x-title"><header class="qn-panel-head"><h2 id="x-title"><span>05</span> QHooks signal</h2><span class="qn-stamp">OFFICIAL EMBEDS</span></header><div id="news-x"></div><div id="news-x-post-launch"></div></section>
+ </div>
+ <footer class="qn-board-foot"><span>QHOOKS NEWS</span><span>Quotes carry their source time. Crypto trades 24/7.</span><a href="/skill.md">Built for agents ↗</a></footer>
+</main><script type="module" src="/qx-news.mjs"></script></body></html>

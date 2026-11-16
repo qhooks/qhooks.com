@@ -3,6 +3,7 @@
 // Elysium), then — for the open-source native chart only — GeckoTerminal OHLCV read by the visitor's browser.
 // The TradingView Advanced Charts adapter (qx-tv-datafeed.mjs) calls this with browser:false: its license requires our
 // own market data feed.
+import {readGecko} from './qx-gecko-read.mjs';
 export const TFS = Object.freeze([60, 300, 900, 3600, 14400, 86400]);
 const GECKO_NET = {'8453': 'base', '1': 'eth', '42161': 'arbitrum', '56': 'bsc', '4663': 'robinhood', '99901': 'elysium', solana: 'solana'};
 const GECKO_TF = {60: ['minute', 1], 300: ['minute', 5], 900: ['minute', 15], 3600: ['hour', 1], 14400: ['hour', 4], 86400: ['day', 1]};
@@ -20,7 +21,9 @@ export async function serverBars({chainId, controller, pool, token, quote, tf, f
     const r = await fetcher('/api/candles?' + q, {cache: 'no-store', signal});
     if (!r.ok) return null;
     const b = await r.json();
-    return b?.version === 1 && Array.isArray(b.bars) ? {bars: clean(b.bars), unit: b.unit || null, source: b.source || 'QHooks', earliest: b.earliest ?? null} : null;
+    const stamp = Number(r.headers.get('x-qhooks-observed-at') || b?.observedAt);
+    return b?.version === 1 && Array.isArray(b.bars) ? {bars: clean(b.bars), unit: b.unit || null, source: b.source || 'QHooks', earliest: b.earliest ?? null,
+      observedAt: Number.isSafeInteger(stamp) && stamp > 0 ? stamp : null, stale: r.headers.get('x-qhooks-stale') === '1' || b.stale === true} : null;
   } catch (e) { if (signal?.aborted) throw e; return null; }
 }
 
@@ -29,12 +32,10 @@ export async function browserBars({chainId, pool, tf, signal, fetcher = globalTh
   const net = GECKO_NET[String(chainId)], [unit, aggregate] = GECKO_TF[tf] || [];
   if (!net || !unit || !pool) return null;
   try {
-    const r = await fetcher(`https://api.geckoterminal.com/api/v2/networks/${net}/pools/${chainId === 'solana' ? pool : String(pool).toLowerCase()}/ohlcv/${unit}?aggregate=${aggregate}&limit=300&currency=usd&token=base`,
-      {headers: {accept: 'application/json'}, credentials: 'omit', referrerPolicy: 'no-referrer', signal});
-    if (!r.ok) return null;
-    const list = (await r.json())?.data?.attributes?.ohlcv_list;
+    const r = await readGecko(`https://api.geckoterminal.com/api/v2/networks/${net}/pools/${chainId === 'solana' ? pool : String(pool).toLowerCase()}/ohlcv/${unit}?aggregate=${aggregate}&limit=300&currency=usd&token=base`, {fetcher, signal});
+    const list = r?.body?.data?.attributes?.ohlcv_list;
     if (!Array.isArray(list)) return null;
-    return {bars: clean(list.map(([t, o, h, l, c, v]) => ({time: Number(t), open: Number(o), high: Number(h), low: Number(l), close: Number(c), volume: Number(v) || 0}))), unit: 'USD', source: 'GeckoTerminal'};
+    return {bars: clean(list.map(([t, o, h, l, c, v]) => ({time: Number(t), open: Number(o), high: Number(h), low: Number(l), close: Number(c), volume: Number(v) || 0}))), unit: 'USD', source: 'GeckoTerminal', observedAt:r.observedAt, stale:r.stale};
   } catch (e) { if (signal?.aborted) throw e; return null; }
 }
 

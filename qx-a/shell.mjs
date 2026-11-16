@@ -15,7 +15,7 @@ import { QCASTER } from '../qcaster-name.mjs';
 /* ---------- places ---------- */
 // The five places. `match` lights the right tab on pages that don't say which one they belong to.
 export const NAV = [
-  { id: 'trade', label: 'Trade', href: '/terminal', icon: 'trade', match: /^\/(terminal|markets|perps|orders|copy|wallets|arb|elysium|pool|trade|qhooks-token)(\b|$)/ },
+  { id: 'trade', label: 'Trade', href: '/terminal', icon: 'trade', match: /^\/(terminal|markets|perps|orders|copy|wallets|arb|elysium|pool|trade|qhooks-token|qproof)(\b|$)/ },
   { id: 'hooks', label: 'Hooks', href: '/hooks', icon: 'hook', match: /^\/(hooks?|hook-marketplace|lab|lab-hook|[a-z-]*-lab|graduation[a-z-]*|l141-[a-z-]*|discover[a-z-]*|builders[a-z-]*|integrate|inspect|contracts|lp-proof|deploy|api|pq-[a-z]*)(\b|$)/ },
   { id: 'launch', label: 'Launch', href: '/create', icon: 'plus', match: /^\/(create|qtoken-studio|launch[a-z-]*|relaunch|pricing|verify|sale|founding|token-profile|list-market|market-submit)(\b|$)/ },
   { id: 'community', label: 'Community', href: '/community', icon: 'community', match: /^\/(community|board|profile|creator|call|stake)(\b|$)/ },
@@ -23,8 +23,9 @@ export const NAV = [
 ];
 // Quick links shown first in the menu and in the footer.
 export const MORE = [
+  { label: 'News wire', href: '/news' },
   { label: 'Perps', href: '/perps' }, { label: 'Markets', href: '/markets' }, { label: 'Lab', href: '/lab' },
-  { label: 'Hook discovery', href: '/discover' }, { label: 'My QHooks', href: '/me' }, { label: 'Apps', href: '/android' },
+  { label: 'Hook discovery', href: '/discover' }, { label: 'My QHooks', href: '/me' }, { label: 'QProof', href: '/qproof' }, { label: 'Apps', href: '/android' },
 ];
 // Every section of the ecosystem: the old site menu, link for link (approved copy).
 export const SECTIONS = [
@@ -54,7 +55,7 @@ export const SECTIONS = [
     ['Holder staking', '/stake', 'Stake for a share of a launch’s income'], ['Buyback and burn', '/hooks#block-buyback', 'Charges buy the token back and burn it'],
     ['Graduation', '/graduation', 'Choose when liquidity moves to its next pool'], ['Team locks', '/hooks#hk-beside-h', 'Cliffs, drips and a public sell notice']] },
   { id: 'protect', title: 'Protect', links: [
-    ['qWallets', '/qwallets', 'Withdrawals need your wallet and your second key'], ['QLocks', '/qlocks', 'Locks traders can check'],
+    ['QProof', '/qproof', 'Check any token, pool or wallet before you buy'], ['qWallets', '/qwallets', 'Withdrawals need your wallet and your second key'], ['QLocks', '/qlocks', 'Locks traders can check'],
     ['The two-key model', '/#two-keys', 'Creator actions need both keys']] },
   { id: 'integrate', title: 'Integrate', links: [
     ['Community', '/community', 'Token calls, community boards and referral rewards'], ['Integration guide', '/integrate', 'Bring QHooks hooks, pools and discovery into your platform'],
@@ -290,7 +291,7 @@ function adoptWallet(slot) {
   const t = doc.getElementById('qhc-trigger');
   if (t) { take(t); return; }
   // No site wallet on this page yet: a plain Connect wallet button (fires qa:wallet), then load the wallet when idle.
-  const btn = h('button', { class: 'qa-btn qa-btn--primary qa-wallet__btn', type: 'button', onclick: () => dispatchEvent(new CustomEvent('qa:wallet', { cancelable: true })) }, 'Connect wallet');
+  const btn = h('button', { class: 'qa-btn qa-btn--primary qa-wallet__btn', type: 'button', onclick: () => dispatchEvent(new CustomEvent('qa:wallet', { cancelable: true })) }, 'Connect');
   slot.replaceChildren(btn);
   const later = globalThis.requestIdleCallback || ((f) => setTimeout(f, 1200));
   later(() => ensureWalletStack().then((trig) => { if (trig && slot.contains(btn)) take(trig); }).catch(() => {}));
@@ -310,7 +311,7 @@ export function ensureWalletStack() {
     const inserted = !doc.getElementById('qhc-dialog');
     if (inserted) doc.body.insertAdjacentHTML('beforeend', WALLET_DIALOG);
     let t = doc.getElementById('qhc-trigger');
-    if (!t) { t = h('button', { type: 'button', id: 'qhc-trigger', class: 'qhc-trigger', 'aria-haspopup': 'dialog', hidden: true }, 'Connect wallet'); doc.body.append(t); }
+    if (!t) { t = h('button', { type: 'button', id: 'qhc-trigger', class: 'qhc-trigger', 'aria-haspopup': 'dialog', hidden: true }, 'Connect'); doc.body.append(t); }
     // Referral capture (?ref=), the fast first tap and the offline worker come with the wallet's early script.
     if (!doc.querySelector('script[src$="wallet-early.js"]')) doc.head.append(h('script', { src: '/wallet-early.js' }));
     for (const [u, bind] of [['/wallet-site.mjs', 'bindSiteWallet'], ['/wallet-login.mjs', 'bindWalletLogin'], ['/l121-mobile-login.mjs', 'bindMetaMaskMobile']]) {
@@ -373,7 +374,7 @@ function makeMenu() {
 }
 // The account part of the menu: Edit profile and your places when a wallet is connected, otherwise Connect wallet.
 async function paintMe(box) {
-  const connect = () => h('button', { class: 'qa-btn qa-btn--primary qa-btn--block', type: 'button', onclick: () => { doc.getElementById('qa-menu')?.close(); openWallet(); } }, 'Connect wallet');
+  const connect = () => h('button', { class: 'qa-btn qa-btn--primary qa-btn--block', type: 'button', onclick: () => { doc.getElementById('qa-menu')?.close(); openWallet(); } }, 'Connect');
   if (!doc.getElementById('qhc-dialog')) { box.replaceChildren(connect()); return; }
   try {
     const [{ getWalletHub }, { profileUrl }] = await Promise.all([import('/wallet-hub.mjs'), import('/qx-profile-address.mjs')]);

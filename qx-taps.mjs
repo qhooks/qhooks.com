@@ -3,7 +3,7 @@ import {getWalletHub} from './wallet-hub-fresh.mjs';
 import {evaluateCatalogue, checkBalance, keeperTransaction, GROUPS, MANUAL_KEY} from './qx-taps-core.mjs';
 
 // Coalesce reads into batches of 20; each chain drains independently.
-export function createReadClient({fetchImpl = globalThis.fetch, origin = '', relay = true, elysiumInterval = 250, sleep = ms => new Promise(r => setTimeout(r, ms)), now = Date.now} = {}) {
+export function createReadClient({fetchImpl = globalThis.fetch, origin = '', relay = true, purpose = '', elysiumInterval = 250, sleep = ms => new Promise(r => setTimeout(r, ms)), now = Date.now} = {}) {
   const chains = new Map(), memo = new Map(), networks = {};
   let nextId = 0;
   const url = path => origin ? new URL(path, origin).href : path;
@@ -29,7 +29,9 @@ export function createReadClient({fetchImpl = globalThis.fetch, origin = '', rel
       if (pause > 0) await sleep(pause);
     }
     try {
-      const response = await fetchTimed(endpoint, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
+      // purpose (stakesafe): our relay reads a money panel's reads as critical; never sent to a public RPC (CORS preflight).
+      const headers = {'content-type': 'application/json', ...(purpose && String(endpoint).startsWith('/api/rpc/') ? {'x-qhooks-read-purpose': purpose} : {})};
+      const response = await fetchTimed(endpoint, {method: 'POST', headers, body: JSON.stringify(body)});
       return await response.json();
     } finally { queue.last = now(); }
   }
@@ -156,7 +158,7 @@ export function mountTaps({document: doc = document, target = window, hub = getW
     }
     const sections = result.groups.map(group => {
       const section = el('section', {class: 'taps-section', 'aria-labelledby': 'taps-' + group.id}, el('h2', {id: 'taps-' + group.id}, group.label));
-      if (group.checking) section.append(el('p', {class: 'taps-checking'}, `Checking ${group.checking} more step${group.checking === 1 ? '' : 's'}… Refreshing`));
+      if (group.checking) section.append(el('p', {class: 'taps-checking'}, `Checking ${group.checking} step${group.checking === 1 ? '' : 's'} below. Setup remains available for review.`));
       if (!group.rows.length && !group.checking) section.append(el('p', {class: 'taps-empty'}, 'Nothing waiting here.'));
       for (const row of group.rows) {
         const icons = el('div', {class: 'taps-chains', 'aria-label': row.chains.map(c => c.name).join(', ')});

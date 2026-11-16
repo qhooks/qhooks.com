@@ -1,3 +1,5 @@
+import {mountAccountHoldings} from './qx-account-holdings.mjs';
+import {solAddress,onSolChange} from './qx-solana.mjs';
 import {profileUrl} from './qx-profile-address.mjs';
 // My QHooks (/me): everything the connected wallet has across the ecosystem, on every chain.
 // Launches it created (income waiting, its own share, vesting streams, keys), tokens it holds, stakes and raffle
@@ -17,63 +19,13 @@ window.addEventListener('pagehide',()=>quantum.lock());
 const $ = id => document.getElementById(id);
 let seq = 0, rewardSeq = 0, lastData = null, lastRewards = null;
 
-// Holdings carry their token art and stay live: every 15 s in view, the terminal feed's last trade price (in the
-// pool's quote) re-values each position and its result; a changed value flashes green or red.
-let feedMap = null, liveTimer = 0;
-const feedKey = (chainId, controller) => chainId + ':' + String(controller || '').toLowerCase();
-async function readFeed() {
-  try {
-    const r = await fetch('/api/terminal/feed?chain=all', { cache: 'no-store' }); if (!r.ok) return false;
-    const d = await r.json(); if (!Array.isArray(d.markets)) return false;
-    feedMap = new Map(d.markets.filter(m => m && m.controller).map(m => [feedKey(m.chainId, m.controller), { logo: typeof m.logo === 'string' && m.logo ? m.logo.replace(/^https:\/\/qhooks\.com(?=\/)/, '') : null, price: Number.isFinite(m.summary?.price) && m.summary.price > 0 ? m.summary.price : null }]));
-    return true;
-  } catch { return false; }
-}
-function coin(p) {
-  const el = h('span', { class: 'qp-art qp-art--sm', 'aria-hidden': 'true' }); el.dataset.letter = String(p.symbol || '?').charAt(0).toUpperCase();
-  const logo = feedMap?.get(feedKey(p.chainId, p.controller))?.logo;
-  if (logo) { const img = h('img', { src: logo, alt: '', loading: 'lazy' }); img.addEventListener('error', () => img.remove()); el.append(img); }
-  return el;
-}
-const valueOf = p => Number.isFinite(p.price) && Number.isFinite(p.balance) ? p.balance * p.price : null;
-const resultOf = (p, value) => value !== null && Number.isFinite(p.spent) && p.spent > 0 && Number.isFinite(p.received) ? p.received + value - p.spent : null;
-const valueText = (p, value) => value === null ? 'Refreshing' : value.toLocaleString(undefined, { maximumSignificantDigits: 4 }) + ' ' + (p.quoteSymbol || '');
-const resultText = (p, pnl) => pnl === null ? 'No cost basis yet' : (pnl >= 0 ? '+' : '') + pnl.toLocaleString(undefined, { maximumSignificantDigits: 3 }) + ' ' + (p.quoteSymbol || '');
-function holdingsSection(positions) {
-  const held = positions.filter(p => p.balance > 0).sort((a, b) => b.balance * b.price - a.balance * a.price);
-  if (!held.length) return [h('p', { class: 'qa-empty' }, 'No QHooks launch tokens in this wallet. ', h('a', { href: '/terminal' }, 'Open the terminal'), '.')];
-  const rows = held.map(p => {
-    const value = valueOf(p), pnl = resultOf(p, value);
-    const v = h('span', { role: 'cell', class: 'qa-me-value' }, valueText(p, value));
-    const r = h('span', { role: 'cell', class: pnl === null ? 'qa-muted' : pnl >= 0 ? 'qa-up' : 'qa-down' }, resultText(p, pnl));
-    const row = h('a', { class: 'qa-tr', role: 'row', href: '/terminal#m=' + p.chainId + ':' + p.controller },
-      h('span', { role: 'cell', class: 'qa-me-tok' }, coin(p), h('b', {}, p.symbol || '?')), h('span', { role: 'cell' }, CHAIN_NAME[p.chainId] || p.chainId),
-      h('span', { role: 'cell' }, p.balance.toLocaleString(undefined, { maximumFractionDigits: 2 })), v, r);
-    row.dataset.key = feedKey(p.chainId, p.controller); row.__p = p; row.__v = v; row.__r = r;
-    return row;
-  });
-  const table = h('div', { class: 'qa-table', role: 'table' },
-    h('div', { class: 'qa-tr qa-th', role: 'row' }, ...['Token', 'Chain', 'Holding', 'Value', 'Result'].map(t => h('span', { role: 'columnheader' }, t))), ...rows);
-  startLive(table);
-  return [table];
-}
-function startLive(table) {
-  clearInterval(liveTimer);
-  const tick = async () => {
-    if (!table.isConnected) { clearInterval(liveTimer); return; }
-    if (document.visibilityState !== 'visible' || !await readFeed()) return;
-    for (const row of table.querySelectorAll('a.qa-tr[data-key]')) {
-      const p = row.__p, live = feedMap.get(row.dataset.key);
-      const ic = row.querySelector('.qp-art'); if (live?.logo && ic && !ic.querySelector('img')) { const img = h('img', { src: live.logo, alt: '', loading: 'lazy' }); img.addEventListener('error', () => img.remove()); ic.append(img); }
-      if (!live?.price || live.price === p.price) continue;
-      const dir = Number.isFinite(p.price) ? Math.sign(live.price - p.price) : 0; p.price = live.price;
-      const value = valueOf(p), pnl = resultOf(p, value);
-      row.__v.textContent = valueText(p, value); row.__r.textContent = resultText(p, pnl); row.__r.className = pnl === null ? 'qa-muted' : pnl >= 0 ? 'qa-up' : 'qa-down';
-      if (dir && !matchMedia('(prefers-reduced-motion: reduce)').matches) { row.classList.remove('is-up', 'is-down'); void row.offsetWidth; row.classList.add(dir > 0 ? 'is-up' : 'is-down'); }
-    }
-  };
-  void tick(); liveTimer = setInterval(tick, 15000);
-}
+// One holdings component across My QHooks and Portfolio.
+let holdings=null,holdingsPanel=null,holdingsOwner=null;
+const total=h('a',{class:'qa-btn qa-me-total',href:'/portfolio'},'Connect to see your total');
+document.querySelector('.mn-me-hero')?.append(total);
+function holdingsSection(){return [h('div',{id:'qa-shared-holdings'})];}
+function mountHoldings(){holdings?.dispose();const root=$('qa-shared-holdings');if(root)holdings=mountAccountHoldings({h,root,total,owner:connectedAddress,connected:connectedAddress,solAddress});}
+onSolChange(()=>holdings?.refresh());
 
 const tile = (k, v, sub) => h('div', { class: 'qa-tile' }, h('span', {}, k), h('b', {}, v), sub ? h('small', {}, sub) : null);
 
@@ -94,22 +46,23 @@ async function loadRewards(me,mine){
  }catch(error){if(mine!==seq||serial!==rewardSeq)return;target.replaceChildren(h('p',{class:'qa-status',role:'status'},'Reward balances could not be read. '+(error.message||'')),h('button',{type:'button',class:'qa-btn',onclick:()=>void loadRewards(me,mine)},'Retry reward balances'));}
 }
 async function load(quiet=false){
- const me=connectedAddress(),mine=++seq,root=$('qa-root');rewardSeq++;lastData=null;lastRewards=null;tiles();
+ const me=connectedAddress(),mine=++seq,root=$('qa-root');document.querySelector('main.mn-me')?.classList.toggle('qa-me-connected',!!me);total.hidden=!me;rewardSeq++;lastData=null;lastRewards=null;tiles();
  if(!me){
+  holdings?.dispose();holdings=null;holdingsPanel=null;holdingsOwner=null;total.textContent='Connect to see your total';
   $('qa-evm-panel').replaceChildren(disconnectedRewards());
-  root.replaceChildren(section('qa-launches','Your launches','Connect your EVM wallet to read launches you created and their income.',[h('button',{type:'button',class:'qx-btn qx-btn-primary','data-qa-connect':''},'Connect wallet')]),section('qa-holdings','Holdings',null,[h('p',{},'Connect your EVM wallet to see indexed launch positions. Use Portfolio for your wider wallet holdings.'),h('a',{class:'qa-btn',href:'/portfolio'},'Open portfolio →')]),section('qa-keys','Wallet and keys',null,[h('p',{},'Your launch dashboard holds creator controls and key recovery. Connect your launch wallet to find it.')]));return;
+  root.replaceChildren(section('qa-launches','Your launches','Connect your EVM wallet to read launches you created and their income.',[h('button',{type:'button',class:'qx-btn qx-btn-primary','data-qa-connect':''},'Connect')]),section('qa-holdings','Holdings',null,[h('p',{},'Connect your EVM wallet to see indexed launch positions. Use Portfolio for your wider wallet holdings.'),h('a',{class:'qa-btn',href:'/portfolio'},'Open portfolio →')]),section('qa-keys','Wallet and keys',null,[h('p',{},'Your launch dashboard holds creator controls and key recovery. Connect your launch wallet to find it.')]));const firstHolding=$('qa-holdings');if(firstHolding)root.prepend(firstHolding);return;
  }
  void loadRewards(me,mine);
- if(!quiet)root.replaceChildren(h('p',{class:'qa-loading',role:'status'},'Reading your launches and holdings…'));
+ const first=holdingsOwner!==me||!holdingsPanel;if(first){holdings?.dispose();holdingsOwner=me;holdingsPanel=section('qa-holdings','Holdings',null,holdingsSection());}
+ if(!quiet)root.replaceChildren(h('p',{class:'qa-loading',role:'status'},'Reading your launches…'),holdingsPanel);else if(!holdingsPanel.isConnected)root.append(holdingsPanel);if(first)mountHoldings();
  try{
   const data=await loadEarnings(me,{refresh:()=>void load(true),includeRewards:false});if(mine!==seq||connectedAddress()!==me)return;
   lastData=data;
   const sections=await renderEarnings(me,data,{refresh:()=>void load(true),includeRewards:false});if(mine!==seq||connectedAddress()!==me)return;
-  root.replaceChildren(...[
+  root.replaceChildren(...[holdingsPanel,
    ...(data.partial?[h('div',{class:'qa-partial',role:'status'},h('p',{},'Some account reads did not answer. Available data is shown; refresh to check again.'),h('button',{type:'button',class:'qa-btn',onclick:()=>void load()},'Refresh account'))]:[]),...sections,
-   section('qa-holdings','Holdings','Indexed launch positions at the last recorded trade price. Results cover indexed buys and sells; transfers and other venues may be missing.',data.coverage?.positions==='unavailable'?[h('p',{class:'qa-empty'},'Your holdings could not be read. Refresh the account to retry.')]:holdingsSection(data.positions)),
-   section('qa-keys','Wallet and keys',null,[h('p',{class:'qa-muted'},'Connected: '+me+'. Protected creator actions use this wallet and your saved second key. Open a launch dashboard to manage keys or recovery.'),h('div',{class:'qa-actions'},h('a',{class:'qa-btn qa-btn-primary',href:profileUrl({wallet:me,edit:true})},'Edit profile →'),h('a',{class:'qa-btn',href:'/qwallets'},'qWallets'),h('button',{type:'button',class:'qa-btn','data-qa-connect':''},'Wallet details'))])]);tiles();
- }catch(error){if(mine!==seq)return;root.replaceChildren(h('div',{class:'qa-partial',role:'status'},h('h2',{},'Your account could not be read'),h('p',{},'Your rewards are checked separately. Refresh the account to try again.'),h('button',{type:'button',class:'qa-btn',onclick:()=>void load()},'Retry account')));}
+   section('qa-keys','Wallet and keys',null,[h('p',{class:'qa-muted'},'Connected: ',h('span',{title:me},me.slice(0,6)+'…'+me.slice(-4)),'. Protected creator actions use this wallet and your saved second key. Open a launch dashboard to manage keys or recovery.'),h('div',{class:'qa-actions'},h('a',{class:'qa-btn qa-btn-primary',href:profileUrl({wallet:me,edit:true})},'Edit profile →'),h('a',{class:'qa-btn',href:'/qwallets'},'qWallets'),h('button',{type:'button',class:'qa-btn','data-qa-connect':''},'Wallet details'))])]);tiles();
+ }catch(error){if(mine!==seq)return;root.replaceChildren(h('div',{class:'qa-partial',role:'status'},h('h2',{},'Your account could not be read'),h('p',{},'Your rewards are checked separately. Refresh the account to try again.'),h('button',{type:'button',class:'qa-btn',onclick:()=>void load()},'Retry account')),holdingsPanel);}
 }
 
 onWalletChange(() => load());

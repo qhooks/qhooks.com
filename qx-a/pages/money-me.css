@@ -156,10 +156,19 @@
   .mn-me .qa-reward-home > .qa-section-head { grid-column: 1 / -1; }
   .mn-me .qa-reward-grid { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 64px; }
   .mn-me .qa-reward-grid > #qa-sol-launch-fees { grid-column: 1 / -1; }
+  /* design audit #28: EVM and Solana cashback side by side (the right column sat empty, so a lone line floated there),
+     then the Solana coins block across both columns. Each empty state stays under its own heading. */
+  .mn-me .qa-reward-grid > #qa-evm-rewards { grid-column: 1; grid-row: 1; }
+  .mn-me .qa-reward-grid > #qa-solana-rewards { grid-column: 2; grid-row: 1; }
+  .mn-me .qa-reward-grid > #qa-sol-launch-fees { grid-row: 2; }
 }
 @media (prefers-reduced-motion: reduce) {
   .mn-me *, .mn-me *::before, .mn-me *::after { animation: none !important; transition: none !important; }
 }
+
+/* empty states read as one quiet line under their heading (they were bright, mixed with the muted intro copy) */
+.mn-me .qa-reward-home.is-out #qa-evm-panel p, .mn-me :is(#qa-solana-connect, .qsr:not(:has(button, table, dl)), #qa-sol-launch-fees) > p { font-size: 14.5px; line-height: 1.5; color: var(--qa-tx-2); }
+.mn-me #qa-sol-launch-fees > :last-child { margin-bottom: 6px; }
 
 /* wallet checks (qx-repoproof-entrypoints.mjs loads its own boxed styles; these lay them on the floor) */
 .mn-me .qre-account > h2 { font-family: var(--qa-sans); font-size: var(--qa-fs-display-m); font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); }
@@ -169,3 +178,46 @@
 .mn-me .qre-account .qre-wallet p { font-size: 14px; color: var(--qa-tx-2); }
 .mn-me-hero .qwc-group { margin-left: 0; }
 .mn-me .qre-account :is(code, pre, kbd, samp, span, p, button, a) { font-family: var(--qa-sans) !important; }
+
+/* Mobile account repair: readable amounts, shared portfolio rows and unobscured anchors. */
+.mn-me .qa-section{scroll-margin-top:120px}
+.mn-me{padding-bottom:calc(120px + env(safe-area-inset-bottom))}
+.mn-me .qa-me-total{white-space:nowrap;font-variant-numeric:tabular-nums}
+.mn-me.qa-me-connected .mn-me-hero>.qwc-group{display:none}
+.mn-me #qa-shared-holdings{min-width:0}
+.mn-me .qyr-amt{overflow-wrap:normal;word-break:normal}
+@media(max-width:600px){
+ .mn-me .qyr-grid{grid-template-columns:1fr;gap:14px}
+ .mn-me .qyr-tile,.mn-me .qyr-tile:first-child{padding:12px 0;box-shadow:0 1px 0 var(--qa-rule)}
+ .mn-me .qyr-lines .qyr-amt{font-size:14px;white-space:nowrap;line-height:1.8;font-stretch:100%}
+ .mn-me .qa-section-head h2,.mn-me .qa-section>h2{overflow-wrap:normal;word-break:normal;max-width:100%}
+ .mn-me :is(.qa-empty,.qa-status){overflow-wrap:break-word}
+}
+
+/* Shared token artwork, including external images and chain badges. */
+.mn-me .qp-art { position: relative; flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 32% 28%, var(--a1, var(--qa-gold-hi)), var(--a2, var(--qa-gold-lo)) 78%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.12), 0 8px 18px -10px rgba(0,0,0,.9); }
+.mn-me .qp-art::before { content: attr(data-letter); font-size: 17px; font-weight: 820; font-stretch: 112%; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.mn-me .qp-art > img:not(.qp-art__chain) { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: var(--qa-floor-2); }
+.mn-me .qp-art__chain { position: absolute; right: -3px; bottom: -3px; width: 17px; height: 17px; padding: 2px; border-radius: 50%; background: var(--qa-floor); box-shadow: 0 0 0 1.5px var(--qa-floor); }
+.mn-me .qp-art--sm { width: 34px; height: 34px; }
+.mn-me .qp-art--sm::before { font-size: 13.5px; }
+.mn-me .qp-art--sm .qp-art__chain { width: 14px; height: 14px; right: -2px; bottom: -2px; }
+.mn-me .qp-art--wallet { width: 30px; height: 30px; }
+.mn-me .qp-art--wallet::before { content: ""; }
+
+.mn-me .qp-art>.qp-art__chain{inset:auto -3px -3px auto}
+
+@media(max-width:600px){.mn-me .qa-section{scroll-margin-top:0}.mn-me #qa-quantum{scroll-margin-top:112px}}
+/* The optional launch-art band must not move phone anchor targets after reads settle. */
+@media(max-width:600px){.mn-me .me4-stage{display:none!important}}
+
+.mn-me .qyr-lines :is(.qyr-number,.qyr-chain,.qyr-sep){font:inherit;color:inherit}
+@media(min-width:601px){.mn-me .qyr-lines .qyr-amt{font-size:12px;line-height:1.5;font-stretch:100%}.mn-me .qyr-number{display:block;white-space:nowrap}.mn-me .qyr-chain{display:block;white-space:nowrap;color:var(--qa-tx-3)}.mn-me .qyr-sep{display:none}.mn-me .qyr-lines{gap:8px}}
+
+/* Keep all four account summaries visible on a phone. */
+@media(max-width:600px){
+ .mn-me-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;margin:24px 0 0;padding:0;scroll-snap-type:none}
+ .mn-me-tiles .qa-tile,.mn-me-tiles .qa-tile:first-child{min-width:0;padding:12px;box-shadow:inset 0 -1px 0 var(--qa-rule)}
+ .mn-me-tiles .qa-tile>span,.mn-me-tiles .qa-tile>small{white-space:normal;overflow-wrap:normal;word-break:normal}
+}

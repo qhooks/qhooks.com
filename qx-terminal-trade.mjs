@@ -1,3 +1,12 @@
+import {waitTransactionReceipt} from './qx-transaction-receipt.mjs';
+import {walletTradingStorage} from './qx-trade-settings-context.mjs';
+import {COPY_RISK} from '/qx-copy-review-core.mjs';
+import {createCopyTicketReview} from './qx-copy-ticket-review.mjs';
+import {EXIT_CHAINS} from './qx-profile-exit.mjs';
+import {amountPreview,cachedTokenHolding} from './qx-ticket-amount.mjs';
+import {matchingEvmBuy} from './qx-buy-receipt.mjs';
+import {mountBuyCallout} from './qx-buy-callout.mjs';
+import {mountTokenFeed} from './qx-token-feed.mjs';
 import {solOrderFeeCopy} from './qx-sol-referral-payout-core.mjs';
 import {sellPortion} from './qx-position-core.mjs';
 import {poolQuoteInfo} from './qx-best-pool.mjs';
@@ -8,7 +17,7 @@ import {homePicker, homeConfig, loadHomePref, instantHomeEnabled, withHomeRails}
 import {loadLocalHome, homeTicketDefault, homeName, homeToken, homeSlippage, homeReturnNeeded} from './qx-home-core.mjs';
 import {encodeBuyFor} from './qx-pro-xbuy.mjs';
 import { tradeError } from './qx-chain-guard.mjs';
-import {curveBuyQuote, curveNoRoute, curveFeeText} from './qx-curve-market.mjs';
+import {curveBuyQuote, curveNoRoute, curveFeeText, curveQuoteProblem} from './qx-curve-market.mjs';
 import { executeTicketSwap } from './qx-ticket-execution.mjs';
 import {pendingHomeBuy, dismissHomeBuy, homeBuyRecoveryView, finishHomeBuy} from './qx-home-buy-step.mjs';
 import {prepareTradeThesis,recordTerminalTrade} from './qx-trade-record.mjs';
@@ -66,21 +75,24 @@ const STABLE = { '8453': ['0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', 'USDC', 
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem('qhooks:terminal:' + k); localStorage.setItem('qhooks:terminal:' + k, v); } catch {} return null; };
 export const validTradeTolerance = value => /^\d{1,5}$/.test(String(value ?? '')) && Number(value) > 0 && Number(value) <= 10000;
 
-export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) {
+export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode=false, copyReview=createCopyTicketReview({now,...(rowMode?{search:''}:{})}) } = {}) {
+  if(copyReview.active&&!document.querySelector('link[href="/qx-copy-review.css"]'))document.head.append(h('link',{rel:'stylesheet',href:'/qx-copy-review.css'}));
   const savedTolerance = store('tol');
+  let copyPrepared=null,copyPreparing=false;
   let st = null, side = 'buy', pay = 'quote', tol = validTradeTolerance(savedTolerance) ? String(Number(savedTolerance)) : '100', current = null, qseq = 0, timer = null, busy = false;
   let homeSelected = false, homeEnabled = false, homePref = loadLocalHome(connectedAddress());
   let priceUsd = null, armedAt = null, armTimer = null, sellCash = false, recovery = null, impactArmedAt = null;
   let sellPrefillOwner = null, pendingSellPrefill = false;
   let selection=null, selectionRevision=0, layoutRevision=0;
   let quoteLoading = false, quoteAgeTimer = null;
-  let marketPrices=[];
+  let marketPrices=[], rowReview=null, lastReceipt=null, lastSubmitError=null;
   const hub = getWalletHub(window);
   loadFundingStyle();
   const homeSettings = homePicker({getOwner: () => connectedAddress()});
   if (!document.getElementById('qhome-style')) { const style = document.createElement('link'); style.id = 'qhome-style'; style.rel = 'stylesheet'; style.href = '/qx-home-currency.css'; document.head.append(style); }
   const homeMarketPay = () => st?.multi ? (st.pools.some(p => nativeRoute(st.chainId, p.quote)) ? 'native' : st.pools[0].quote) : [...paySel.options].some(o => o.value === 'native') ? 'native' : 'quote';
   async function syncHome(defaultSelection = false) {
+    if(rowMode){homeSelected=false;homeEnabled=false;return;}
     const intent = selection, state = st, owner = connectedAddress();
     const config = await homeConfig().catch(() => ({enabled: false}));
     const pref = await loadHomePref(owner).catch(() => loadLocalHome(owner));
@@ -109,7 +121,10 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   }
   window.addEventListener('qhooks:home', () => { if (!busy && !recovery) void syncHome(true).then(layout); });
   const status = h('p', { class: 'qtx-status', role: 'status', ariaLive: 'polite' });
-  const amount = h('input', { type: 'text', inputMode: 'decimal', placeholder: '0.0', autocomplete: 'off', ariaLabel: 'Amount', id: 'qxt-amount' });
+  const amount = h('input', {type:'hidden', id:'qxt-amount-exact'});
+  const amountDisplay = h('input', {type:'text', inputMode:'decimal', placeholder:'0.0', autocomplete:'off', ariaLabel:'Amount', id:'qxt-amount'});
+  const amountView = amountPreview(amountDisplay, amount, {onInput: () => {sellPrefillOwner=null;refresh();}});
+  const setAmount = value => amountView.set(value);
   const thesis = h('input', {type:'text',maxLength:280,placeholder:'Buy thesis · optional, 140 characters',ariaLabel:'Public buy thesis',autocomplete:'off'});
   const thesisRow = h('label',{class:'qxt-trader-thesis'},h('span',{},'Public buy thesis'),thesis,h('small',{},'Shown with this buy when your public trading profile is on. ',h('a',{href:'/community#trading-feed'},'Trading profile')));
   const unit = h('span', { class: 'qxt-unit' });
@@ -119,7 +134,9 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   let autoNote = '', unitUsd = null, usdMode = false;
   // $/token toggle on the amount (default token). In $ mode the visible box takes dollars and writes the token amount
   // into the real amount field, which every quote and send path already reads.
-  const usdInput = h('input', {type: 'text', inputMode: 'decimal', placeholder: '$0', autocomplete: 'off', ariaLabel: 'Amount in US dollars', hidden: true, class: 'qxt-usd-input'});
+  const usdInput = h('input', {type:'hidden'});
+  const usdDisplay = h('input', {type:'text', inputMode:'decimal', placeholder:'$0', autocomplete:'off', ariaLabel:'Amount in US dollars', hidden:true, class:'qxt-usd-input'});
+  const usdView = amountPreview(usdDisplay, usdInput, {onInput:() => usdInput.dispatchEvent(new Event('input'))});
   const unitToggle = h('button', {type: 'button', class: 'qxt-unit-toggle', ariaLabel: 'Enter the amount in dollars', disabled: true}, '$');
   const usdEcho = h('small', {class: 'qxt-usd-echo'});
   const presets = h('div', { class: 'qxt-presets', role: 'group', ariaLabel: 'Amount presets' });
@@ -129,7 +146,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   const quoteTools = h('div', { class:'qxt-quote-tools', hidden: true }, h('small', {}, quoteTime), refreshQuote);
   const go = h('button', { type: 'button', class: 'qxt-go', disabled: true }, 'Buy');
   // Signed out (EVM): a live button that opens the same wallet sheet as the header's Connect wallet.
-  const signIn = h('button', { type: 'button', class: 'qxt-go qxt-signin', hidden: true }, 'Sign in to buy');
+  const signIn = h('button', { type: 'button', class: 'qxt-go qxt-signin', hidden: true }, 'Connect to buy');
   signIn.addEventListener('click', () => { (document.getElementById('qxt-connect')||document.getElementById('qhc-trigger'))?.click(); });
   // Empty wallet on this chain: say how to fund it, with the address to copy.
   const addFunds = h('div', { class: 'qxt-add-funds', hidden: true });
@@ -151,7 +168,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     link.addEventListener('click', async () => { try { await navigator.clipboard.writeText(referralLink(me)); link.textContent = 'Link copied'; } catch { link.textContent = referralLink(me); } });
     cash.append(h('p',{},h('a',{href:'/me#qa-rewards'},'Claim cashback'), ' · ',link));
   }
-  const showSignIn = () => { const out = !st?.noRoute && !st?.sol && !connectedAddress(); if (out) addFunds.hidden = true; signIn.hidden = !out; go.hidden = out; signIn.textContent = side === 'sell' ? 'Sign in to sell' : 'Sign in to buy'; };
+  const showSignIn = () => { const out = !st?.noRoute && !st?.sol && !connectedAddress(); if (out) addFunds.hidden = true; signIn.hidden = !out; go.hidden = out; signIn.textContent = side === 'sell' ? 'Connect to sell' : 'Connect to buy'; };
   const sideBtns = ['buy', 'sell'].map(s => h('button', { type: 'button', 'data-side': s, ariaPressed: String(s === side) }, s === 'buy' ? 'Buy' : 'Sell'));
   const sellToCash = h('button', { type: 'button', 'data-side': 'cash', hidden: !xchainEnabled }, 'Sell to cash');
   const paySel = h('select', { ariaLabel: 'Pay with' });
@@ -159,16 +176,16 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   if (!TOL.some(([value]) => value === tol)) tolSel.append(h('option', { value: tol, selected: true }, Number(tol) / 100 + '%'));
   tolSel.value = tol;
   let settingsStorage;try{settingsStorage=globalThis.localStorage;}catch{}
-  const tradingSettings=mountTradingSettings({h,storage:settingsStorage,legacyTolerance:savedTolerance,onChange:profileChanged,onError:error=>{status.textContent=tradeError(error);}});
+  const tradingSettings=mountTradingSettings({h,storage:walletTradingStorage(settingsStorage,()=>st?.chainId),legacyTolerance:savedTolerance,onChange:profileChanged,onError:error=>{status.textContent=tradeError(error);}});
   function syncProfile(){
     if(st)tradingSettings.setChain(st.chainId,Array.from(paySel.options,option=>unitClass(option.textContent)));
-    const profile=tradingSettings.profile(),settings=profile[side],resolved=resolveTradingTolerance(settings,marketPrices,now());tol=String(resolved.bps);
+    const profile=tradingSettings.profile(),settings=profile[side],resolved=resolveTradingTolerance(settings,marketPrices,now());tol=String(copyReview.active&&copyReview.context?copyReview.context.slippageBps:resolved.bps);
     tolSel.replaceChildren(h('option',{value:'auto'},'Auto · max '+settings.maxBps/100+'%'),...TOL.map(([v,t])=>h('option',{value:v},t)));
     if(settings.mode==='manual'&&!TOL.some(([v])=>v===String(settings.manualBps)))tolSel.append(h('option',{value:String(settings.manualBps)},settings.manualBps/100+'%'));
-    tolSel.value=settings.mode==='auto'?'auto':String(settings.manualBps);
+    if(copyReview.active&&copyReview.context){const value=String(copyReview.context.slippageBps);if(!Array.from(tolSel.options).some(o=>o.value===value))tolSel.append(h('option',{value},Number(value)/100+'%'));tolSel.value=value;tolSel.disabled=true;}else{tolSel.value=settings.mode==='auto'?'auto':String(settings.manualBps);tolSel.disabled=false;}
   }
   function profileChanged(){if(busy||recovery)return;status.textContent='';syncProfile();clearArmed();refresh();if(st)layout();}
-  syncProfile();
+  syncProfile();tradingSettings.element.hidden=true;
   const payLabel = h('span', {}, 'Pay with'), payRow = h('label', { class: 'qxt-pay qxt-pay-chip' }, payLabel, paySel);
   // Home currency is a setting, not part of the buy: one collapsed row inside Settings.
   const homeRowName = h('span', {class: 'qxt-home-name'});
@@ -185,25 +202,42 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const from = funding.from; if (!busy && from && quote) go.textContent = 'Move from ' + (CHAIN_NAME[from.chainId] || 'other chain').replace(/ Chain$/, '') + ' & buy ' + (st?.symbol || '');
   } });
   const quoteDetails=h('div',{class:'qxt-quote-details'});
-  if(tradingSettings.summary)tradingSettings.summary.textContent='Edit trading profile';
+  tradingSettings.element.append(h('label',{class:'qxt-pay qxt-live-slippage'},h('span',{},'Slippage'),tolSel));
   const settingsSummary=h('summary',{},'Settings');
-  const settings=h('details',{class:'qxt-ticket-settings'},settingsSummary,homeRow,tradingSettings.element,h('label',{class:'qxt-pay'},h('span',{},'Slippage'),tolSel),thesisRow,quoteDetails,quoteTools,cashSettings(h),cash);
+  const settings=h('details',{class:'qxt-ticket-settings'},settingsSummary,homeRow,thesisRow,quoteDetails,quoteTools,cashSettings(h),cash);
   settings.addEventListener('keydown',event=>{if(event.key==='Escape'&&settings.open){event.preventDefault();event.stopPropagation();settings.open=false;settingsSummary.focus();}});
   function presentQuote(...nodes){const main=nodes.filter((n,i)=>i===0||String(n.getAttribute?.('class')||n.className||'').split(' ').includes('qxt-impact'));out.replaceChildren(...main);quoteDetails.replaceChildren(...nodes.filter(n=>!main.includes(n)));}
   card.replaceChildren(
     h('div', { class: 'qxt-side-toggle', role: 'group', ariaLabel: 'Trade side' }, ...sideBtns, sellToCash),
     payRow,
-    risk, ...avail.elements, h('div', { class: 'qxt-amount' }, amount, usdInput, unit), h('div', {class: 'qxt-usd-row'}, usdEcho, unitToggle), addFunds, funding.element, presets, out, go, signIn, status, followup, settings);
-  import('/qx-oneclick.mjs').then(m => m.mountOneClickToggle(settings)).catch(() => {}); // One-click trading toggle (hidden unless an email/Google wallet is connected)
+    risk, ...avail.elements, h('div', { class: 'qxt-amount qxt-amount-fit' }, amount, amountDisplay, usdInput, usdDisplay, unit), h('div', {class: 'qxt-usd-row'}, usdEcho, unitToggle), addFunds, funding.element, presets, out, go, signIn, tradingSettings.element, status, followup, settings);
+  if(!rowMode)import('/qx-oneclick.mjs').then(m => m.mountOneClickToggle(settings)).catch(() => {}); // One-click trading toggle (hidden unless an email/Google wallet is connected)
 
+  const calloutContext=()=>st?{chainId:String(st.chainId),token:String(st.token).toLowerCase(),owner:connectedAddress()?.toLowerCase()}:null;
+  const currentCalloutContext=()=>{if(!st)return null;if(st.sol)return {chainId:'solana',token:st.token,owner:solAddress()};return calloutContext();};
+  const copyNote=h('div',{class:'qxt-copy-review',role:'status'}),copyText=h('p',{}),leaveCopy=h('button',{type:'button',class:'qxt-context-action'},'Leave copy review');copyNote.append(copyText,h('p',{class:'qxt-muted'},COPY_RISK),leaveCopy);copyNote.hidden=!copyReview.active;card.prepend(copyNote);
+  leaveCopy.addEventListener('click',()=>{if(busy||recovery)return;copyReview.clear();copyPrepared=null;copyNote.hidden=true;const u=new URL(location.href);u.searchParams.delete('copy');history.replaceState(null,'',u);setAmount('');refresh();void layout();});
+  async function prepareCopyReview(){
+    if(!copyReview.active||!st||busy||recovery||copyPreparing)return;const intent=selection,owner=quoteOwner(),key=st.chainId+':'+st.token+':'+owner;if(copyPrepared===key)return;copyPreparing=true;go.disabled=true;copyText.textContent='Refreshing copy review';
+    try{const c=await copyReview.load({chainId:st.chainId,token:st.token,owner});if(!isSelection(intent)||owner!==quoteOwner())return;
+      if((c.tpPct||c.slPct)&&(st.ext||!EXIT_CHAINS.includes(st.chainId)||!window.__qhooksPool?.controller))throw Error('TP/SL is unavailable for this route. Set both levels to 0 for future copy reviews.');
+      if(!Array.from(paySel.options).some(o=>o.value==='native'))throw Error('This route cannot use the copy profile’s native coin.');
+      side='buy';pay='native';homeSelected=false;sellCash=false;paySel.value=pay;setUsdMode(false);setAmount(c.amount);copyPrepared=key;copyText.textContent='Copy review · '+c.amount+' '+c.unit.symbol+' maximum · '+c.slippageBps/100+'% slippage. You sign each trade.';syncProfile();refresh();
+    }catch(error){if(isSelection(intent)){copyPrepared=null;copyReview.invalidate();copyText.textContent=error.message;current=null;go.disabled=true;}}finally{copyPreparing=false;}
+  }
+  const buyCallout=rowMode?{refresh(){},offer(){},openHolding(){}}:mountBuyCallout(card,{h,getContext:currentCalloutContext,storage:settingsStorage});
+  const tokenFeed=rowMode?{setMarket(){}}:mountTokenFeed(document.getElementById('traders')||card,{h,onCompose:()=>buyCallout.openHolding()});
+  let calloutMarket='';
+  function syncCallout(){const c=currentCalloutContext(),key=c?c.chainId+':'+c.token:'';if(key!==calloutMarket){calloutMarket=key;tokenFeed.setMarket(c);}buyCallout.refresh();}
   const targetKey=t=>!t?'none':t.kind==='launch'?'m:'+String(t.chainId)+':'+String(t.controller).toLowerCase():'t:'+String(t.chainId)+':'+(String(t.chainId)==='solana'?String(t.address):String(t.address).toLowerCase());
   const isSelection=intent=>!!intent&&intent===selection;
   function beginSelection(target) {
     if(busy||recovery){status.textContent=busy?'Finish the current trade before opening another token.':'Resolve the funded trade below before opening another token.';return false;}
-    selection=Object.freeze({revision:++selectionRevision,key:targetKey(target)});thesis.value='';
+    copyPrepared=null;copyReview.invalidate();
+    selection=Object.freeze({revision:++selectionRevision,key:targetKey(target)});thesis.value='';tokenFeed.setMarket(null);calloutMarket='';
     clearTimeout(timer);qseq++;current=null;st=null;priceUsd=null;marketPrices=[];sellCash=false;homeSelected=false;sellPrefillOwner=null;pendingSellPrefill=false;
     funding.clear();quoteDetails.replaceChildren();followup.replaceChildren();cash.replaceChildren();risk.replaceChildren();risk.hidden=true;
-    amount.value='';unit.textContent='';balance.disabled=true;avail.set('');autoNote='';paySel.replaceChildren();
+    setAmount('');unit.textContent='';balance.disabled=true;avail.set('');autoNote='';paySel.replaceChildren();
     clearArmed();go.disabled=true;status.textContent='';out.textContent=target?(target.kind==='launch'?'Loading the launch…':'Loading the token…'):'Choose a token to trade.';
     quoteLoading=false;renderQuoteFreshness();
     return selection;
@@ -213,7 +247,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     if(retry){const again=h('button',{type:'button',class:'qxt-context-action'},'Retry trade setup');again.addEventListener('click',async()=>{if(!isSelection(intent)||busy||recovery)return;again.disabled=true;out.textContent='Preparing trade…';await retry();});out.append(again);}
     return true;}
   const quoteMatches=c=>!!c&&!!st&&isSelection(c.selection)&&c.revision===qseq&&c.chainId===st.chainId&&c.token===st.token&&c.side===side&&c.pay===pay;
-  const bindQuote=(fields,revision,owner,tolerance=tol)=>({...fields,payAsset: !st.sol && side==='buy' && pay==='homeAsset' ? homeToken(homePref) : null,homeRequired:homeSelected&&side==='buy',selection,revision,chainId:st.chainId,token:st.token,owner,readAt:now(),toleranceBps:Number(tolerance)});
+  const bindQuote=(fields,revision,owner,tolerance=tol)=>({...fields,payAsset: !st.sol && side==='buy' && pay==='homeAsset' ? homeToken(homePref) : null,homeRequired:homeSelected&&side==='buy',copyReviewId:copyReview.active?copyReview.context?.id:null,selection,revision,chainId:st.chainId,token:st.token,owner,readAt:now(),toleranceBps:Number(tolerance)});
   const quoteOwner = () => st?.sol ? solAddress() : connectedAddress();
   const sameOwner = (a,b,sol) => sol ? a===b : a?.toLowerCase()===b?.toLowerCase();
   function hasQuoteAmount() { try { return !!st&&parseUnits(amount.value,payDecimals())>0n; } catch { return false; } }
@@ -222,7 +256,8 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const hasAmount=hasQuoteAmount();
     quoteTools.hidden=!hasAmount;
     refreshQuote.disabled=!hasAmount||quoteLoading||busy||!!recovery;
-    const c=current,valid=!quoteLoading&&quoteMatches(c)&&sameOwner(c.owner,quoteOwner(),st.sol)&&Number.isFinite(c.readAt);
+    const c=current;if(copyReview.active&&c){try{copyReview.assert(c,{owner:quoteOwner(),silent:silentActive()});}catch{go.disabled=true;}}
+    const valid=!quoteLoading&&quoteMatches(c)&&sameOwner(c.owner,quoteOwner(),st.sol)&&Number.isFinite(c.readAt);
     quoteTime.textContent='';quoteTime.setAttribute('datetime','');quoteTime.title='';
     if(!valid)return;
     const date=new Date(c.readAt),seconds=Math.max(0,Math.floor((now()-c.readAt)/1000));
@@ -271,13 +306,13 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   }
   function syncUsd() {
     const a = Number(amount.value), ok = unitUsd > 0 && amount.value !== '' && Number.isFinite(a);
-    if (usdMode && document.activeElement !== usdInput) usdInput.value = ok ? (Math.round(a * unitUsd * 100) / 100).toString() : '';
+    if (usdMode && document.activeElement !== usdDisplay) usdView.set(ok ? (Math.round(a * unitUsd * 100) / 100).toString() : '');
     usdEcho.textContent = !ok ? '' : usdMode ? '≈ ' + amount.value + ' ' + (st ? payUnit() : '') : '≈ $' + (a * unitUsd).toLocaleString('en-US', {maximumFractionDigits: a * unitUsd >= 100 ? 0 : 2});
   }
   function setUsdMode(on) {
-    usdMode = !!on && unitUsd > 0; amount.hidden = usdMode; usdInput.hidden = !usdMode;
+    usdMode = !!on && unitUsd > 0; amountDisplay.hidden = usdMode; usdDisplay.hidden = !usdMode;
     unitToggle.textContent = usdMode ? (st ? payUnit() : 'Token') : '$'; unitToggle.setAttribute('aria-label', usdMode ? 'Enter the amount in ' + (st ? payUnit() : 'tokens') : 'Enter the amount in dollars');
-    unit.textContent = usdMode ? 'USD' : st ? payUnit() : ''; syncUsd(); (usdMode ? usdInput : amount).focus?.({preventScroll: true});
+    unit.textContent = usdMode ? 'USD' : st ? payUnit() : ''; syncUsd(); amountView.fit(); usdView.fit(); (usdMode ? usdDisplay : amountDisplay).focus?.({preventScroll: true});
   }
   // The pay chip lists each source with its chain and balance; option text stays the bare symbol (presets key off it).
   function labelPayOptions(b) {
@@ -313,6 +348,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     return priceUsd ? units(c.side === 'buy' ? c.got : c.a, st.decimals) * priceUsd : null;
   }
   function tradePlan(c, fundingQuote = c?.funding) {
+    if(copyReview.active)return {silent:false,ticketConfirm:false,capUsd:null};
     const me = connectedAddress(), wallet = hub.snapshot().current;
     const inputUsd = Number(fundingQuote?.details?.currencyIn?.amountUsd);
     const usd = fundingQuote && inputUsd > 0 ? inputUsd : c ? tradeUsd(c) : null;
@@ -330,13 +366,24 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     clearArmed(); return plan;
   }
   let lastWallet = hub.snapshot().current;
-  hub.subscribe(({ current: wallet }) => { if (wallet !== lastWallet) { clearArmed(); lastWallet = wallet; } showSignIn(); });
+  hub.subscribe(({ current: wallet }) => { if (wallet !== lastWallet) { clearArmed(); lastWallet = wallet; } showSignIn();queueMicrotask(()=>buyCallout.refresh()); });
   window.addEventListener('qhooks:trade-prefs', clearArmed);
 
+  function paintCachedHolding() {
+    if (!st || side !== 'sell') return '';
+    const owner = st.sol ? solAddress() : connectedAddress();
+    const kept = cachedTokenHolding({owner, chainId: st.chainId, token: st.token, decimals: st.decimals, storage: settingsStorage});
+    const text = kept ? availableText({side:'sell', main:{amount:asNum(kept.raw,st.decimals), symbol:st.symbol, chain:st.sol?'Solana':CHAIN_NAME[st.chainId]}}) + ' · Refreshing' : '';
+    avail.set(text || (owner ? 'Your holdings are refreshing…' : SIGNED_OUT_TEXT));
+    return text;
+  }
+
   async function layout() {
+    tradingSettings.element.hidden=!st;syncCallout();
     if (!st||busy||recovery) return;
     if (st.noRoute) { out.textContent=st.noRoute; go.disabled=true; go.hidden=false; signIn.hidden=true; addFunds.hidden=true; cash.replaceChildren(); return; }
-    const activeState=st,intent=selection,mine=++layoutRevision;
+    const activeState=st,intent=selection,mine=++layoutRevision,layoutOwner=st.sol?solAddress():connectedAddress();
+    const cachedHolding = paintCachedHolding();
     syncProfile();
     sideBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.side === side)));
     card.dataset.side = side; paySel.value = homeSelected ? 'home' : pay;
@@ -353,19 +400,21 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     payRow.hidden = side === 'sell' && !st.multi || paySel.options.length < 2;
     payLabel.textContent = st.multi && side === 'sell' ? 'Receive' : 'Pay from';
     unit.textContent = usdMode ? 'USD' : payUnit(); if (usdMode) unitToggle.textContent = payUnit();
-    go.textContent = buttonText();showSignIn();
+    go.textContent = buttonText();showSignIn();amountView.fit();
     const profile=tradingSettings.profile(),list = side === 'sell' ? profile.sellPercentages.map(p => [p + '%', p]) : profile.amounts[unitClass(payUnit())].map(v => [v, v]);
     presets.replaceChildren(...list.map(([label, v], i) => h('button', { type: 'button', title: 'Key ' + (i + 1), onclick: () => preset(i) }, label)), balance);
     const b = await balances().catch(() => null);
-    if(st!==activeState||!isSelection(intent)||mine!==layoutRevision||busy||recovery)return;
+    if(st!==activeState||!isSelection(intent)||mine!==layoutRevision||layoutOwner!==(st.sol?solAddress():connectedAddress())||busy||recovery)return;
+    if (side === 'sell' && b) avail.set(availableText({side:'sell', main:{amount:asNum(b.token,st.decimals),symbol:st.symbol,chain:st.sol?'Solana':CHAIN_NAME[st.chainId]}}));
     unitUsd = side === 'sell' ? priceUsd : await readQuoteUsd(payUnit()).catch(() => null);
-    if(st!==activeState||!isSelection(intent)||mine!==layoutRevision||busy||recovery)return;
+    if(st!==activeState||!isSelection(intent)||mine!==layoutRevision||layoutOwner!==(st.sol?solAddress():connectedAddress())||busy||recovery)return;
     unitToggle.disabled = !(unitUsd > 0); if (!(unitUsd > 0) && usdMode) setUsdMode(false); syncUsd();
-    avail.set(b ? moneyLine(b) : st?.sol ? (solAddress() ? '' : 'Connect a Solana wallet to trade') : !st?.noRoute && !connectedAddress() ? SIGNED_OUT_TEXT : '');labelPayOptions(b);
+    avail.set(b ? moneyLine(b) : st?.sol ? (solAddress() ? '' : 'Connect a Solana wallet to trade') : !st?.noRoute && !connectedAddress() ? SIGNED_OUT_TEXT : cachedHolding || (side==='sell'?'Your holdings are refreshing…':''));labelPayOptions(b);
     homeRowName.textContent = homeName(homePref);
     balance.disabled = !b;showAddFunds(b);
     refresh();
-    showCashback().catch(() => cash.replaceChildren());
+    if(!rowMode)showCashback().catch(() => cash.replaceChildren());
+    void prepareCopyReview();
   }
 
   // ---- Outside tokens: 0x routes, 1% platform fee taken by 0x on the coin/dollar side ----
@@ -382,7 +431,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   // third-party pool such as AEON's 56%-fee one).
   const onCurve = () => st?.curve?.phase === 'curve';
   async function fetchXQuote(a,tolerance=tol) {
-    if (onCurve() && side === 'buy' && pay === 'native' && st.curve.quote?.native) {
+    if (onCurve() && st.curve.venue?.buy === 'direct' && side === 'buy' && pay === 'native' && st.curve.quote?.native) {
       const router = await extraAddress('feeRouter', st.chainId);
       return curveBuyQuote({c: st.curve, amountIn: a, slippageBps: tolerance, router, feeBps: FEE_BPS, rpc, formatUnits});
     }
@@ -391,7 +440,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const r = await fetch('/api/terminal/x/quote?' + q, { cache: 'no-store' });
     const body = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(body.error === 'official_pool' ? (body.detail || 'Trade this token through its official QHooks pool.') + ' Open it from the terminal search.' : body.error === 'trading_off' ? 'Trading outside tokens is not switched on yet.' : body.error === 'no_route' ? 'No route for this trade right now.' : body.detail || 'No quote right now.');
-    if (onCurve() && !(body.sources || []).some(x => /^pons/i.test(String(x)))) throw new Error('No route through the curve for this trade right now.');
+    const problem = curveQuoteProblem(st.curve, body, side); if (problem) throw new Error(problem);
     return body;
   }
   async function extQuote(mine, a, read) {
@@ -437,7 +486,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       }
       const after = await erc20(chainId, token, me).catch(() => null), moved = after ? (after.balance > b.token ? after.balance - b.token : b.token - after.balance) : null;
       s(moved === null ? 'Trade confirmed. Refresh balances.' : (c.side === 'buy' ? 'Bought ' : 'Sold ') + formatUnits(moved, st.decimals, 4) + ' ' + st.symbol + '.');if (c.side === 'buy' && moved !== null) afterBuy();
-      amount.value = ''; thesis.value=''; document.dispatchEvent(new CustomEvent('qhooks:traded')); try { await onTraded({ side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s, ext: true }); } catch {}
+      setAmount( ''); thesis.value=''; document.dispatchEvent(new CustomEvent('qhooks:traded')); try { await onTraded({copyExit:c.copyExit, side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s, ext: true }); } catch {}
   }
   // ---- Solana: server-priced Jupiter orders signed in the trader’s wallet ----
   const solMints = () => {
@@ -485,7 +534,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       s('Linking any referral for your rewards…'); await enrollSolanaReferrer();
       s('Confirm in your wallet…');
       assertTradeOwner(c);
-      if(o.route==='dbc'){const x=await (await import('/qx-sol-launch-trade.mjs')).executeDirectDbc(o);status.textContent='Trade finalized · '+x.signature;amount.value='';document.dispatchEvent(new CustomEvent('qhooks:traded'));await onTraded({side:c.side,chainId:c.chainId,token:c.token,owner:c.owner,ext:true});lock(false);layout();return;}
+      if(o.route==='dbc'){const x=await (await import('/qx-sol-launch-trade.mjs')).executeDirectDbc(o);queueRecord(c,x);status.textContent='Trade finalized · '+x.signature;setAmount('');document.dispatchEvent(new CustomEvent('qhooks:traded'));await onTraded({copyExit:c.copyExit,side:c.side,chainId:c.chainId,token:c.token,owner:c.owner,ext:true});lock(false);layout();return;}
       const signed = await signSol(o.transaction);
       assertTradeOwner(c);
       s('Sending…');
@@ -496,11 +545,11 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
       queueRecord(c,x,{requestId:o.requestId});
       const after = await balances(), moved = after.token > b.token ? after.token - b.token : b.token - after.token;
       status.replaceChildren((c.side === 'buy' ? 'Bought ' : 'Sold ') + formatUnits(moved, st.decimals, 4) + ' ' + st.symbol + '. ', h('a', { href: 'https://solscan.io/tx/' + x.signature, target: '_blank', rel: 'noopener' }, 'View ↗'));
-      amount.value = ''; thesis.value=''; document.dispatchEvent(new CustomEvent('qhooks:traded')); await onTraded({ side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s, ext: true });
+      setAmount( ''); thesis.value=''; document.dispatchEvent(new CustomEvent('qhooks:traded')); await onTraded({copyExit:c.copyExit, side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s, ext: true });
     } catch (e) { s(e.message || 'The trade did not go through'); }
     lock(false); layout();
   }
-  onSolChange(() => { if (st?.sol&&!busy&&!recovery) { if(sellPrefillOwner&&sellPrefillOwner!==solAddress()){amount.value='';sellPrefillOwner=null;} refresh(); layout(); } });
+  onSolChange(() => { buyCallout.refresh(); if (st?.sol&&!busy&&!recovery) { if(sellPrefillOwner&&sellPrefillOwner!==solAddress()){setAmount('');sellPrefillOwner=null;} refresh(); layout(); } });
 
   function renderRisk() {
     const v = st?.ext || st?.direct ? st.safety : null;
@@ -515,7 +564,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const report=[...(note ? [note] : []), h('b', {}, title), ...(flags.length ? [h('ul', {}, ...flags.map(f => h('li', {}, f)))] : []),
       h('p', { class: 'qxt-muted' }, 'Source: ' + (typeof v.source === 'string' ? v.source.slice(0, 48) : 'not reported') + '.'),
       ...(v.verdict === 'danger' ? [h('label', {}, h('input', { type: 'checkbox', onchange: () => { if (current) go.disabled = busy || !risk.querySelector('input').checked || (funding.required && !funding.quote); } }), ' I understand and still want to trade')] : []),
-      h('a', { href: 'https://repoproof.online/proof?q=' + encodeURIComponent(st.token), target: '_blank', rel: 'noopener' }, 'Full check on QProof ↗')];
+      h('a', { href: '/qproof?q=' + encodeURIComponent(st.token) }, 'Full check on QProof')];
     if(!flags.length&&(v.verdict==='ok'||v.verdict==='unknown')){
       risk.classList.add('qxt-risk-compact');
       risk.replaceChildren(...(note ? [note] : []), h('details',{},h('summary',{},v.verdict==='ok'?'Limited checks · no flags returned':'No safety scan returned'),h('div',{class:'qxt-risk-report'},...report.filter(x => x !== note))));
@@ -558,8 +607,8 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     clearArmed();
     if (side === 'sell') {
       const b = await balances(); if(!isSelection(intent)||st!==activeState||revision!==qseq)return; if (!b) { status.textContent = 'Connect a wallet first.'; return; }
-      amount.value = formatUnits(sellPortion(b.token, tradingSettings.profile().sellPercentages[i]), st.decimals, st.decimals).replace(/,/g, '');
-    } else amount.value = tradingSettings.profile().amounts[unitClass(payUnit())][i];
+      setAmount( formatUnits(sellPortion(b.token, tradingSettings.profile().sellPercentages[i]), st.decimals, st.decimals).replace(/,/g, ''));
+    } else setAmount( tradingSettings.profile().amounts[unitClass(payUnit())][i]);
     refresh();
   }
 
@@ -577,9 +626,10 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   }
   async function quote() {
     if (!st) return;
+    if(copyReview.active&&(!copyReview.context||!copyPrepared)){current=null;go.disabled=true;out.textContent='Open Copy settings to prepare this review.';return;}
     if (st.noRoute) { out.textContent=st.noRoute; current=null; go.disabled=true; return; }
     syncProfile();
-    if (!st.sol && (homeSelected || homeReturnNeeded(st.chainId, homePref, homeEnabled))) tol = String(homeSlippage(tol));
+    if (!copyReview.active&&!st.sol && (homeSelected || homeReturnNeeded(st.chainId, homePref, homeEnabled))) tol = String(homeSlippage(tol));
     const mine = ++qseq,read={revision:mine,state:st,selection,owner:quoteOwner(),sol:!!st.sol,toleranceBps:Number(tol)}; let a;
     quoteLoading=true;renderQuoteFreshness();
     try {
@@ -634,14 +684,15 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
 
   // One-click (qx-oneclick.mjs): when on, the server sends this trade (same router routes) with no wallet popup.
   async function tryOneClick(c, s) {
+    if(copyReview.active||c.copyReviewId)return false;
     const oc = await import('/qx-oneclick.mjs').catch(() => null);
     if (!oc || !(await oc.oneClickOn().catch(() => false))) return false;
     assertTradeOwner(c); s('Placing your trade…');
     const done = await oc.oneClickTrade({ chainId: st.chainId, token: st.token, side: c.side, amountWei: c.a, ...(st.multi&&c.side==='sell'?{quoteToken:c.route.pool.quote}:{}), slippageBps: c.toleranceBps || 300, referrer: savedReferrer() });
     if (!done) return false;
     const last = done.hashes[done.hashes.length - 1];
-    for (let i = 0; i < 90; i++) { const r = await rpc(st.chainId, 'eth_getTransactionReceipt', [last]).catch(() => null); if (r) { if (r.status !== '0x1') throw new Error('The trade reverted'); queueRecord(c,r); return true; } await new Promise(res => setTimeout(res, 1000)); }
-    return true;
+    const receipt=await waitTransactionReceipt(st.chainId,last,{rpc,onStatus:s,assert:()=>assertTradeOwner(c)});
+    queueRecord(c,receipt);return true;
   }
   async function poolSubmit(c) {
         const { chainId, key, token, quote: qt } = st, router = await extraAddress('feeRouter', chainId);
@@ -668,11 +719,11 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
         }
         const after = await erc20(chainId, token, me).catch(() => null), moved = after ? (after.balance > b.token ? after.balance - b.token : b.token - after.balance) : null;
         status.textContent = moved === null ? 'Trade confirmed. Refresh balances.' : (c.side === 'buy' ? 'Bought ' : 'Sold ') + formatUnits(moved, st.decimals, 4) + ' ' + st.symbol + '.';if (c.side === 'buy' && moved !== null) afterBuy();
-        amount.value = ''; thesis.value=''; document.dispatchEvent(new CustomEvent('qhooks:traded')); try { await onTraded({ side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s }); } catch {}
+        setAmount( ''); thesis.value=''; document.dispatchEvent(new CustomEvent('qhooks:traded')); try { await onTraded({copyExit:c.copyExit, side: c.side, moved, chainId:c.chainId,token:c.token,owner:c.owner,status: s }); } catch {}
   }
 
   const payAsset = () => pay === 'homeAsset' ? homeToken(homePref) : fundingAsset(st.chainId, pay === 'native' ? 'native' : { address: selectedQuote().quote, decimals: selectedQuote().quoteDecimals });
-  function assertTradeOwner(c) { assertSelection(c); if(st.sol){if(c.owner!==solAddress())throw new Error('Reconnect the Solana wallet that reviewed this trade.');return;} if (c.owner && connectedAddress()?.toLowerCase() !== c.owner.toLowerCase()) throw new Error('Reconnect the wallet that reviewed this trade.'); }
+  function assertTradeOwner(c) { assertSelection(c);if(copyReview.active)copyReview.assert(c,{owner:quoteOwner(),silent:silentActive()}); if(st.sol){if(c.owner!==solAddress())throw new Error('Reconnect the Solana wallet that reviewed this trade.');return;} if (c.owner && connectedAddress()?.toLowerCase() !== c.owner.toLowerCase()) throw new Error('Reconnect the wallet that reviewed this trade.'); }
   async function offerFunding(mine) {
     if (!quoteMatches(current) || mine !== qseq) return;
     current.owner = connectedAddress();
@@ -740,7 +791,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     st = state; side = 'buy'; pay = market.pay; homeSelected = true; homeEnabled = true;
     homePref = loadLocalHome(owner);
     paySel.replaceChildren(h('option', {value: 'home'}, 'Home (' + homeName(homePref) + ')')); paySel.value = 'home';
-    amount.value = formatUnits(BigInt(pending.amountNeeded), payDecimals(), payDecimals()).replace(/,/g, ''); unit.textContent = pending.asset.symbol;
+    setAmount( formatUnits(BigInt(pending.amountNeeded), payDecimals(), payDecimals()).replace(/,/g, '')); unit.textContent = pending.asset.symbol;
     current = bindQuote({side, pay, a: BigInt(pending.amountNeeded), minOut: BigInt(market.minOut || 0), route: {pool: {quote: market.quoteToken}}, homeRequired: false}, qseq, owner, market.slippageBps);
     current.homeRequired = false;
     out.textContent = 'Finish your buy of ' + st.symbol + '.';
@@ -748,7 +799,9 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     return true;
   }
   function queueRecord(c,receipt,extra={}) {
+    if(rowMode&&c.side==='sell')lastReceipt=receipt;
     const tx=receipt?.transactionHash||receipt?.signature;
+    if(tx&&((String(c.chainId)==='solana'&&receipt.status==='Success')||(String(c.chainId)!=='solana'&&matchingEvmBuy(receipt,c))))buyCallout.offer({...c,tx,...extra,status:'confirmed'});
     if(tx)void recordTerminalTrade({chainId:c.chainId,token:c.token,side:c.side,owner:c.owner,thesis:c.thesis||'',tx,...extra}).catch(()=>{});
   }
   async function sendRecorded(c,tx,onStatus,assertContext) {
@@ -757,14 +810,15 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   function lock(value) {
     busy = value; funding.setBusy(value);
     tradingSettings.lock(value||!!recovery);
-    for (const el of [amount, thesis, paySel, tolSel, balance, sellToCash, ...sideBtns, ...presets.querySelectorAll('button'), ...cash.querySelectorAll('button')]) el.disabled = value||!!recovery;
+    for (const el of [amountDisplay, usdDisplay, thesis, paySel, tolSel, balance, sellToCash, ...sideBtns, ...presets.querySelectorAll('button'), ...cash.querySelectorAll('button')]) el.disabled = value||!!recovery;
     for(const el of followup.querySelectorAll('button'))el.disabled=value || recovery?.retryable === false && el.textContent !== 'Dismiss';
     go.disabled = value||!!recovery;
     renderQuoteFreshness();
   }
   async function submit() {
     if (!current || busy || !st || go.disabled && !recovery) return;
-    const c = {...current};
+    const c = {...current};lastSubmitError=null;
+    if(copyReview.active){try{copyReview.assert(c,{owner:quoteOwner(),silent:silentActive()});}catch(error){status.textContent=error.message;go.disabled=true;return;}}
     if(c.homeRequired && !c.home){go.disabled=true;status.textContent='Refreshing home quote.';return;}
     if(!quoteMatches(c)){go.disabled=true;status.textContent='This token selection changed. Review a fresh quote before trading.';return;}
     if (!st.sol && c.owner && connectedAddress()?.toLowerCase() !== c.owner.toLowerCase()) { refresh(); return; }
@@ -781,6 +835,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
     const plan = st.sol ? null : ticketPlan(c);
     if (!st.sol && !plan) return;
     lock(true);
+    if(copyReview.active){try{const copied=await copyReview.claim(c,{owner:quoteOwner(),silent:silentActive()});c.copyExit={tpPct:copied.tpPct,slPct:copied.slPct};assertTradeOwner(c);}catch(error){status.textContent=error.message;lock(false);go.disabled=true;return;}}
     try {c.thesis=await prepareTradeThesis({chainId:c.chainId,owner:c.owner,token:c.token,side:c.side,thesis:c.side==='buy'?thesis.value:''});assertTradeOwner(c);}catch(error){status.textContent=tradeError(error);lock(false);return;}
     if (st.sol) { lock(true); return solSubmit(c); }
     lock(true); status.textContent = '';
@@ -803,7 +858,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
               market: {state: st, pay: c.pay, quoteToken: c.route?.pool?.quote, minOut: String(c.minOut), slippageBps: c.toleranceBps, spender: await extraAddress('feeRouter', st.chainId), setup: await isLive(st.chainId, 'feeRouter') ? 0 : 1},
               onStep: step => {if (step.message) status.textContent = step.message;}});
             if (result.landed && !result.completed) {landed = true; if (result.pendingBuy) showHomeRecovery(result.pendingBuy); else {recovery = result; followup.replaceChildren(recoveryView(h, {...result, error: {message: tradeError(result.error)}}, () => submit()));}}
-            else if (c.home.home.path === 'instant') {status.textContent = 'Bought into your wallet.'; amount.value = ''; document.dispatchEvent(new CustomEvent('qhooks:traded'));}
+            else if (c.home.home.path === 'instant') {for(const hash of (result.outTxHashes||[]).slice(-5)){const receipt=await rpc(c.chainId,'eth_getTransactionReceipt',[hash]).catch(()=>null);if(matchingEvmBuy(receipt,c)){queueRecord(c,receipt);break;}}status.textContent = 'Bought into your wallet.'; setAmount( ''); document.dispatchEvent(new CustomEvent('qhooks:traded'));}
           } finally {wallet.dispose();}
           return;
         }
@@ -816,7 +871,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
           } finally { wallet.dispose(); }
           return;
         }
-        const autoHome = c.side === 'sell' && homeReturnNeeded(st.chainId, homePref, homeEnabled);
+        const autoHome = !rowMode && c.side === 'sell' && homeReturnNeeded(st.chainId, homePref, homeEnabled);
         const asset = (sellCash || autoHome) ? (st.ext ? payAsset() : st.multi?{address:c.route.pool.quote,decimals:c.route.pool.quoteDecimals,symbol:c.route.pool.quoteSymbol}:{ address: selectedQuote().quote, decimals: selectedQuote().quoteDecimals, symbol: selectedQuote().quoteSymbol }) : null;
         const before = asset ? await readAssetBalance(c.owner, { chainId: st.chainId, asset }) : 0n;
         await (autoHome || c.payAsset ? withHomeRails(c.owner, () => st.ext ? extSubmit(c) : poolSubmit(c)) : st.ext ? extSubmit(c) : poolSubmit(c));
@@ -829,7 +884,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
           }
         } }
       });
-    } catch (e) { if (recovery?.pendingBuy) showHomeRecovery(pendingHomeBuy(c.owner) || recovery.pendingBuy); status.textContent = tradeError(e); landed = !!recovery; }
+    } catch (e) { lastSubmitError=e;if (recovery?.pendingBuy) showHomeRecovery(pendingHomeBuy(c.owner) || recovery.pendingBuy); status.textContent = tradeError(e); landed = !!recovery; }
     finally { lock(false); if (landed) { go.disabled = true; if (recovery?.retryable === false) for (const el of followup.querySelectorAll('button')) if (!recovery.pendingBuy || el.textContent !== 'Dismiss') el.disabled = true; } else await layout(); }
     if (xchainEnabled && proceeds && (cashHome() && cashHome() !== Number(proceeds.chainId) || proceeds.asset.symbol !== cashAsset(proceeds.chainId).symbol)) {
       const home = cashHome(), button = h('button', { type: 'button', class: 'qxt-mini' }, home ? 'Move to ' + chainName(home) : 'Move proceeds to cash');
@@ -840,17 +895,16 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
 
   document.addEventListener('qhooks:rewards-claimed', () => showCashback().catch(() => cash.replaceChildren()));
   sideBtns.forEach(b => b.addEventListener('click', () => setSide(b.dataset.side)));
-  paySel.addEventListener('change', () => { if (busy||recovery) return; clearArmed(); autoNote = ''; homeSelected = paySel.value === 'home'; pay = homeSelected ? homeMarketPay() : paySel.value; amount.value = '';sellPrefillOwner=null; refresh(); layout(); });
+  paySel.addEventListener('change', () => { if (busy||recovery) return; clearArmed(); autoNote = ''; homeSelected = paySel.value === 'home'; pay = homeSelected ? homeMarketPay() : paySel.value; setAmount( '');sellPrefillOwner=null; refresh(); layout(); });
   tolSel.addEventListener('change', () => {if(busy||recovery)return;try{if(!tradingSettings.setTolerance(side,tolSel.value)){syncProfile();status.textContent='Choose Auto or a valid manual tolerance (maximum 50% on Solana, 100% on EVM).';return;}if(tolSel.value!=='auto')store('tol',tolSel.value);}catch(error){syncProfile();status.textContent=tradeError(error);}});
-  amount.addEventListener('input', () => { sellPrefillOwner=null;refresh(); });
   usdInput.addEventListener('input', () => { if (!st || !(unitUsd > 0)) return; const v = Number(usdInput.value.replace(/[$,\s]/g, ''));
-    amount.value = Number.isFinite(v) && v > 0 ? String(Number((v / unitUsd).toFixed(Math.min(8, payDecimals())))) : ''; sellPrefillOwner = null; refresh(); });
-  usdInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) submit(); } });
+    setAmount( Number.isFinite(v) && v > 0 ? String(Number((v / unitUsd).toFixed(Math.min(8, payDecimals())))) : ''); sellPrefillOwner = null; refresh(); });
+  usdDisplay.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) submit(); } });
   unitToggle.addEventListener('click', () => { if (!busy && !recovery) setUsdMode(!usdMode); });
-  amount.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) submit(); } });
-  balance.addEventListener('click', async () => { if(busy||recovery||!st)return;const intent=selection,activeState=st,mine=++qseq;clearTimeout(timer);current=null;go.disabled=true;sellPrefillOwner=null;clearArmed();quoteLoading=false;renderQuoteFreshness(); const b = await balances(); if(!isSelection(intent)||st!==activeState||mine!==qseq)return;if (b) { amount.value = formatUnits(spendable(b), payDecimals(), payDecimals()).replace(/,/g, ''); refresh(); } });
+  amountDisplay.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) submit(); } });
+  balance.addEventListener('click', async () => { if(busy||recovery||!st)return;const intent=selection,activeState=st,mine=++qseq;clearTimeout(timer);current=null;go.disabled=true;sellPrefillOwner=null;clearArmed();quoteLoading=false;renderQuoteFreshness(); const b = await balances(); if(!isSelection(intent)||st!==activeState||mine!==qseq)return;if (b) { setAmount( formatUnits(spendable(b), payDecimals(), payDecimals()).replace(/,/g, '')); refresh(); } });
   go.addEventListener('click', submit);
-  onWalletChange(() => { clearArmed(); if (!busy && recovery?.pendingBuy && recovery.pendingBuy.owner.toLowerCase() !== connectedAddress()?.toLowerCase()) {recovery = null; current = null; followup.replaceChildren(); lock(false);} if (!busy&&!recovery&&!st?.sol) {if (restorePendingBuy()) return; if(sellPrefillOwner&&sellPrefillOwner.toLowerCase()!==connectedAddress()?.toLowerCase()){amount.value='';sellPrefillOwner=null;}void syncHome(true).then(() => {refresh();layout();});} });
+  onWalletChange(() => { clearArmed(); if (!busy && recovery?.pendingBuy && recovery.pendingBuy.owner.toLowerCase() !== connectedAddress()?.toLowerCase()) {recovery = null; current = null; followup.replaceChildren(); lock(false);} if (!busy&&!recovery&&!st?.sol) {paintCachedHolding();if (!rowMode&&restorePendingBuy()) return; if(sellPrefillOwner&&sellPrefillOwner.toLowerCase()!==connectedAddress()?.toLowerCase()){setAmount('');sellPrefillOwner=null;}void syncHome(true).then(() => {refresh();layout();});} });
 
   sellToCash.addEventListener('click', async () => {
     if (!st || busy||recovery) return;
@@ -862,11 +916,11 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now } = {}) 
   });
 
   function setSide(s) { if (busy||recovery || !['buy','sell'].includes(s) || side === s && !sellCash&&!pendingSellPrefill) return; clearArmed(); sellCash = false; side = s;homeSelected = false;autoNote = ''; // Home is chosen in the pay chip, never by switching side (2026-11-12)
-if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} amount.value = '';sellPrefillOwner=null;pendingSellPrefill=false; refresh(); layout(); }
+if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} setAmount( '');sellPrefillOwner=null;pendingSellPrefill=false; refresh(); layout(); }
 
-  restorePendingBuy();
+  if(!rowMode)restorePendingBuy();
   return {
-    beginSelection,isSelection,failSelection,canSelect:()=>!busy&&!recovery,
+    prepareCopyReview,beginSelection,isSelection,failSelection,canSelect:()=>!busy&&!recovery,
     async setPool(pool, meta, intent) {
       if(busy||recovery)return false;
       intent??=beginSelection({kind:'launch',chainId:pool.chainId,controller:pool.controller});
@@ -888,7 +942,7 @@ if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} amount.value = '
       // Wrapped-native launches default to paying in the coin people actually hold.
       pay = native?.wrap || native?.stock || native?.usdg ? 'native' : 'quote'; paySel.value = pay;
       // QHooks launches: verified creator, copy warning, RepoProof verdict and on-chain facts (qx-trust.mjs).
-      await syncHome(true);
+      paintCachedHolding(); await syncHome(true);
       renderRisk(); const view=h('div');trustRisk(view,pool).then(()=>{if(isSelection(intent)){risk.replaceChildren(view);risk.hidden=view.hidden;}}).catch(()=>{}); await layout();return isSelection(intent);
     },
     /// Any token, traded through 0x: { chainId, address, symbol, decimals, safety }.
@@ -897,10 +951,11 @@ if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} amount.value = '
       intent??=beginSelection({kind:'external',chainId:t.chainId,address:t.address});
       if(!isSelection(intent)||intent.key!==targetKey({kind:'external',chainId:t.chainId,address:t.address}))return false;
       if (t.chainId === 'solana') {
-        st = { ext: true, sol: true, chainId: 'solana', token: t.address, symbol: t.symbol || 'token', decimals: Number(t.decimals ?? 6), quote: SOL_USDC, quoteSymbol: 'USDC', quoteDecimals: 6, safety: t.safety || null };
+        st = { ext: true, sol: true, chainId: 'solana', token: t.address, symbol: t.symbol || 'token', decimals: Number(t.decimals ?? 6), quote: SOL_USDC, quoteSymbol: 'USDC', quoteDecimals: 6, safety: t.safety || null, curve: t.curve || null };
+        if (curveNoRoute(t.curve)) st.noRoute = curveNoRoute(t.curve);
         paySel.replaceChildren(h('option', { value: 'native' }, 'SOL'), h('option', { value: 'quote' }, 'USDC'));
         pay = 'native'; paySel.value = pay;
-        await syncHome(true); renderRisk(); await layout(); return isSelection(intent);
+        paintCachedHolding(); await syncHome(true); renderRisk(); await layout(); return isSelection(intent);
       }
       const noRoute=externalTradingNote(t.chainId);
       if (noRoute) {
@@ -921,22 +976,33 @@ if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} amount.value = '
         const wrapRoute = !native && !d.refused && nativeRoute(t.chainId, d.quote);
         paySel.replaceChildren(h('option', { value: 'native' }, NATIVE[t.chainId]), ...(wrapRoute ? [h('option', { value: 'quote' }, st.quoteSymbol)] : []));
         pay = 'native'; paySel.value = pay;
-        await syncHome(true); renderRisk(); await layout(); if (st.noRoute) { out.textContent = st.noRoute; go.disabled = true; } return isSelection(intent);
+        paintCachedHolding(); await syncHome(true); renderRisk(); await layout(); if (st.noRoute) { out.textContent = st.noRoute; go.disabled = true; } return isSelection(intent);
       }
       const [qa, qs, qd] = STABLE[t.chainId] || [null, null, null];
       st = { ext: true, chainId: String(t.chainId), token: t.address, symbol: t.symbol || 'token', decimals: Number(meta.decimals ?? 18), quote: qa, quoteSymbol: qs, quoteDecimals: qd, safety: t.safety || null, curve: t.curve || null };
       if (curveNoRoute(t.curve)) st.noRoute = curveNoRoute(t.curve);
       paySel.replaceChildren(h('option', { value: 'native' }, NATIVE[t.chainId]), ...(qa ? [h('option', { value: 'quote' }, qs)] : []));
       pay = 'native'; paySel.value = pay;
-      await syncHome(true); renderRisk(); await layout();if (st.noRoute) { out.textContent = st.noRoute; go.disabled = true; } return isSelection(intent);
+      paintCachedHolding(); await syncHome(true); renderRisk(); await layout();if (st.noRoute) { out.textContent = st.noRoute; go.disabled = true; } return isSelection(intent);
     },
     setSafety(v,intent=selection) { if (isSelection(intent)&&(st?.ext||st?.direct)) { st.safety = v; renderRisk(); } },
+    setCurve(curve,intent=selection) {
+      if (!isSelection(intent) || !st?.ext || busy || recovery) return false;
+      if (curve && (String(curve.chainId) !== st.chainId || curve.token !== st.token)) return false;
+      const prior = st.curve, priorNote = curveNoRoute(prior);
+      const changed = (prior?.phase || '') !== (curve?.phase || '') || (prior?.pool?.address || prior?.pool?.id || '') !== (curve?.pool?.address || curve?.pool?.id || '');
+      st.curve = curve;
+      if (priorNote && st.noRoute === priorNote) delete st.noRoute;
+      const nextNote = curveNoRoute(curve); if (nextNote) st.noRoute = nextNote;
+      if (changed) { refresh(); void layout(); }
+      return true;
+    },
     // The market poll updates this every few seconds; a price tick must not disarm a pending "Confirm $X".
     setPriceUsd(p,intent=selection) { if(!isSelection(intent))return; const v = Number(p); priceUsd = Number.isFinite(v) && v > 0 ? v : null;if(priceUsd){marketPrices.push({price:priceUsd,at:now()});marketPrices=marketPrices.slice(-12);} },
     setSide, preset, submit,
     // Position actions reread the live balance. run=true continues through the
     // normal quoted submit flow, with the same owner, router and confirmation checks.
-    async prefillSell({percent,owner,chainId,token,controller,run=false}={}) {
+    async prefillSell({percent,owner,chainId,token,controller,run=false,quoteNow=false}={}) {
       if(!st||busy||recovery){status.textContent=busy?'Finish the current trade before preparing a sell.':recovery?'Resolve the funded trade below before preparing a sell.':'Open a token first.';return false;}
       if(![25,50,100].includes(percent))return false;
       const activeState=st,intent=selection,me=st.sol?solAddress():connectedAddress();
@@ -958,15 +1024,39 @@ if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} amount.value = '
         if(!value)throw Error(held===0n?'This wallet has no available tokens to sell.':'This balance is too small for that percentage.');
         pendingSellPrefill=false;side='sell';sellCash=false;homeSelected=false;if(st.multi)pay='auto';paySel.value=pay;sellPrefillOwner=me;
         const filled=formatUnits(value,precision,precision).replace(/,/g,'');
-        amount.value=filled;
+        setAmount(filled);
         await layout();
         if(!isSelection(intent)||st!==activeState||!ownerMatches()||side!=='sell'||sellPrefillOwner!==me||amount.value!==filled)return false;
         status.textContent='Sell '+percent+'% prepared.';
-        if(run){clearTimeout(timer);await quote();if(quoteMatches(current)&&ownerMatches()&&current.a===value&&amount.value===filled)await submit();}
+        if(run||quoteNow){clearTimeout(timer);await quote();if(!quoteMatches(current)||!ownerMatches()||current.a!==value||amount.value!==filled)return false;if(run)await submit();}
         return true;
-      }catch(error){if(alive())status.textContent=tradeError(error);return false;}
+      }catch(error){if(alive())status.textContent=tradeError(error);if(rowMode)throw error;return false;}
       finally{if(mine===qseq)pendingSellPrefill=false;}
     },
+    // Row review retains this exact quote/owner/minimum. Explicit inline confirmation
+    // satisfies the existing cap/impact confirmation, never a risk acknowledgement.
+    sellReview() {
+      if(!rowMode||!current||!quoteMatches(current)||side!=='sell'||busy)throw Error(status.textContent||out.textContent||'Refresh the sell quote.');
+      assertTradeOwner(current);
+      const plan=tradePlan(current),highImpact=impactGate({impactPct:current.impactPct,armedAt:null,now:now()})==='arm';
+      rowReview={quote:current,at:now(),used:false};
+      const receive=st.ext?xTokens():{outSym:(st.multi?current.route.pool:selectedQuote()).quoteSymbol,outDec:(st.multi?current.route.pool:selectedQuote()).quoteDecimals};
+      return {id:rowReview,amount:formatUnits(current.a,st.decimals,st.decimals),preview:'Receive ≈ '+formatUnits(current.got,receive.outDec,6)+' '+receive.outSym+' · min '+formatUnits(current.minOut,receive.outDec,6),usd:tradeUsd(current),silent:!st.sol&&plan.silent,confirmRequired:!!plan.ticketConfirm||highImpact||['caution','danger'].includes(st.safety?.verdict)||!!st.hookOwner,warning:highImpact?confirmCopy('sell',current.impactPct).status:'',slippageBps:current.toleranceBps};
+    },
+    async submitSell(review,{confirmed=false}={}) {
+      if(!rowMode||!rowReview||review.id!==rowReview||rowReview.used||rowReview.quote!==current||!quoteMatches(current)||side!=='sell'||now()-rowReview.at>30000)throw Error('This sell quote expired. Tap a percentage for a fresh quote.');
+      assertTradeOwner(current);
+      if(tradePlan(current).silent!==review.silent)throw Error('One-click settings changed. Review a fresh sell quote.');
+      if(go.disabled)throw Error(status.textContent||'Review the token risk and confirm this sell.');
+      if((!review.silent||review.confirmRequired)&&!confirmed)throw Error('Confirm this sell first.');
+      if(confirmed){armedAt=Date.now();impactArmedAt=Date.now();}
+      rowReview.used=true;lastReceipt=null;lastSubmitError=null;
+      await submit();
+      if(lastReceipt)return {receipt:lastReceipt};
+      if(lastSubmitError)throw lastSubmitError;
+      throw Error(status.textContent||'The sell was not submitted. Refresh the quote.');
+    },
+    rowElements:()=>({risk,status,ready:go}),
     /// Instant buy from the feed: sets the amount in the given unit class and sends once quoted.
     async quickBuy(cls, value) {
       if (!st || busy||recovery) return;
@@ -979,7 +1069,7 @@ if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} amount.value = '
       // HYPE (Elysium): pay in the coin people hold (native HYPE, wrapped by the router), as the ticket defaults to.
       pay = st.ext && !st.quote ? 'native' : st.nativePool ? 'native' : cls === 'hype' && native?.wrap && unitClass(NATIVE[st.chainId]) === 'hype' ? 'native' : unitClass(st.quoteSymbol) === cls ? 'quote' : native && unitClass(NATIVE[st.chainId]) === cls ? 'native' : 'quote';
       if(st.multi){const q=st.pools.find(p=>unitClass(p.quoteSymbol)===cls);pay=unitClass(NATIVE[st.chainId])===cls?'native':q?.quote||'native';}
-      paySel.value = pay; amount.value = value;
+      paySel.value = pay; setAmount( value);
       await layout();if(!isSelection(intent))return; clearTimeout(timer); await quote();
       if (isSelection(intent)&&quoteMatches(current)) await submit();
     },

@@ -1,5 +1,6 @@
 // Public market context and device-local workspace state. No wallet requests,
 // signatures or trading authority; execution remains in the guarded ticket.
+import {tokenAvatarSources} from './qx-token-avatar.mjs';
 import {freshnessState,safetyChecked} from './qx-terminal-data.mjs';
 const EVM=/^0x[0-9a-f]{40}$/i,MINT=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const finite=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
@@ -19,27 +20,34 @@ export function workspaceAsset(raw) {
   symbol:text(raw.symbol,20),name:text(raw.name,100),decimals:Number.isInteger(raw.decimals)&&raw.decimals>=0&&raw.decimals<=36?raw.decimals:null,
   priceUsd:nonnegative(raw.priceUsd),priceQuote:nonnegative(raw.priceQuote),quoteSymbol:text(raw.quoteSymbol,12),
   liquidityUsd:nonnegative(raw.liquidityUsd),change24:finite(raw.change24),
+  avatarSources:tokenAvatarSources(raw,Array.isArray(raw.avatarSources)?raw.avatarSources:[]).filter(src=>src.length<=2048).slice(0,4),
   receivedAt:Number.isSafeInteger(raw.receivedAt)&&raw.receivedAt>0?raw.receivedAt:null,
   observedAt:Number.isSafeInteger(raw.observedAt)&&raw.observedAt>0?raw.observedAt:null,stale:raw.stale===true,
-  openedAt:Number.isSafeInteger(raw.openedAt)&&raw.openedAt>0?raw.openedAt:null};
+  openedAt:Number.isSafeInteger(raw.openedAt)&&raw.openedAt>0?raw.openedAt:null,source:raw.source==='searched'?'searched':'viewed'};
 }
 export function sameWorkspaceSelection(a,b) {
  const x=workspaceAsset(a),y=workspaceAsset(b);
  return !!x&&!!y&&x.key===y.key&&a.revision===b.revision&&(!x.token||!y.token||x.token===y.token);
 }
 export function createWorkspaceMemory({storage,now=Date.now,key='qhooks:terminal:workspace:v1'}={}) {
- let recent=[],watched=[],persistent=true;
- try{const raw=storage?.getItem(key);if(raw&&raw.length<=100000){const parsed=JSON.parse(raw);if(parsed.version===1){recent=(Array.isArray(parsed.recent)?parsed.recent:[]).map(workspaceAsset).filter(Boolean).slice(0,32);watched=(Array.isArray(parsed.watched)?parsed.watched:[]).map(workspaceAsset).filter(Boolean).slice(0,64);}}}catch{persistent=false;}
+ let recent=[],watched=[],persistent=!!storage?.getItem&&!!storage?.setItem,lastRaw; 
+ try{const raw=storage?.getItem(key);lastRaw=raw;if(raw&&raw.length<=1000000){const parsed=JSON.parse(raw);if(parsed.version===1){recent=(Array.isArray(parsed.recent)?parsed.recent:[]).map(workspaceAsset).filter(Boolean).slice(0,32);watched=(Array.isArray(parsed.watched)?parsed.watched:[]).map(workspaceAsset).filter(Boolean).slice(0,64);}}}catch{persistent=false;}
  const unique=rows=>rows.filter((row,i)=>rows.findIndex(other=>other.key===row.key)===i);
  recent=unique(recent);watched=unique(watched);
- function save(){try{if(!storage?.setItem){persistent=false;return;}storage.setItem(key,JSON.stringify({version:1,recent,watched}));}catch{persistent=false;}}
+ function save(){try{if(!storage?.setItem){persistent=false;return;}const raw=JSON.stringify({version:1,recent,watched});storage.setItem(key,raw);lastRaw=raw;}catch{persistent=false;}}
+ function pull(){try{const raw=storage?.getItem(key);if(raw===lastRaw)return;lastRaw=raw;if(!raw){recent=[];watched=[];return;}if(raw.length>1000000)return;const value=JSON.parse(raw);if(value.version!==1)return;recent=unique((Array.isArray(value.recent)?value.recent:[]).map(workspaceAsset).filter(Boolean)).slice(0,32);watched=unique((Array.isArray(value.watched)?value.watched:[]).map(workspaceAsset).filter(Boolean)).slice(0,64);}catch{persistent=false;}}
+ const same=(a,b)=>a.key===b.key||!!a.token&&!!b.token&&a.chainId===b.chainId&&a.token===b.token;
+ function remember(raw){const asset=workspaceAsset({...raw,openedAt:Number.isSafeInteger(raw?.openedAt)&&raw.openedAt>0?raw.openedAt:now()});if(!asset)return false;recent=[asset,...recent.filter(row=>!same(row,asset))].slice(0,32);watched=watched.map(row=>same(row,asset)?{...asset,openedAt:row.openedAt}:row);return true;}
  const api={
-  remember(raw){const asset=workspaceAsset({...raw,openedAt:Number.isSafeInteger(raw?.openedAt)&&raw.openedAt>0?raw.openedAt:now()});if(!asset)return false;recent=[asset,...recent.filter(row=>row.key!==asset.key)].slice(0,32);watched=watched.map(row=>row.key===asset.key?{...asset,openedAt:row.openedAt}:row);save();return true;},
-  watch(raw,on=true){const asset=workspaceAsset(raw);if(!asset)return false;const had=watched.some(row=>row.key===asset.key);watched=on?[asset,...watched.filter(row=>row.key!==asset.key)].slice(0,64):watched.filter(row=>row.key!==asset.key);if(had!==on)save();return on;},
+  remember(raw){pull();if(!remember(raw))return false;save();return true;},
+  rememberSearch(raw){pull();const stamp=now(),rows=unique((Array.isArray(raw)?raw:[]).map(workspaceAsset).filter(Boolean)).slice(0,8);for(const row of rows.reverse())remember({...row,source:'searched',openedAt:stamp});if(rows.length)save();return rows.length;},
+  removeRecent(raw){pull();const asset=workspaceAsset(raw);if(!asset)return false;const n=recent.length;recent=recent.filter(row=>!same(row,asset));if(n!==recent.length)save();return n!==recent.length;},
+  clearRecent(){pull();recent=[];save();},
+  watch(raw,on=true){pull();const asset=workspaceAsset(raw);if(!asset)return false;const had=watched.some(row=>same(row,asset));watched=on?[asset,...watched.filter(row=>!same(row,asset))].slice(0,64):watched.filter(row=>!same(row,asset));if(had!==on)save();return on;},
   toggle(raw){const asset=workspaceAsset(raw);if(!asset)return false;return api.watch(asset,!api.has(asset));},
-  has(raw){const asset=workspaceAsset(raw);return !!asset&&watched.some(row=>row.key===asset.key);},
-  rows({mode='recent',chain='all',query=''}={}){const q=String(query).trim().toLowerCase();return copy((mode==='watch'?watched:recent).filter(row=>(chain==='all'||row.chainId===String(chain))&&(!q||[row.symbol,row.name,row.token,row.controller,row.chainId].some(v=>String(v||'').toLowerCase().includes(q)))));},
-  snapshot:()=>({recent:copy(recent),watched:copy(watched),persistent}),
+  has(raw){pull();const asset=workspaceAsset(raw);return !!asset&&watched.some(row=>same(row,asset));},
+  rows({mode='recent',chain='all',query=''}={}){pull();const q=String(query).trim().toLowerCase();return copy((mode==='watch'?watched:recent).filter(row=>(chain==='all'||row.chainId===String(chain))&&(!q||[row.symbol,row.name,row.token,row.controller,row.chainId].some(v=>String(v||'').toLowerCase().includes(q)))));},
+  snapshot:()=>{pull();return {recent:copy(recent),watched:copy(watched),persistent};},
  };return Object.freeze(api);
 }
 // One ordered result model drives both the Recent/Watch rail and its keyboard
@@ -51,7 +59,7 @@ export function workspaceSearchRows({query='',chain='all',launches=[],external=[
  if(q.length<2)return{matches:[],saved:local,rows:local};
  const listed=(Array.isArray(launches)?launches:[]).filter(row=>row?.live).map(row=>{
   const price=finite(row.summary?.price)>0?row.summary.price:null;
-  const asset=workspaceAsset({kind:'launch',chainId:row.chainId,controller:row.controller,token:row.token,name:row.name,symbol:row.symbol,
+  const asset=workspaceAsset({...row,kind:'launch',chainId:row.chainId,controller:row.controller,token:row.token,name:row.name,symbol:row.symbol,
    priceQuote:price,priceUsd:/^(?:USD|USDC|USDT)$/i.test(row.quoteSymbol||'')?price:null,quoteSymbol:row.quoteSymbol,change24:row.summary?.change24});
   return asset?{...asset,origin:'listed',launchedAt:Number.isSafeInteger(row.launchedAt)?row.launchedAt:0}:null;
  }).filter(row=>row&&onChain(row)&&matchesQuery(row)).sort((a,b)=>b.launchedAt-a.launchedAt);
@@ -237,7 +245,7 @@ export function renderWorkspaceContext({h,selection,snapshot,chainName=id=>id,on
    checks.detail?h('p',{class:'qxt-checks-note'},checks.detail):null,
    checks.flags.length?h('ul',{},...checks.flags.map(flag=>h('li',{},flag))):null,
    checks.refreshError?h('p',{class:'qxt-checks-note'},'Checks paused. Use Refresh data to retry.'):null,
-   checks.status==='not_checked'||checks.status==='unsupported'?h('p',{class:'qxt-checks-note'},h('a',{href:'https://repoproof.online/proof',target:'_blank',rel:'noopener'},'Run a full check on QProof ↗')):null,
+   checks.status==='not_checked'||checks.status==='unsupported'?h('p',{class:'qxt-checks-note'},h('a',{href:'/qproof'+(typeof location!=='undefined'&&/#[mt]=([^&]+)/.test(location.hash)?'?q='+encodeURIComponent(/#[mt]=(?:[^:]+:)?([^&]+)/.exec(location.hash)?.[1]||''):''),rel:'noopener'},'Run a full check on QProof')):null,
    h('p',{class:'qxt-checks-note'},'A returned check describes its reported coverage. Review the token controls, liquidity and quoted costs alongside it.')));
  return {identity,data,checks:details};
 }

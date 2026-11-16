@@ -5,6 +5,7 @@
 //  2. Official pool: one quiet linked line under the trade action.
 //  3. The terminal's own scrolls to its parts land on the sheet or the top of the token page (qx-terminal-v2-plan.mjs).
 import { scrollPlan } from '/qx-terminal-v2-plan.mjs';
+import {installOverlayDismissal} from './qx-overlays.mjs';
 const doc = document, root = doc.documentElement;
 const $ = id => doc.getElementById(id);
 const main = $('qxt-main'), ticket = $('qxt-ticket');
@@ -38,43 +39,41 @@ if (main && ticket) {
   const backdrop = el('button', { type: 'button', class: 'qv2-backdrop', 'aria-label': 'Close trade ticket', tabindex: '-1' });
   let opener = null;
   const sheetOpen = () => root.classList.contains('qv2-sheet');
+  const sheetOwner=installOverlayDismissal().registerCustom(ticket,{isOpen:sheetOpen,close:()=>{closeSheet();return true;},opener:()=>opener,escape:event=>!innerOverlay(event)});
+  function sheetHeader(){
+    let header=ticket.querySelector('.qv2-sheet-head');if(header)return header;
+    header=el('header',{class:'qv2-sheet-head'});header.append(grip);
+    const sides=ticket.querySelector('.qxt-side-toggle');if(sides)header.append(sides);
+    header.append(closeX);ticket.prepend(header);return header;
+  }
   function openSheet(side) {
     if (!phone.matches || !marketOpen()) return;
     const b = side && sideButton(side);
     if (b && b.getAttribute('aria-pressed') !== 'true') b.click();
-    if (!ticket.contains(closeX)) ticket.append(closeX);
-    if (ticket.firstChild !== grip) ticket.prepend(grip);
+    sheetHeader();
     if (sheetOpen()) return;
     opener = doc.activeElement; root.classList.add('qv2-sheet');
     ticket.setAttribute('role', 'dialog'); ticket.setAttribute('aria-modal', 'true'); ticket.setAttribute('aria-label', 'Trade'); ticket.tabIndex = -1;
     ticket.focus({ preventScroll: true });
+    sheetOwner.sync();
     dispatchEvent(new CustomEvent('qx:sheet', { detail: { open: true } }));
   }
   function closeSheet() {
     if (!sheetOpen()) return;
     root.classList.remove('qv2-sheet');
     for (const a of ['role', 'aria-modal', 'aria-label', 'tabindex']) ticket.removeAttribute(a);
-    if (opener && doc.contains(opener)) opener.focus({ preventScroll: true });
+    sheetOwner.sync();
     opener = null;
     dispatchEvent(new CustomEvent('qx:sheet', { detail: { open: false } }));
   }
   window.qxSheet = { open: openSheet, close: closeSheet, isOpen: sheetOpen };
-  closeX.addEventListener('click', closeSheet);
-  backdrop.addEventListener('click', closeSheet);
+  closeX.addEventListener('click', () => sheetOwner.requestClose('close'));
+  backdrop.addEventListener('click', () => sheetOwner.requestClose('backdrop'));
   // Escape closes the sheet first; the terminal's own Escape (back to the token list) only runs when no sheet is open.
-  const innerOverlay = e => doc.fullscreenElement || doc.querySelector('dialog[open], [role="dialog"]:not(#qxt-ticket), [aria-modal="true"]:not(#qxt-ticket), .qxt-layer-list:not([hidden]), .qxt-ticket-settings[open], .qxt-settings[open]') || e.target?.closest?.('details[open]');
-  // Tab stays inside the open sheet (wallet and sign-in dialogs that open above it are left alone).
-  addEventListener('keydown', e => {
-    if (e.key !== 'Tab' || !sheetOpen() || doc.querySelector('dialog[open], [role="dialog"]:not(#qxt-ticket)')) return;
-    const f = [...ticket.querySelectorAll('button, [href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])')].filter(n => !n.disabled && n.getClientRects().length);
-    if (!f.length) return; const first = f[0], last = f[f.length - 1], at = doc.activeElement;
-    if (!ticket.contains(at) || at === ticket) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
-    else if (e.shiftKey && at === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && at === last) { e.preventDefault(); first.focus(); }
-  }, true);
+  const innerOverlay = e => doc.fullscreenElement || [...doc.querySelectorAll('dialog[open], [role="dialog"]:not(#qxt-ticket), [aria-modal="true"]:not(#qxt-ticket), .qxt-layer-list:not([hidden]), .qxt-ticket-settings[open], .qxt-settings[open]')].some(node=>node.getClientRects().length) || e.target?.closest?.('details[open]');
+  // Shared adapter owns Tab/Escape/history/scroll; native Wallet/Privy stays above it.
   // "Skip to trading" reaches the ticket on a phone too.
   doc.querySelector('.skip-link')?.addEventListener('click', e => { if (phone.matches && marketOpen()) { e.preventDefault(); openSheet(); } });
-  addEventListener('keydown', e => { if (e.key === 'Escape' && sheetOpen() && !innerOverlay(e)) { e.stopImmediatePropagation(); e.preventDefault(); closeSheet(); } }, true);
   phone.addEventListener('change', closeSheet);
   doc.body.append(backdrop);
   new MutationObserver(() => { if (sheetOpen() && !ticket.contains(closeX)) ticket.append(closeX); if (!ticket.contains(note)) syncPoolNote(); }).observe(ticket, { childList: true });

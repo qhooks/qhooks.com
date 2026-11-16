@@ -219,7 +219,7 @@ function boardView() {
     const sub = plural(r.tokens, 'token') + ' · ' + plural(r.trades, 'trade') + (r.volumeUsd != null ? ' · ' + usd(r.volumeUsd) + ' volume' : '') + (r.chains?.length && B.chain === 'all' ? ' · ' + [...r.chains].sort((x, y) => SMART_CHAINS.findIndex(c => c[0] === x) - SMART_CHAINS.findIndex(c => c[0] === y)).map(chainShort).join(', ') : '');
     list.append(el('li', {}, el('button', { type: 'button', class: 'qpw-row', onclick: () => openCard(r.wallet, B.scope === 'all' ? { windowKey: B.tf === '24h' ? '7d' : B.tf, chainId: r.chains?.[0] || null } : {}) },
       el('span', { class: 'qpw-who' }, el('b', {}, nameOf(r.wallet)), el('small', {}, sub)),
-      el('span', { class: 'qpw-stats' }, el('span', { class: tone(r.pnlUsd) }, signedUsd(r.pnlUsd)), el('span', {}, 'Win ' + pct(r.winRate)), following ? el('span', { class: 'qpw-tag' }, 'Following') : null))));
+      el('span', { class: 'qpw-stats' }, el('span', { class: tone(r.pnlUsd) }, signedUsd(r.pnlUsd)), el('span', {}, 'Win ' + pct(r.winRate)), following ? el('span', { class: 'qpw-tag' }, 'Following') : null)),el('a',{class:'qpw-btn',href:'/mirror?w='+r.wallet},'Copy')));
   }
   return box;
 }
@@ -251,7 +251,7 @@ export async function openCard(wallet, { windowKey = '30d', chainId = null, acro
       if (!boardSession()) { try { await signIn(); await loadFollows(); } catch { return; } }
       followBtn.disabled = true; try { await follow(wallet, f ? {} : { label: '' }, !f); draw(w); } catch (e) { followBtn.disabled = false; followBtn.after(el('p', { class: 'qpw-note' }, say(e))); }
     });
-    const copyLink = me?.toLowerCase() !== wallet ? el('a', { class: 'qpw-btn', href: '/copy?w=' + wallet + (chainId ? '&chain=' + chainId : '') }, 'Copy trades') : null;
+    const copyLink = me?.toLowerCase() !== wallet ? el('a', { class: 'qpw-btn', href: '/mirror?w=' + wallet + (chainId ? '&chain=' + chainId : '') }, 'Copy trades') : null;
     // Alerts for a wallet you follow: what reaches you on the site and in @qhooks_bot.
     const alertPick = f && boardSession() ? el('label', { class: 'qpw-alerts' }, 'Alerts ', (() => {
       const sel = el('select', { 'aria-label': 'Alerts for this wallet' }, ...[['all', 'Every trade'], ['buy', 'Buys'], ['sell', 'Sells'], ['first', 'First buys of a token'], ['off', 'Off']].map(([v, t]) => el('option', { value: v }, t)));

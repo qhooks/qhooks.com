@@ -1,3 +1,4 @@
+import {pendingReceiptHash} from './qx-transaction-receipt.mjs';
 // Shared EIP-1193 boundary. No cached wallet network is trusted for signing.
 import { chainById } from './chains.mjs';
 const hex = n => '0x' + BigInt(n).toString(16);
@@ -8,6 +9,7 @@ const causes = e => { const out = [], seen = new Set(); for (let n = e; n && !se
 const hasCode = (e, code) => causes(e).some(n => Number(n.code) === code);
 
 export function tradeError(error) {
+  if(error?.pending)return 'Confirming… Your transaction is still pending.';
   const home = {
     home_off: 'Home currency is switched off.',
     home_sign_in: 'Sign in with the wallet you chose for home.',
@@ -44,7 +46,7 @@ export function debugTradeError(error, scope = 'trade') {
 export function asTradeError(error) {
   debugTradeError(error);
   const mapped = failure(tradeError(error), error);
-  for (const key of ['code', 'mayHaveSubmitted', 'txHash', 'chainId']) if (error?.[key] !== undefined) mapped[key] = error[key];
+  for (const key of ['code', 'mayHaveSubmitted', 'txHash', 'chainId', 'pending']) if (error?.[key] !== undefined) mapped[key] = error[key];
   return mapped;
 }
 export function chainParams(id) {
@@ -119,6 +121,7 @@ export async function guardedSend(provider, id, tx, { rpc, assert = () => {}, on
   onStatus('Confirm in your wallet…'); assert();
   try { return await provider.request({ method: 'eth_sendTransaction', params: [{ ...request, ...fees, gas: hex((estimate * 13n + 9n) / 10n) }] }); }
   catch (cause) {
+    const submitted=pendingReceiptHash(cause);if(submitted){onStatus('Confirming…');return submitted;}
     // Explicitly rejected/blocked prompts cannot have sent; a transport failure after send can have.
     if (hasCode(cause, 4001) || /popup.*block|pop-up.*block|user gesture|user activation/i.test(causes(cause).map(e => e.message).join(' '))) throw cause;
     throw Object.assign(failure(tradeError(cause), cause), {mayHaveSubmitted: true});

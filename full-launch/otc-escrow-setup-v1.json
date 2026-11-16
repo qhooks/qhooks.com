@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "kind": "qhooks-otc-escrow-setup",
+  "set": "otc-escrow",
+  "chains": {
+    "4663": {
+      "steps": [
+        {
+          "id": "otc-escrow",
+          "name": "OTC escrow",
+          "short": "OTC escrow",
+          "address": "0xbea24499f82f1e018a4dff5607b7c54141cbfbf8",
+          "runtimeSha256": "a6a266302126c44873b043fff2d853238d22db560ea0bbb3c559c8e553fc4cb6"
+        }
+      ]
+    }
+  }
+}

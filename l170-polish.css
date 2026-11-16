@@ -47,7 +47,6 @@
 .q170-home .q170-brief-status { min-height:1.6em; }
 .q170-home .q170-networks li { display:inline-flex; gap:12px; align-items:center; color:var(--muted); }
 .q170-home .q170-networks img { object-fit:contain; filter:grayscale(1); }
-:root[data-theme="dark"] .q170-home .q170-networks img[src*="base.svg"] { filter:grayscale(1) brightness(6); }
 .q170-home #catalog { width:calc(100% - 13%); max-width:1250px; padding:44px 0 48px; }
 .q170-home #catalog .section-heading { margin-bottom:20px; }
 .q170-home #catalog .eyebrow { color:var(--muted); font-size:11px; letter-spacing:.16em; }

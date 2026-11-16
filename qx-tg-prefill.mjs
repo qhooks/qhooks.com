@@ -92,6 +92,7 @@ export async function applyTradePrefill(card, trade, { active = () => true, time
   if (!card || !trade || !active()) return false;
   pendingPrefills.get(card)?.cancel();
   const amount = card.querySelector('#qxt-amount'), go = card.querySelector('.qxt-go');
+  const exactAmount = card.querySelector('#qxt-amount-exact') || amount;
   const side = card.querySelector(`[data-side="${trade.side}"]`);
   if (!amount || !go || !side) return false;
   const pay = card.querySelector('select[aria-label="Pay with"]');
@@ -138,9 +139,9 @@ export async function applyTradePrefill(card, trade, { active = () => true, time
       catch { const status = card.querySelector('.qtx-status'); if (status && isActive()) status.textContent = trade.wallet ? 'Connect '+trade.wallet.slice(0,6)+'…'+trade.wallet.slice(-4)+' to fill this sell.' : 'Token balance is unavailable. Choose a sell amount to continue.'; return false; }
       if (full == null) return false;
     } else {
-      amount.value = ''; balance.click();
-      if (!await waitFor(() => /^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(amount.value), { active: isActive, timeout })) return false;
-      full = amount.value;
+      writeAmount(''); balance.click();
+      if (!await waitFor(() => /^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(exactAmount.value), { active: isActive, timeout })) return false;
+      full = exactAmount.value;
     }
     if (!isActive()) return false;
     writeAmount(percentAmount(full, trade.percent));

@@ -1,3 +1,4 @@
+import {publishedPost} from './qx-a/pages/community-common.mjs';
 import {profileUrl,resolveProfileAddress} from './qx-profile-address.mjs';
 // Callouts on the site: "Call it" in the terminal, Follow on profiles, the callout inbox in My QHooks and
 // the callout points board on Community. Mounts itself on whichever of those pages loads it.
@@ -83,26 +84,26 @@ function mountProfile(anchor){
 
 // ---------- My QHooks: callout inbox ----------
 function mountInbox(before){
- const list=h('div',{class:'qco-inbox'}),status=h('p',{class:'qa-status',role:'status','aria-live':'polite'}),actions=h('div',{class:'qa-actions'});
+ if(document.getElementById('qa-callouts'))return;let inboxSequence=0;
+ const ownList=h('div',{class:'qco-your-calls'}),list=h('div',{class:'qco-inbox'}),status=h('p',{class:'qa-status',role:'status','aria-live':'polite'}),actions=h('div',{class:'qa-actions'});
  const section=h('section',{id:'qa-callouts',class:'qa-section qco-section','aria-labelledby':'qa-callouts-h'},
-  h('div',{class:'qa-section-head'},h('h2',{id:'qa-callouts-h'},'Callouts'),h('p',{},'When someone you follow calls a token they hold, it shows up here and in @qhooks_bot.')),actions,status,list);
+  h('div',{class:'qa-section-head'},h('h2',{id:'qa-callouts-h'},'Callouts'),h('p',{},'When someone you follow calls a token they hold, it shows up here and in @qhooks_bot.')),h('h3',{},'Your callouts'),ownList,h('h3',{},'From people you follow'),actions,status,list);
  before.before(section);
  document.querySelector('.qa-account-nav')?.prepend(h('a',{href:'#qa-callouts'},'Callouts'));
  async function load(){
-  actions.replaceChildren();list.replaceChildren();
+  const revision=++inboxSequence;actions.replaceChildren(h('a',{class:'qa-btn',href:'/community#callout-points'},'Callout points'));list.replaceChildren();ownList.replaceChildren();const owner=connectedAddress();if(owner)try{const profile=await call('/profile/'+owner);if(revision!==inboxSequence||connectedAddress()!==owner)return;for(const c of profile.callouts||profile.calls||[])ownList.append(c.kind==='buy'||c.kind==='post'?publishedPost(c):h('article',{class:'qco-item'},h('a',{class:'qco-sym',href:c.links?.terminal||'/terminal#'+boardParam(c.board||{})},(c.kind==='buy'?'bought ':'called ')+(c.board?.symbol?'$'+c.board.symbol:'token')),clampInto(h('p',{class:'qco-text'}),c.text||'')));if(!ownList.childNodes.length)ownList.append(h('p',{class:'qco-empty'},'Your public callouts will appear here.'));}catch{if(revision!==inboxSequence||connectedAddress()!==owner)return;ownList.append(h('p',{class:'qco-empty'},'Your callouts are refreshing.'));}
   if(!connectedAddress()){status.textContent='Connect your wallet to see callouts from people you follow.';return;}
   if(!boardSession()){status.textContent='';actions.append(h('button',{type:'button',class:'qa-btn qa-btn-primary',onclick:async e=>{e.target.disabled=true;try{await signIn();await load();}catch(err){status.textContent=errorText(err);e.target.disabled=false;}}},'Sign in to see callouts'));status.textContent='One free signature. No transaction.';return;}
   status.textContent='Refreshing…';
   try{
-   const [inbox,me]=await Promise.all([call('/inbox'),call('/profile/'+connectedAddress())]);
+   const [inbox,me]=await Promise.all([call('/inbox'),call('/profile/'+connectedAddress())]);if(revision!==inboxSequence||connectedAddress()!==owner)return;
    status.textContent=(me.following?'You follow '+num(me.following)+(me.following===1?' caller':' callers'):'You don’t follow anyone yet.')+' · '+num(me.followers)+(me.followers===1?' follower':' followers')+(me.points?.total?' · '+num(me.points.total)+' callout points':'');
    if(inbox.unread)actions.append(h('button',{type:'button',class:'qa-btn',onclick:async()=>{await call('/inbox/read',{method:'POST',body:{}});load();}},'Mark '+inbox.unread+' as read'));
-   actions.append(h('a',{class:'qa-btn',href:'/community#callout-points'},'Callout points'));
-   if(!inbox.items.length){list.append(h('p',{class:'qco-empty'},'No callouts yet. Find callers on ',h('a',{href:'/community#callers'},'Community'),' and tap Follow on their profile.'));return;}
-   for(const it of inbox.items)list.append(h('article',{class:'qco-item'+(it.read?'':' is-unread')},
+   if(!(inbox.callouts||inbox.items||[]).length){list.append(h('p',{class:'qco-empty'},'No callouts yet. Find callers on ',h('a',{href:'/community#callers'},'Community'),' and tap Follow on their profile.'));return;}
+   for(const it of inbox.callouts||inbox.items||[])list.append(it.kind==='buy'||it.kind==='post'?publishedPost(it):h('article',{class:'qco-item'+(it.read?'':' is-unread')},
     h('div',{class:'qco-item-head'},h('a',{class:'qco-sym',href:it.links.terminal},it.board.symbol?'$'+it.board.symbol:'Token'),h('span',{},' called by '),h('a',{href:profileUrl({wallet:it.caller,handle:it.handle})},short(it.caller)),h('time',{datetime:new Date(it.at).toISOString()},ago(it.at))),
     clampInto(h('p',{class:'qco-text'}),it.text||''),h('div',{class:'qco-item-links'},h('a',{class:'qa-btn qa-btn-primary',href:it.links.terminal},'Open'),h('a',{class:'qa-btn',href:it.links.board},'Board'))));
-  }catch{status.textContent='Refreshing…';setTimeout(load,15000);}
+  }catch{if(revision!==inboxSequence||connectedAddress()!==owner)return;status.textContent='Refreshing…';setTimeout(load,15000);}
  }
  onWalletChange(load);load();setTimeout(load,1500);
 }

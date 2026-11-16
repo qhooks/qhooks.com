@@ -1,0 +1,3 @@
+const filter=document.getElementById('ct-chain-filter'),count=document.getElementById('ct-directory-count');
+function draw(){let shown=0;for(const section of document.querySelectorAll('.ct-directory')){let matches=0;for(const row of section.querySelectorAll('tbody tr')){row.hidden=filter.value!=='all'&&row.dataset.contractChain!==filter.value;if(!row.hidden)matches++;}section.querySelector('.ct-directory-table').hidden=!matches;section.querySelector('.ct-directory-empty').hidden=!!matches;shown+=matches;}count.textContent=shown+' deployed contract'+(shown===1?'':'s');}
+filter?.addEventListener('change',draw);

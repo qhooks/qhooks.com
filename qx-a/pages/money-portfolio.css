@@ -149,6 +149,12 @@
 .qp-holding { position: relative; display: grid; grid-template-columns: 44px auto minmax(0, 1fr) auto; grid-template-areas: "art tok tok val" "art bal price chg" "art pnl pnl trade"; column-gap: 12px; row-gap: 3px; align-items: center;
   padding: 14px var(--qa-pad); box-shadow: 0 1px 0 var(--qa-rule-row); transition: background-color var(--qa-t-quick) var(--qa-ease); }
 .qp-holding:hover { background: var(--qa-wash); }
+.qp-open-token { position: static; display: block; min-width: 0; max-width: 100%; color: inherit; text-decoration: none; }
+.qp-open-token b { display: block; max-width: 100%; }
+.qp-open-token::after { content: ""; position: absolute; inset: 0; z-index: 1; cursor: pointer; }
+.qp-open-token:focus-visible { outline: none; }
+.qp-open-token:focus-visible::after { outline: 2px solid var(--qa-gold-hi); outline-offset: -2px; }
+.qp-holding .qp-trade { position: relative; z-index: 2; }
 .qp-holding.is-spam { opacity: .55; }
 .qp-holding > .qp-art { grid-area: art; align-self: start; margin-top: 2px; }
 .qp-token { grid-area: tok; display: flex; align-items: baseline; gap: 8px; min-width: 0; }
@@ -236,4 +242,70 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .mn-pf *, .mn-pf *::before, .mn-pf *::after { animation: none !important; transition: none !important; }
+}
+
+/* Creator launches: compact facts with every launch and its payout kept available. */
+#qp-earnings #qa-launches { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 28px; }
+#qp-earnings #qa-launches > .qa-section-head { grid-column: 1 / -1; padding-bottom: 6px; }
+#qp-earnings #qa-launches > .qa-launch { min-width: 0; padding: 0 0 18px; border-bottom: 1px solid var(--qa-rule-row); }
+#qp-earnings #qa-launches .qa-launch-head { align-items: center; }
+#qp-earnings #qa-launches .qa-launch-head > div { min-width: 0; }
+#qp-earnings #qa-launches .qa-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; margin: 8px 0 16px; }
+#qp-earnings #qa-launches .qa-facts > div { min-width: 0; }
+#qp-earnings #qa-launches .qa-facts dt { font-size: 12px; line-height: 1.4; color: var(--qa-tx-3); }
+#qp-earnings #qa-launches .qa-facts dd { margin: 3px 0 0; font-size: 14px; font-weight: 680; line-height: 1.4; color: var(--qa-tx); overflow-wrap: anywhere; }
+#qp-earnings #qa-launches .qa-status:empty { display: none; }
+@media (min-width: 1100px) {
+  #qp-earnings #qa-launches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #qp-earnings #qa-launches .qa-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 759px) {
+  #qp-earnings #qa-launches :is(.qa-launch-links, .qa-actions) .qa-btn { min-height: 44px; height: auto; }
+}
+
+/* Token-day performance belongs with the token; personal dollar PnL belongs with the holding's amounts. */
+.qp-holding { grid-template-columns: 44px minmax(0, 1fr) minmax(110px, auto); grid-template-areas: "art tok pnl" "art bal val" "art price trade"; row-gap: 5px; }
+.qp-token { display: grid; gap: 3px; }
+.qp-name-line { display: flex; flex-wrap: wrap; gap: 3px 8px; align-items: baseline; min-width: 0; }
+.qp-token .qp-name-line b { flex: 0 1 auto; font-size: 16px; }
+.qp-day { flex: none; font-size: 11.5px; font-weight: 650; color: var(--qa-tx-3); white-space: nowrap; }
+.qp-day.qp-positive { color: var(--qa-buy); }
+.qp-day.qp-negative { color: var(--qa-sell); }
+.qp-pnl { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; white-space: normal; font-size: 18px; line-height: 1.2; font-weight: 760; text-align: right; }
+.qp-pnl .qp-cell-label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; margin: 0; font-size: 10.5px; line-height: 1.3; font-weight: 550; color: var(--qa-tx-3); }
+.qp-c-val { display: flex; justify-content: flex-end; align-items: baseline; gap: 4px; font-size: 12px; font-weight: 600; color: var(--qa-tx-2); }
+.qp-c-val .qp-cell-label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; font-size: 10.5px; color: var(--qa-tx-3); }
+.qp-c-price { font-size: 12px; }
+.qp-c-price .qp-cell-value::before { content: 'Price '; }
+.qp-holding .qp-trade { min-height: 38px; height: auto; }
+@media (max-width: 1099px) {
+ .qp-holding.is-cash .qp-pnl { display: none; }
+ .qp-holding.is-cash .qp-c-val { grid-area: pnl; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 18px; font-weight: 760; color: var(--qa-tx); }
+}
+@media (min-width: 1100px) {
+ .mn-pf-cols, .qp-holding { grid-template-columns: 44px minmax(180px, 1.6fr) minmax(90px, .8fr) minmax(90px, .8fr) minmax(100px, .9fr) minmax(140px, 1.2fr) 76px; grid-template-areas: none; column-gap: 18px; }
+ .qp-holding > * { grid-area: auto; }
+ .qp-token .qp-name-line b { font-size: 16px; }
+ .qp-c-val { font-size: 15px; color: var(--qa-tx); }
+ .qp-c-val .qp-cell-label { display: none; }
+ .qp-c-price .qp-cell-value::before { content: none; }
+ .qp-pnl { font-size: 16px; }
+ .qp-pnl .qp-cell-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}
+
+/* Preserve the live phone rowtight density while moving personal PnL to the amounts. */
+@media(max-width:699px){
+ .mn-pf-list .qp-token{display:block}
+ .mn-pf-list .qp-token>.qa-chain{display:none}
+ .mn-pf-list .qp-name-line{flex-wrap:nowrap;gap:6px}
+ .mn-pf-list .qp-name-line .qp-open-token{flex:0 1 auto}
+ .mn-pf-list .qp-day{font-size:10.5px}
+ .mn-pf-list .qp-pnl{flex-direction:row;align-items:center;gap:4px;font-size:16px}
+ .mn-pf-list .qp-pnl .qp-cell-label{font-size:10px;white-space:nowrap}
+ .mn-pf-list .qp-holding .qp-trade{min-height:30px;height:30px}
+}
+
+@media(max-width:699px){
+ .mn-pf-list .qp-name-line,.mn-pf-list .qp-name-line :is(a,b){line-height:18.4px}
+ .mn-pf-list .qp-holding.is-cash .qp-c-val{flex-direction:row;align-items:baseline;font-size:16px;line-height:18.4px}
 }

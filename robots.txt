@@ -1,2 +1,10 @@
 User-agent: *
-Disallow: /
+Allow: /
+Disallow: /api/
+Disallow: /me
+Disallow: /portfolio
+Disallow: /orders
+Disallow: /safe
+Disallow: /privy/
+Disallow: /x402-test
+Sitemap: https://qhooks.com/sitemap.xml

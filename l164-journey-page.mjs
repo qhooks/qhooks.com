@@ -25,8 +25,8 @@ export function bindLaunchJourney({document:d=document,target=window,snapshot=()
  function choose(next,focus=true){
   if(dead||blocked||launchJourneyStatus(current()).busy)return;
   const s=current(),hasLaunch=!!s.launch;
-  if(next>0&&!hasLaunch&&!validate())return;
-  if(next===3&&!hasLaunch&&($('ql-begin').disabled||!s.connected)){message('Connect on your selected chain, then create or restore and verify your quantum-key backup.',true);next=2;}
+  if(next===1&&!hasLaunch&&(!($('ql-name').value.trim())||!(/^[A-Za-z0-9]{1,10}$/.test($('ql-symbol').value.trim())))){message('Add a name and a ticker to explore pool rules.',true);return;}
+  if(next===3&&!hasLaunch&&!validate())return;
   step=next;render();
   if(focus){const heading=$('qj-heading-'+step);heading.focus();heading.scrollIntoView?.({block:'start'});}
  }
@@ -78,5 +78,5 @@ export function bindLaunchJourney({document:d=document,target=window,snapshot=()
  listen(target,'pagehide',dispose);
  if(blocked){for(const n of $('launch-workspace').querySelectorAll('input,select,button,textarea'))n.disabled=true;message('This launch link has an invalid or repeated chain. Return through Launch token.',true);}
  else{try{const value=target.sessionStorage.getItem(draftPrefix+$('ql-chain').value);if(value)applyDraft(value);}catch{message('The previous public configuration could not be restored. Import it or enter your settings.');}}
- render();return Object.freeze({render,wrapClient,dispose,get step(){return step;}});
+ render();return Object.freeze({render,wrapClient,dispose,choose,get step(){return step;}});
 }

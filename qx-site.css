@@ -192,6 +192,15 @@ html body.qx .site-header .qn .qn-me:hover,html body.qx .site-header .qn .qn-me[
 
 /* Wallet dialog, one job per state (qx-account-menu.mjs). data-qwm="connect" | "account" on #qhc-dialog. */
 html body #qhc-dialog{font-family:var(--qx-sans,inherit);background:var(--qx-bg-2,#111613);color:var(--qx-ink,#f1eee3);border-radius:22px;border-color:var(--qx-line-2,rgba(241,238,227,.18))}
+/* Account/Connect keeps its dismiss control outside the scrolling content. */
+html body #qhc-dialog:has(>.qx-overlay-content){padding:0;overflow:hidden;max-height:calc(100dvh - 32px)}
+html body #qhc-dialog[open]:has(>.qx-overlay-content){display:flex;flex-direction:column}
+html body #qhc-dialog>.qhc-heading{flex:none;position:sticky;top:0;z-index:2;gap:16px;margin:0;padding:12px 16px;background:var(--qx-bg-2,#111613);border-bottom:1px solid var(--qx-line,rgba(241,238,227,.1));touch-action:pan-x}
+html body #qhc-dialog>.qx-overlay-content{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 18px max(18px,env(safe-area-inset-bottom,0px))}
+html body #qhc-dialog .qhc-heading button{min-width:44px;min-height:44px;width:44px;height:44px;flex:none}
+dialog::backdrop{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+dialog :is(.qmf-heading,.qpo-sheet-bar,.qpw-sheet-head,.qtl-head,.qv-head){touch-action:pan-x}
+dialog :is(button[data-qx-dismiss],button[aria-label^="Close"],button[aria-label^="close"]){min-width:44px;min-height:44px}
 html body #qhc-dialog .qhc-heading h2{font:650 20px/1.2 var(--qx-sans,inherit);letter-spacing:-.02em}
 html body #qhc-dialog .qhc-choice,html body #qhc-dialog .qhc-secondary{border-radius:999px;font-weight:600}
 /* Connect */
@@ -334,3 +343,32 @@ html body .qx-serif{font-family:inherit!important;font-weight:inherit!important;
 .qwm-act-status,.qwm-act-note{margin:0;font-size:12px;line-height:1.5;color:var(--qx-muted,#a7aea3);overflow-wrap:anywhere}.qwm-act-status a{color:inherit}
 .qwm-chain-name{flex-wrap:wrap;row-gap:2px}
 .qxt-launch-caps,.qx-launch-caps{margin:6px 0 0;font:600 12px var(--qx-mono,monospace);color:var(--qx-muted,#a7aea3);letter-spacing:-.01em}
+
+/* walletmenu4 (2026-11-13, Randall: "This Section could be better alligned"). One grid per chain: the chain line, then
+   its actions as equal 44 px pills (Send · Unwrap · Move · Move home) in a 2-column grid on phones, an even row when
+   wider. Move funds is a full-width button with its note left-aligned. The copy row, the nav grid, the balances and
+   the actions share the same left/right edges. */
+#qhc-dialog .qwm-chains>li{display:grid;gap:6px;padding:0 0 10px}
+#qhc-dialog .qwm-chains>li+li{border-top:1px solid color-mix(in srgb,var(--qx-ink,#f1eee3) 8%,transparent);padding-top:6px}
+#qhc-dialog .qwm-acts{padding:0;margin:0}
+#qhc-dialog .qwm-act-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:6px}
+#qhc-dialog .qwm-act-bar>.qwm-act{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;padding:6px 10px;font-size:13px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#qhc-dialog .qwm-acts>.qwm-act-note{margin:4px 2px 0}
+#qhc-dialog .qwm-acts>.qwm-act-panel{margin-top:8px}
+@media (max-width:520px){#qhc-dialog .qwm-act-bar{grid-template-columns:1fr 1fr}}
+#qhc-dialog .qwm-cash{display:grid;grid-template-columns:minmax(0,1fr);justify-items:stretch;gap:6px}
+#qhc-dialog .qwm-cash .qwm-move{width:100%;min-height:44px;justify-content:center}
+#qhc-dialog .qwm-cash .qwm-move-note{text-align:left}
+#qhc-dialog .qwc-dialog.qwc-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:stretch}
+#qhc-dialog .qwc-dialog .qwc-copy,#qhc-dialog .qwc-dialog .qwc-explorer{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;box-sizing:border-box;border:1px solid var(--qx-line-2,rgba(241,238,227,.18));border-radius:999px;text-align:center}
+#qhc-dialog .qwc-dialog .qwc-explorer[hidden]{display:none}
+#qhc-dialog .qwc-dialog:has(.qwc-explorer[hidden]){grid-template-columns:1fr}
+/* Account is a narrow panel at every page width: chain labels own a separate row. */
+ #qhc-dialog .qwm-chain{grid-template-columns:18px minmax(0,1fr);align-items:start}
+ #qhc-dialog .qwm-chain-name{align-self:center}
+ #qhc-dialog .qwm-amts{grid-column:1/-1;justify-items:stretch;min-width:0;width:100%}
+ #qhc-dialog .qwm-amt{display:flex;justify-content:space-between;gap:10px;min-width:0;white-space:normal}
+ #qhc-dialog .qwm-amt b{min-width:0;overflow-wrap:anywhere}
+ #qhc-dialog .qwm-amt small{flex:none}
+html body #qhc-dialog[data-qwm="account"]:has(>.qx-overlay-content){max-height:calc(100dvh - 108px)}
+@media(max-width:520px){html body #qhc-dialog[data-qwm]:has(>.qx-overlay-content){max-height:88dvh}}

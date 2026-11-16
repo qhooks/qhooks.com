@@ -27,9 +27,32 @@ export const CURVE_VENUES = Object.freeze({
     logSpan: 9990000,
     // Buys go straight to the curve (through QFeeRouter → AllowanceHolder.exec). Sells go through 0x, whose Robinhood
     // routing lists the Pons V2 curves as a source ("Pons_V2_1"); a sell quote from any other source is refused.
-    zeroExSource: /^pons/i,
+    zeroExSource: /^pons/i, buy: 'direct', source: '^pons',
   })]),
+  // BNB Chain (curves batch 1, 2026-11-12). Both launchpads are listed by 0x as sources ("Flap", "FourMeme"), so buys and
+  // sells go through QFeeRouter.swapVia with a 0x quote, and a quote from any other source is refused while the token is on
+  // its curve. Facts: work/qhooks-curves-20261112/research-launchpads.md (on-chain reads 2026-11-13).
+  '56': Object.freeze([
+    Object.freeze({
+      // flap.sh: one Portal holds every curve. getTokenV8Safe(token) reverts for non-flap tokens; status 1 curve, 4 DEX,
+      // 5 staged. Curve (x + r)(y + h) = k·1e18, x = quote held, y = tokens left (supply − circulating); graduates at
+      // circulatingSupply = dexSupplyThresh into a PancakeSwap V2 pair (getTokenV8Safe.pool).
+      id: 'flap', name: 'Flap', kind: 'flap', portal: '0xe2ce6ab80874fa9fa2aae65d277dd6b8e65c9de0',
+      multicall: '0xca11bde05977b3631167028862be2a173976ca11', logSpan: 49000, fixedBlockTime: true, histTtl: 30000, buy: '0x', source: '^flap', zeroExSource: /^flap/i,
+    }),
+    Object.freeze({
+      // four.meme classic: TokenManager2 holds the curves; Helper3.getTokenInfo(token) answers version 0 for other tokens.
+      // Graduates when funds reach maxFunds into a PancakeSwap V2 pair (factory getPair(token, quote or WBNB)).
+      id: 'fourmeme', name: 'four.meme', kind: 'fourmeme', helper: '0xf251f83e40a78868fcfa3fa4599dad6494e46034',
+      manager: '0x5c952063c7fc8610ffdb798152d69f0b9550762b', pairFactory: '0xca143ce32fe78f1f7019d7d551a6402fc5350c73',
+      wrappedNative: '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c', multicall: '0xca11bde05977b3631167028862be2a173976ca11',
+      buy: '0x', source: '^fourmeme', zeroExSource: /^fourmeme/i,
+    }),
+  ]),
 });
 
-export const curveVenuesFor = chainId => CURVE_VENUES[String(chainId)] || [];
+// Solana (curves batch 2): pump.fun, Raydium LaunchLab and Meteora DBC (Bags …), detected by the worker from their own
+// accounts (server/curve-solana.mjs). Jupiter routes every one of them; the terminal's Solana ticket is unchanged.
+export const SOLANA_CURVES = Object.freeze([{id: 'solana', name: 'Solana launchpads', kind: 'solana', via: 'Jupiter'}]);
+export const curveVenuesFor = chainId => String(chainId) === 'solana' ? SOLANA_CURVES : CURVE_VENUES[String(chainId)] || [];
 export const hasCurveVenue = chainId => curveVenuesFor(chainId).length > 0;

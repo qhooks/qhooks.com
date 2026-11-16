@@ -1,0 +1,3 @@
+import {keccak_256} from './full-launch/prototypes/qpools/client/vendor/hashes/sha3.js';
+const TOPIC='0x'+Array.from(keccak_256(new TextEncoder().encode('Swapped(address,address,address,uint256,uint256,address,uint256)')),b=>b.toString(16).padStart(2,'0')).join('');
+export function matchingEvmBuy(receipt,{owner,token}={}){return receipt?.status==='0x1'&&/^0x[0-9a-f]{64}$/i.test(receipt.transactionHash||'')&&(receipt.logs||[]).some(l=>!l.removed&&l.topics?.[0]?.toLowerCase()===TOPIC&&l.topics?.[1]?.slice(-40).toLowerCase()===owner?.slice(2).toLowerCase()&&l.topics?.[3]?.slice(-40).toLowerCase()===token?.slice(2).toLowerCase());}

@@ -68,7 +68,7 @@ async function run(){
  const qco=document.getElementById('qco-profile');
  const acts=()=>{if(!qco||qco.querySelector('.pv3-acts'))return;const follow=qco.querySelector('.qco-follow');if(!follow)return;
   follow.classList.add('qa-btn--primary');
-  const row=el('div','pv3-acts'),copy=el('a','pv3-copy qa-btn qa-btn--secondary','Copy trades');copy.href='/copy?w='+encodeURIComponent(wallet);follow.before(row);row.append(follow,copy);};
+  const row=el('div','pv3-acts'),copy=el('a','pv3-copy qa-btn qa-btn--secondary','Copy trades');copy.href='/mirror?w='+encodeURIComponent(wallet);follow.before(row);row.append(follow,copy);};
  acts();if(qco)new MutationObserver(acts).observe(qco,{childList:true});
 
  // the caller record: the strip, then the tabs, then each call
@@ -97,19 +97,20 @@ async function run(){
 
  // tabs: Calls / Trades / Holdings / Launches / Boards over the sections the page already draws
  const root=document.getElementById('qp-root'),trading=document.getElementById('qp-trading');
- const TABS=[['calls','Calls'],['trades','Trades'],['holdings','Holdings'],['launches','Launches'],['boards','Boards']];
+ const TABS=[['calls','Callouts'],['trades','Trades'],['holdings','Holdings'],['launches','Launches'],['boards','Boards']];
  let active=['calls','trades','holdings','launches','boards'].includes(location.hash.slice(1))?location.hash.slice(1):'calls';
  const bar=tabs(TABS.map(([id,label])=>({id,label})),{active,label:'Profile sections',onChange:id=>{active=id;apply();}});
  bar.el.classList.add('pv-tabs');anchor?.before(bar.el);
  const kindOf=sec=>{const id=sec.getAttribute('aria-labelledby')||'',t=(sec.querySelector('h2')?.textContent||'').trim();
-  if(id==='qp-calls-h'||t==='Calls')return'calls';if(id==='qp-hold-h'||/^(Shared )?holdings$/i.test(t))return'holdings';if(id==='qp-launches-h'||t==='Launches')return'launches';
+  if(id==='qp-calls-h'||id==='qp-callouts-h'||t==='Calls')return'calls';if(id==='qp-hold-h'||/^(Shared )?holdings$/i.test(t))return'holdings';if(id==='qp-launches-h'||t==='Launches')return'launches';
   if(id==='qp-posts-h'||id==='qp-badges-h'||t==='Recent posts'||t==='Badges')return'boards';return null;};
  const badges=h('div',{class:'pv-badges',id:'pv-badges'});document.getElementById('qp-member-identity')?.after(badges);
+ const idForPublished=sec=>sec.getAttribute('aria-labelledby')==='qp-callouts-h';
  function apply(){
   if(trading)trading.toggleAttribute('data-pv-off',active!=='trades');
   const counts={calls:calls.length||null,launches:0,boards:0,holdings:0};
   for(const sec of root?.children||[]){const k=kindOf(sec);if(!k)continue;sec.dataset.pvTab=k;sec.toggleAttribute('data-pv-off',k!==active);
-   if(k==='launches')counts.launches+=sec.querySelectorAll('.qa-launch').length;if(k==='boards')counts.boards+=sec.querySelectorAll('.qb-postline').length;if(k==='holdings')counts.holdings+=sec.querySelectorAll('.qa-tr:not(.qa-th)').length;
+   if(idForPublished(sec))counts.calls=(counts.calls||0)+sec.querySelectorAll('.cx-published').length;if(k==='launches')counts.launches+=sec.querySelectorAll('.qa-launch').length;if(k==='boards')counts.boards+=sec.querySelectorAll('.qb-postline').length;if(k==='holdings')counts.holdings+=sec.querySelectorAll('.qa-tr:not(.qa-th)').length;
    // badges are facts about the person: they move under the name
    const set=sec.querySelector('.qb-badgeset');if(set&&sec.getAttribute('aria-labelledby')==='qp-badges-h'){badges.replaceChildren(...set.childNodes);sec.dataset.pvMoved='1';}
    if(sec.dataset.pvMoved)sec.toggleAttribute('data-pv-off',true);

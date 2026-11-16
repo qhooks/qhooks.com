@@ -8,19 +8,22 @@
 export const EMBEDDED_RDNS = 'io.qhooks.privy';
 export const DEFAULT_CAP_USD = 50;
 export const MAX_CAP_USD = 10000;
+const memory = new Map();
 const key = addr => 'qhooks.trade-confirm.' + String(addr || '').toLowerCase();
 
 export const instantCapable = entry => entry?.rdns === EMBEDDED_RDNS;
 export function tradePrefs(addr) {
-  let p = null;
-  try { p = JSON.parse(localStorage.getItem(key(addr)) || 'null'); } catch {}
+  let p = memory.get(key(addr)) || null;
+  try { p = JSON.parse(localStorage.getItem(key(addr)) || 'null') || p; } catch {}
   const cap = Number(p?.capUsd);
-  return { mode: p?.mode === 'popup' ? 'popup' : 'oneclick', capUsd: Number.isFinite(cap) && cap > 0 ? Math.min(cap, MAX_CAP_USD) : DEFAULT_CAP_USD };
+  return { orderApproval: p?.orderApproval === 'bounded' ? 'bounded' : 'once', mode: p?.mode === 'popup' ? 'popup' : 'oneclick', capUsd: Number.isFinite(cap) && cap > 0 ? Math.min(cap, MAX_CAP_USD) : DEFAULT_CAP_USD };
 }
 export function setTradePrefs(addr, prefs) {
   const next = { ...tradePrefs(addr), ...prefs };
   next.mode = next.mode === 'popup' ? 'popup' : 'oneclick';
+  next.orderApproval=next.orderApproval==='bounded'?'bounded':'once';
   next.capUsd = Math.max(1, Math.min(MAX_CAP_USD, Math.round(Number(next.capUsd) || DEFAULT_CAP_USD)));
+  memory.set(key(addr), next);
   try { localStorage.setItem(key(addr), JSON.stringify(next)); } catch {}
   window.dispatchEvent(new CustomEvent('qhooks:trade-prefs', { detail: { address: String(addr).toLowerCase(), ...next } }));
   return next;

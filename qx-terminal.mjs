@@ -1,8 +1,16 @@
+import {discoveryEvidence,evidenceTime} from './qx-discovery-evidence.mjs';
+import {discoveryBadges} from './qx-discovery-badges.mjs';
+import{quickAmounts}from'/qx-trade-settings-store.mjs';
+import{walletTradingStorage}from'/qx-trade-settings-context.mjs';
+import{openQuickAmountSettings}from'/qx-quick-amount-settings.mjs';
+import {renderTokenNews,hideTokenNews} from './qx-token-news.mjs';
+import {assetPriceFields,priceState,priceFields,isQhooksPriceAsset} from './qx-price-state.mjs';
 import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
 import {communityFollowing,followSubject} from './qx-community-follow.mjs';
 import {swapCandles,mergeSwapCandles} from '/qx-swap-candles.mjs';
 import {shapeCandles} from './qx-chart-shape.mjs';
-import {tokenAvatar,bindTokenAvatar} from '/qx-token-avatar.mjs';
+import {tokenAvatarSources,bindTokenAvatar} from '/qx-token-avatar.mjs';
+import {marketAvatarSources} from './qx-market-avatar.mjs';
 import {positionChart} from '/qx-position-core.mjs';
 import {mountMarketPosition} from '/qx-market-position.mjs';
 import {outsideCosts} from '/qx-wallet-pnl.mjs'; // walletpos: the connected wallet's own on-chain position, any venue
@@ -14,6 +22,7 @@ import {mountArbGapPanel} from '/qx-arb-gap-panel.mjs';
 import {mountRelaunchBadge} from '/qx-relaunch-badge.mjs';
 import {createProviderChartRenderer,directProviderChart} from '/qx-provider-chart.mjs';
 import {mountPriceAlerts} from '/qx-price-alerts.mjs';
+import {mountTokenAlerts} from '/qx-token-alerts.mjs';
 import {mountChartTools} from '/qx-chart-tools.mjs';
 import {createTradeTape,mountTapeControls,recentTraders} from '/qx-trade-tape.mjs';
 import {createExternalHolderPanel} from '/qx-market-holders.mjs';
@@ -44,8 +53,9 @@ import {freshnessState,historyState,loadExternalHeader,loadExternalHistory} from
 import {ownCandleOptions,ownChartRange,ownChartView,ownHolderLabel,ownTapeValue,ownTapeRows,ownTapePrice} from '/qx-terminal-own.mjs';
 import {fillNativeUsd,ethUsd as browserEthUsd,quoteUsd} from '/qx-native-usd.mjs';
 import {coldPoolSpec,readColdPrice,coldMayPaint,spotFromSlot0,GET_SLOT0,COLD_CHART_MESSAGE} from '/qx-cold-price.mjs';
-import {renderMarketHolders,holderSource} from '/qx-terminal-holders.mjs';
-import {renderChartHistory,renderTapeHistory,tapeHistoryState,refreshHistoryPresentation} from '/qx-terminal-history.mjs';
+import {holderSource} from '/qx-terminal-holders.mjs';
+import {renderMarketHolders} from '/qx-holder-xray.mjs';
+import {renderChartHistory,renderTapeHistory,tapeHistoryState,refreshHistoryPresentation,retainHistoryFreshness,tradeHistoryState,chartHistoryState} from '/qx-terminal-history.mjs';
 import {createOnchainEvmFallback,renderOnchainHolderSample} from '/qx-terminal-onchain.mjs';
 import { parseTerminalHash, applyTradePrefill, readTokenBalance, openTerminalView, applyTokenQuery } from '/qx-tg-prefill.mjs';
 import {curveStatCells,curveSyncLine} from '/qx-curve-market.mjs';
@@ -74,6 +84,7 @@ const state = { chain: store('chain') || 'all', feed: store('feed') || 'recent',
 if (!TFS.some(([t]) => t === state.tf)) state.tf = 60;
 let memoryStorage;try{memoryStorage=localStorage;}catch{}
 let workspaceMemory=createWorkspaceMemory({storage:memoryStorage});
+const quickForChain=chain=>quickAmounts(walletTradingStorage(memoryStorage,()=>String(chain)),String(chain));
 const watchSubject=raw=>followSubject({kind:'board',board:{kind:raw.kind==='launch'||raw.controller?'launch':'token',chainId:raw.chainId,controller:raw.controller,address:raw.token||raw.address},label:raw.symbol||raw.name||''});
 function watchingAsset(raw){if(!communityFollowing.persistent())return workspaceMemory.has(raw);try{return communityFollowing.has(watchSubject(raw));}catch{return workspaceMemory.has(raw);}}
 function syncedWatchRows(){
@@ -83,9 +94,10 @@ function syncedWatchRows(){
  for(const row of snapshot.watched)try{watchSubject(row);}catch{rows.push(row);}
  return rows;
 }
-function rehydrateWatches(){workspaceMemory=createWorkspaceMemory({storage:memoryStorage});try{state.watch=new Set(JSON.parse(store('watch')||'[]'));}catch{state.watch=new Set();}if(paneReady){renderHead();renderFeed();}}
+function rehydrateWatches(){workspaceMemory=createWorkspaceMemory({storage:memoryStorage});try{state.watch=new Set(JSON.parse(store('watch')||'[]'));}catch{state.watch=new Set();}if(paneReady){if(state.data)renderHead();renderFeed();}}
 addEventListener('qhooks:watch-migrated',rehydrateWatches);
-addEventListener('qhooks:community-following',()=>{if(paneReady){renderHead();renderFeed();}});
+addEventListener('storage',event=>{if(event.key==='qhooks:terminal:workspace:v1'||event.key==='qhooks:terminal:watch')rehydrateWatches();});
+addEventListener('qhooks:community-following',()=>{if(paneReady){if(state.data)renderHead();renderFeed();}});
 let marketWorkspace=null,positionsPanel=null,conversationView=null,conversationKey=null,renderedWorkspaceKey=null,renderedWorkspacePhone=null,selectedProof=null;
 
 // ---- Formatting ----
@@ -96,6 +108,9 @@ function price(p) {
   // the site's one price format (qx-price.mjs): subscript zero count only from 5 leading zeros, e.g. 0.0₅1234
   return priceDigits(p) ?? '—';
 }
+// Chart labels also compress the user's four-zero example; site/ticket formatting keeps its own default.
+// Reuse the shared formatter's rounding, then change only the displayed zero run (never a numeric value).
+function chartPrice(p) { return price(p).replace(/^0\.0{4}([1-9]\d*)$/, '0.0₄$1'); }
 function compact(n) {
   if (n == null || Number.isNaN(n)) return '—';
   const a = Math.abs(n);
@@ -113,9 +128,9 @@ const clock = s => { s = Math.max(0, s); const m = Math.floor(s / 60); return m 
 const short = a => a ? a.slice(0, 6) + '…' + a.slice(-4) : '—';
 // A token's avatar: its ticker's first letter on a colour drawn from its address, with the chain as a small badge.
 const hue = a => { let x = 0; for (const c of String(a || '').slice(2, 14)) x = (x * 31 + parseInt(c, 16)) % 360; return x; };
-// The official token shows its own logo over the letter (qx-official.mjs).
-const avLogo = (chainId, token, market = {}) => { const fallback=officialLogo(chainId,token),src=tokenAvatar(market).src||fallback;if(!src)return null;const img=h('img',{alt:'',class:'qxt-av-logo',decoding:'async',hidden:true});bindTokenAvatar(img,market,[fallback]);return img; };
-const avatar = (m, size = '') => h('span', { class: 'qxt-av ' + size, style: '--h:' + hue(m.token || m.controller), 'aria-hidden': 'true' }, h('span', {}, (m.symbol || '?').replace(/^\$/, '').slice(0, 1).toUpperCase()), avLogo(m.chainId, m.token, m), icon(m.chainId));
+// Use the feed's image fallback/decoding lifecycle for saved and listed markets.
+const avLogo = (chainId, token, market = {}) => { const sources=marketAvatarSources({...market,chainId,token},state.markets);if(!sources.length)return null;const img=h('img',{alt:'',class:'qxt-av-logo',decoding:'async',hidden:true});bindTokenAvatar(img,{},sources);return img; };
+const avatar = (m, size = '') => h('span', { class: 'qxt-av ' + size, style: '--h:' + hue(typeof m.token === 'string' ? m.token : m.controller), 'aria-hidden': 'true' }, h('span', {}, (m.symbol || '?').replace(/^\$/, '').slice(0, 1).toUpperCase()), avLogo(m.chainId, m.token, m), icon(m.chainId));
 const icon = id => h('img', { src: '/chain-symbol-icons/' + ICON[id] + '.svg', alt: CHAIN_NAME[id] || '', width: 14, height: 14, class: 'qxt-ci' });
 const keyOf = m => m.chainId + ':' + m.controller;
 // A row without a quote symbol falls back to its chain's quote (WHYPE on Elysium), never to a dollar default.
@@ -128,7 +143,7 @@ function selectedContext() {
  return Object.freeze({kind:state.sel.ext?'external':'launch',chainId:state.sel.chainId,token,controller:state.sel.controller||null,
   revision:selectionFlow?.current()?.intent?.revision??mseq,symbol:meta?.symbol||'',name:meta?.name||'',decimals:state.data?.token?.decimals??null,
   priceUsd:summary.priceUsd??(state.data?.ext||stable(meta?.quoteSymbol)?summary.price??null:null),priceQuote:summary.price??null,quoteSymbol:meta?.quoteSymbol||'',
-  liquidityUsd:state.data?.ext?summary.liquidity??null:null,change24:summary.change24??null,
+  liquidityUsd:state.data?.ext?summary.liquidity??null:null,change24:summary.change24??null,avatarSources:marketAvatarSources({...meta,...state.data?.token,chainId:state.sel.chainId,token,controller:state.sel.controller},state.markets),
   route:(c=>c?(c.venue?.name||'Launchpad')+(c.phase==='pool'?' pool':' curve'):null)(state.data?.ext?state.data.token?.curve:null)});
 }
 function renderWorkspace() {
@@ -181,9 +196,10 @@ const SAFETY_SKIP=new Set(['99901']); // /api/terminal/x/safety has no Elysium (
 async function repoproofTokenChecks(selected,signal){
  if(!REPOPROOF_TOKEN_CHAINS.has(String(selected.chainId)))return {unsupported:true,chainId:selected.chainId,address:selected.token};
  const none={unsupported:true,chainId:selected.chainId,address:selected.token};
- try{const r=await fetch('/api/repoproof/check?'+new URLSearchParams({kind:'token',chainId:String(selected.chainId),address:selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase()}),{cache:'no-store',signal});if(!r.ok)return none;
+ try{const r=await fetch('/api/qproof/subject?'+new URLSearchParams({kind:'token',chainId:String(selected.chainId),address:selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase()}),{cache:'no-store',signal});if(!r.ok)return none;
   const v=await r.json();if(v?.version!==1||v.subject?.kind!=='token'||String(v.subject?.chainId)!==String(selected.chainId)||(selected.chainId==='solana'?String(v.subject?.address):String(v.subject?.address).toLowerCase())!==(selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase()))return none;
   const rep=v.report&&['danger','caution','clear','unknown'].includes(v.report.level)&&Array.isArray(v.report.checks)?v.report:null;
+  if(rep&&!v.stale&&v.state==='ready')discoveryEvidence().record(selected.chainId,selected.token,'qproof',{at:evidenceTime(v.checkedAt||rep.completedAt),source:'QProof subject report',level:rep.level});
   return {...(rep||{}),level:rep?.level??null,verdict:rep?(rep.level==='clear'?'ok':rep.level):undefined,unavailable:!rep,state:v.state,retryAt:v.retryAt??null,source:'QProof via QHooks',checkedAt:v.checkedAt||rep?.completedAt||null,chainId:String(selected.chainId),address:selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase()};
  }catch(e){if(signal?.aborted)throw e;return none;}
 }
@@ -218,7 +234,7 @@ async function autoRepoProof(kind,chainId,address,signal){
  try{seen=JSON.parse(sessionStorage.getItem(AUTO_KEY)||'[]');}catch{}
  if(seen.includes(key))return false;
  try{sessionStorage.setItem(AUTO_KEY,JSON.stringify([...seen,key].slice(-40)));}catch{}
- try{const r=await fetch('/api/repoproof/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,chainId:String(chainId),address:(String(chainId)==='solana'?String(address):String(address).toLowerCase())}),signal});return r.ok;}
+ try{const r=await fetch('/api/qproof/subject',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,chainId:String(chainId),address:(String(chainId)==='solana'?String(address):String(address).toLowerCase())}),signal});return r.ok;}
  catch(e){if(signal?.aborted)throw e;return false;}
 }
 async function tokenRepoProof(selected,signal){
@@ -242,7 +258,7 @@ async function refreshSelectedChecks() {
    else if(response.status>=500&&rpChain){checks=await tokenRepoProof(selected,signal);if(checks?.unsupported)throw Error('Checks paused. Refresh data to retry.');}
    else{if(!response.ok)throw Error('Checks paused. Refresh data to retry.');const scan=await response.json();checks=rpChain?mergeRisk(scan,await tokenRepoProof(selected,signal)):scan;forTicket=ticketRisk(checks,scan);}
   }
-  if(!run.active())return;if(!checks)throw Error('Check provider returned no coverage.');if(selected.kind==='external'){const t=forTicket||ticketRisk(checks);state.data.safety=t;ticket.setSafety(t,run.intent);}
+  if(!run.active())return;if(selected.kind==='launch'&&checks&&!checks.stale&&!checks.unavailable)discoveryEvidence().record(selected.chainId,selected.token,'qproof',{at:evidenceTime(checks.checkedAt),source:'QProof launch report',level:checks.level});if(!checks)throw Error('Check provider returned no coverage.');if(selected.kind==='external'){const t=forTicket||ticketRisk(checks);state.data.safety=t;ticket.setSafety(t,run.intent);}
   marketWorkspace.receiveRisk(selected,checks);renderHead();
  }catch(error){if(run.active()){marketWorkspace.failRisk(selected,error);if(state.data)renderHead();}}
 }
@@ -260,7 +276,7 @@ const hub = getWalletHub(window);
 function setConnection(address, chainId) {
   state.me = address ? address.toLowerCase() : null;
   $('qt-connection').textContent = state.me ? (CHAIN_NAME[chainId] || 'EVM') + ' · ' + state.me : '';
-  $('qxt-connect').textContent = state.me ? short(state.me) : 'Connect wallet';
+  $('qxt-connect').textContent = state.me ? short(state.me) : 'Connect';
   $('qxt-connect').classList.toggle('on', !!state.me);
   renderPane(); renderLaunchActions(); loadPositions(); myPosition=null; void marketPosition?.refresh({force:true}); if (state.data) renderChart();
 }
@@ -347,7 +363,7 @@ function xRows() {
 function xItem(x,i) {
   const sel = state.sel?.ext && state.sel.chainId === x.chainId && state.sel.ext === x.address;
   const row = h('button', { type: 'button', class: 'qxt-row', onclick: () => selectExternal(x.chainId, x.address) },
-    avatar({ token: x.address, symbol: x.symbol, chainId: x.chainId }),
+    avatar({ ...x, token: x.address }),
     h('span', { class: 'qxt-r1' }, h('b', {}, x.symbol || '?'), h('span', { class: 'qxt-muted qxt-trunc' }, x.name || ''), rowMark(x.chainId, x.address, x.name, x.symbol)),
     h('span',{class:'qxt-r3 qxt-rail-contract'},h('b',{},CHAIN_NAME[x.chainId]||x.chainId),h('code',{title:x.address},short(x.address))),
     h('span', { class: 'qxt-r2' }, h('span', {}, h('i', {}, 'Liq '), x.liquidityUsd != null ? '$' + compact(x.liquidityUsd) : '—'), h('span', {}, h('i', {}, 'V '), x.volume24Usd != null ? '$' + compact(x.volume24Usd) : '—'),
@@ -356,7 +372,7 @@ function xItem(x,i) {
 }
 function renderWorkspaceRail() {
  const selected=selectedContext(),asset=workspaceAsset(selected),current=$('qxt-rail-selected');current.hidden=!asset;
- if(asset)current.replaceChildren(h('span',{class:'qxt-rail-kicker'},'In view'),h('div',{class:'qxt-current-market'},h('b',{},asset.symbol||'Reading token…'),h('span',{},CHAIN_NAME[asset.chainId]||asset.chainId)),h('code',{title:asset.token||asset.controller},asset.token||asset.controller));
+ if(asset)current.replaceChildren(h('span',{class:'qxt-rail-kicker'},'In view'),h('div',{class:'qxt-current-market'},avatar(asset),h('b',{},asset.symbol||'Reading token…'),h('span',{},CHAIN_NAME[asset.chainId]||asset.chainId)),h('code',{title:asset.token||asset.controller},asset.token||asset.controller));
  $('qxt-rail-note').textContent=communityFollowing.persistent()?'Watchlist syncs with your wallet. Recent markets stay in this browser.':workspaceMemory.snapshot().persistent?'Sign in to sync your watchlist. Recent markets stay in this browser.':'Kept in this tab. Browser storage is unavailable.';
  const launchMode=['new','opening','trending'].includes(state.feed);$('qxt-launch-view').hidden=!launchMode;if(launchMode)$('qxt-launch-sort').value=state.feed;
 }
@@ -366,7 +382,7 @@ function memoryRow(row,i) {
  const label=CHAIN_NAME[row.chainId]||row.chainId,address=row.token||row.controller;
  const value=row.priceUsd!==null?'$'+price(row.priceUsd):row.priceQuote!==null?price(row.priceQuote)+' '+row.quoteSymbol:'Refreshing price…';
  return h('li',{class:'qxt-memory-row'+(active?' sel':'')+(i===state.cursor?' cur':''),'data-key':row.key},h('button',{type:'button',class:'qxt-row',ariaLabel:'Open '+(row.symbol||row.name||address)+' on '+label+' '+address,onclick:open},
-  avatar({token:address,symbol:row.symbol,chainId:row.chainId}),h('span',{class:'qxt-r1'},h('b',{},row.symbol||short(address)),h('span',{class:'qxt-rail-chain'},label),rowMark(row.chainId,row.token,row.name,row.symbol),active?h('span',{class:'qxt-current-tag'},'Current'):null),
+  avatar({...row,token:address}),h('span',{class:'qxt-r1'},h('b',{},row.symbol||short(address)),h('span',{class:'qxt-rail-chain'},label),rowMark(row.chainId,row.token,row.name,row.symbol),active?h('span',{class:'qxt-current-tag'},'Current'):null),
   h('span',{class:'qxt-r2'},h('span',{},value),row.change24!==null?h('span',{class:row.change24>0?'up':row.change24<0?'down':''},pct(row.change24)):null),
   h('span',{class:'qxt-r3 qxt-rail-contract'},h('code',{title:address},short(address)),h('span',{},row.kind==='launch'?'QHooks launch':'Outside token')),h('span',{class:'qxt-memory-time'},(row.origin==='listed'?'Listed launch':row.openedAt?'Viewed '+age(row.openedAt/1000)+' ago':'Watched market')+' · '+freshnessState(row,Date.now(),{fresh:'Live · '}).label)));
 }
@@ -384,6 +400,7 @@ function searchNotice(){
  return h('li',{class:'qxt-empty'},'No matching tokens on the selected chain. Try the contract address.');
 }
 function renderFeed() {
+ document.dispatchEvent(new Event('qxt:library'));
  renderWorkspaceRail();
  if(state.feed==='wallets')return renderWallets();
  const list=$('qxt-list'),xs=xRows(),q=$('qxt-search').value.trim();
@@ -406,7 +423,7 @@ function renderFeed() {
   return h('li',{class:'qxt-has-qb '+(sel?'sel ':'')+(i===state.cursor?'cur':''),'data-key':keyOf(m)},h('button',{type:'button',class:'qxt-row',onclick:()=>select(m.chainId,m.controller)},avatar(m),
    h('span',{class:'qxt-r1'},h('b',{},m.symbol),h('span',{class:'qxt-rail-chain'},CHAIN_NAME[m.chainId]||m.chainId),h('span',{class:'qxt-age'},age(m.launchedAt))),
    s?h('span',{class:'qxt-r2'},h('span',{},h('i',{},'MC '),amt(s.mcapUsd,s.mcap)),h('span',{},h('i',{},'V '),amt(s.volume24Usd,s.volume24)),h('span',{class:s.change24>0?'up':s.change24<0?'down':''},pct(s.change24))):h('span',{class:'qxt-r2 qxt-quiet'},'Refreshing…'),
-   h('span',{class:'qxt-r3 qxt-rail-contract'},h('code',{title:m.token||m.controller},short(m.token||m.controller)),...badges(m))),h('button',{type:'button',class:'qxt-qb',title:'Buy '+m.symbol+' with '+state.quick[u]+' '+QUNIT[u],onclick:()=>quickBuy(m)},'⚡ '+state.quick[u]));
+   h('span',{class:'qxt-r3 qxt-rail-contract'},h('code',{title:m.token||m.controller},short(m.token||m.controller)),...badges(m))),h('button',{type:'button',class:'qxt-qb',title:'Buy '+m.symbol+' with '+quickForChain(m.chainId)[u]+' '+QUNIT[u],onclick:()=>quickBuy(m)},String(quickForChain(m.chainId)[u])));
  }),...xPart);
 }
 let feedRevision=0;
@@ -422,10 +439,19 @@ async function loadFeed() {
 }
 
 // ---- Chart ----
-let chart, candles, volume,chartTools,entryLine;
-let chartOhlc,chartReadoutBars=new Map(),chartLatest=null,chartHoverTime=null,chartReadoutPrice=price,chartReadoutVolume=compact;
+let chart, candles, volume,chartTools,entryLine,entryLabel,chartEntryPrice=null;
+let chartOhlc,chartReadoutBars=new Map(),chartLatest=null,chartHoverTime=null,chartReadoutPrice=chartPrice,chartReadoutVolume=compact;
 const providerChart=createProviderChartRenderer({nativeElement:$('qxt-chart')}),chartUnits=document.querySelector('[aria-label="Chart units"]');
 function css(name) { return getComputedStyle(document.body).getPropertyValue(name).trim(); }
+// Invalid scale coordinates are empty ticks, never a dollar-prefixed placeholder.
+function chartAxisPrice(value,unit='USD') { return Number.isFinite(value)&&value>0?(unit==='USD'?'$':'')+chartPrice(value):''; }
+function placeEntryLabel() {
+  if(!entryLabel)return;
+  const y=chartEntryPrice!=null?candles.priceToCoordinate(chartEntryPrice):null;
+  const height=$('qxt-chart').clientHeight-chart.timeScale().height();
+  entryLabel.hidden=!Number.isFinite(y)||y<10||y>height-10;
+  if(!entryLabel.hidden)entryLabel.style.top=y+'px';
+}
 function renderChartReadout() {
   if(!chartOhlc)return;
   const bar=chartReadoutBars.get(chartHoverTime)||chartLatest;
@@ -444,21 +470,21 @@ function ensureChart() {
     grid: { vertLines: { color: line }, horzLines: { color: line } }, rightPriceScale: { borderColor: line, scaleMargins: { top: 0.12, bottom: 0.24 } },
     timeScale: { borderColor: line, timeVisible: true, secondsVisible: false, rightOffset: 6 }, crosshair: { mode: CrosshairMode.Normal },
     trackingMode: { exitMode: TrackingModeExitMode.OnTouchEnd } });
-  candles = chart.addCandlestickSeries({ ...ownCandleOptions(up,down), priceFormat: { type: 'custom', formatter: price, minMove: 1e-12 } });
+  candles = chart.addCandlestickSeries({ ...ownCandleOptions(up,down), priceFormat: { type: 'custom', formatter: chartAxisPrice, minMove: 1e-12 } });
   volume = chart.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
   chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
   chart.timeScale().subscribeVisibleTimeRangeChange(scheduleLayerRead);
-  chartOhlc=h('div',{class:'qxt-chart-ohlc',ariaLabel:'Candle values',hidden:true});el.append(chartOhlc);
+  chartOhlc=h('div',{class:'qxt-chart-ohlc',ariaLabel:'Candle values',hidden:true});entryLabel=h('span',{class:'qxt-entry-label',hidden:true});el.append(chartOhlc,entryLabel);
   chart.subscribeCrosshairMove(param=>{
     const point=param.point,scale=chart.timeScale();
     chartHoverTime=point&&point.x>=0&&point.x<scale.width()&&point.y>=0&&point.y<el.clientHeight-scale.height()&&param.seriesData?.has(candles)?param.time:null;
-    renderChartReadout();
+    renderChartReadout();placeEntryLabel();
   });
-  chart.timeScale().subscribeSizeChange(renderChartReadout);
+  chart.timeScale().subscribeSizeChange(()=>{renderChartReadout();placeEntryLabel();});
   el.addEventListener('mouseleave',resetChartReadout);
   el.addEventListener('touchend',resetChartReadout,{passive:true});
   el.addEventListener('touchcancel',resetChartReadout,{passive:true});
-  el.addEventListener('pointerup',()=>requestAnimationFrame(()=>chartLayers?.place()));
+  el.addEventListener('pointerup',()=>requestAnimationFrame(()=>{chartLayers?.place();placeEntryLabel();}));
   chartTools=mountChartTools({h,chart,candles,volume,element:el,storage:memoryStorage});
 }
 // Day/night (2026-11-10): the chart reads its colours from the theme's CSS variables; re-read them when the theme flips,
@@ -474,8 +500,10 @@ let lastChartKey = '';
 function marketDisplay() {
  const raw=state.data;if(!raw)return null;
  raw.candles=mergeSwapCandles(swapCandles(raw.trades?.filter(t=>t.via!=='eth')||[],raw.tf),raw.candles||[]);
- const view=nativeMarketView(raw);
- return view?{...raw,...view}:raw;
+ const summary=raw.summary&&assetPriceFields(raw.summary,{chainId:raw.meta?.chainId,token:raw.meta?.token,at:raw.priceAt??raw.observedAt??raw.token?.observedAt,now:Date.now()});
+ const current=summary?{...raw,summary}:raw;
+ const view=nativeMarketView(current);
+ return view?{...current,...view}:current;
 }
 function nativeEmpty(d,part) {
  if(d.ext)return d.tradeCoverage?.scope==='received_confirmed_swaps'?'No indexed trades received for this pool.':'No trades returned for this pool.';
@@ -492,28 +520,28 @@ function renderChart() {
   const ownChart=ownChartView(d);
   for(const b of $('qxt-tf').querySelectorAll('button')){b.disabled=!!d.ext&&Number(b.dataset.tf)<60;if(b.disabled)b.title='Outside-token candles start at one minute';}
   const embedSelection=d.ext?{chainId:d.meta.chainId,token:d.meta.token,pool:d.token?.pools?.[0]?.address,quote:d.token?.pools?.[0]?.quoteAddress,asset:d.meta.symbol,tf:d.tf}:null;
-  // Outside tokens: when our candles are missing or behind, show the live provider chart instead of a stale one.
-  const candlesBehind=!!d.ext&&!!d.candles?.length&&historyState('candles',d.historyFreshness?.candles).stale;
+  // Keep retained candles with their Refreshing/last-bar notice; use a provider only when no bars are available.
   // Our candles first: no provider embed while the history read is still running (2026-11-10, chart switch).
   // QHooks launches whose index is catching up: the live provider chart until it is within 300 blocks again.
   const ownLive=!d.ext&&d.providerLive?ownProviderSelection(d):null;
   if(ownLive&&providerChart.render(directProviderChart(ownLive,Date.now(),'refreshing'),ownLive)){chartUnits.hidden=true;const status=$('qxt-candles-freshness');if(status)status.hidden=true;return;}
-  if((!d.candles?.length||candlesBehind)&&d.marketCoverage?.candles!=='loading'&&providerChart.render(d.chartSurface||directProviderChart(embedSelection),embedSelection)){chartUnits.hidden=true;const status=$('qxt-candles-freshness');if(status)status.hidden=true;return;}
+  if(!d.candles?.length&&d.marketCoverage?.candles!=='loading'&&providerChart.render(d.chartSurface||directProviderChart(embedSelection),embedSelection)){chartUnits.hidden=true;const status=$('qxt-candles-freshness');if(status)status.hidden=true;return;}
   providerChart.clear();chartUnits.hidden=false;
   renderHistoryStatus('candles',d);
   ensureChart();
-  const history=renderChartHistory({element:$('qxt-chart'),message:$('qxt-chart-empty'),data:{...d,candles:ownChart.bars},formatPrice:value=>(ownChart.unit&&ownChart.unit!=='USD'?'':'$')+price(value)+(ownChart.unit&&ownChart.unit!=='USD'?' '+ownChart.unit:'')});
+  const history=renderChartHistory({element:$('qxt-chart'),message:$('qxt-chart-empty'),data:{...d,candles:ownChart.bars},formatPrice:value=>(ownChart.unit&&ownChart.unit!=='USD'?'':'$')+chartPrice(value)+(ownChart.unit&&ownChart.unit!=='USD'?' '+ownChart.unit:'')});
   const capMissing=state.unit==='mcap'&&!(d.summary?.supply>0),bars=shapeCandles(capMissing?[]:history.bars);
   const k = state.unit === 'mcap' ? d.summary?.supply || 1 : 1, up = css('--qxt-up-a'), down = css('--qxt-down-a');
   $('qxt-chart-empty').hidden = bars.length > 0;
   if(!history.stale)$('qxt-chart-empty').textContent=capMissing?'Market cap chart needs indexed supply. Price chart and activity remain available.':d.marketCoverage?.candles==='loading'?'Refreshing':'No trades yet';
   candles.setData(bars.map(c => ({ time: c.time, open: c.open * k, high: c.high * k, low: c.low * k, close: c.close * k })));
-  candles.applyOptions({priceFormat:{type:'custom',formatter:d.nativeQuote?value=>(ownChart.unit==='USD'?'$':'')+price(value):price,minMove:1e-12}});
+  const priceUnit=ownChart.unit||(d.ext||stable(d.meta.quoteSymbol)?'USD':d.meta.quoteSymbol||'');
+  candles.applyOptions({priceFormat:{type:'custom',formatter:value=>chartAxisPrice(value,priceUnit),minMove:1e-12}});
   $('qxt-chart').title=d.nativeQuote?.usd?ownChart.unit+' chart uses '+d.nativeQuote.symbol+'/USD observed '+new Date(d.nativeQuote.observedAt).toISOString()+'. Volume is in '+d.nativeQuote.symbol+'.':'';
   volume.setData(bars.map(c => ({ time: c.time, value: c.volume, color: c.close >= c.open ? up : down })));
   const key = keyOf(state.sel) + d.tf + state.unit;
   const readoutUnit=ownChart.unit||(d.ext||stable(d.meta.quoteSymbol)?'USD':d.meta.quoteSymbol||''),volumeUnit=d.ext?'USD':d.nativeQuote?.symbol||d.meta.quoteSymbol||'';
-  chartReadoutPrice=value=>(readoutUnit==='USD'?'$':'')+price(value)+(readoutUnit&&readoutUnit!=='USD'?' '+readoutUnit:'');
+  chartReadoutPrice=value=>(readoutUnit==='USD'?'$':'')+chartPrice(value)+(readoutUnit&&readoutUnit!=='USD'?' '+readoutUnit:'');
   chartReadoutVolume=value=>compact(value)+(volumeUnit?' '+volumeUnit:'');
   chartReadoutBars=new Map(bars.map(c=>[c.time,{...c,open:c.open*k,high:c.high*k,low:c.low*k,close:c.close*k}]));
   chartLatest=chartReadoutBars.get(bars.at(-1)?.time)||null;
@@ -522,9 +550,15 @@ function renderChart() {
   chartTools.update({key:d.meta.chainId+':'+d.meta.token+':'+state.unit,label:(d.meta.symbol||'Token')+' · '+(d.meta.chainId==='solana'?'Solana':CHAIN_NAME[d.meta.chainId]||d.meta.chainId)+' · '+(TFS.find(([tf])=>tf===d.tf)?.[1]||d.tf+'s')+' · '+(state.unit==='mcap'?'MCap':'Price')+(ownChart.unit?' '+ownChart.unit:''),data:bars.map(c=>({...c,open:c.open*k,high:c.high*k,low:c.low*k,close:c.close*k,volumeKind:'quote',quoteVolume:c.volume}))});
   const personal=positionChart(myPosition,bars,d.tf,k);
   const overlay=chartLayers.render({selection:selectedContext(),data:d,position:myPosition,chart,series:candles,bars,tf:d.tf,k,tracked:state.tracked});
-  candles.setMarkers(overlay.markers);
+  // Receipt-backed personal trades stay on the candles; other activity keeps its existing axis controls.
+  candles.setMarkers(overlay.youEnabled ? personal.markers.map(marker=>({...marker,text:$('qxt-chart').clientWidth<600?'You':marker.text==='Buy'?'You buy':'You sell'})).sort((a,b)=>a.time-b.time) : []);
   if(entryLine){candles.removePriceLine(entryLine);entryLine=null;}
-  if(overlay.youEnabled&&personal.entry!=null&&(d.ext||ownChart.unit==='USD'||stable(d.meta.quoteSymbol)))entryLine=candles.createPriceLine({price:personal.entry,color:'#38b87c',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'Avg entry $'+price(myPosition.averageEntryUsd)});
+  chartEntryPrice=null;entryLabel.hidden=true;
+  if(overlay.youEnabled&&personal.entry!=null&&(d.ext||ownChart.unit==='USD'||stable(d.meta.quoteSymbol))){
+    entryLine=candles.createPriceLine({price:personal.entry,color:'#38b87c',lineWidth:1,lineStyle:2,axisLabelVisible:false,title:''});
+    chartEntryPrice=personal.entry;entryLabel.textContent='Avg entry $'+chartPrice(myPosition.averageEntryUsd);
+    placeEntryLabel();requestAnimationFrame(placeEntryLabel);
+  }
   // Semantic render receipt used by the offline browser acceptance runner.
   $('qxt-chart').dataset.candleCount=String(bars.length);
   $('qxt-chart').dataset.buyMarkers=String(personal.markers.filter(m=>m.text==='Buy').length);
@@ -537,7 +571,7 @@ function renderChart() {
 
 function scheduleLayerRead(){
   clearTimeout(layerReadTimer);layerReadTimer=setTimeout(()=>{
-    chartLayers?.place();const selection=selectedContext(),d=marketDisplay();if(!selection?.token||!d?.candles?.length)return;
+    chartLayers?.place();placeEntryLabel();const selection=selectedContext(),d=marketDisplay();if(!selection?.token||!d?.candles?.length)return;
     const range=chart?.timeScale().getVisibleRange(),first=range?.from??d.candles[0].time,last=range?.to??d.candles.at(-1).time;
     if(typeof first!=='number'||typeof last!=='number')return;
     const to=Math.ceil((last+d.tf)*1000),from=Math.max(0,Math.floor(first*1000),to-366*86400000);
@@ -597,8 +631,14 @@ export function tabTitle(symbol, {priceUsd = null, priceQuote = null, quoteSymbo
   const shown = priceUsd > 0 ? '$' + plainPrice(priceUsd) : !native && priceQuote > 0 ? plainPrice(priceQuote) + (quoteSymbol ? ' ' + quoteSymbol : '') : '';
   return sym + (shown ? ' ' + shown : '') + ' | QHooks Terminal';
 }
+let renderedPriceAge=null;
+function paintDiscoveryBadges(m){if(!m?.token)return;if(!document.querySelector('link[href="/qx-discovery-badges.css"]'))document.head.append(h('link',{rel:'stylesheet',href:'/qx-discovery-badges.css'}));let target=$('qxt-discovery-badges');if(!target){target=h('div',{id:'qxt-discovery-badges'});$('qxt-market-identity').after(target);}const next=discoveryBadges({chainId:m.chainId,token:{address:m.token},pool:m.poolId||derefPoolId(m)},{h});if(target.dataset.html!==next.outerHTML){target.dataset.html=next.outerHTML;target.replaceChildren(next);}}
+function derefPoolId(m){return m.key?.id||state.data?.poolId||state.data?.token?.poolId||null;}
+document.addEventListener('qxt:discovery-evidence',()=>{if(state.data)paintDiscoveryBadges(marketDisplay().meta);});
 function renderHead() {
   const d = marketDisplay(), m = d.meta, s = d.summary || {};
+  paintDiscoveryBadges(m);
+  renderedPriceAge=[s.priceAt,!!s.pricesRefreshing,s.priceUsd,s.price].join('|');
   $('qxt-symbol').textContent = m.symbol; $('qxt-symbol').title=m.symbol; $('qxt-name').textContent = m.name; $('qxt-name').title=m.name;
   syncOfficial(m);
   let solLaunch=$('qxt-sol-launch');if(!solLaunch){solLaunch=h('p',{id:'qxt-sol-launch',class:'qxt-launch-caps'});$('qxt-name').after(solLaunch);}const launchInfo=d.token?.qhooksLaunch;solLaunch.hidden=!launchInfo;solLaunch.textContent=launchInfo?'QHooks launch · '+(launchInfo.graduated?'Graduated · LP locked':(launchInfo.progressBps/100).toFixed(1)+'% to graduation · 85 SOL'):'';
@@ -607,7 +647,7 @@ function renderHead() {
   const av = $('qxt-av'); if (av) { av.hidden = false; av.style.setProperty('--h', hue(m.token || state.sel?.controller)); av.firstChild.textContent = (m.symbol || '?').replace(/^\$/, '').slice(0, 1).toUpperCase(); av.querySelector('.qxt-av-logo')?.remove(); const lg = avLogo(m.chainId ?? state.sel?.chainId, m.token, {...d.token,...m}); if (lg) av.firstChild.after(lg); }
   const copy = $('qxt-copy'); copy.hidden = false; copy.textContent = short(m.token); copy.title = 'Copy ' + m.token;
   $('qxt-share').hidden = false; $('qxt-share').textContent = 'Share';
-  const star=$('qxt-star');star.hidden=false;const watching=watchingAsset(selectedContext());star.textContent=watching?'★ Watching':'☆ Watch';star.setAttribute('aria-pressed',String(watching));star.setAttribute('aria-label',(watching?'Remove from':'Add to')+' watchlist: '+m.symbol+' on '+(CHAIN_NAME[m.chainId]||m.chainId));
+  const star=$('qxt-star');star.hidden=false;const watching=watchingAsset(selectedContext());star.textContent=watching?'Watching':'Watch';star.setAttribute('aria-pressed',String(watching));star.setAttribute('aria-label',(watching?'Remove from':'Add to')+' watchlist: '+m.symbol+' on '+(CHAIN_NAME[m.chainId]||m.chainId));
   const q = m.quoteSymbol, cell = (k, v, cls) => [h('div', {}, h('dt', {}, k), h('dd', { class: cls || '' }, v))];
   if (d.ext) {
     headTrust();
@@ -620,7 +660,7 @@ function renderHead() {
       ...curveStatCells(h,cv),
       ...cell('MCap', money(cs.mcap, 'USD')), ...cell(cv?.phase==='curve'?'In the curve':'Liquidity', money(cs.liquidity, 'USD')), ...cell('Vol 24h', money(cs.volume24, 'USD')),
       ...cell('Buys / sells · 24h', Number.isFinite(cs.buys24)&&Number.isFinite(cs.sells24)?cs.buys24+' / '+cs.sells24:'—'), ...cell('Checks', verdict[0], verdict[1]));
-    $('qxt-sync').textContent = cv ? curveSyncLine(cv) : 'Chart pool '+short(d.token?.pools?.[0]?.address)+' · execution via '+(m.chainId==='solana'?'Jupiter':hasDirectRoute(m.chainId)?'the pool · QHooks router':'0x');
+    $('qxt-sync').textContent = s.pricesRefreshing?'Refreshing':cv ? curveSyncLine(cv) : 'Chart pool '+short(d.token?.pools?.[0]?.address)+' · execution via '+(m.chainId==='solana'?'Jupiter':hasDirectRoute(m.chainId)?'the pool · QHooks router':'0x');
     return;
   }
   headTrust();
@@ -630,7 +670,7 @@ function renderHead() {
     ...cell('MCap', usdFirst(s.mcapUsd, s.mcap, q)), ...cell('Vol 24h', usdFirst(s.volume24Usd, s.volume24, q)), ...cell('Buys / sells · 24h', Number.isFinite(s.buys24)&&Number.isFinite(s.sells24)?s.buys24+' / '+s.sells24:'—'),
     ...cell('Holder wallets', s.holders ?? '—'), ...cell('Top 10', pct(s.top10, false)), ...cell('Burned', s.supply!=null&&s.burned!=null&&s.supply+s.burned>0 ? pct(s.burned / (s.supply + s.burned), false) : '—'),
     ...cell('Team locked', s.supply!=null&&s.burned!=null&&s.locked!=null&&s.supply+s.burned>0 ? pct(s.locked / (s.supply + s.burned), false) : '—'));
-  $('qxt-sync').textContent = d.providerLive?'Refreshing · live price by DexScreener':'';
+  $('qxt-sync').textContent = s.pricesRefreshing?'Refreshing':d.providerLive?'Refreshing · live price by DexScreener':'';
 }
 
 // ---- Bottom panes ----
@@ -656,30 +696,36 @@ const tapeControls=mountTapeControls({h,container:$('qxt-pane'),onChange:()=>ren
 paneReady=true;
 const holderPanel=createExternalHolderPanel({h,who,link,short,pct});
 const onchainEvm=createOnchainEvmFallback();
+const tokenAlerts=mountTokenAlerts({h,after:$('qxt-ticket')});
+let tokenAlertOwner=hub.snapshot().current?.owner||null;hub.subscribe(s=>{const owner=s.current?.owner||null;if(owner!==tokenAlertOwner){tokenAlertOwner=owner;tokenAlerts.invalidateAuth();}});onSolChange(()=>tokenAlerts.invalidateAuth());
 const priceAlerts=mountPriceAlerts({h,after:$('qxt-ticket'),storage:memoryStorage,onError:e=>{$('qxt-sync').textContent=e.message;},onReached:(target,alert)=>toast((alert.state==='target'?'Target':'Stop')+' reached for '+(target.symbol||'this token')+'.', ['Review sell',async()=>{if(!state.sel?.ext||state.sel.chainId!==target.chainId||state.sel.ext!==target.token)await selectExternal(target.chainId,target.token);const owner=target.chainId==='solana'?solAddress():state.me;if(owner)await ticket.prefillSell({percent:100,owner,chainId:target.chainId,token:target.token});else $('qxt-sync').textContent='Connect the holding wallet to prepare a sell.';}])});
 
 function renderHistoryStatus(kind,d){
  const id='qxt-'+kind+'-freshness';let node=$(id);
  if(!node){node=h('p',{id,class:'qxt-panel-freshness',role:'status'});if(kind==='candles')$('qxt-chart').prepend(node);else $('qxt-pane').before(node);}
- node.hidden=!d?.ext||(kind==='trades'&&!['trades','traders'].includes(state.pane));
+ node.hidden=!d||(kind==='trades'&&(!d.ext||!['trades','traders'].includes(state.pane)));
  if(node.hidden)return;
  // Providers are credited at the bottom of the page; near the chart only say when it is behind.
- const details=d.historyFreshness?.[kind],status=historyState(kind,details);
- if(kind==='candles'){node.hidden=!status.stale;node.textContent=status.stale?'Chart refreshing · '+status.label:'';}else node.textContent=status.label;
+ const details=d.historyFreshness?.[kind],status=kind==='trades'?tradeHistoryState(d,{rows:tradeTape.receivedRows()}):historyState(kind,details);
+ if(kind==='candles'){const view=chartHistoryState(d);node.hidden=!view.stale;node.textContent=view.message;}else node.textContent=status.label;
  node.dataset.stale=String(status.stale);
 }
 
 function renderPane() {
   if(!paneReady)return; // a remembered wallet's subscribe callback can run before the pane controls below exist
   const pane = $('qxt-pane'), d = marketDisplay();pane.dataset.mode=state.pane;
+  if(state.pane==='news'){$('qxt-trade-filters').hidden=true;tapeControls.element.hidden=true;return renderTokenNews(pane,d?.meta);}
+  hideTokenNews();
+  if(d){const quoteSymbol=d.meta.quoteSymbol;tradeTape.ingest(d.meta.chainId+':'+d.meta.token+':'+(d.token?.pools?.[0]?.address||d.meta.controller||''),(d.trades||[]).map(t=>({...t,valueUsd:t.valueUsd??(d.ext||stable(quoteSymbol)&&t.pool!==2?t.quote:null)})));}
   renderHistoryStatus('trades',d);
   $('qxt-trade-filters').hidden = state.pane !== 'trades';tapeControls.element.hidden=state.pane!=='trades';
   if (state.pane === 'positions') return renderPositions();
   if (!d) { pane.replaceChildren(h('p', { class: 'qxt-empty' }, state.loading?'Loading this token’s trades…':state.loadError||'Choose a token to see its trades. Holder coverage is available for QHooks launches.')); return; }
   const m = d.meta, q = m.quoteSymbol;
   const traderTab=$('qxt-data-tabs').querySelector('[data-pane="traders"]');if(traderTab)traderTab.textContent=d.ext?'Recent traders':'Top traders';
+  tokenAlerts.update(selectedContext());
   priceAlerts.update({selection:selectedContext(),price:d.summary?.price,at:Number.isFinite(d.token?.observedAt)?d.token.observedAt:d.synced?.at||null});
-  tradeTape.ingest(m.chainId+':'+m.token+':'+(d.token?.pools?.[0]?.address||m.controller||''),d.trades.map(t=>({...t,valueUsd:t.valueUsd??(d.ext||stable(q)&&t.pool!==2?t.quote:null)})));tapeControls.status(tradeTape.status());
+  tapeControls.status(tradeTape.status());
   tapeControls.element.dataset.historyStale=String(tapeHistoryState(tradeTape.receivedRows()).collapsed);
   const creatorFilter=$('qxt-trade-filters').querySelector('[data-filter="creator"]');if(creatorFilter){creatorFilter.disabled=!m.owner;creatorFilter.title=m.owner?'Trades by the token creator':'Creator identity is not indexed for this token';}
   if(state.filter==='creator'&&!m.owner){state.filter='all';pressGroup($('qxt-trade-filters'),'filter','all');}
@@ -792,7 +838,7 @@ function renderWallets() {
   if (!addrs.length) items.push(h('li', { class: 'qxt-empty' }, 'Track wallets from any trades, holders or top-traders list (+ Track), or paste an address above. Their trades across every chain show here, with alerts.'));
   else if (!state.activity.length) items.push(h('li', { class: 'qxt-empty' }, 'No trades by tracked wallets in listed launches yet.'));
   for (const t of state.activity.slice(0, 40)) items.push(h('li', { class: 'qxt-act' }, h('button', { type: 'button', class: 'qxt-row', onclick: () => select(t.chainId, t.controller) },
-    h('span', { class: 'qxt-r1' }, icon(t.chainId), h('b', {}, state.tracked[t.trader] || short(t.trader)), h('span', { class: t.buy ? 'up' : 'down' }, t.buy ? 'bought' : 'sold'), h('b', {}, t.symbol), h('span', { class: 'qxt-age' }, age(t.ts))),
+    avatar(t),h('span', { class: 'qxt-r1' }, h('b', {}, state.tracked[t.trader] || short(t.trader)), h('span', { class: t.buy ? 'up' : 'down' }, t.buy ? 'bought' : 'sold'), h('b', {}, t.symbol), h('span', { class: 'qxt-age' }, age(t.ts))),
     h('span', { class: 'qxt-r2' }, h('span', {}, compact(t.token) + ' ' + t.symbol), h('span', {}, money(t.quote, t.quoteSymbol)), h('span', {}, h('i', {}, '@ '), price(t.price)))),
     t.buy ? h('button', { type: 'button', class: 'qxt-qb', title: 'Buy your quick-buy amount of ' + t.symbol, onclick: () => copyTrade(t) }, 'Copy') : null));
   list.replaceChildren(...items);
@@ -807,9 +853,9 @@ const canonicalHash=()=>state.sel?(state.sel.ext?'#t='+state.sel.chainId+':'+sta
 function restoreSelectionURL(){history.replaceState(null,'',location.pathname+location.search+canonicalHash());}
 function clearMarketView(message='Choose a token') {
   providerChart.clear();chartUnits.hidden=false;
-  chartReadoutBars.clear();chartLatest=null;resetChartReadout();
+  chartReadoutBars.clear();chartLatest=null;resetChartReadout();chartEntryPrice=null;if(entryLabel)entryLabel.hidden=true;
   for(const kind of ['candles','trades'])if($('qxt-'+kind+'-freshness'))$('qxt-'+kind+'-freshness').hidden=true;
-  chartTools?.clear();priceAlerts.clear();holderPanel.clear();tradeTape.ingest(null,[]);tapeControls.status(tradeTape.status());
+  chartTools?.clear();priceAlerts.clear();tokenAlerts.clear();holderPanel.clear();tradeTape.ingest(null,[]);tapeControls.status(tradeTape.status());
   tapeControls.element.dataset.historyStale='false';$('qxt-chart').dataset.historyStale='false';$('qxt-chart-empty').dataset.stale='false';
   $('qxt-symbol').textContent=message;$('qxt-name').textContent=state.sel?(CHAIN_NAME[state.sel.chainId]||state.sel.chainId)+' · '+short(state.sel.ext||state.sel.controller):'';
   document.title='Terminal | QHooks';$('qxt-stats').replaceChildren();
@@ -884,11 +930,11 @@ function applyPoolPrice(data,p,usd){
 // Synchronous: a pool price this page already read (the cold read, or an earlier poll) fills the header in the same
 // paint as the index, so an untraded launch never shows "—" between the pool read and the index.
 function applyCachedPoolPrice(data){
- if(!needsPoolPrice(data?.summary))return;const hit=poolSpots.get(launchPoolId(data));if(!hit)return;
+ if(isQhooksPriceAsset(data?.meta?.chainId,data?.meta?.token)||!needsPoolPrice(data?.summary))return;const hit=poolSpots.get(launchPoolId(data));if(!hit)return;
  applyPoolPrice(data,hit.price,Number(data.nativeQuote?.usd)>0?Number(data.nativeQuote.usd):stable(data.meta.quoteSymbol)?1:null);
 }
 async function fillPoolPrice(data,mine){
- const s=data?.summary;if(!s||s.lastTradeAt||(Number(s.price)>0&&!s.priceFromPool))return;
+ const s=data?.summary;if(isQhooksPriceAsset(data?.meta?.chainId,data?.meta?.token)||!s||s.lastTradeAt||(Number(s.price)>0&&!s.priceFromPool))return;
  try{const p=await poolSpotPrice(data);if(!p||mine!==mseq||state.data!==data)return;
   let usd=null;
   if(Number(data.nativeQuote?.usd)>0)usd=Number(data.nativeQuote.usd);
@@ -901,7 +947,7 @@ async function fillPoolPrice(data,mine){
 // Cold load: the header shows the pool's own spot price (dollars first when ETH/USD is known, then WETH) while the
 // launch index loads. It paints only until the index has painted this selection; after that the index owns the header.
 async function paintColdPrice(record,chainId,mine){
- const spec=coldPoolSpec(record,chainById(chainId));if(!spec)return;
+ const spec=coldPoolSpec(record,chainById(chainId));if(!spec||isQhooksPriceAsset(chainId,spec.token))return;
  let cold;try{cold=await readColdPrice(spec,{rpc,ethUsd:()=>browserEthUsd(),quoteUsd});}catch{return;}
  if(!cold)return;poolSpots.set(spec.poolId,{price:cold.price,at:cold.observedAt});
  if(!coldMayPaint({revision:mine,current:mseq,hasIndexData:!!state.data}))return;
@@ -921,7 +967,7 @@ const SALE_CHAINS={has:id=>!!chainById(id)?.saleLaunch?.address}; // chains.mjs 
 // A token still in its sale-first launch: the terminal says so and links to the sale page (no trading until it settles).
 async function saleState(chainId,token){
   try{
-    const r=await fetch(`/api/v1/sales/token/${chainId}/${token}`,{cache:'no-store'});if(!r.ok)return null;
+    const r=await fetch(`/api/v1/sales/token/${chainId}/${token}?optional=1`,{cache:'no-store'});if(!r.ok)return null;
     const s=(await r.json()).sale;if(!s||s.state==='settled')return null;
     const coin=v=>{const n=BigInt(v),w=n/10n**18n,f=(n%10n**18n).toString().padStart(18,'0').slice(0,4).replace(/0+$/,'');return w+(f?'.'+f:'');};
     const now=Math.floor(Date.now()/1000),left=t=>{const d=Math.max(0,t-now);return d>=3600?Math.floor(d/3600)+'h '+Math.floor(d%3600/60)+'m':Math.floor(d/60)+'m';};
@@ -986,23 +1032,27 @@ async function loadExternal({signal,strict=false}={}) {
       data.safety=prior.safety;
       if(prior.tf===tf&&prior.token.pools?.[0]?.address===pool){
         for(const key of ['candles','trades','tradeCoverage','marketCoverage','historyFreshness','holders','holderSample','chartSurface'])data[key]=prior[key];
+        data.historyFreshness=retainHistoryFreshness(prior.historyFreshness);
+        data.marketCoverage={...prior.marketCoverage,candles:'loading',trades:'loading'};
       }
     }
-    if(liveHeader&&liveHeader.key===chainId+':'+ext&&Date.now()-liveHeader.patch.observedAt<LIVE_WINS_MS)applyLiveHeader(data,liveHeader.patch);
+    if((!data.token.curve||data.token.curve.phase==='pool')&&liveHeader&&liveHeader.key===chainId+':'+ext&&Date.now()-liveHeader.patch.observedAt<LIVE_WINS_MS)applyLiveHeader(data,liveHeader.patch);
     state.data=data;state.loading=false;state.loadError=null;
+    ticket.setCurve(data.token.curve||null,selectionFlow.current()?.intent);
     ticket.setPriceUsd(data.summary.price,selectionFlow.current()?.intent);paintMarket();
     const selection={chainId,token:ext,pool,quote:data.token.pools?.[0]?.quoteAddress,asset:data.meta.symbol,tf,revision:mine};
     const isCurrent=()=>mine===mseq&&read===externalRead&&state.tf===tf&&!signal?.aborted&&state.data?.token?.pools?.[0]?.address===pool;
     const fillOnchain=panels=>onchainEvm.fill({selection,panels,signal,isCurrent,getData:()=>state.data,onData:updated=>{state.data=updated;paintMarket();}}).catch(()=>{});
     void fillOnchain(['holders']);
     // History is independent: a delayed chart/tape cannot hold up ticket setup.
-    void loadExternalHistory({chainId,pool,tf,signal,token:ext,quote:selection.quote,curve:data.token.curve||null}).then(history=>{
+    const applyHistory=history=>{
       if(!isCurrent())return;
-      state.data={...state.data,...history,...(history.candles?.length?{chartSurface:null}:{})};
+      state.data={...state.data,...history,marketCoverage:{...state.data.marketCoverage,...history.marketCoverage},historyFreshness:{...state.data.historyFreshness,...history.historyFreshness},...(history.candles?.length?{chartSurface:null}:{})};
       // curves: the curve's own 24h numbers (its trades) replace the header's until the next header read carries them.
       if(history.curveStats)state.data.summary={...state.data.summary,...Object.fromEntries(Object.entries(history.curveStats).filter(([,v])=>v!=null))};paintMarket();
-      void fillOnchain(['candles','trades']);
-    }).catch(()=>{});
+      if('candles'in history&&'trades'in history)void fillOnchain(['candles','trades']);
+    };
+    void loadExternalHistory({chainId,pool,tf,signal,token:ext,quote:selection.quote,curve:data.token.curve||null,onData:applyHistory}).then(applyHistory).catch(()=>{});
     return true;
   }catch(error){if(mine!==mseq||read!==externalRead)return false;if(strict)throw error;marketWorkspace?.failMarket(selectedContext(),error);$('qxt-sync').textContent=error.message||'Refreshing market data…';return false;}
 }
@@ -1050,13 +1100,13 @@ function explicitTrade(run,target,owner,action){
 async function quickBuy(m) {
   const u = unitOf(m);
   if (!state.me) { $('qxt-connect').click(); return; }
-  const target={kind:'launch',chainId:String(m.chainId),controller:m.controller,token:m.token||null},owner=tradeOwner(target),value=state.quick[u];
+  const target={kind:'launch',chainId:String(m.chainId),controller:m.controller,token:m.token||null},owner=tradeOwner(target),value=quickForChain(m.chainId)[u];
   const opening=select(m.chainId,m.controller),run=selectionFlow.current();if(!await opening)return;
   return explicitTrade(run,target,owner,()=>ticket.quickBuy(u==='usd'?'usd':u,value));
 }
 async function quickBuyExternal(chainId, address) {
   chainId = String(chainId);
-  const plan = externalQuick(chainId, address, state.quick);
+  const plan = externalQuick(chainId, address, quickForChain(chainId));
   if (plan.stock) return;
   if (!state.me) { $('qxt-connect').click(); return; }
   const launch = state.markets.find(m => m.live && String(m.chainId) === chainId && (chainId === 'solana' ? m.token === address : m.token?.toLowerCase() === address.toLowerCase()));
@@ -1102,7 +1152,20 @@ const workspaceSearch=createWorkspaceSearch({onChange:result=>{state.xhits=resul
 $('qxt-search').addEventListener('input',()=>{state.cursor=-1;const v=$('qxt-search').value.trim();
  if(/^0x[0-9a-fA-F]{40}$/.test(v)&&state.chain!=='all'&&state.chain!=='solana'){$('qxt-search').value='';workspaceSearch.search('',state.chain);location.hash='#t='+state.chain+':'+v.toLowerCase();return;}
  workspaceSearch.search(v,state.chain);});
-$('qxt-star').addEventListener('click',async()=>{const selected=selectedContext();if(!selected||!state.data)return;const star=$('qxt-star');star.disabled=true;try{let subject;try{subject=watchSubject(selected);}catch{}if(subject&&communityFollowing.persistent()){await communityFollowing.set(subject,!communityFollowing.has(subject));}else{const watched=workspaceMemory.toggle(selected);if(selected.kind==='launch'){const key=keyOf(state.sel);watched?state.watch.add(key):state.watch.delete(key);store('watch',JSON.stringify([...state.watch]));}}renderHead();renderFeed();}catch(error){$('qxt-sync').textContent=error.message;}finally{star.disabled=false;}});
+async function setWatched(raw,on){
+ const asset=workspaceAsset(raw);if(!asset)throw Error('Choose a token to watch.');
+ let subject;try{subject=watchSubject(asset);}catch{}
+ if(subject&&communityFollowing.persistent())await communityFollowing.set(subject,on);
+ else{workspaceMemory.watch(asset,on);if(asset.kind==='launch'){const key=asset.chainId+':'+asset.controller;on?state.watch.add(key):state.watch.delete(key);store('watch',JSON.stringify([...state.watch]));}}
+ if(state.data)renderHead();renderFeed();return on;
+}
+$('qxt-star').addEventListener('click',async()=>{const selected=selectedContext();if(!selected||!state.data)return;const star=$('qxt-star');star.disabled=true;try{await setWatched(selected,!watchingAsset(selected));}catch(error){$('qxt-sync').textContent=error.message;}finally{star.disabled=false;}});
+const tokenLibrary=Object.freeze({
+ snapshot:()=>({...workspaceMemory.snapshot(),watched:communityFollowing.persistent()?syncedWatchRows():workspaceMemory.rows({mode:'watch'}),synced:communityFollowing.persistent()}),
+ has:watchingAsset,watch:setWatched,
+ rememberSearch(rows){const n=workspaceMemory.rememberSearch(rows);if(n)renderFeed();return n;},
+ removeRecent(row){workspaceMemory.removeRecent(row);renderFeed();},clearRecent(){workspaceMemory.clearRecent();renderFeed();}
+});
 // Share: a qhooks.com/l/<chain>/<controller> link that shows a preview card on X and in chats.
 $('qxt-share').addEventListener('click', async () => {
   const me = connectedAddress() || '', refq = /^0x[0-9a-fA-F]{40}$/.test(me) ? '?ref=' + me.toLowerCase() : '';
@@ -1115,8 +1178,8 @@ $('qxt-share').addEventListener('click', async () => {
 $('qxt-copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(state.data.meta.token); $('qxt-copy').textContent = 'Copied'; setTimeout(() => renderHead(), 1200); } catch {} });
 // Quick-buy amounts, one per unit (USDC, ETH, BNB).
 const quickRow = document.querySelector('.qxt-quick');
-quickRow.replaceChildren(h('span', {}, '⚡ Quick buy'), ...Object.keys(QUICK).map(u => h('label', {}, h('input', { type: 'text', inputMode: 'decimal', value: state.quick[u], ariaLabel: 'Quick buy amount in ' + QUNIT[u],
-  oninput: e => { if (/^\d*\.?\d*$/.test(e.target.value) && e.target.value) { state.quick[u] = e.target.value; store('quick', JSON.stringify(state.quick)); renderFeed(); } } }), h('span', {}, QUNIT[u]))));
+quickRow.replaceChildren(h('button',{type:'button',class:'qaq-open',onclick:e=>openQuickAmountSettings({chainId:state.sel?.chainId||(state.chain==='all'?'4663':state.chain),opener:e.currentTarget})},'Trade settings'));
+document.addEventListener('qhooks:quick-settings',()=>renderFeed());
 
 // Launch tools: one tab per shared panel that has something to show for this launch.
 const TOOLS = [['qta', 'Auction'], ['qts', 'TP/SL'], ['qtb', 'Rules'], ['qtt', 'Terms'], ['qto', 'Limit'], ['qtp', 'ETH pool'], ['qtz', 'Staking'], ['qtm', 'Modules'], ['qtv', 'Vesting'], ['qtl', 'Team'], ['qtk', 'Keys']];
@@ -1128,8 +1191,9 @@ let linkTool = toolFromLink(location.hash);
 // The tab link lands on the tools card (under the sticky section tabs) and keeps it in view while the chart, tape, holders
 // and proof above it load: on a phone they push it ~7,000 px down after the first scroll (newcomer walk, 2026-11-12).
 // It lets go at the person's first scroll gesture, tap or key, or after 12 s.
+function stakingToolTarget(){const locks=$('qtzl');return locks&&!locks.hidden&&locks.querySelector('[data-lock-id]')?locks:$('qtz');}
 function pinTools() {
-  const box = document.querySelector('.qxt-tools'); if (!box) return;
+  const box = tool === 'qtz' ? stakingToolTarget() : document.querySelector('.qxt-tools'); if (!box) return;
   const evs = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
   let done = false, iv = 0;
   const stop = () => { if (done) return; done = true; clearInterval(iv); evs.forEach(t => removeEventListener(t, stop, true)); };
@@ -1147,8 +1211,8 @@ function renderTools() {
   if (linkTool && shown.some(([id]) => id === linkTool)) { tool = linkTool; chosen = true; linkTool = null; requestAnimationFrame(pinTools); }
   // Until someone picks a tab, the first panel in TOOLS order wins (auction, then rules), whichever loads first.
   if (!chosen || !shown.some(([id]) => id === tool)) tool = shown[0]?.[0] || null;
-  $('qxt-tool-tabs').replaceChildren(...shown.map(([id, label]) => h('button', { role: 'tab', type: 'button', 'data-tool': id, ariaSelected: String(id === tool), onclick: () => { tool = id; chosen = true; renderTools(); } }, label)));
-  for (const [id] of TOOLS) $(id).toggleAttribute('data-off', id !== tool);
+  $('qxt-tool-tabs').replaceChildren(...shown.map(([id, label]) => h('button', { role: 'tab', type: 'button', 'data-tool': id, ariaSelected: String(id === tool), onclick: () => { tool = id; chosen = true; renderTools(); if(id==='qtz')stakingToolTarget().scrollIntoView({block:'start'}); } }, label)));
+  for (const [id] of TOOLS) $(id).toggleAttribute('data-off', id !== 'qtz' && id !== tool);
   document.querySelector('.qxt-tools').hidden = !shown.length;
 }
 const toolWatch = new MutationObserver(renderTools);
@@ -1169,13 +1233,13 @@ document.addEventListener('keydown',createTerminalShortcutHandler({document,isDi
 }}));
 
 // ---- Start ----
-ticket = mountTicket($('qxt-ticket'), { onTraded: async ({ side, moved, status,ext,chainId,token,owner }) => {
+ticket = mountTicket($('qxt-ticket'), { onTraded: async ({ side, moved, status,ext,chainId,token,owner,copyExit }) => {
   setTimeout(loadMarket, 1500); setTimeout(loadPositions, 3000);
   // walletpos: the receipt is in: the held amount, entry and markers re-read from the chain now and once more as the
   // public RPC catches up (two reads, no loop)
   void marketPosition?.refresh({force:true,rescan:true}); setTimeout(()=>void marketPosition?.refresh({force:true,rescan:true}),4000);
   // Auto TP/SL: a buy can set the saved take-profit and stop on exactly what it bought.
-  if (!ext&&side === 'buy') try { if (await afterBuy(moved, status,{chainId,token,owner})) { status('TP/SL set on the ' + compact(Number(moved) / 1e18) + ' bought.'); toast('TP/SL placed on your buy.'); } } catch (e) { toast('TP/SL was not placed: ' + (e.message || 'error')); }
+  if (!ext&&side === 'buy') try { if (await afterBuy(moved, status,{chainId,token,owner,copyExit})) { status('TP/SL set on the ' + compact(Number(moved) / 1e18) + ' bought.'); toast('TP/SL placed on your buy.'); } } catch (e) { toast('TP/SL was not placed: ' + (e.message || 'error')); }
 } });
 marketPosition=mountMarketPosition({h,after:$('qxt-ticket'),getSelection:selectedContext,getOwner:()=>selectedContext()?.chainId==='solana'?solAddress():state.me,ticket,chainPosition:args=>outsideCosts().position(args),onChange:p=>{myPosition=p;if(state.data)renderChart();}});
 chartLayers=mountChartLayers({h,chartElement:$('qxt-chart'),getOwner:chain=>chain==='solana'?solAddress():state.me,headersFor:tradeRecordHeaders,onChange:()=>{if(state.data)renderChart();}});
@@ -1210,7 +1274,7 @@ for(const type of ['click','keydown'])document.addEventListener(type,event=>{
  if(!back)return;if(!backToTokens()){event.preventDefault();event.stopImmediatePropagation();}
 },true);
 document.addEventListener('qxt:discover',event=>{if(!backToTokens()){event.preventDefault();event.stopImmediatePropagation();}},true);
-window.qxTerminal = { selectExternal, select, quickBuyExternal, backToTokens, get state() { return state; }, display: () => marketDisplay(), chart: () => chart ? { chart, candles, volume, element: $('qxt-chart') } : null, onMarkets(fn) { marketListeners.add(fn); fn(state.markets); return () => marketListeners.delete(fn); } };
+window.qxTerminal = { quickForChain, library:tokenLibrary, selectExternal, select, quickBuyExternal, backToTokens, get state() { return state; }, display: () => marketDisplay(), chart: () => chart ? { chart, candles, volume, element: $('qxt-chart') } : null, onMarkets(fn) { marketListeners.add(fn); fn(state.markets); return () => marketListeners.delete(fn); } };
 document.dispatchEvent(new CustomEvent('qxt:ready'));
 loadActivity(true);
 renderTools(); renderPane();
@@ -1277,11 +1341,14 @@ try {
 } catch (e) { $('qxt-sync').textContent = e.message || 'Could not open that launch'; }
 
 await loadFeed();
+function refreshPriceClock(){
+ if(!state.data?.summary||document.hidden)return;const s=marketDisplay()?.summary||{},key=[s.priceAt,!!s.pricesRefreshing,s.priceUsd,s.price].join('|');if(key!==renderedPriceAge){renderHead();document.dispatchEvent(new CustomEvent('qxt:paint'));}
+}
 function refreshHistoryClocks(){
  if(document.hidden)return;
- refreshHistoryPresentation({data:marketDisplay(),chartElement:$('qxt-chart'),message:$('qxt-chart-empty'),tapeElement:tapeControls.element,pane:state.pane==='trades'?$('qxt-pane'):null,rows:tradeTape.receivedRows(),renderChart,renderTape:renderPane,formatPrice:value=>'$'+price(value)});
+ refreshHistoryPresentation({data:marketDisplay(),chartElement:$('qxt-chart'),message:$('qxt-chart-empty'),tapeElement:tapeControls.element,pane:state.pane==='trades'?$('qxt-pane'):null,rows:tradeTape.receivedRows(),renderChart,renderTape:renderPane,formatPrice:value=>'$'+chartPrice(value)});
 }
-setInterval(() => { if (!document.hidden){loadFeed();renderWorkspace();refreshHistoryClocks();} }, 15000);
+setInterval(() => { if (!document.hidden){loadFeed();renderWorkspace();refreshHistoryClocks();refreshPriceClock();} }, 15000);
 document.addEventListener('visibilitychange',refreshHistoryClocks);
 setInterval(() => { if (!document.hidden && state.markets.some(m => (m.auctionEndsAt || m.opensAt || 0) > now())) renderFeed(); }, 1000);
 

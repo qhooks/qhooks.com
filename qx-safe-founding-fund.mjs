@@ -4,46 +4,42 @@
 //    UTC and don't have one yet (read from QGrants on chain), in slot order, within the 2.5M budget.
 // 2. Top-up: WETH into QDrops for founding top-ups and callout rewards (one WETH budget). The amount field starts at
 //    0.05 WETH (main thread 2026-11-12) and lives in the link (?weth=), so both owners sign the same amount; it never
-//    goes below what founding is waiting for. The rest is the callout reserve, shown in weeks at recent pool size.
+//    changes unless an owner edits it. The rest is the callout reserve, shown in weeks at recent pool size.
 // Everything that decides the hash is fixed for the day (the cut, on-chain grants, a list update), so both owners
 // build the same transaction. Nothing is sent unless an eth_call of the exact transaction succeeds from the owner.
 import {getWalletHub} from '/wallet-hub-fresh.mjs';
-import {chainById} from '/chains.mjs';
+import {OWNERS,createSafeReader} from '/safe-founding-read.mjs';
+import {createSafeSection} from '/safe-founding-section.mjs';
 import {FOUNDING, beneficiary, grantBatch, dayCut} from '/founding-config.mjs';
 import {grantsTx, topUpTx, decodeGrant, grantedSet, SEL, parseWeth, DEFAULT_WETH} from '/founding-fund.mjs';
 import {safeHashCall, safeExecData} from '/qdrops-core.mjs';
 const hub = getWalletHub(window), CHAIN = FOUNDING.pay.chain, SAFE = FOUNDING.grant.grantor;
-const OWNERS = [{a: '0x88db60586866294409e47bbbb0b436104f09c1b5', name: 'Qhooks 1'}, {a: '0x9b13398df547c18e68d1cfe086ff1cb5f1a84127', name: 'Qhooks2'}];
+if(new URLSearchParams(location.search).has('weth')){const topup=document.getElementById('qff-weth');topup.parentElement.prepend(topup);}
 const el = (tag, attrs = {}, ...kids) => { const n = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) if (v !== false && v != null) n.setAttribute(k, v === true ? '' : v); n.append(...kids.filter(k => k != null)); return n; };
 const pad = a => a.toLowerCase().slice(2).padStart(64, '0'), W = v => BigInt(v).toString(16).padStart(64, '0');
 const fmt = (v, d = 0) => (Number(BigInt(v)) / 1e18).toLocaleString('en-US', {maximumFractionDigits: d});
-async function rpc(method, params) {
-  const r = await fetch(chainById(CHAIN).rpc, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({jsonrpc: '2.0', id: 1, method, params})});
-  const j = await r.json(); if (j.error) throw Error(j.error.message || 'Network read failed'); return j.result;
-}
-const call = (to, data, from) => rpc('eth_call', [{to, data, ...(from ? {from} : {})}, 'latest']);
+const reader=createSafeReader({wallet:()=>hub.snapshot().current}),{rpc,call}=reader;
+let foundingHint=null;
+async function foundingJSON(){const r=await fetch('/api/founding',{cache:'no-store',signal:AbortSignal.timeout(8000)});if(!r.ok)throw Error('Founding list unavailable (HTTP '+r.status+'). Retry.');return r.json();}
 const words = h => { const s = h.slice(2), o = []; for (let i = 0; i < s.length; i += 64) o.push(BigInt('0x' + s.slice(i, i + 64))); return o; };
 
-async function readCommon() {
-  const [n, blk, api] = await Promise.all([call(SAFE, '0xaffed0e0'), rpc('eth_getBlockByNumber', ['latest', false]), fetch('/api/founding', {cache: 'no-store'}).then(r => r.json())]);
-  return {nonce: BigInt(n), now: Number(BigInt(blk.timestamp)), api};
-}
+async function readCommon(requireFounding=false){const c=await reader.common();return {...c,api:requireFounding?await foundingJSON():foundingHint};}
 async function readGrants() {
-  const c = await readCommon(), g = FOUNDING.grant;
-  const ids = words(await call(g.qgrants, '0x' + SEL.grantsBy + pad(SAFE))).slice(2);
-  const grants = await Promise.all(ids.map(id => call(g.qgrants, '0x' + SEL.get + W(id)).then(decodeGrant)));
+  const c = await readCommon(true), g = FOUNDING.grant;
+  const ids = words(await call(g.qgrants, '0x' + SEL.grantsBy + pad(SAFE), null, c.blockTag)).slice(2);
+  const grants = await Promise.all(ids.map(id => call(g.qgrants, '0x' + SEL.get + W(id), null, c.blockTag).then(decodeGrant)));
   const granted = grantedSet(grants), cut = dayCut(c.now);
   // Entry rule at payout: only creators holding 100,000 QHOOKS right now (others wait for a later batch).
   const due = (c.api.launches || []).filter(l => l.qualifiedAt && l.qualifiedAt < cut && !granted.has(beneficiary(l)));
   const holding = new Set(), waiting = [];
   await Promise.all(due.map(async l => { try { const r = await fetch('/api/founding/eligibility?wallet=' + beneficiary(l), {cache: 'no-store'}), d = await r.json(); if (d.eligible) holding.add(beneficiary(l)); else waiting.push(l); } catch { waiting.push(l); } }));
   const {rows, left} = grantBatch((c.api.launches || []).filter(l => holding.has(beneficiary(l))), granted, cut);
-  const bal = BigInt(await call(g.token, '0x' + SEL.balanceOf + pad(SAFE)));
+  const bal = BigInt(await call(g.token, '0x' + SEL.balanceOf + pad(SAFE), null, c.blockTag));
   const tx = rows.length ? grantsTx(rows) : null;
   return {...c, kind: 'grants', rows, left, granted: granted.size, bal, tx, short: tx && bal < tx.total, waiting};
 }
 const wethInput = el('input', {id: 'qff-amount', type: 'text', inputmode: 'decimal', autocomplete: 'off', value: new URLSearchParams(location.search).get('weth') || DEFAULT_WETH, 'aria-describedby': 'qff-amount-hint'});
-const wethField = el('p', {class: 'qff-amount'}, el('label', {for: 'qff-amount'}, 'Amount (WETH) '), wethInput, el('span', {id: 'qff-amount-hint'}, ' Both owners use the same amount: it is saved in this page link.'));
+const wethField = el('p', {class: 'qff-amount'}, el('label', {for: 'qff-amount'}, 'Amount (WETH) '), wethInput, el('span', {id: 'qff-amount-hint'}, ' Both devices use the same proposal link. The amount is never raised or rounded; use up to four decimal places.'));
 let poolCache = null;
 // One shared request, at most 8 s: the pool size is a hint for the split, never a reason to hold the page.
 function calloutPool() {
@@ -54,73 +50,17 @@ function calloutPool() {
   poolCache = entry; return entry.p;
 }
 async function readTopUp() {
-  const [c, pool] = await Promise.all([readCommon(), calloutPool()]), need = BigInt(c.api.wethWaiting || '0');
-  const bal = BigInt(await call(FOUNDING.pay.token, '0x' + SEL.balanceOf + pad(SAFE)));
-  const typed = parseWeth(wethInput.value), amount = typed === null ? null : typed < need ? need : typed;
-  const tx = amount && amount > 0n ? topUpTx(amount) : null;
-  const callouts = tx ? tx.amount - need : 0n, daily = pool?.dailyPoolWei ? BigInt(pool.dailyPoolWei) : null;
-  const weeks = daily && daily > 0n ? Number(callouts) / Number(daily * 7n) : null;
-  return {...c, kind: 'topup', need, bal, tx, short: tx && bal < tx.amount, typed, callouts, daily, weeks, days: pool?.days?.length || 0};
+  const c=await readCommon(), pool=poolCache?.body||null, need=/^\d+$/.test(c.api?.wethWaiting||'')?BigInt(c.api.wethWaiting):null;
+  const bal=BigInt(await call(FOUNDING.pay.token,'0x'+SEL.balanceOf+pad(SAFE),null,c.blockTag));
+  const typed=parseWeth(wethInput.value);let tx=typed!==null&&typed>0n?topUpTx(typed):null,amountError='';
+  if(tx&&tx.amount!==typed){tx=null;amountError='Use up to four decimal places. No rounding was applied.';}
+  const callouts=tx&&need!==null?(tx.amount>need?tx.amount-need:0n):null,daily=pool?.dailyPoolWei?BigInt(pool.dailyPoolWei):null;
+  const weeks=callouts!==null&&daily&&daily>0n?Number(callouts)/Number(daily*7n):null;
+  return {...c,kind:'topup',need,bal,tx,short:tx&&bal<tx.amount,typed,amountError,callouts,daily,weeks,days:pool?.days?.length||0};
 }
-wethInput.addEventListener('change', () => { const q = new URLSearchParams(location.search); q.set('weth', wethInput.value.trim()); history.replaceState(null, '', location.pathname + '?' + q + location.hash); drawTopUp(); });
-async function withHash(s) {
-  if (!s.tx) return {...s, hash: null, approved: [false, false]};
-  const hash = await call(SAFE, safeHashCall(s.tx, s.nonce));
-  const approved = (await Promise.all(OWNERS.map(o => call(SAFE, '0x7d832974' + pad(o.a) + hash.slice(2))))).map(x => BigInt(x) !== 0n);
-  return {...s, hash, approved};
-}
-function section(root, read, describe) {
-  let busy = false, status = {text: '', tone: ''};
-  const say = (text, tone = '') => { status = {text, tone}; draw(); };
-  async function send(kind) {
-    if (busy) return; let conn = hub.snapshot().current; if (!conn) { hub.open(); return; }
-    busy = true; say('');
-    try {
-      const s = await withHash(await read());
-      if (!s.tx) throw Error('Nothing to sign right now. Nothing was sent.');
-      if (s.short) throw Error('The Safe does not hold enough for this. Nothing was sent.');
-      if (conn.chainId !== CHAIN) { say('Switching your wallet to Robinhood Chain…'); conn = await hub.switchChain(CHAIN); if (conn?.chainId !== CHAIN) throw Error('Switch your wallet to Robinhood Chain, then try again.'); }
-      const from = conn.owner, me = OWNERS.find(o => o.a === String(from).toLowerCase());
-      if (!me) throw Error('This wallet is not an owner of the QHooks Safe. Nothing was sent.');
-      const data = kind === 'exec' ? safeExecData(s.tx, OWNERS.map(o => o.a)) : '0xd4d9bdcd' + s.hash.slice(2), tx = {from, to: SAFE, data, value: '0x0'};
-      let sim; try { sim = await call(SAFE, data, from); } catch (e) { throw Error('This would fail right now (' + (e.message || 'reverted') + '). Nothing was sent.'); }
-      if (kind === 'exec' && BigInt(sim || '0x0') !== 1n) throw Error('The Safe would not run it right now. Nothing was sent.');
-      try { tx.gas = '0x' + (BigInt(await rpc('eth_estimateGas', [{from, to: SAFE, data, value: '0x0'}])) * 13n / 10n).toString(16); } catch { throw Error('This would fail right now. Nothing was sent.'); }
-      if (hub.snapshot().current?.owner !== from) throw Error('Your wallet changed. Try again.');
-      say('Confirm in your wallet…');
-      const hash = await conn.entry.provider.request({method: 'eth_sendTransaction', params: [tx]});
-      say('Sent. Waiting for the network…');
-      let r = null; for (let i = 0; i < 180 && !r; i++) { r = await rpc('eth_getTransactionReceipt', [hash]).catch(() => null); if (!r) await new Promise(res => setTimeout(res, 2000)); }
-      if (!r) throw Error('Still pending. Check your wallet activity, then reload this page.');
-      if (r.status !== '0x1') throw Error('The network refused it. Only gas was spent.');
-      say(kind === 'exec' ? 'Done.' : 'Approved.', 'ok');
-    } catch (e) { say(/reject|denied|cancel/i.test(e?.message || '') ? 'Cancelled in your wallet. Nothing was sent.' : (e?.message || 'That did not go through.'), 'bad'); }
-    finally { busy = false; draw(); }
-  }
-  async function draw() {
-    let s = null; try { s = await withHash(await read()); } catch {}
-    const conn = hub.snapshot().current, me = conn && OWNERS.find(o => o.a === String(conn.owner).toLowerCase()), other = me && OWNERS.find(o => o !== me);
-    const d = s ? describe(s) : {title: 'Refreshing…', facts: [], note: ''};
-    let label = 'Connect an owner wallet', action = () => hub.open(), disabled = busy, note = d.note;
-    if (!s) { disabled = true; label = 'Refreshing…'; }
-    else if (!s.tx) { disabled = true; label = 'Nothing to sign'; }
-    else if (s.short) { disabled = true; label = 'Safe balance too low'; }
-    else if (conn && !me) { label = 'Switch to an owner wallet'; note += ' This wallet is not an owner. Connect Qhooks 1 or Qhooks2.'; }
-    else if (me) {
-      const i = OWNERS.indexOf(me), j = 1 - i;
-      if (s.approved[j]) { label = 'Step 2: Send'; action = () => send('exec'); note += ' ' + OWNERS[j].name + ' has approved. Sending from ' + me.name + ' completes it.'; }
-      else if (s.approved[i]) { disabled = true; label = 'Waiting for ' + other.name; note += ' Approved by ' + me.name + '. Open this page with ' + other.name + ' to send.'; }
-      else { label = 'Step 1: Approve as ' + me.name; action = () => send('approve'); note += ' Then open this page with ' + other.name + ' to send.'; }
-    }
-    const facts = el('dl', {}, ...d.facts.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]),
-      el('dt', {}, 'Safe transaction'), el('dd', {}, s ? (s.hash ? '#' + s.nonce + ' · ' + s.hash : '#' + s.nonce + ' · nothing to sign now') : 'Refreshing…'),
-      ...OWNERS.flatMap((o, k) => [el('dt', {}, o.name), el('dd', {}, !s ? 'Refreshing…' : !s.hash ? 'nothing to sign' : s.approved[k] ? 'approved' : 'not yet')]));
-    const btn = el('button', {type: 'button', class: 'qtx-mini qas-go', disabled}, label); btn.addEventListener('click', action);
-    root.replaceChildren(el('h2', {}, d.title), facts, ...(d.extra || []), el('p', {}, note), btn, el('p', {class: 'qas-status', role: 'status', 'aria-live': 'polite', 'data-tone': status.tone || false}, status.text));
-  }
-  hub.subscribe(() => draw());
-  return draw;
-}
+wethInput.addEventListener('input',()=>drawTopUp.edit());
+wethInput.addEventListener('change',()=>{const u=new URL(location.href);u.searchParams.set('weth',wethInput.value.trim());u.searchParams.delete('nonce');u.searchParams.delete('safeHash');history.replaceState(null,'',u);drawTopUp.reset();});
+const section=(root,read,describe)=>createSafeSection({root,read,describe,hub,reader,topup:root.id==='qff-weth'});
 const drawGrants = section(document.getElementById('qff-grants'), readGrants, s => ({
   title: s.rows.length ? 'Grant 50,000 QHOOKS to ' + s.rows.length + ' founding creator' + (s.rows.length > 1 ? 's' : '') : 'No grants due',
   facts: [['Budget', '2,500,000 QHOOKS · ' + s.granted + ' granted · ' + fmt(s.left) + ' left after this batch'], ['Safe QHOOKS', fmt(s.bal)],
@@ -133,10 +73,12 @@ const drawGrants = section(document.getElementById('qff-grants'), readGrants, s 
 const weeksText = s => s.weeks == null ? 'Refreshing…' : s.weeks >= 52 ? 'over a year' : s.weeks >= 2 ? Math.floor(s.weeks) + ' weeks' : s.weeks >= 1 ? 'about 1 week' : Math.max(1, Math.floor(s.weeks * 7)) + ' days';
 const drawTopUp = section(document.getElementById('qff-weth'), readTopUp, s => ({
   title: s.tx ? 'Deposit ' + fmt(s.tx.amount, 4) + ' WETH for rewards' : s.typed === null ? 'Enter an amount' : 'Nothing to deposit',
-  facts: [['Founding top-ups', fmt(s.need, 6) + ' WETH waiting in the drop list'],
-    ['Callout rewards', fmt(s.callouts, 6) + ' WETH · covers ' + weeksText(s) + (s.daily ? ' at ' + fmt(s.daily, 6) + ' WETH a day (10% of terminal fees, last ' + s.days + ' days)' : '')],
-    ['Safe WETH', fmt(s.bal, 4)], ['Into', 'QDrops ' + FOUNDING.pay.drops]],
+  facts: [['Founding top-ups', s.need===null?'List unavailable; entered amount stays fixed':fmt(s.need, 6) + ' WETH waiting in the drop list'],
+    ['Callout rewards', (s.callouts===null?'Reserve estimate unavailable':fmt(s.callouts, 6)+' WETH') + ' · covers ' + weeksText(s) + (s.daily ? ' at ' + fmt(s.daily, 6) + ' WETH a day (10% of terminal fees, last ' + s.days + ' days)' : '')],
+    ['Safe WETH', (s.bal/10n**18n).toString()+'.'+(s.bal%10n**18n).toString().padStart(18,'0')], ['Into', 'QDrops ' + FOUNDING.pay.drops]],
   extra: [wethField],
-  note: s.tx ? (s.short ? 'The Safe holds less WETH than this. Move WETH to the Safe first.' : 'Drop lists pay founding top-ups and callout rewards from this. What is not used yet stays in QDrops for later lists.') : s.typed === null ? 'Type an amount like 0.05.' : 'Each weekly drop list adds what founding launches and callers earned.',
+  note: s.amountError || (s.tx ? (s.short ? 'The Safe holds less WETH than this. Move WETH to the Safe first.' : 'Drop lists pay founding top-ups and callout rewards from this. What is not used yet stays in QDrops for later lists.') : s.typed === null ? 'Type an amount like 0.05.' : 'Each weekly drop list adds what founding launches and callers earned.'),
 }));
 drawGrants(); drawTopUp();
+let resumed=0;const refreshVisible=()=>{if(document.visibilityState==='visible'&&document.activeElement!==wethInput&&Date.now()-resumed>=2000){resumed=Date.now();void drawTopUp();}};setInterval(refreshVisible,15000);document.addEventListener('visibilitychange',refreshVisible);window.addEventListener('focus',refreshVisible);
+Promise.allSettled([foundingJSON().then(j=>{foundingHint=j;}),calloutPool()]).then(()=>{drawTopUp.render();});

@@ -1,3 +1,4 @@
+import {isQhooksPriceAsset,priceState} from './qx-price-state.mjs';
 // walletpnl (2026-11-12, Randall: "My balances don't load quickly - I'm in profit on this rooq trade").
 // /api/portfolio/evm/<w> gives cost:null to every token bought outside QHooks, so the wallet showed "PnL unknown" for all
 // but QHooks launches. This fills the same cost object the portfolio returns for QHooks tokens ({boughtUnits, soldUnits,
@@ -18,6 +19,7 @@
 // Kept per (chain, wallet) on this device with each token's scanned block range, so a repeat view reads only blocks after
 // its cursor (at most once a minute per token) plus one batched price read.
 import {keccak_256} from './full-launch/prototypes/qpools/client/vendor/hashes/sha3.js';
+import {inventoryBasis} from './qx-position-basis.mjs';
 
 // walletchains (2026-11-13): every EVM chain QHooks supports. Each row is that chain's free public endpoint (the page CSP
 // lists them, chains.mjs) and what it serves, probed 2026-11-13 with an address+topic eth_getLogs filter:
@@ -168,11 +170,7 @@ export async function poolPrices({tokens, state, rpc, now = Date.now}) {
 
 /// The cost object for a held token from its finished state, valued at the portfolio's own price.
 export function costFromState(s, token, quoteUsd, quoteSymbol) {
-  if (!s || s.bad || s.prior !== '0' || (s.pending || []).length || !Number.isInteger(token?.decimals)) return null;
-  // The answer's balance must be the one this history explains: an answer read before (or after) the latest trade the
-  // chain shows would pair the wrong amount with the basis. Within a millionth, for rounding.
-  const held = big(token.balance), net = big(s.bought) - big(s.sold), gap = held > net ? held - net : net - held;
-  if (net <= 0n || gap * 1_000_000n > net) return null;
+  if (!inventoryBasis({heldRaw:token?.balance,boughtRaw:s?.bought,soldRaw:s?.sold,prior:s?.prior,pending:s?.pending?.length||0,bad:s?.bad,limited:!!s?.wall,decimals:token?.decimals}).complete) return null;
   const qd = s.qd ?? 18, spentQuote = num(big(s.spent), qd), receivedQuote = num(big(s.received), qd);
   const boughtUnits = num(big(s.bought), token.decimals), soldUnits = num(big(s.sold), token.decimals);
   if (!(boughtUnits > 0) || !(spentQuote > 0)) return null;
@@ -402,15 +400,17 @@ export function applyState(chain, cfg, state, now = Date.now) {
   for (const t of chain.tokens || []) {
     const quoteUsd = ethUsd;
     const p = state.pons?.[t.address];
-    if (p?.curve && !p.graduated && known(p.price) && now() - (p.priced || 0) < LIMITS.PONS_MS && quoteUsd && t.spam && t.spamReason === THIN) {
+    if (!isQhooksPriceAsset(chain.chainId,t.address) && p?.curve && !p.graduated && known(p.price) && now() - (p.priced || 0) < LIMITS.PONS_MS && quoteUsd && t.spam && t.spamReason === THIN) {
+      t.priceAt = Math.min(p.priced, chain.native?.priceAt ?? now()); t.pricesRefreshing = !!chain.native?.pricesRefreshing||priceState(t.priceAt,now()).refreshing; t.priceLabel = "on curve";
       t.priceUsd = p.price * quoteUsd; t.valueUsd = known(t.units) ? t.units * t.priceUsd : t.valueUsd;
       t.liquidityUsd = known(p.reserve) ? p.reserve * quoteUsd : t.liquidityUsd;
       t.spam = false; t.spamReason = null; t.venue = {kind: 'pons-curve', curve: p.curve}; touched = true;
     }
     const s = state.tokens?.[t.address], posUsd = usdOf(s);
-    if (!t.qhooks && s?.px && known(s.px.eth) && now() - s.px.at < LIMITS.PRICE_MS && posUsd && known(t.units)) {
+    if (!isQhooksPriceAsset(chain.chainId,t.address) && !t.qhooks && t.curve?.phase !== 'curve' && s?.px && known(s.px.eth) && now() - s.px.at < LIMITS.PRICE_MS && posUsd && known(t.units)) {
       // the pool the wallet traded in, read on chain this pass: trackers lag or misprice thin RH tokens (GeckoTerminal had
       // ROOQ at 5× its pool price on 2026-11-12)
+      t.priceAt = Math.min(s.px.at, s?.quote && cfg.stable && s.quote===cfg.stable.symbol ? now() : chain.native?.priceAt ?? now()); t.pricesRefreshing = !!chain.native?.pricesRefreshing||priceState(t.priceAt,now()).refreshing;
       t.priceUsd = s.px.eth * posUsd; t.valueUsd = t.units * t.priceUsd; t.priceSource = 'pool'; touched = true;
     }
     if (!t.qhooks && (t.cost == null || t.cost.source === 'chain')) {
@@ -450,8 +450,8 @@ export function positionFrom({s, decimals, heldRaw, supplyRaw, priceQuote = null
   if (!Number.isInteger(decimals) || heldRaw == null) return null;
   const heldBig = big(heldRaw), held = num(heldBig, decimals), supply = big(supplyRaw);
   const supplyPct = supply > 0n ? Number(heldBig * 10_000_000_000n / supply) / 1e8 : null; // percent, 8 decimals
-  const netBig = s ? big(s.bought) - big(s.sold) : 0n, gap = heldBig > netBig ? heldBig - netBig : netBig - heldBig;
-  const complete = !!s && !s.bad && s.prior === '0' && !(s.pending || []).length && netBig > 0n && gap * 1_000_000n <= netBig;
+  const coverage = inventoryBasis({heldRaw,boughtRaw:s?.bought,soldRaw:s?.sold,prior:s?.prior,pending:s?.pending?.length||0,bad:s?.bad,limited:!!s?.wall,decimals});
+  const complete = coverage.complete;
   const qd = s?.qd ?? 18, quoteSymbol = s?.quote || nativeSymbol;
   const bought = s ? num(big(s.bought), decimals) : 0, sold = s ? num(big(s.sold), decimals) : 0;
   const spent = s ? num(big(s.spent), qd) : 0, received = s ? num(big(s.received), qd) : 0;
@@ -464,7 +464,7 @@ export function positionFrom({s, decimals, heldRaw, supplyRaw, priceQuote = null
     return {id: r.tx + ':' + r.side, tx: r.tx, at: r.t * 1000, side: r.side, quantity: units, priceQuote: units > 0 ? quote / units : null,
       priceUsd: units > 0 && known(quoteUsd) ? quote / units * quoteUsd : null};
   });
-  const state = complete ? 'complete' : !s ? 'pending' : s.bad ? 'none' : s.wall && s.prior !== '0' ? 'limited' : 'pending';
+  const state = coverage.state;
   return {quantity: held, supplyPct, quoteSymbol, complete, state, bought, sold, spentQuote: spent, receivedQuote: received,
     priceQuote: known(priceQuote) ? priceQuote : null, priceUsd: usd(known(priceQuote) ? priceQuote : null),
     valueQuote: known(priceQuote) ? held * priceQuote : null, valueUsd: known(priceQuote) ? usd(held * priceQuote) : null,

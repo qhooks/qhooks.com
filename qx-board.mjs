@@ -1,3 +1,4 @@
+import {xAttachment,xAttachmentInput} from './qx-x-attachment.mjs';
 import {readBoardAddress} from './qx-board-address.mjs';
 import {profileUrl} from './qx-profile-address.mjs';
 // Community board for a listed launch (#m=<chain>:<controller>) or token (#t=<chain>:<address>). Reading is public. Posting identity is
@@ -114,6 +115,7 @@ function postCard(p, { reply = false } = {}) {
   const b = data.board, viewer = data.viewer, creator = b.kind !== 'token' && !!viewer?.creator;
   const head = h('header', { class: 'qb-post-head' }, memberIdentity(p.author,{mark:mark(p.author),className:'qb-author'}),
     ...(p.badges || []).map(badgePill).filter(Boolean),
+    p.agent&&p.agent.wallet===p.author.toLowerCase()?h('a',{class:'qb-kind qb-agent',href:'/agents/'+p.author.toLowerCase(),title:'Wallet-signed agent path. Client name is self-reported.'},'Agent · '+p.agent.client):null,
     p.kind === 'announcement' ? h('span', { class: 'qb-kind' }, 'Announcement') : null,
     h('time', { class: 'qb-time', datetime: new Date(p.createdAt).toISOString(), title: fullTime(p.createdAt) }, ago(p.createdAt)));
   const card = h('article', { class: 'qb-post' + (reply ? ' is-reply' : '') + (p.pinned ? ' is-pinned' : '') + (p.kind === 'announcement' ? ' is-ann' : ''), id: 'post-' + p.id, 'data-id': p.id });
@@ -123,7 +125,7 @@ function postCard(p, { reply = false } = {}) {
     if (creator && p.hidden === 'creator') card.append(h('div', { class: 'qb-actions' }, actBtn('Unhide', () => moderate(p, 'hide', { hidden: false }))));
     return card;
   }
-  const body = h('div', { class: 'qb-post-body' }, (p.kind === 'call' ? clampInto(h('div', { class: 'qb-text' }), p.text || '', { render: richText }) : h('div', { class: 'qb-text' }, ...richText(p.text || ''))), p.kind === 'call' && p.call ? (A ? callBlock(p, b) : callRecord({ ...p.call, boardKind: b.kind })) : null);
+  const body = h('div', { class: 'qb-post-body' }, (p.kind === 'call' ? clampInto(h('div', { class: 'qb-text' }), p.text || '', { render: richText }) : h('div', { class: 'qb-text' }, ...richText(p.text || ''))), p.kind === 'call' && p.call ? (A ? callBlock(p, b) : callRecord({ ...p.call, boardKind: b.kind })) : null,xAttachment(p.text,{hidden:!!p.hidden||!!p.folded}));
   if (p.hidden === 'creator' || p.hidden === 'review' || p.folded) {
     card.classList.add('is-hidden');
     const show = h('button', { type: 'button', class: 'qb-link' }, 'Show post');
@@ -245,7 +247,7 @@ function composer({ replyTo = null, placeholder, small = false, onDone }) {
     catch(error){status.textContent=error.message;}
   });
   const form = h('form', { class: 'qb-compose' + (small ? ' is-small' : '') }, callToggle ? h('div', { class: 'qb-compose-mode' }, callToggle,intro) : null, ta, introNote,callNote,
-    entry?.element,
+    entry?.element,xAttachmentInput(ta),
     h('div', { class: 'qb-compose-foot' }, who, h('span', { class: 'qb-compose-right' }, ann, count, send)), gateNote, retryHolding, check, status);
   form.addEventListener('submit', async e => {
     e.preventDefault(); status.textContent = ''; draft[callMode ? 'call' : 'post'] = ta.value; persist();
@@ -472,7 +474,7 @@ function parseTarget() {
 }
 async function index(mine) {
   document.title = 'Community boards | QHooks';
-  root.replaceChildren(h('section', { class: 'qb-hero' }, h('div', { class: 'qb-hero-main' }, h('p', { class: 'qx-eyebrow' }, 'Community'), h('h1', {}, 'Boards ', h('span', { class: 'qx-serif' }, 'for any token.')),
+  root.replaceChildren(h('section', { class: 'qb-hero qb-hero--index' }, h('div', { class: 'qb-hero-main' }, h('p', { class: 'qx-eyebrow' }, 'Community'), h('h1', {}, 'Boards ', h('span', { class: 'qx-serif' }, 'for any token.')),
     h('p', { class: 'qa-lede' }, 'Choose a token, write your thesis and put your call on record. Read and draft without a wallet.'),
     h('div', { class: 'qa-launch-links' }, h('a', { class: 'qa-btn', href: '/terminal' }, 'Open the terminal'),h('a',{class:'qa-btn',href:'/community#following'},'Following')))), h('section',{class:'qb-picker-card','aria-labelledby':'qb-picker-title'},h('h2',{id:'qb-picker-title'},'What’s your call?'),h('div',{id:'qb-token-picker'})),
     h('section', { class: 'qa-section' }, h('div', { class: 'qa-section-head' }, h('h2', {}, 'Active boards'), h('p', {}, 'Boards with posts, most recent activity first.')),

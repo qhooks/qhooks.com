@@ -1,3 +1,4 @@
+import {waitTransactionReceipt} from './qx-transaction-receipt.mjs';
 import {shownKids} from './qx-shown.mjs';
 import { guardWalletChain, assertWalletChain, guardedSend, asTradeError } from './qx-chain-guard.mjs';
 // Shared chain plumbing for the Trade page's extra panels (Buy with ETH, limit orders, team locks):
@@ -69,16 +70,17 @@ export function uintArray(hex, at = 0) {
 }
 
 // ---- Reads ----
-export async function rpc(chainId, method, params) {
-  const r = await fetch(RPC[chainId], { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) });
+export async function rpc(chainId, method, params, {signal, purpose = ''} = {}) {
+  const r = await fetch(RPC[chainId], { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }), ...(signal ? {signal} : {}), ...(purpose ? {qhooksReadPurpose: purpose} : {}) });
+  if (!r.ok) throw Object.assign(Error('RPC read returned HTTP ' + r.status), {status: r.status, retryAfter: r.headers.get('retry-after')});
   const j = await r.json(); if (j.error) throw new Error(j.error.message || 'RPC error'); return j.result;
 }
-export const ethCall = (chainId, to, data, from) => rpc(chainId, 'eth_call', [{ to, data, ...(from ? { from } : {}) }, 'latest']);
+export const ethCall = (chainId, to, data, from, options) => rpc(chainId, 'eth_call', [{ to, data, ...(from ? { from } : {}) }, 'latest'], options);
 export const codeAt = (chainId, a) => rpc(chainId, 'eth_getCode', [a, 'latest']);
 export async function erc20(chainId, token, owner) {
   const [bal, dec, sym] = await Promise.all([
-    owner ? ethCall(chainId, token, calldata('0x70a08231', ['address'], [owner])) : '0x0',
-    ethCall(chainId, token, '0x313ce567'), ethCall(chainId, token, '0x95d89b41')]);
+    owner ? ethCall(chainId, token, calldata('0x70a08231', ['address'], [owner]), undefined, {purpose: 'transaction'}) : '0x0',
+    ethCall(chainId, token, '0x313ce567', undefined, {purpose: 'display'}), ethCall(chainId, token, '0x95d89b41', undefined, {purpose: 'display'})]);
   return { balance: BigInt(bal), decimals: Number(BigInt(dec)), symbol: decodeString(sym) };
 }
 export function decodeString(hex) {
@@ -104,9 +106,12 @@ export async function spotQuote(chainId, key, token, decimals, from) {
 }
 export function sqrtBig(n) { if (n < 2n) return n; let x = n, y = (x + 1n) >> 1n; while (y < x) { x = y; y = (x + n / x) >> 1n; } return x; }
 
+import { normalizeAmountInput, AMOUNT_FORMAT_HELP } from './qx-amount-input.mjs';
 // ---- Units ----
+// stakesafe (2026-11-13): every amount typed or pasted anywhere on the site goes through the shared reader, so
+// "1,000,000", "1.234,56" (decimal comma), "0,5" and "12 345" all work; anything else says how to type it.
 export function parseUnits(text, decimals) {
-  const s = String(text).trim(); if (!/^\d*(\.\d*)?$/.test(s) || s === '' || s === '.') throw new TypeError('Enter an amount');
+  const s = normalizeAmountInput(String(text)); if (s === '.') throw new TypeError(AMOUNT_FORMAT_HELP);
   const [i, f = ''] = s.split('.'); if (f.length > decimals) throw new TypeError('Too many decimals');
   return BigInt(i || '0') * 10n ** BigInt(decimals) + BigInt((f + '0'.repeat(decimals)).slice(0, decimals) || '0');
 }
@@ -159,24 +164,17 @@ async function onChain(p,chainId,onStatus=()=>{},assertContext=()=>{}){
   return guardWalletChain(p,chainId,{onStatus,assert:assertContext});
 }
 /// Sends one transaction from the connected wallet on the pool's chain and waits for its receipt.
-export async function send(chainId,tx,onStatus=()=>{},assertContext=()=>{}){
+export async function send(chainId,tx,onStatus=()=>{},assertContext=()=>{},options={}){
   try {
     assertContext();const from=connectedAddress();if(!from)throw Error('Connect your wallet first');
     const assert=()=>{assertContext();if(connectedAddress()!==from)throw Error('Your wallet changed. Review this action again.');};assert();
     const p=await providerFor(from);assert();
     const hash=await guardedSend(p,chainId,{...tx,from},{rpc,assert,onStatus:text=>onStatus(silentActive()&&text==='Confirm in your wallet…'?'Sending…':text)});
     if (!/^0x[0-9a-f]{64}$/i.test(hash || '')) throw Object.assign(new Error('Check the pending trade in your wallet.'), {mayHaveSubmitted: true, chainId});
-    // 2026-11-12 (buy ticket): say it was sent the moment there is a hash, then poll the receipt fast while it is
-    // pending only (Robinhood makes a block about every 0.25 s): 0.3 s for the first 6 s, 1 s to 36 s, then 2 s.
-    // Any read error ("not found yet", a lagging node) counts as still pending; nothing is ever re-sent from here.
-    const sentAt = Date.now(); onStatus('Sent · ' + hash.slice(0, 10) + '… · confirming');
-    for (let i = 0; i < 230; i++) {
-      const r = await rpc(chainId, 'eth_getTransactionReceipt', [hash]).catch(() => null);
-      if (r) { const ms = Date.now() - sentAt; try { (globalThis.__qhooksTxTimes ||= []).push({chainId: String(chainId), hash, ms}); } catch {}
-        if (r.status !== '0x1') throw new Error('The transaction reverted'); onStatus('Confirmed in ' + (ms / 1000).toFixed(1) + ' s'); return Object.assign(r, {confirmedMs: ms}); }
-      await new Promise(res => setTimeout(res, i < 20 ? 300 : i < 50 ? 1000 : 2000));
-    }
-    throw Object.assign(new Error('Still pending. Check your wallet activity'), {mayHaveSubmitted: true, txHash: hash, chainId});
+    options.onSubmitted?.(hash);
+    const receipt=await waitTransactionReceipt(chainId,hash,{rpc,onStatus,assert,...options.receipt});
+    try{(globalThis.__qhooksTxTimes ||= []).push({chainId:String(chainId),hash,ms:receipt.confirmedMs});}catch{}
+    return receipt;
   } catch(error) { throw asTradeError(error); }
 }
 /// EIP-5792: sends `calls` as one atomic batch when the connected wallet reports atomic batching on `chainId`

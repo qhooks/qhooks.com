@@ -1,6 +1,6 @@
 import { getWalletHub } from "/wallet-hub.mjs";
 import { ExchangeClient, HttpTransport, createWalletClient, custom, privateKeyToAccount, generatePrivateKey } from "./vendor/hyperliquid/hl.mjs";
-import { ADDRESS, normalizeConfig, orderResult, positive } from "./qx-perps-core.mjs";
+import { ADDRESS, normalizeConfig, orderResult, positive, withBuilder } from "./qx-perps-core.mjs";
 const USDC = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", BRIDGE = "0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7";
 const feeKeyFor = (owner) => "qhooks:perps:builder-fee:v1:" + owner.toLowerCase();
 // perpskey (2026-11-12): the agent (fast trading) key is kept sealed at rest.
@@ -143,7 +143,7 @@ function depositTransaction(owner, amount) {
   return { from: owner, to: USDC, data: "0xa9059cbb" + BRIDGE.slice(2).toLowerCase().padStart(64, "0") + units.toString(16).padStart(64, "0"), value: "0x0" };
 }
 const browserStorage = { getItem: (k) => globalThis.localStorage.getItem(k), setItem: (k, v) => globalThis.localStorage.setItem(k, v), removeItem: (k) => globalThis.localStorage.removeItem(k), keys: () => Array.from({ length: globalThis.localStorage.length }, (_, i) => globalThis.localStorage.key(i)) };
-function createPerpsWallet({ hub = getWalletHub(window), storage = browserStorage, transport = new HttpTransport({ timeout: 15e3 }), sdk = { ExchangeClient, createWalletClient, custom, privateKeyToAccount, generatePrivateKey }, keys = indexedKeyStore(), subtle = globalThis.crypto?.subtle, random = (bytes) => globalThis.crypto.getRandomValues(bytes) } = {}) {
+function createPerpsWallet({ hub = getWalletHub(window), storage = browserStorage, transport = new HttpTransport({ timeout: 15e3 }), readBuilderFee = payload => transport.request('info', payload), sdk = { ExchangeClient, createWalletClient, custom, privateKeyToAccount, generatePrivateKey }, keys = indexedKeyStore(), subtle = globalThis.crypto?.subtle, random = (bytes) => globalThis.crypto.getRandomValues(bytes) } = {}) {
   const sealer = createSealer({ keys, subtle, random, sdk });
   function current() {
     const c = hub.snapshot().current;
@@ -243,23 +243,34 @@ function createPerpsWallet({ hub = getWalletHub(window), storage = browserStorag
       return c.entry.provider.request(args);
     } }) }));
   }
+  const builderFlights = new Map();
   async function builderApproval(c, config) {
     const cfg = normalizeConfig(config);
     if (!cfg.builder) return;
-    let approved;
-    try {
-      approved = storage.getItem(feeKeyFor(c.owner));
-    } catch {
-    }
-    if (approved !== cfg.builder) {
-      orderResult(await ownerClient(c).approveBuilderFee({ builder: cfg.builder, maxFeeRate: "0.1%" }));
-      await guard(c);
-      try {
-        storage.setItem(feeKeyFor(c.owner), cfg.builder);
-      } catch {
+    const key = c.owner.toLowerCase() + ':' + cfg.builder;
+    if (builderFlights.has(key)) { await builderFlights.get(key); await guard(c); return; }
+    const pending = (async () => {
+      const read = async () => {
+        await guard(c);
+        let value;
+        try { value = await readBuilderFee({type: 'maxBuilderFee', user: c.owner.toLowerCase(), builder: cfg.builder}); }
+        catch { throw Error('Builder fee approval is refreshing. No order was sent. Try again.'); }
+        await guard(c);
+        if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) throw Error('Builder fee approval could not be verified. No order was sent.');
+        return value;
+      };
+      if (await read() < cfg.builderFeeTenthsBp) {
+        // This permission must come from the main wallet, never the local trading key.
+        orderResult(await ownerClient(c).approveBuilderFee({ builder: cfg.builder, maxFeeRate: "0.1%" }));
+        await guard(c);
+        if (await read() < cfg.builderFeeTenthsBp) throw Error('Builder fee approval is still refreshing. No order was sent. Check approval and retry.');
       }
-    }
-    await guard(c);
+      await guard(c);
+      // Compatibility hint only. Every setup/order verifies Hyperliquid's actual approval.
+      try { storage.setItem(feeKeyFor(c.owner), cfg.builder); } catch {}
+    })();
+    builderFlights.set(key, pending);
+    try { await pending; } finally { if (builderFlights.get(key) === pending) builderFlights.delete(key); }
   }
   async function setup(config) {
     const c = current(), cfg = normalizeConfig(config);
@@ -280,10 +291,12 @@ function createPerpsWallet({ hub = getWalletHub(window), storage = browserStorag
       record.approved = true;
       save(c.owner, record);
     }
-    if (cfg.builder && record.builder !== cfg.builder) {
+    if (cfg.builder) {
       await builderApproval(c, cfg);
-      record.builder = cfg.builder;
-      save(c.owner, { ...record, approved: true });
+      if (record.builder !== cfg.builder) {
+        record.builder = cfg.builder;
+        save(c.owner, { ...record, approved: true });
+      }
     }
   }
   return {
@@ -324,12 +337,13 @@ function createPerpsWallet({ hub = getWalletHub(window), storage = browserStorag
       }
       await guard(c);
       if (!record?.approved || !ready(cfg)) throw Error("Approve fast trading once to close.");
+      await builderApproval(c, cfg);
       const exchange = client(c, record.account);
       if (leverage) {
         orderResult(await exchange.updateLeverage(leverage));
       }
       await guard(c);
-      return orderResult(await exchange.order(action));
+      return orderResult(await exchange.order(withBuilder(action, cfg)));
     },
     async cancel(asset, oid) {
       const c = current();

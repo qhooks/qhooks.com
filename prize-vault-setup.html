@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Prize vault setup | QHooks</title><meta name="description" content="Deploy the QHOOKS prize vault on Robinhood Chain. Fixed token, Safe and a minimum 30-day prize lock."><link rel="icon" href="/qhooks-logo.jpg"><script src="/theme.js"></script>
+<link rel="preload" href="/qx-a/fonts/mona-sans-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/qx-a/tokens.css"><link rel="stylesheet" href="/qx-a/components.css"><link rel="stylesheet" href="/qx-a/shell.css"><link rel="stylesheet" href="/wallet-site.css"><link rel="stylesheet" href="/qx-a/pages/setup-prize-vault.css">
+</head><body class="qa setup prize-page" data-a-shell data-setup-page="prize-vault-setup"><a class="skip-link" href="#main">Skip to content</a>
+<header class="setup-fallback"><a class="brand" href="/"><span class="mark"><img src="/qx-a/img/qhooks-icon.jpg" alt=""></span>QHooks</a><button id="qhc-trigger" type="button" aria-haspopup="dialog">Connect wallet</button></header>
+<main id="main" class="qa-page setup-page"><section class="setup-intro"><p class="eyebrow">Robinhood Chain · QHOOKS</p><h1>Set up the prize vault.</h1><p>Create the fixed vault for QHOOKS prizes. Awarded tokens stay locked for at least 30 days and do not earn staking rewards.</p></section>
+<section id="prize-root" class="setup-flow" aria-label="Prize vault deployment" data-state="checking"><div class="prize-summary"><div><span>Prize token</span><strong>QHOOKS</strong></div><div><span>Minimum lock</span><strong>30 days</strong></div><div><span>Network</span><strong>Robinhood Chain</strong></div></div>
+<p>Any wallet can deploy. Only the fixed QHooks Safe can award prizes.</p><button id="prize-go" type="button" class="qas-go setup-primary qa-btn qa-btn--primary" disabled>Checking setup…</button><p id="prize-status" role="status" aria-live="polite">Checking Robinhood Chain…</p><button id="prize-retry" type="button">Retry check</button><br><a id="prize-tx" hidden target="_blank" rel="noopener"></a>
+<div id="prize-track" hidden><label for="prize-hash">Transaction hash from your wallet</label><input id="prize-hash" autocomplete="off" spellcheck="false" placeholder="0x…"><button id="prize-track-go" type="button">Check saved transaction</button></div>
+<p class="prize-note">Your wallet reviews and confirms the deployment gas in ETH. This step moves no QHOOKS and does not fund or award prizes.</p>
+<details class="prize-details"><summary>Review fixed vault settings</summary><dl><dt>Vault</dt><dd id="prize-address"></dd><dt>QHOOKS token</dt><dd id="prize-token"></dd><dt>Funder Safe</dt><dd id="prize-safe"></dd><dt>Minimum lock</dt><dd>2,592,000 seconds · 30 days</dd></dl><p><a id="prize-explorer" target="_blank" rel="noopener">View vault address on Blockscout</a></p></details></section>
+</main><dialog id="qhc-dialog" class="qhc-dialog" aria-labelledby="qhc-title">
+ <div class="qhc-heading"><h2 id="qhc-title">Your wallet</h2><button id="qhc-close" type="button" aria-label="Close wallet dialog">×</button></div>
+ <section class="qhc-login"><button id="qhc-email-login" type="button" class="qhc-choice">Continue with email or Google</button><p>No wallet extension needed. Your QWallet quantum key stays separate.</p><button id="qhc-email-logout" type="button" class="qhc-secondary" hidden>Sign out of QHooks login</button><p id="qhc-login-status" role="status" aria-live="polite"></p></section><section class="qhc-mobile">
+ <label for="qhc-mobile-chain">Mobile wallet network</label><select id="qhc-mobile-chain"></select>
+ <button id="qhc-mobile-login" type="button" class="qhc-choice">MetaMask Mobile</button>
+ <p id="qhc-mobile-status" role="status" aria-live="polite">Connect your phone with a QR code.</p>
+ <button id="qhc-mobile-disconnect" type="button" class="qhc-secondary" hidden>Disconnect mobile session</button>
+ <p class="qhc-sdk-notice">Uses MetaMask Connect, copyright ConsenSys. <a href="/metamask/LICENSE.txt" target="_blank" rel="noopener">License</a></p>
+</section>
+<div id="qhc-choices">
+  <p>Choose an EVM wallet.</p>
+  <div id="qhc-wallets" class="qhc-wallets"></div>
+  <div id="qhc-empty"><p>No wallet detected in this browser.</p><p>Open <strong>qhooks.com</strong> in Chrome with your wallet extension enabled, or in your wallet app’s built-in browser.</p><p>The in-app preview cannot access Chrome’s wallet extensions. Use MetaMask Mobile above to pair your phone.</p></div>
+  <button id="qhc-rescan" type="button" class="qhc-secondary">Detect wallets again</button>
+ </div>
+ <div id="qhc-account" hidden><p id="qhc-address" class="qhc-address"></p><p id="qhc-chain"></p><p id="qhc-remembered"></p><button id="qhc-forget" type="button" class="qhc-secondary">Disconnect and forget</button></div>
+ <div id="qhc-email-network" hidden><label for="qhc-embedded-chain">Embedded wallet network</label><select id="qhc-embedded-chain"></select><button id="qhc-embedded-switch" type="button" class="qhc-secondary">Switch network</button></div><p id="qhc-status" role="status" aria-live="polite"></p>
+ <p class="qhc-footnote">Connecting does not authorize spending. Every signature and transaction needs your approval. Never enter your recovery phrase here.</p>
+</dialog><script src="/wallet-early.js"></script><script type="module" src="/wallet-site.mjs"></script><script type="module" src="/wallet-page-resume.mjs"></script><script type="module" src="/wallet-login.mjs"></script><script type="module" src="/l121-mobile-login.mjs"></script><script type="module" src="/qx-prize-vault-setup.mjs"></script></body></html>

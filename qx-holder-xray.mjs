@@ -1,0 +1,51 @@
+import {discoveryEvidence,holderEvidence} from './qx-discovery-evidence.mjs';
+import {holderLpProof} from './qx-holder-lp-proof.mjs';
+import {holderView,holderOwners} from './qx-terminal-holders.mjs';
+import {holderXray,historyWallet} from './qx-holder-xray-core.mjs';
+const pages=new Map(),memories=new Map(),pendingControllers=new Set();let proofPromise=null;if(typeof addEventListener==='function')addEventListener('pagehide',()=>{for(const c of pendingControllers)c.abort();pendingControllers.clear();});
+const defaultHeaders=async()=>{const [{authHeaders},record,sol]=await Promise.all([import('./qx-board-session.mjs'),import('./qx-trade-record.mjs'),import('./qx-solana.mjs')]);const evm=authHeaders();return evm.authorization?evm:record.tradeRecordHeaders('solana',sol.solAddress());};
+export function renderMarketHolders({h,who,link,short,chainId,market={},sample=null,snapshot=null,onMore=null,now=Date.now(),fetcher=(...a)=>fetch(...a),headers=defaultHeaders,document:doc=globalThis.document,events=globalThis.window,autoRead=true,lpStorage}={}){
+ if(doc&&!doc.querySelector('link[href="/qx-holder-xray.css"]'))doc.head.append(h('link',{rel:'stylesheet',href:'/qx-holder-xray.css'}));
+ const chain=String(chainId),view=holderOwners(holderView({market,sample,snapshot,now})),token=market.meta?.token||market.token?.address||market.token?.token||snapshot?.token||sample?.token||'',pageKey=chain+':'+token,root=h('section',{class:'hx',ariaLabel:'Holder X-ray'}),status=h('p',{class:'hx-status',role:'status'});
+ let offset=Math.min(pages.get(pageKey)||0,Math.max(0,Math.floor((view.rows.length-1)/25)*25)),wallets=[],key='';
+
+ let observer=null,controller=null,disposed=false,sequence=0,proof=null,history=null,busy=false;
+ const error=e=>{status.textContent=e?.message||'Holder history is refreshing. Try again.';};
+ const field=(label,value,title,cls='',compact=label)=>h('div',{class:cls},h('dt',{},h('span',{class:'hx-label-full'},label),h('span',{class:'hx-label-short'},compact)),h('dd',title?{title}: {},value));
+ function readPageView(){const subset=view.rows.slice(offset,offset+25),next=[...new Set(subset.filter(r=>!r.excluded).map(r=>historyWallet(r.holder,chain)).filter(Boolean))],nextKey=pageKey+':'+next.join(',');if(key!==nextKey){sequence++;controller?.abort();busy=false;key=nextKey;wallets=next;history=memories.get(key)?.value||null;}return {...view,rows:subset};}
+ function paint(){
+  const pageView=readPageView(),data=holderXray({view:pageView,market,history,proof,chainId:chain,now}),head=h('div',{class:'hx-head'},h('h3',{},'Holder X-ray')),read=h('button',{type:'button',class:'qxt-context-action',disabled:busy||!wallets.length},busy?'Reading history…':'Read wallet history');read.hidden=!data.historyEnabled;read.addEventListener('click',()=>void load(true).catch(error));head.append(read);
+  const creator=data.creator,created=creator.wallet?h('div',{class:'hx-creator'},h('span',{},'Creator sells · '+creator.scope),h('b',{},creator.sold===null?'Unknown':creator.sold.toLocaleString('en-US',{maximumSignificantDigits:6})+' '+(market.meta?.symbol||market.token?.symbol||'tokens')),...(creator.tx?[link(chain,'/tx/'+creator.tx,'Latest sell ↗')]:[])):h('div',{class:'hx-creator'},h('span',{},'Creator sells'),h('b',{},'Creator not identified'));
+  const proofLink='/qproof?'+new URLSearchParams({chain,q:token}),facts=h('div',{class:'hx-facts'},market.ext?h('div',{},h('span',{},'LP lock / burn'),h('a',{href:proofLink},'Check with QProof →')):h('div',{},h('span',{},'Launch LP code'),data.lp.listed?h('b',{},data.lp.custody):h('a',{href:proofLink},'Check with QProof →')),created),ul=h('ol',{class:'hx-rows'});
+  const lp=market.ext?null:holderLpProof({chainId:chain,token,factory:market.meta?.factory||market.meta?.engine,poolId:market.meta?.poolId||market.poolId||market.pool?.id,registry:proof,storage:lpStorage,now});
+  if(!market.ext&&data.lp.listed&&!lp&&/^0x[0-9a-f]{40}$/i.test(token))facts.children[0].append(h('a',{href:'/lp-proof?'+new URLSearchParams({chain,token:token.toLowerCase()})},'Check LP proof →'));
+  const observation=holderEvidence({view,data,market,sample,chainId:chain,now:Date.now()});if(observation)discoveryEvidence().record(chain,token,'holders',observation);
+  if(lp)discoveryEvidence().record(chain,token,'lp',{at:lp.readAt,source:lp.source,poolId:lp.poolId,noRemove:true});
+  if(lp)facts.append(h('div',{class:'hx-lp-position'},h('span',{},'Launch LP position'),h('b',{},lp.text),h('a',{href:lp.href},'View LP proof →'),h('small',{},'Read at '+new Date(lp.readAt).toISOString().slice(0,19).replace('T',' ')+' UTC')));
+  for(const [i,r]of data.rows.entries()){
+   const original=who(chain,r.holder,null,r.label),identity=h('div',{class:'hx-wallet'});if(original.tagName?.toLowerCase()==='td')identity.append(...Array.from(original.childNodes||original.children||[]));else identity.append(original);const row=h('li',{class:'hx-row'}),name=h('div',{class:'hx-name'},h('span',{class:'hx-rank'},String(offset+i+1).padStart(2,'0')),identity,...(r.label?[h('span',{class:'hx-role'},r.label)]:[]));
+   name.append(h('span',{class:'hx-held'},h('span',{},'Held '),r.shareText));
+   if(r.firstBuyScope!=='Indexed history')name.append(h('span',{class:'hx-role'},r.firstBuyScope));
+   if(r.accounts?.length>1)name.append(h('span',{class:'hx-role'},r.accounts.length+' token accounts'));
+   const metrics=h('dl',{class:'hx-metrics'},field('Held',r.shareText,null,'hx-held-detail'),field('Amount',r.amountText,null,'hx-amount'),field(r.firstBuyScope==='Indexed history'?'First buy':'Buy seen',r.firstBuyText,r.firstBuyScope),field('Sold of bought',r.soldText,r.firstBuyScope,'','Sold'),field('Age',r.activityAge,r.history?.scope||'Not checked'));
+   const signals=h('div',{class:'hx-signals'});for(const signal of r.signals)signals.append(signal.wallet?link(chain,'/address/'+signal.wallet.replace(/^solana:/,''),signal.label+' ↗'):h('span',{},signal.label));
+   row.append(name,metrics);if(r.signals.length)row.append(signals);ul.append(row);
+  }
+  const scope=h('p',{class:'qxt-data-scope'},view.summary),fresh=h('p',{class:'qxt-panel-freshness'},view.detail+' · '+(view.rows.length?offset+1:0)+'–'+Math.min(offset+25,view.rows.length)+' of '+view.rows.length+' returned owners shown'),explain=h('p',{class:'hx-explain'},'Buy timing and sold/bought use indexed history or shown swaps, as labelled. Listed LP code is not proof that every pool position is locked. Activity age is a lower bound from returned transfers or signatures, not wallet creation. Shared funding or a buy block does not prove common ownership.');
+  const navigation=h('div',{class:'hx-navigation'}),goPage=next=>{offset=next;pages.delete(pageKey);pages.set(pageKey,offset);if(pages.size>30)pages.delete(pages.keys().next().value);paint();void load().catch(error);};
+  if(offset>0){const prev=h('button',{type:'button',class:'qxt-context-action'},'Previous 25');prev.addEventListener('click',()=>goPage(Math.max(0,offset-25)));navigation.append(prev);}
+  if(offset+25<view.rows.length){const next=h('button',{type:'button',class:'qxt-context-action'},'Next 25');next.addEventListener('click',()=>goPage(offset+25));navigation.append(next);}else if(view.next&&onMore){const more=h('button',{type:'button',class:'qxt-more'},'Load more holders');more.addEventListener('click',()=>{more.disabled=true;pages.set(pageKey,offset+25);onMore();});navigation.append(more);}
+  root.replaceChildren(head,scope,fresh,facts,h('a',{class:'hx-proof',href:proofLink},'Check liquidity and token with QProof →'),status,...(data.rows.length?[ul]:[h('p',{class:'qxt-empty'},'Refreshing holders…')]),navigation,explain);
+ }
+ async function load(force=false){
+  if(disposed||busy||doc?.hidden||!wallets.length)return;const previous=memories.get(key);if(!force&&previous&&Date.now()-previous.at<60000){history=previous.value;paint();return;}busy=true;controller=new AbortController();pendingControllers.add(controller);const requestController=controller,revision=++sequence;paint();
+  try{
+   const path='/api/holders/history',query=new URLSearchParams({chain,wallets:wallets.join(',')});
+   if(force){const available=new Set((history?.rows||[]).filter(r=>r.state==='available'&&r.ageRead!==false||r.retryAt>Date.now()).map(r=>r.wallet)),targets=wallets.filter(w=>!available.has(w)).slice(0,10),auth=await headers();if(!auth.authorization)throw Error('Sign in with this wallet in Community, then retry the history read.');if(!targets.length){status.textContent='Wallet history is current.';return;}const response=await fetcher(path,{method:'POST',signal:requestController.signal,cache:'no-store',credentials:'omit',redirect:'error',headers:{...auth,'content-type':'application/json'},body:JSON.stringify({chainId:chain,wallets:targets})});if(!response.ok)throw Error(response.status===429?'Wallet history is at its current allowance. Try again later.':response.status===401?'Sign in with this wallet in Community, then retry.':'Wallet history is unavailable right now.');}
+   const response=await fetcher(path+'?'+query,{signal:requestController.signal,cache:'no-store',credentials:'omit',redirect:'error'}),value=await response.json();if(!response.ok||value.chainId!==chain||!Array.isArray(value.rows))throw Error('Wallet history is refreshing.');if(disposed||revision!==sequence)return;history=value;memories.delete(key);memories.set(key,{value,at:Date.now()});if(memories.size>30)memories.delete(memories.keys().next().value);
+  }finally{pendingControllers.delete(requestController);if(controller===requestController)controller=null;if(!disposed&&revision===sequence){busy=false;paint();}}
+ }
+ const dispose=()=>{disposed=true;sequence++;controller?.abort();observer?.disconnect();};paint();
+ if(autoRead)queueMicrotask(()=>{if(root.isConnected===false)return;if(typeof MutationObserver==='function'&&root.parentNode){observer=new MutationObserver(()=>{if(root.isConnected===false)dispose();});observer.observe(root.parentNode,{childList:true});}void load().catch(error);if(!proofPromise)proofPromise=fetcher('/full-launch/lp-proof-v1.json',{cache:'force-cache',credentials:'omit',redirect:'error'}).then(r=>r.ok?r.json():null).catch(()=>null);void proofPromise.then(value=>{if(!disposed&&root.isConnected!==false){proof=value;paint();}});});
+ return [root];
+}

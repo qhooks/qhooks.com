@@ -1,12 +1,14 @@
+import {readPerpsMarketIntent} from './compete-perps-copy.mjs';
 import { getWalletHub } from "/wallet-hub.mjs";
 import { canTrade, marketsFrom, positionsFrom, buildEntry, buildCloseAll, buildPositionTpsl, estimatedLiquidation, RISK } from "./qx-perps-core.mjs";
 import { createPerpsWallet } from "./qx-perps-wallet.mjs";
 import { info, account, liveFeed } from "./qx-perps-data.mjs";
 import { el, usd, num, pct, short, createConfirmation, detailList } from "./qx-perps-ui.mjs";
 import { createPerpsChart, feedStatus } from "./qx-perps-chart.mjs";
-import { loadPerpsConfig } from "./qx-perps-config.mjs";
+import { loadPerpsConfig, loadLivePerpsConfig } from "./qx-perps-config.mjs";
+const PERPS_INTENT=readPerpsMarketIntent(location.search);
 const $ = (id) => document.getElementById(id), hub = getWalletHub(window), wallet = createPerpsWallet({ hub }), confirm = createConfirmation();
-let config = null, country = null, markets = [], selected = "BTC", tf = "1h", buy = true, positions = [], orders = [], accountOwner = null, accountSeq = 0, chartView = null, marketRequests = 0, socketStatus = "Refreshing", busy = false, dead = false, feed, accountLoading = false;
+let config = null, country = null, markets = [], selected = PERPS_INTENT||"BTC", tf = "1h", buy = true, positions = [], orders = [], accountOwner = null, accountSeq = 0, chartView = null, marketRequests = 0, socketStatus = "Refreshing", busy = false, dead = false, feed, accountLoading = false;
 const owner = () => hub.snapshot().current?.owner || null, market = () => markets.find((m) => m.name === selected);
 // System A (2026-11-11): the price hangs on changed digits, the band of markets scrolls, rows carry a coin mark. Data and flows unchanged.
 const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -191,7 +193,13 @@ async function refreshMarkets() {
     const next = marketsFrom(await info({ type: "metaAndAssetCtxs" }));
     if (dead) return;
     markets = next.map((m2) => ({ ...m2, updatedAt: Date.now() }));
-    if (!market()) selected = markets.find((m2) => m2.name === "BTC")?.name || markets[0]?.name || "BTC";
+    if (!market()&&!PERPS_INTENT) selected = markets.find((m2) => m2.name === "BTC")?.name || markets[0]?.name || "BTC";
+    if(PERPS_INTENT&&!market()){
+      $("action-status").textContent="That perp isn’t available. Choose a market.";
+      $("coin").textContent="Choose market";if($("pp-coin"))$("pp-coin").textContent="?";
+      paintPrice("—",selected);for(const id of ["change","funding","interest","max-leverage","mark"])$(id).textContent="—";
+      $("chart").setAttribute("aria-label","Choose an available perps market");
+    }
     const m = market();
     if (m) {
       $("leverage").max = m.maxLeverage;
@@ -234,7 +242,7 @@ function color(name) {
   return getComputedStyle(document.body).getPropertyValue(name).trim();
 }
 async function loadCandles({ reset = true } = {}) {
-  if (!chartView || dead) return;
+  if (!chartView || dead || !market()) return;
   feed?.select(selected, tf);
   await chartView.load(selected, tf, { reset });
 }
@@ -389,7 +397,8 @@ $("order-form").addEventListener("submit", (e) => {
   run(async () => {
     if (!canTrade(country)) throw Error("Perps trading isn't available in your region.");
     const address = owner();
-    config = await loadPerpsConfig();
+    config = await loadLivePerpsConfig();
+    renderControls();
     await freshMarkets();
     const m = market(), leverage = { asset: m.asset, isCross: $("margin-mode").value === "cross", leverage: Number($("leverage").value) }, action = buildEntry({ market: m, buy, kind: $("order-kind").value, amount: $("amount").value, unit: $("size-unit").value, limit: $("limit-price").value, slippage: $("slippage").value, tp: $("tp").value, sl: $("sl").value, reduceOnly: $("reduce-only").checked }, config);
     const entry = action.orders[0];
@@ -404,7 +413,8 @@ $("order-form").addEventListener("submit", (e) => {
 });
 $("setup-agent").addEventListener("click", () => run(async () => {
   if (!canTrade(country)) return;
-  config = await loadPerpsConfig();
+  config = await loadLivePerpsConfig();
+  renderControls();
   if (!await confirm.ask("Turn on fast trading?", "Approve QHooks as a trading agent. The key stays in this browser. Agent keys cannot withdraw." + (config.builder ? "\nAlso approve a 0.1% builder fee cap with your wallet." : ""))) return;
   await wallet.setup(config);
   note("Fast trading is on.");

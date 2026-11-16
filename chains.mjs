@@ -52,6 +52,8 @@ const rows = [
   },
   {
     simpleLaunch: '0x023623568f41c032ec2f4bba368dbafc123160cc', simpleLaunchFrom: 108170556,
+    // Deployed QStampVault v2. Runtime and all immutables checked against the audited build on 2026-11-16.
+    stampVault: { address: '0xed93171c96adf984f481c303a330d6b18b82e3ec', version: 2, genesis: 1794852468 },
     // Next-generation QSimpleLaunch on Robinhood (start cap + optional PQ creator key), Randall 2026-11-09 "upgrade robinhood";
     // deployed via /chain-setup at block 110156527. Same RH settings as the factory above (fee wallet QFlywheel 0xb85e…,
     // 0.0002 ETH, same start): chain() identical. New one-tap launches go here; launches on 0x0236… stay listed and tradable.

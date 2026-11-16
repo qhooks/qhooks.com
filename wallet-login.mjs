@@ -84,13 +84,13 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
  }
  // newcomerA (2026-11-12): on a token page the sheet follows the token's chain family. Email/Google/X stays first; then
  // EVM wallet apps for an EVM token, Solana wallet apps only for a Solana token; the other family moves under
- // "I have a wallet app" (or to the end of the sheet when there is no expander). Opened from a buy, it reads "Sign in to buy".
+ // "I have a wallet app" (or to the end of the sheet when there is no expander). Opened from a buy, it reads "Connect to buy".
  const parked=[];
  const park=(node,parent,before=null)=>{if(!node||!parent||node.parentNode===parent&&node.nextSibling===before)return;if(!parked.some(p=>p.node===node))parked.push({node,parent:node.parentNode,next:node.nextSibling});parent.insertBefore(node,before);};
  const unparkAll=()=>{for(const p of parked.splice(0).reverse())if(p.parent?.isConnected)p.parent.insertBefore(p.node,p.next&&p.next.parentNode===p.parent?p.next:null);};
  const tokenFamily=()=>{const m=/^#(?:m|t)=(solana|\d+):/.exec(String(target.location?.hash||''));return m?(m[1]==='solana'?'solana':'evm'):null;};
  function arrange(){
-  if(dead)return;const fam=tokenFamily(),dialog=$('dialog'),more=$('more-wallets'),apps=$('apps'),empty=$('empty');
+  if(dead)return;const fam=tokenFamily(),dialog=$('dialog'),more=$('more-wallets'),apps=$('apps'),empty=$('empty');const direct=$('evm-wallet-login');if(direct)direct.hidden=fam==='solana';
   if(fam!=='evm'){unparkAll();return;}
   if(more){park(apps,more.parentNode,more);if(apps&&empty)apps.hidden=empty.hidden;park(solButton,more);park(solApps,more);}
   else{const foot=dialog?.querySelector('.qhc-footnote');if(foot){park(solButton,foot.parentNode,foot);park(solApps,foot.parentNode,foot);}}
@@ -98,9 +98,9 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
  let buyTap=0;const BUY_TAP='.qxt-signin,.qxt-go,.qxt-qb,.qa-dock,.qxt-quick,#qxt-ticket,#qxt-trade,#qxt-main';
  d.addEventListener?.('click',e=>{const b=e.isTrusted&&e.target?.closest?.('button,a');if(b&&b.closest(BUY_TAP)&&/\bbuy\b/i.test((b.textContent||'')+' '+(b.title||'')))buyTap=Date.now();},true);
  const titleEl=$('title');let buyMode=false;const MO=target.MutationObserver||globalThis.MutationObserver;
- const paintTitle=()=>{if(!titleEl)return;const want=buyMode&&!hub.snapshot().current?'Sign in to buy':null;if(want&&titleEl.textContent!==want)titleEl.textContent=want;};
+ const paintTitle=()=>{if(!titleEl)return;const want=buyMode&&!hub.snapshot().current?'Connect to buy':null;if(want&&titleEl.textContent!==want)titleEl.textContent=want;};
  if(titleEl&&MO)new MO(paintTitle).observe(titleEl,{childList:true,characterData:true,subtree:true});
- if($('dialog')&&MO)new MO(()=>{const dlg=$('dialog');if(dlg.open){buyMode=Date.now()-buyTap<2500;arrange();paintTitle();}else if(buyMode){buyMode=false;if(titleEl&&titleEl.textContent==='Sign in to buy')titleEl.textContent=hub.snapshot().current?'Account':'Connect a wallet';}}).observe($('dialog'),{attributes:true,attributeFilter:['open']});
+ if($('dialog')&&MO)new MO(()=>{const dlg=$('dialog');if(dlg.open){buyMode=Date.now()-buyTap<2500;arrange();paintTitle();}else if(buyMode){buyMode=false;if(titleEl&&titleEl.textContent==='Connect to buy')titleEl.textContent=hub.snapshot().current?'Account':'Connect a wallet';}}).observe($('dialog'),{attributes:true,attributeFilter:['open']});
  target.addEventListener?.('hashchange',arrange);
  const show=()=>{if(!dead&&!$('dialog').open)$('dialog').showModal();};
  function render(){button.disabled=!!loading&&!state.ready;button.textContent=!state.authenticated?loginLabel(inApp,xOn):state.hasWallet?'Use my QHooks wallet':'Create my EVM wallet';$('email-logout').hidden=!state.authenticated;const c=hub.snapshot().current;$('email-network').hidden=c?.entry.rdns!==EMBEDDED_RDNS;if(c?.entry.rdns===EMBEDDED_RDNS&&!wantedChain)$('embedded-chain').value=c.chainId;renderSolana();arrange();}
@@ -168,12 +168,15 @@ export function bindWalletLogin({target=window,document:d=document,hub=getWallet
  const mobile=d.getElementById('qhc-mobile-login');
  if(mobile&&!d.getElementById('qhc-phone-login')){
   const phoneButton=d.createElement('button');phoneButton.type='button';phoneButton.id='qhc-phone-login';phoneButton.className='qhc-choice';phoneButton.textContent='Any phone wallet (WalletConnect)';
-  phoneButton.addEventListener('click',async()=>{
+  const connectPhone=async()=>{
    try{wantPhone=true;status('Loading WalletConnect…');await initialize();status('');
     if(phoneBridge.provider&&hub.snapshot().wallets.some(w=>w.uuid===PHONE_UUID)){wantPhone=false;await hub.connect(PHONE_UUID);$('dialog').close();return;}
     $('dialog').close();await sdk.connectPhone();}
    catch(error){wantPhone=false;status(error?.message||'WalletConnect could not open. Please try again.');show();}
-  });
+  };
+  phoneButton.addEventListener('click',connectPhone);
+  const direct=d.createElement('button');direct.type='button';direct.id='qhc-evm-wallet-login';direct.className='qhc-choice';direct.textContent='MetaMask / Coinbase / WalletConnect';direct.addEventListener('click',connectPhone);
+  const loginBox=d.querySelector('#qhc-dialog .qhc-login');if(loginBox)loginBox.append(direct);else button.after(direct);
   mobile.after(phoneButton);
  }$('email-logout').addEventListener('click',logout);
  for(const c of launchChains){const option=d.createElement('option');option.value=c.id;option.textContent=c.name+' · '+c.gas;$('embedded-chain').append(option);}

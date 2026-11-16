@@ -6,6 +6,7 @@ import { formatUnits, send, connectedAddress, onWalletChange, CHAIN_NAME, NATIVE
 import { cashbackOf, referralLink, claimCall } from '/qx-swap.mjs';
 import { extraAddress } from '/qx-extras.mjs';
 import { readEvmRewardSnapshot, sameRewardOwner } from '/qx-reward-state.mjs';
+import {installOverlayDismissal} from './qx-overlays.mjs';
 
 const Z = '0x0000000000000000000000000000000000000000';
 // The quote tokens terminal fees are taken in, besides each chain's coin.
@@ -23,6 +24,7 @@ const btn = h('button', { type: 'button', id: 'qxt-rewards', class: 'qxt-rewards
   h('span', {}, 'Rewards'), h('i', { class: 'qxt-rewards-dot', 'aria-hidden': 'true' }));
 const panel = h('div', { id: 'qxt-rewards-panel', class: 'qxt-rewards', role: 'dialog', 'aria-label': 'Rewards', hidden: true });
 wallet?.before(h('div', { class: 'qxt-rewards-wrap' }, btn, panel));
+const rewardsOverlay=installOverlayDismissal().registerCustom(panel,{isOpen:()=>!panel.hidden,close:()=>{toggle(false);return true;},opener:()=>btn});
 let seq = 0, epoch = 0, owner = null, router = null, pending = null, claiming = null;
 // Last successful asset reads belong only to the current connection. A failed refresh never turns them into zero.
 const known = new Map();
@@ -152,13 +154,16 @@ async function load(notice = '') {
   }
   const previous = [...known.values()].filter(x => BigInt(x.amount) > 0n);
   list.replaceChildren(...(previous.length ? previous.map(x => row({ ...x, stale: true }, null)) : [h('div', { class: 'qxt-rewards-skel' }), h('div', { class: 'qxt-rewards-skel' })]));
+  const hadFocus=panel.contains(document.activeElement),close=h('button',{type:'button',class:'qxt-rewards-x','aria-label':'Close rewards'},'×');
+  close.addEventListener('click',()=>rewardsOverlay.requestClose('close'));
   panel.replaceChildren(
-    h('div', { class: 'qxt-rewards-head' }, h('h2', {}, 'Rewards'), h('p', {}, 'Cashback and referral earnings from eligible EVM terminal trades. Claims use network gas.')),
+    h('header', { class: 'qxt-rewards-head' }, h('div',{},h('h2', {}, 'Rewards'), h('p', {}, 'Cashback and referral earnings from eligible EVM terminal trades. Claims use network gas.')),close),
     list, status, refresh,
     h('section', { class: 'qxt-rewards-ref' },
       h('h3', {}, 'Bring traders. Earn rewards.'),
       h('p', {}, 'Bring traders, get 20% of their fee. They get 30% back on EVM trades, 40% on Robinhood Chain if they hold 100K QHOOKS.'),
       h('div', { class: 'qxt-rewards-link' }, h('code', { title: link }, 'qhooks.com/terminal.html?ref=' + short(me)), copy)));
+  if(hadFocus&&!panel.hidden)close.focus({preventScroll:true});
   let snapshot;
   try { snapshot = await scan(me, generation); } catch { snapshot = unavailable(me); }
   if (!current(me, generation, mine)) { if (!owns(me, generation)) sync(); return; }
@@ -182,14 +187,9 @@ async function load(notice = '') {
 function toggle(open = panel.hidden) {
   panel.hidden = !open; btn.setAttribute('aria-expanded', String(open));
   if (open) load(); else seq++;
+  rewardsOverlay.sync();
 }
 btn.addEventListener('click', e => { e.stopPropagation(); toggle(); });
-document.addEventListener('click', e => {
-  // Refresh replaces its clicked control before this event reaches document.
-  const path = e.composedPath?.() || [];
-  if (!panel.hidden && !path.includes(panel) && !path.includes(btn) && !panel.contains(e.target) && !btn.contains(e.target)) toggle(false);
-});
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !panel.hidden) { toggle(false); btn.focus(); } });
 document.addEventListener('qhooks:rewards-claimed', () => { sync(); if (owner && panel.hidden) refreshDot(); });
 document.addEventListener('qhooks:traded', () => { sync(); if (owner) panel.hidden ? refreshDot() : load(); });
 function sync() {

@@ -1,4 +1,5 @@
 import {privyAccessToken} from './qx-privy-access-token.mjs';
+import {installOverlayDismissal} from './qx-overlays.mjs';
 export {privyAccessToken};
 // Wallet ownership is confirmed in the connected wallet. Telegram credentials remain in the bridge's memory.
 export const utf8Hex = text => '0x' + [...new TextEncoder().encode(text)].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -35,11 +36,11 @@ export function mountWalletLink({ document: doc, hub, telegram, fetchImpl = glob
   if (!telegram?.inTelegram || !telegram.getInitData() || !doc.body) return () => {};
   // The list view does not display the trade panel. Own one sheet directly on the body.
   if (doc.querySelector('#qxt-tg-link')) return () => {};
-  let revision = 0, sheet = null, userId = '', previousAddress, previousProvider;
+  let revision = 0, sheet = null, surfaceOwner = null, userId = '', previousAddress, previousProvider;
   const dismissed = new Set();
   const dismissKey = address => 'qhooks:tg:link-dismissed:' + userId + ':' + address;
   const seen = address => { try { return dismissed.has(dismissKey(address)) || storage?.getItem(dismissKey(address)) === '1'; } catch { return dismissed.has(dismissKey(address)); } };
-  const remove = () => { sheet?.remove(); sheet = null; };
+  const remove = () => { if(sheet)sheet.hidden=true;surfaceOwner?.sync();surfaceOwner?.dispose();surfaceOwner=null;sheet?.remove();sheet=null; };
   const dismiss = address => {
     if (address) { dismissed.add(dismissKey(address)); try { storage?.setItem(dismissKey(address), '1'); } catch {} }
     revision++; remove();
@@ -48,14 +49,21 @@ export function mountWalletLink({ document: doc, hub, telegram, fetchImpl = glob
   const button = text => make('button', { type: 'button', class: 'qxt-mini' }, text);
   function frame(titleText, descriptionText, address) {
     remove();
+    const opener=doc.activeElement;
     const title = make('h2', { id: 'qxt-tg-link-title', 'aria-live': 'polite' }, titleText);
     const description = make('p', { class: 'qxt-tg-description' }, descriptionText);
     const status = make('p', { class: 'qxt-tg-status', role: 'status', 'aria-live': 'polite' });
     const close = button('Dismiss');
     close.addEventListener('click', () => dismiss(address));
     const controls = make('div', { class: 'qxt-tg-controls' });
-    sheet = make('section', { id: 'qxt-tg-link', class: 'qxt-card qxt-tg-link', role: 'dialog', 'aria-labelledby': 'qxt-tg-link-title' }, title, description, controls, status);
+    const x=make('button',{type:'button',class:'qxt-tg-x','aria-label':'Close wallet link'},'×');
+    sheet = make('section', { id: 'qxt-tg-link', class: 'qxt-tg-link', role: 'dialog', 'aria-labelledby': 'qxt-tg-link-title' }, make('header',{class:'qxt-tg-head'},title,x), description, controls, status);
     doc.body.append(sheet);
+    const node=sheet;
+    const viewWindow=doc.defaultView||globalThis.window;
+    if(doc.documentElement&&viewWindow?.addEventListener&&viewWindow.history)surfaceOwner=installOverlayDismissal({document:doc,window:viewWindow}).registerCustom(node,{isOpen:()=>!node.hidden&&node.isConnected,
+      close:()=>{node.hidden=true;surfaceOwner?.sync();return true;},opener:()=>opener});
+    x.addEventListener('click',()=>surfaceOwner?surfaceOwner.requestClose('close'):node.hidden=true);surfaceOwner?.sync();
     return {title, description, controls, status, close};
   }
   function connect() {
@@ -168,7 +176,12 @@ export function mountWalletLink({ document: doc, hub, telegram, fetchImpl = glob
     });
   }
   const stop = hub.subscribe(snapshot => { void update(snapshot); });
-  return () => { revision++; stop(); remove(); };
+  const dispose=()=>{revision++;stop();remove();};
+  // Reopening the same view keeps its label draft and pending signature work. Unlike
+  // the explicit Dismiss action, view dismissal never records a durable preference.
+  dispose.open=()=>{if(sheet){sheet.hidden=false;surfaceOwner?.sync();}};
+  dispose.close=()=>surfaceOwner?.requestClose('owner');
+  return dispose;
 }
 
 if (typeof document !== 'undefined' && window.qxTelegram?.inTelegram) {

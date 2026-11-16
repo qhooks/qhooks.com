@@ -118,6 +118,11 @@ export const BUILT_IN = [
   { name: CHAIN_WORD_CAP + ' chains', glyph: 'chains', line: chainNames() + '.' }   // one count, from chains.mjs (qx-chain-count.mjs)
 ];
 
+export const STUDIO_KITS = [
+ {id:'anti-sniper',name:'Anti-sniper',line:'Falling buy tax and a cooldown; early buyers pay more.',on:['antiSnipe','cooldown'],guardMin:10},
+ {id:'revenue-max',name:'Revenue max',line:'5% buy/sell tax to payees; higher costs can discourage trading.',on:['tax'],set:{buyTaxBps:5,sellTaxBps:5}},
+ {id:'holder-games',name:'Holder games',line:'2% tax funds the king and last-buyer pots; rewards are competitive.',on:['tax','king','clockPot','points'],set:{buyTaxBps:2,sellTaxBps:2,kingShareBps:20,clockShareBps:20}}
+];
 export const PRESETS = [
   { id: 'none', name: 'Memecoin', line: 'Open trading. No extra buy/sell tax, limits or launch games.', on: [] },
   { id: 'fair', name: 'Fair launch', line: 'Stops snipers and whales for the first ten minutes.',

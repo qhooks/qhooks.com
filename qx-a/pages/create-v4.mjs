@@ -11,7 +11,7 @@ const hero = doc.querySelector('.cr-hero'), list = $('cr-launched-list');
 // the ideas heading gets the same hierarchy as the hero: its first sentence bold, the rest light (same words)
 const ideasH = doc.getElementById('qq-ideas-title');
 if (ideasH && !ideasH.querySelector('span')) { const m = ideasH.textContent.match(/^([^.]+\.)\s+(.+)$/); if (m) ideasH.replaceChildren(doc.createTextNode(m[1] + ' '), Object.assign(doc.createElement('span'), { textContent: m[2] })); }
-if (hero && !hero.querySelector('.cr4-stage')) {
+if (hero && !doc.querySelector('.cr5') && !hero.querySelector('.cr4-stage')) {
   doc.querySelector('main')?.classList.add('cr4');
   const stage = doc.createElement('div'); stage.className = 'cr4-stage'; stage.setAttribute('aria-hidden', 'true');
   const cv = doc.createElement('canvas'), tag = doc.createElement('p'); tag.className = 'cr4-tag'; tag.hidden = true;
@@ -161,7 +161,7 @@ if (hero && !hero.querySelector('.cr4-stage')) {
 function dropTile(input) {
   // the Sale first and token profile pickers are already tiles (create-create.mjs dressUpload, live): one implementation
   // per input, so those stay theirs (styled below to match) and this dresses only the quick-launch pickers
-  if (!input || input.closest('.cr4-drop, #qsf-root, .qtp-editor') || input.dataset.crTile) return;
+  if (!input || input.id==='qq-image'&&doc.querySelector('.cr5') || input.closest('.cr4-drop, #qsf-root, .qtp-editor') || input.dataset.crTile) return;
   const kind = /banner/i.test(input.id) ? 'banner' : 'image';
   const tile = doc.createElement('div'); tile.className = 'cr4-drop cr4-drop--' + kind;
   const shot = doc.createElement('img'); shot.alt = ''; shot.hidden = true; shot.className = 'cr4-drop__img';

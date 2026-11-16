@@ -1,7 +1,7 @@
 import {BUILT} from './chains.mjs';
 export function pageScope(location = globalThis.location, document = globalThis.document) {
   const path = location?.pathname || '', query = new URLSearchParams(location?.search || ''), hash = new URLSearchParams((location?.hash || '').slice(1));
-  const page = /portfolio/.test(path) ? 'portfolio' : /wallets(?:\.html)?$/.test(path) ? 'wallets' : /terminal/.test(path) ? 'terminal' : /wallet/.test(path) ? 'wallet' : null;
+  const page = /^\/creator(?:\.html)?\/?$/.test(path) ? 'creator' : /portfolio/.test(path) ? 'portfolio' : /wallets(?:\.html)?$/.test(path) ? 'wallets' : /terminal/.test(path) ? 'terminal' : /wallet/.test(path) ? 'wallet' : null;
   if (!page) return null;
   const selection = hash.get('m') || hash.get('t') || hash.get('pool') || '', selectedChain = selection.split(':')[0], market = selection.split(':').slice(1).join(':') || query.get('pool') || null;
   const input = document?.querySelector?.('#qxt-chains [aria-pressed="true"], #qpw-chain, [data-presence-chain], #chain');
@@ -30,8 +30,8 @@ if (typeof window !== 'undefined' && !window.__qhooksPresence) {
   window.fetch = async (...args) => {
     const r = await base(...args);
     // Pages with their own refresh status (the Trade list's "● Live / Refreshing…", a token's sync line) show one quiet
-    // dot, not a second floating "Refreshing" pill on top of the rows (2026-11-12 walk).
-    if (r.headers.get('x-qhooks-refreshing') === '1' && !document.querySelector('.qxfd-status, #qxt-sync')) {
+    // dot, not a second floating "Refreshing" pill on top of the rows (2026-11-12 walk). /portfolio's one status line (#qp-at) too (2026-11-13).
+    if (r.headers.get('x-qhooks-refreshing') === '1' && !document.querySelector('.qxfd-status, #qxt-sync, #qp-at, #qc-data-age')) {
       let node = document.getElementById('qhooks-refreshing');
       if (!node) { node = document.createElement('div'); node.id = 'qhooks-refreshing'; node.setAttribute('role','status'); node.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9999;padding:8px 12px;border-radius:8px;background:#17212e;color:#fff;font:13px system-ui;pointer-events:none'; document.body.append(node); if (!document.getElementById('qx-pill-style')) { const st = document.createElement('style'); st.id = 'qx-pill-style'; st.textContent = '#qhooks-refreshing#qhooks-refreshing{top:calc(env(safe-area-inset-top) + var(--qa-nav-h, 64px) + 8px)!important;bottom:auto!important;pointer-events:none!important;opacity:.92}'; document.head.append(st); } }
       node.textContent = 'Refreshing';

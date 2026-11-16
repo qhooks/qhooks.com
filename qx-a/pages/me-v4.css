@@ -13,7 +13,10 @@ body:has(main.me4) .qa-ambient__art { filter: blur(56px) saturate(.5) brightness
 .me4 .mn-h1 { font-size: clamp(48px, 12.5vw, 124px); line-height: .86; font-weight: 880; font-stretch: 125%; letter-spacing: -.035em; text-transform: uppercase; }
 .me4 .mn-h1 .mn-gold { color: var(--qa-tx-2); background: none; -webkit-text-fill-color: currentColor; font-weight: 260; font-stretch: 112%; letter-spacing: -.02em; }
 .me4 .mn-me-hero > :not(.me4-stage):not(:first-child) { justify-self: start; margin-top: 18px; }
-.me4 :is(#qa-rewards-h, #qa-sol-launch-fees-h, #qa-wallet-checks-h, #qa-callouts-h, #qa-launches-h, #qa-holdings-h) { font-size: clamp(32px, 4.6vw, 60px); line-height: .9; font-weight: 880; font-stretch: 125%; letter-spacing: -.03em; text-transform: uppercase; }
+.me4 :is(#qa-rewards-h, #qa-wallet-checks-h, #qa-callouts-h, #qa-launches-h, #qa-holdings-h, #qa-earn-h, #qa-keys-h) { font-size: clamp(32px, 4.6vw, 60px); line-height: .9; font-weight: 880; font-stretch: 125%; letter-spacing: -.03em; text-transform: uppercase; }
+/* design audit #28: one heading style. Section titles above; every card and block title below in the same uppercase heavy
+   face at card size (they mixed sentence case with caps). Token names in launch cards keep their own case. */
+.mn-me.me4 :is(.qa-reward-card > h3, #qa-sol-launch-fees > h2, #qa-wallet-checks h3) { margin-bottom: 12px; font-size: clamp(20px, 2vw, 24px); line-height: 1; font-weight: 880; font-stretch: 125%; letter-spacing: -.02em; text-transform: uppercase; }
 [data-theme="light"] .me4 .mn-h1 .mn-gold { color: var(--qa-tx-3); }
 @media (min-width: 1100px) {
   .me4 .mn-me-hero { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: end; min-height: 520px; }

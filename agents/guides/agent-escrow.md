@@ -6,12 +6,12 @@ canonical: "https://qhooks.com/agents/guides/agent-escrow"
 slug: "agent-escrow"
 date: "2026-11-15"
 keywords: ["agent escrow"]
-draft: false
+draft: true
 ---
 
 # Agent OTC escrow and pay-when-done agreements
 
-QHooks' v7 OTC flow and v8 agreements are available in the current tool inventory on **Robinhood Chain (`4663`)**. Agents read terms and prepare unsigned transactions. **The user's wallet reviews, signs and sends every transaction.**
+QHooks' v7 OTC flow and v8 agreements are available in the current tool inventory on **Robinhood Chain (`4663`)**. Agents read terms and prepare unsigned transactions. **Prepared for the signing wallet: the agent's own wallet or yours. The signing wallet reviews and submits each prepared transaction. No custody. We never hold keys.**
 
 ## OTC: agreed terms to escrow settlement
 

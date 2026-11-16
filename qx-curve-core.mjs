@@ -193,3 +193,31 @@ export function candlesOf(rows, tf) {
   }
   return [...bars.values()];
 }
+
+// ---- BNB Chain launchpads (curves batch 1) ----
+export const SEL_BNB = Object.freeze({getTokenV8Safe: '0x62fafcca', getFeeRate: '0x84e5eed0', fourInfo: '0x1f69565f', getPair: '0xe6a43905', blockTime: '0x0f28c97d'});
+export const TRANSFER = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+/// flap Portal getTokenV8Safe(token): 18 static words. Null when the call failed (not a flap token).
+export function decodeFlap(hex) {
+  const h = strip(hex);
+  if (h.length < 18 * 64) return null;
+  const w = i => big(word(h, i));
+  const status = Number(w(0));
+  return {status, phase: status === 1 ? 'curve' : status === 4 ? 'pool' : status === 5 ? 'graduating' : 'unknown',
+    reserve: w(1), circulating: w(2), price: w(3), tokenVersion: Number(w(4)), r: w(5), h: w(6), k: w(7), thresh: w(8),
+    quote: addr(word(h, 9)), nativeToQuote: w(10) === 1n, buyTax: Number(w(12)), sellTax: Number(w(13)), pool: addr(word(h, 14)),
+    progress: w(15), dexId: Number(w(17))};
+}
+/// flap curve: quote held when `circulating` tokens are out, (x + r)(supply − circulating + h) = k·1e18.
+export const flapQuoteAt = (f, supply, circulating) => f.k * 10n ** 18n / (BigInt(supply) - BigInt(circulating) + f.h) - f.r;
+/// Marginal price in raw quote units per raw token unit at a circulating supply (display maths, floats).
+export const flapPriceAt = (f, supply, circulating) => { const y = Number(BigInt(supply) - BigInt(circulating) + f.h); return Number(f.k) * 1e18 / (y * y); };
+/// four.meme Helper3.getTokenInfo(token): 12 static words. Null for a token four.meme doesn't know (version 0).
+export function decodeFourInfo(hex) {
+  const h = strip(hex);
+  if (h.length < 12 * 64) return null;
+  const w = i => big(word(h, i)), version = Number(w(0));
+  if (!version) return null;
+  return {version, manager: addr(word(h, 1)), quote: addr(word(h, 2)), lastPrice: w(3), feeRate: Number(w(4)), minFee: w(5), launchTime: Number(w(6)),
+    offers: w(7), maxOffers: w(8), funds: w(9), maxFunds: w(10), liquidityAdded: w(11) === 1n};
+}

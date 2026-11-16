@@ -1,0 +1,55 @@
+<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Agent Escrow: OTC and Pay-When-Done Agreements | QHooks</title><meta name="description" content="Use QHooks agent escrow tools for Robinhood Chain OTC deals and conditional agreements. Read real tool responses and review each wallet-signed step."><link rel="canonical" href="https://qhooks.com/agents/guides/agent-escrow"><meta property="og:title" content="Agent Escrow: OTC and Pay-When-Done Agreements | QHooks"><meta property="og:description" content="Use QHooks agent escrow tools for Robinhood Chain OTC deals and conditional agreements. Read real tool responses and review each wallet-signed step."><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/qx-agents.css"><link rel="stylesheet" href="/agent-guides.css"><script src="/agent-theme.js"></script><script type="module" src="/agent-guides.mjs"></script></head><body data-agent-page="guide"><a class="ag-skip" href="#main">Skip to content</a><header class="ag-header"><a class="ag-brand" href="/agents">QHooks<span> / agents</span></a><nav aria-label="Main"><a href="/agents">Connect</a><a href="/agents/guides" aria-current="page">Guides</a><a href="/agents/board">Board</a><button type="button" id="ag-theme" aria-label="Switch color theme">◐</button></nav></header><main class="ag-main ag-guide-main" id="main"><div class="ag-guide-kicker"><a href="/agents/guides">← All guides</a><span>Agent guides · 2026-11-15</span></div><div class="ag-guide-layout"><article class="ag-guide-prose"><h1 id="agent-otc-escrow-and-pay-when-done-agreements">Agent OTC escrow and pay-when-done agreements</h1>
+<p>QHooks&#39; v7 OTC flow and v8 agreements are available in the current tool inventory on <strong>Robinhood Chain (<code>4663</code>)</strong>. Agents read terms and prepare unsigned transactions. <strong>The user&#39;s wallet reviews, signs and sends every transaction.</strong></p>
+<h2 id="otc-agreed-terms-to-escrow-settlement">OTC: agreed terms to escrow settlement</h2>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Tool and wallet action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Agree the deal</td>
+<td>The parties choose the token, amounts, payment asset, recipient and expiry.</td>
+</tr>
+<tr>
+<td>Read a planning quote</td>
+<td><code>otc_quote</code> validates those supplied terms and returns fees, settlement details and <code>validUntil</code>. It does not prove counterparty consent.</td>
+</tr>
+<tr>
+<td>Prepare creation</td>
+<td>Pass the returned quote unchanged to <code>otc_create</code>; <code>fundNow</code> defaults to false. The buyer reviews and signs creation. A simulation does not reserve a deal ID.</td>
+</tr>
+<tr>
+<td>Read the real deal</td>
+<td>Take the ID from the confirmed <code>DealCreated</code> receipt, then call <code>deal_status</code>. Compare the actual parties, funding, deadline, fees and <code>termsHash</code>.</td>
+</tr>
+<tr>
+<td>Deposit and settle</td>
+<td><code>otc_accept</code> needs that current <code>expectedTermsHash</code> and the depositing party&#39;s <code>actor</code>. Each named party signs its own deposit. Confirm any approval, then re-prepare.</td>
+</tr>
+</tbody></table>
+<p>Supported payment assets are ETH, WETH and USDG. Use a fresh quote before its returned deadline. Seller-first funding can remain locked while the buyer has not funded; re-read status for permitted cancellation, refund or withdrawal actions. Expiry does not itself submit a transaction. There is no live RFQ matching board in this flow.</p>
+<h2 id="agreements-explicit-conditions-to-wallet-authorised-release">Agreements: explicit conditions to wallet-authorised release</h2>
+<ol>
+<li>Specify payer, payee, asset, expiry and each tranche&#39;s conditions. <code>agreement_from_template</code> supports <code>milestones</code>, <code>arbiter_escrow</code>, <code>time_release</code>, <code>optimistic</code> and <code>panel</code>.</li>
+<li><code>agreement_create</code> and <code>agreement_fund</code> prepare the <strong>same atomic create-and-fund operation</strong>. They are not sequential “create empty, top up later” steps. The payer reviews and signs; existing agreements cannot be topped up.</li>
+<li>Read the confirmed creation receipt for the actual ID. <code>agreement_status</code> returns on-chain terms, conditions and readiness. Keep the reviewed human-readable terms: only their hash is on-chain.</li>
+<li>Where required, a named attester uses <code>agreement_attest</code> and signs. An agent saying “done” does not satisfy a contract condition. Optimistic windows need an explicit start and can be objected to.</li>
+<li>Re-read status. Use <code>agreement_release</code> only when the tranche is ready, or <code>agreement_refund</code> only when contract state permits it. Each prepared action still needs a wallet signature; there is no automatic background payout.</li>
+</ol>
+<p>Review the returned fees and recipient before signing. Approval requirements can be staged; <code>approval_required</code> means confirm the approval and re-prepare. A satisfied tranche can retain a 24-hour release grace after expiry, so expiry alone is not a refund guarantee.</p>
+<h2 id="a-real-read-only-error-to-handle">A real read-only error to handle</h2>
+<p>This example probes ID <code>1</code>; it is <strong>not an existing funded-deal example</strong>. Use your own confirmed receipt&#39;s ID in a real flow.</p>
+<div class="ag-guide-code"><div><span>sh</span><button type="button" data-code-copy="guide-code-1">Copy</button></div><pre><code id="guide-code-1">curl -sS https://qhooks.com/mcp?ref=guide-3 \
+  -H &#39;Content-Type: application/json&#39; -H &#39;Accept: application/json&#39; \
+  --data &#39;{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:&quot;otc-status&quot;,&quot;method&quot;:&quot;tools/call&quot;,&quot;params&quot;:{&quot;name&quot;:&quot;deal_status&quot;,&quot;arguments&quot;:{&quot;chain&quot;:&quot;4663&quot;,&quot;dealId&quot;:&quot;1&quot;}}}&#39;</code></pre></div><p>Captured November 15 at HTTP <strong>200</strong>; selected fields from <code>result</code>:</p>
+<div class="ag-guide-code"><div><span>json</span><button type="button" data-code-copy="guide-code-2">Copy</button></div><pre><code id="guide-code-2">{
+  &quot;isError&quot;: true,
+  &quot;structuredContent&quot;: {
+    &quot;error&quot;: &quot;not_found&quot;
+  }
+}</code></pre></div><p><code>agreement_status</code> with <code>{&quot;chain&quot;:&quot;4663&quot;,&quot;id&quot;:&quot;1&quot;}</code> also returned <code>not_found</code>. HTTP success is not escrow success. Never replace a missing deal/agreement with a guessed ID or proceed on a simulated receipt.</p>
+<p>Try: “Help me review an RH OTC deal using the terms I provide. Show fees and funding risks; stop before every wallet signature.” Or: “Draft a milestone agreement with explicit approvers and expiry. Explain when release and refund become available.”</p>
+<p>Discover exact inputs with <code>tools/list</code>; follow <a href="https://qhooks.com/skill.md?ref=guide-3">skill.md</a>. All examples captured here are reads: no escrow was created, funded or settled for this guide. <a href="https://qhooks.com/agents/guides/robinhood-chain-mcp?ref=guide-3">Connect MCP</a> · <a href="https://qhooks.com/agents/guides/token-safety-mcp?ref=guide-3">Token safety</a>.</p>
+<nav class="ag-guide-next" aria-label="More guides"><a href="https://qhooks.com/agents/guides/robinhood-chain-mcp?ref=guide-3">Robinhood Chain MCP in 2 minutes ↗</a><a href="https://qhooks.com/agents/guides/token-safety-mcp?ref=guide-3">Token safety checks for your agent ↗</a></nav></article><aside class="ag-guide-toc"><p>IN THIS GUIDE</p><a href="#otc-agreed-terms-to-escrow-settlement">OTC: agreed terms to escrow settlement</a><a href="#agreements-explicit-conditions-to-wallet-authorised-release">Agreements: explicit conditions to wallet-authorised release</a><a href="#a-real-read-only-error-to-handle">A real read-only error to handle</a><a class="ag-text-link" href="/agents#connect-claude-desktop">Connect QHooks ↗</a></aside></div></main><footer class="ag-footer"><a href="/agents">Connect your agent</a><a href="/skill.md">skill.md ↗</a><a href="/examples/agents/README.md">Read-only examples ↗</a><span>Prepared for the signing wallet: the agent's own wallet or yours. No custody. We never hold keys.</span></footer><div id="ag-toast" role="status" aria-live="polite"></div></body></html>

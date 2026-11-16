@@ -37,6 +37,12 @@ export function hookLabel(h,{capability=false}={}){
   const cap=(h.capabilities||[])[0]?.title;
   return capability&&cap?'Unnamed hook · '+cap.replace(/^Can /,'can '):'Unnamed hook';
 }
+// List rows: an unnamed hook shows its short address (0x1234…abcd) plus a small "unverified" tag, not "Unnamed hook".
+const shortHex = a => { const s=String(a||''); return s.length>12 ? s.slice(0,6)+'…'+s.slice(-4) : (s || 'Unnamed hook'); };
+function rowName(h){
+  const named=hookLabel(h)!=='Unnamed hook', addr=h.address||h.hook||h.hookAddress||'';
+  return {named, text:named?hookLabel(h):shortHex(addr), html:named?esc(hookLabel(h)):`<span class="hl-addr">${esc(shortHex(addr))}</span><span class="qd-unverified">unverified</span>`, aria:named?hookLabel(h):'hook '+shortHex(addr)};
+}
 export const short = (s, n = 8) => s ? String(s).length > n * 2 + 1 ? String(s).slice(0,n) + '…' + String(s).slice(-n) : String(s) : 'Not reported';
 export const chainName = id => CHAIN_NAMES[id] || `Chain ${id}`;
 export function filterState(query = '') {
@@ -104,8 +110,8 @@ export function capabilityMarks(capabilities=[]) {
 export function renderBoard(body,{watch=[],tray=[]}={}) {
   if (!body.hooks?.length) return empty('No hooks match these filters. Clear a filter or try another address.');
   return `<div class="qd-rows qd-board-rows" role="list">${body.hooks.map(h=>{
-    const id=hookId(h), name=hookLabel(h), chain=h.chainName || chainName(h.chainId);
-    return `<div class="qd-row qd-brow" role="listitem" data-hook-row>${groupGlyph(h)}<div class="qd-row__main"><a class="qd-record-name${name==='Unnamed hook'?' is-unnamed':''}" href="${profileURL(h)}" title="${esc(name)}">${esc(name)}</a><span class="qd-board-meta"><span>${esc(chain)}</span><span class="hl-addr" title="${esc(h.address)}">${esc(short(h.address,4))}</span>${h.qhooks?'<span class="qd-board-qhooks">QHooks</span>':''}</span></div><div class="qd-marks" aria-label="Capabilities">${capabilityMarks(h.capabilities)}</div><div class="qd-row__v" title="${esc(formatNumber(h.swaps))} swaps · ${esc(formatNumber(h.pools))} pools"><b>${esc(compactNumber(h.swaps))}</b><small>swaps · ${esc(compactNumber(h.pools))} pools</small></div><div class="qd-row-actions"><button type="button" class="qd-star" data-star="${id}" aria-label="${watch.includes(id)?'Unwatch':'Watch'} ${esc(name)}" title="Watch hook" aria-pressed="${watch.includes(id)}">${watch.includes(id)?'★':'☆'}</button><label class="qd-check" title="Compare ${esc(name)}"><input type="checkbox" data-compare="${id}" aria-label="Compare ${esc(name)}"${tray.includes(id)?' checked':''}><span>Compare</span></label></div></div>`;
+    const id=hookId(h), rn=rowName(h), name=rn.aria, chain=h.chainName || chainName(h.chainId);
+    return `<div class="qd-row qd-brow" role="listitem" data-hook-row>${groupGlyph(h)}<div class="qd-row__main"><a class="qd-record-name${rn.named?'':' is-unnamed'}" href="${profileURL(h)}" title="${esc(rn.named?rn.text:h.address)}">${rn.html}</a><span class="qd-board-meta"><span>${esc(chain)}</span>${rn.named?`<span class="hl-addr" title="${esc(h.address)}">${esc(short(h.address,4))}</span>`:''}${h.qhooks?'<span class="qd-board-qhooks">QHooks</span>':''}</span></div><div class="qd-marks" aria-label="Capabilities">${capabilityMarks(h.capabilities)}</div><div class="qd-row__v" title="${esc(formatNumber(h.swaps))} swaps · ${esc(formatNumber(h.pools))} pools"><b>${esc(compactNumber(h.swaps))}</b><small>swaps · ${esc(compactNumber(h.pools))} pools</small></div><div class="qd-row-actions"><button type="button" class="qd-star" data-star="${id}" aria-label="${watch.includes(id)?'Unwatch':'Watch'} ${esc(name)}" title="Watch hook" aria-pressed="${watch.includes(id)}">${watch.includes(id)?'★':'☆'}</button><label class="qd-check" title="Compare ${esc(name)}"><input type="checkbox" data-compare="${id}" aria-label="Compare ${esc(name)}"${tray.includes(id)?' checked':''}><span>Compare</span></label></div></div>`;
   }).join('')}</div>`;
 }
 
@@ -128,7 +134,7 @@ export function renderStats(body, directory = body) {
   return `<div class="qa-stats__track">${[['Hooks in directory',view.hooks,view.includesTape?'Snapshot + newly observed Tape hooks':'Snapshot records'],['Snapshot chains',view.chains,'Activity snapshot · '+at],['Pools at snapshot',view.pools,'v4.xyz index · '+at],['Swaps at snapshot',view.swaps,'v4.xyz index · '+at]].map(([label,value,source])=>`<div class="qa-stat" title="${esc(formatNumber(value))} · ${esc(source)}"><b class="qa-stat__v">${esc(compactNumber(value))}</b><span class="qa-stat__l">${label}</span><small class="qd-stat-src">${esc(source)}</small></div>`).join('')}</div>`;
 }
 export function renderNewHooks(body,now=Date.now()) {
-  return body.hooks?.length?`<div class="qd-rows" role="list">${body.hooks.slice(0,6).map(h=>`<div class="qd-row qd-new-card" role="listitem">${groupGlyph(h)}<div class="qd-row__main">${link(profileURL(h),hookLabel(h),'qd-record-name')}<span class="qd-board-meta"><span>${esc(h.chainName || chainName(h.chainId))}</span><span>first seen block ${esc(formatNumber(h.firstSeen?.block))}</span></span></div><div class="qd-row__v" title="${esc(formatTime(h.firstSeen?.at))}"><b>${esc(relativeTime(h.firstSeen?.at,now))}</b><small>first seen</small></div></div>`).join('')}</div>`:note('No first-seen hooks were returned by the Tape.');
+  return body.hooks?.length?`<div class="qd-rows" role="list">${body.hooks.slice(0,6).map(h=>`<div class="qd-row qd-new-card" role="listitem">${groupGlyph(h)}<div class="qd-row__main">${(rn=>rn.named?link(profileURL(h),rn.text,'qd-record-name'):`<a class="qd-record-name is-unnamed" href="${esc(profileURL(h))}" title="${esc(h.address||'')}">${rn.html}</a>`)(rowName(h))}<span class="qd-board-meta"><span>${esc(h.chainName || chainName(h.chainId))}</span><span>first seen block ${esc(formatNumber(h.firstSeen?.block))}</span></span></div><div class="qd-row__v" title="${esc(formatTime(h.firstSeen?.at))}"><b>${esc(relativeTime(h.firstSeen?.at,now))}</b><small>first seen</small></div></div>`).join('')}</div>`:note('No first-seen hooks were returned by the Tape.');
 }
 export function renderMapLabels(nodes) {
   const centers=[[175,38],[500,38],[825,38],[330,260],[670,260]];

@@ -5,7 +5,7 @@
     var id = e.currentTarget.id;
     if (window.__qhcReady && (id !== 'qxt-connect' || window.__qxtReady)) return;
     var d = document.getElementById('qhc-dialog');
-    if (d && !d.open && d.showModal) d.showModal();
+    if (d && !d.open && d.showModal) { d.dataset.qxOverlayOpener = id; d.showModal(); }
   }
   ['qhc-trigger', 'qxt-connect'].forEach(function (id) { var b = document.getElementById(id); if (b) b.addEventListener('click', open); });
 })();

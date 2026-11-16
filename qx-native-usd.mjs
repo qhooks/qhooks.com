@@ -1,3 +1,4 @@
+import {priceState,priceFields,isQhooksPriceAsset} from './qx-price-state.mjs';
 // ETH/USD in the browser for launch pages (lead, launch night 2026-11-07). When the launch index has no dated
 // ETH/USD sample (our server-side native price source is being refused), the terminal reads a keyless public spot
 // price itself: Coinbase spot first, DexScreener's mainnet WETH price as the fallback. No keys, nothing stored.
@@ -24,20 +25,24 @@ export async function ethUsd(now = Date.now()) {
     for (const [source, read] of [['coinbase', coinbase], ['dexscreener', dexscreener]]) {
       try { const usd = await read(); return (cache = {usd, observedAt: Date.now(), source}); } catch {}
     }
-    return cache; // last good value (may be null)
+    return cache&&priceState(cache.observedAt).usable?{...cache,refreshing:true}:null; // never use >60m quote
   })().finally(() => { inflight = null; });
   return inflight;
 }
 const finite = v => typeof v === 'number' && Number.isFinite(v);
 /** Fill dollar values on a launch-index response that came back without ETH/USD. Returns the same object. */
 export async function fillNativeUsd(data, read = ethUsd) {
+  if(isQhooksPriceAsset(data?.meta?.chainId,data?.meta?.token))return data;
   const q = data?.nativeQuote;
   if (!q || q.symbol !== 'ETH' || (finite(q.usd) && q.usd > 0)) return data;
-  const p = await read().catch(() => null); if (!p?.usd) return data;
+  const p = await read().catch(() => null); if (!p?.usd||!priceState(p.observedAt).usable) return data;
   const usd = p.usd;
   data.nativeQuote = {...q, usd, observedAt: p.observedAt, source: 'browser:' + p.source};
   const s = data.summary;
   if (s) {
+    const poolAt=s.priceAt??data.observedAt??data.synced?.at;
+    if(!priceState(poolAt).usable){data.summary=priceFields(s,{at:poolAt});return data;}
+    s.priceAt=Math.min(poolAt,p.observedAt);s.pricesRefreshing=!!s.pricesRefreshing||priceState(s.priceAt).refreshing;
     if (!finite(s.priceUsd) && finite(s.price)) s.priceUsd = s.price * usd;
     if (!finite(s.mcapUsd) && finite(s.mcap)) s.mcapUsd = s.mcap * usd;
     if (!finite(s.volume24Usd) && finite(s.volume24)) s.volume24Usd = s.volume24 * usd;
@@ -55,8 +60,8 @@ export async function quoteUsd(symbol, fetcher = (...a) => fetch(...a)) {
   if (/^(USD|USDC|USDT|USDG|DAI)$/.test(sym)) return 1;
   const m = /^W?(ETH|BNB|HYPE|MON)$/.exec(sym); if (!m) return null;
   if (!natives || Date.now() - natives.at > TTL) natives = {at: Date.now(), p: fetcher('/api/funding/native-prices?symbols=ETH,BNB,HYPE,MON', {cache: 'no-store', signal: AbortSignal.timeout(TIMEOUT)})
-    .then(r => r.ok ? r.json() : null).then(b => b?.prices || {}).catch(() => ({}))};
-  const v = Number((await natives.p)[m[1]]);
-  if (v > 0) return v;
+    .then(r => r.ok ? r.json() : null).catch(() => null)};
+  const b=await natives.p,v=Number(b?.prices?.[m[1]]);
+  if (v > 0 && priceState(b?.updatedAt?.[m[1]]).usable) return v;
   natives = null; return m[1] === 'ETH' ? (await ethUsd().catch(() => null))?.usd ?? null : null;
 }

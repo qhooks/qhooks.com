@@ -13,7 +13,7 @@ export function positionChart(position, bars, tf, multiplier = 1) {
 
 export const CHART_LAYERS=Object.freeze([['you','You'],['following','Following'],['smart','Smart'],['calls','Calls'],['dev','Dev']]);
 export function layerPreferences(viewer='guest',{storage=()=>globalThis.localStorage}={}) {
-  const key='qhooks:chart-layers:v1:'+String(viewer||'guest'),enabled=Object.fromEntries(CHART_LAYERS.map(([id])=>[id,true]));
+  const key='qhooks:chart-layers:v1:'+String(viewer||'guest'),enabled=Object.fromEntries(CHART_LAYERS.map(([id])=>[id,id==='you'&&!!viewer&&viewer!=='guest'&&!String(viewer).endsWith(':guest')])); // Connected owners see their receipt-backed trades; explicit saved choices win.
   try{const value=JSON.parse(storage().getItem(key)||'{}');for(const [id]of CHART_LAYERS)if(typeof value[id]==='boolean')enabled[id]=value[id];}catch{}
   return {enabled,toggle(id){if(!CHART_LAYERS.some(([name])=>name===id))return;enabled[id]=!enabled[id];try{storage().setItem(key,JSON.stringify(enabled));}catch{}return enabled[id];}};
 }

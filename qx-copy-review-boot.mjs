@@ -1,0 +1,1 @@
+import {bootCopyReview} from './qx-copy-review.mjs';void bootCopyReview().catch(()=>{const root=document.getElementById('copy-review');if(root)root.textContent='Copy settings are refreshing. Reload to try again.';});

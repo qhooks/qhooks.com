@@ -91,11 +91,8 @@ export async function nativePrices({ fetchImpl = (...args) => globalThis.fetch(.
     const r = await timed('/api/funding/native-prices?symbols=ETH,BNB,HYPE,MON', { credentials: 'omit', cache: 'no-store' });
     if (r.ok) { const p = (await r.json())?.prices || {}; for (const k of ['ETH', 'BNB', 'HYPE', 'MON']) { const v = usdNumber(p[k]); if (v != null) out[k] = v; } }
   } catch {}
-  if (out.ETH != null && out.BNB != null) return out;
-  try { // Fallback where a direct call is allowed (tests, Node).
-    const response = await timed('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,binancecoin&vs_currencies=usd', { credentials: 'omit', cache: 'no-store' });
-    if (response.ok) { const body = await response.json(); out.ETH ??= usdNumber(body?.ethereum?.usd); out.BNB ??= usdNumber(body?.binancecoin?.usd); }
-  } catch {}
+  // Missing prices remain unavailable. Browser/Node callers must not bypass the site's keyless source policy.
+
   return out;
 }
 
@@ -174,6 +171,15 @@ export function selectMoveRoute(tokens, { from, to, moveBack = false } = {}) {
     ?? tokens.find(t => t.chainId === destinationChain && t.symbol === 'USDC')
     ?? tokens.find(t => t.chainId === destinationChain && t.native);
   return { from: origin, to: destination };
+}
+
+// A dismissed unsubmitted form is reusable only for the same owner and route.
+// New explicit amount/route intents and completed moves still start a fresh form.
+export function canResumeMoveDraft(draft, options, currentOwner) {
+  if (!draft || !ADDRESS.test(draft.owner ?? '') || !currentOwner || !same(draft.owner, currentOwner) || options.amount != null || options.moveBack || draft.homeCurrency !== (options.homeCurrency === true)) return false;
+  try { for (const side of ['from', 'to']) if (options[side] != null && (!draft[side] || !matches(draft[side], preference(options[side])))) return false; }
+  catch { return false; }
+  return true;
 }
 
 export function promptCounts(q) {
@@ -298,7 +304,7 @@ export function createMoveFunds({ document = globalThis.document, target = globa
   signIn = async () => (await import('./qx-board-session.mjs')).signIn(),
   now = Date.now, setTimer = setTimeout, clearTimer = clearTimeout,
   setRepeat = setInterval, clearRepeat = clearInterval } = {}) {
-  let view, hub, opener, debounce, interval, stopWatching;
+  let view, hub, opener, debounce, interval, stopWatching, draft;
   let revision = 0, quoteRevision = 0;
   const s = { tokens: [], owner: null, entry: null, from: null, to: null, quote: null, quoteAt: 0,
     busy: false, locked: false, finished: false, loading: false, usingMax: false, maxPasses: 0,
@@ -380,6 +386,7 @@ export function createMoveFunds({ document = globalThis.document, target = globa
       note: noteNode, owner, move, max, refresh, connect, signin, check, progress, steps, links };
     dialog.addEventListener('close', () => {
       if (dialog.dataset.qxUnder) return; // stepped under a wallet confirm (qx-confirm-top.mjs): keep the move running
+      draft = !s.busy && !s.locked && !s.finished && view.amount.value.trim() ? {owner:s.owner,homeCurrency:s.homeCurrency,from:s.from,to:s.to} : null;
       clearTimer(debounce); clearRepeat(interval); quoteRevision++; revision++;
       stopWatching?.(); stopWatching = null;
       if (!s.busy) { s.quote = null; s.loading = false; }
@@ -689,11 +696,13 @@ export function createMoveFunds({ document = globalThis.document, target = globa
     build();
     if (!view.dialog.open) { opener = document.activeElement; view.dialog.showModal(); }
     if (s.busy || s.locked) { watchWhileOpen(); controls(); return view.dialog; }
+    const resumeDraft = canResumeMoveDraft(draft, options, hub?.snapshot()?.current?.owner); draft = null;
     const opening = ++revision; quoteRevision++;
     s.homeCurrency = options.homeCurrency === true; s.homeSlippage = homeSlippage(options.slippageBps || 100);
-    s.from = null; s.to = null; s.quote = null; s.feePerGas = null; s.finished = false;
+    if (!resumeDraft) { s.from = null; s.to = null; view.amount.value = ''; }
+    s.quote = null; s.feePerGas = null; s.finished = false;
     s.usingMax = false; s.requestId = null; s.run = null; s.owner = null; s.needsSignIn = false;
-    view.amount.value = ''; view.progress.hidden = true; view.links.hidden = true; paintQuote(null); controls();
+    view.progress.hidden = true; view.links.hidden = true; paintQuote(null); controls();
     try { hub ??= await getHub(); }
     catch { note('Connect your wallet to move funds.', true); controls(); return view.dialog; }
     if (opening !== revision || !view.dialog.open) return view.dialog;

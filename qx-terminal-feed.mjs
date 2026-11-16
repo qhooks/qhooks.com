@@ -1,5 +1,14 @@
+import {mountDiscoveryNext} from './qx-discovery-next.mjs';
+import {discoveryBadges} from './qx-discovery-badges.mjs';
+import {evidenceMetrics} from './qx-discovery-evidence.mjs';
+import {mountPulseBoard} from './qx-pulse-board.mjs';
+import {createFeedPriceCache} from './qx-feed-price-cache.mjs';
+import{openQuickAmountSettings}from'./qx-quick-amount-settings.mjs';
+import {mountTokenLibrary} from './qx-token-library.mjs';
 import {bindTokenAvatar} from './qx-token-avatar.mjs';
 import {WINDOWS,filterDiscovery,createMarketViews,validateDiscoveryFilters} from './qx-discovery-model.mjs';
+import {discoveryCandidate} from './qx-discovery-rank.mjs';
+import {createDiscoveryUpdates} from './qx-discovery-updates.mjs';
 import {plainMarketError} from './qx-terminal-data.mjs';
 import {fetchDexPairs,pickPair,rowPatch,applyRowPatch,DEX_CHAINS} from './qx-dex-live.mjs';
 import {renderFeedFeedback} from './qx-terminal-feed-presentation.mjs';
@@ -31,22 +40,31 @@ const lookupWallet = createWalletLookup({costs: outsideCosts()}); // walletpnl: 
 let savedWindow;try{savedWindow=storage?.getItem('qxt:discover:window');}catch{}state.window=WINDOWS.some(([k])=>k===savedWindow)?savedWindow:'h6'; /* first open: 6h (Randall, 2026-11-09) */state.filters=validateDiscoveryFilters();
 if(WINDOWS.some(([key])=>key===state.sort.key)){state.window=state.sort.key;state.sort={...state.sort,key:'move'};savePreference(storage,'window',state.window);savePreference(storage,'sort',state.sort);}
 const savedViews=createMarketViews(storage);
+try{state.layout=storage?.getItem('qhooks:discovery:layout:v1')==='pulse'?'pulse':'list';}catch{state.layout='list';}
+let pulse=null;const pulseMode=()=>state.layout==='pulse'&&!state.query&&!state.wallet;
+const discoveryPrices=createFeedPriceCache({storage});
+if(new URLSearchParams(location.search).get('discover')==='trending'){state.layout='list';state.tab='trending';state.chain='all';state.filters=validateDiscoveryFilters();}
 let wantedLaunch = prefs.tab === 'launches', api = null, quickRow = null, quickHome = null;
 let focusedKey = null, savedScroll = 0, savedWindowScroll = 0, opening = false, searchGeneration = 0;
-let searchTimer, searchController;
+let searchTimer, searchController, tokenLibraryUI, lastLibrarySearch = '';
 const main = document.getElementById('qxt-main');
 const search = document.getElementById('qxt-search');
+for(const href of ['/qx-pulse.css','/qx-discovery-badges.css'])if(!document.querySelector('link[href="'+href+'"]'))document.head.append(el('link',{rel:'stylesheet',href}));
 const columns = [
   ['token', 'Token'], ['price', 'Price'], ['move', 'Change'],
   ['volume', 'Volume 24h'], ['liquidity', 'Liquidity'], ['mcap', 'MCap'],
-  ['txns', 'Swaps 24h'], ['makers', 'Wallet activity'], ['safety', 'Safety'], ['buy', '⚡ Buy'],
+  ['holders','Holders'], ['txns', 'Swaps 24h'], ['makers', 'Wallet activity'], ['safety', 'Safety'], ['buy', 'Buy'],
 ];
 const nodes = new Map();
+const layoutControls=el('div',{class:'qxfd-layout-controls',role:'group','aria-label':'Token layout'});
+for(const [id,label]of[['list','List'],['pulse','Pulse']]){const b=button(label,{'data-layout':id,'aria-pressed':String(state.layout===id)});b.addEventListener('click',()=>{if(state.layout===id)return;loader.cancel();state.layout=id;state.loading=false;try{storage?.setItem('qhooks:discovery:layout:v1',id);}catch{}renderRows();refresh();});layoutControls.append(b);}
 const root = el('section', { class: 'qxfd', id: 'qxt-discover', 'aria-label': 'Tokens' });
 const tabs = el('div', { class: 'qxfd-tabs', role: 'tablist', 'aria-label': 'Token lists' });
 const chainGroup = el('div', { class: 'qxfd-chains', role: 'group', 'aria-label': 'Token chains' });
 const status = el('span', { class: 'qxfd-status', role: 'status', 'aria-live': 'polite' });
 const windows=el('div',{class:'qxfd-windows',role:'group','aria-label':'Price change window'},...WINDOWS.map(([key,label])=>button(label,{'data-window':key,'aria-pressed':String(key===state.window)})));
+const pauseUpdates=button('Pause updates',{'aria-pressed':'false',class:'qxfd-update-toggle'});
+const arrivals=el('span',{class:'qxfd-arrivals',role:'status','aria-live':'polite'});
 const quickSlot = el('div', { class: 'qxfd-quick-slot' });
 const sortSelect = el('select', { 'aria-label': 'Sort tokens', class: 'qxfd-sort-select' },
   el('option', { value: '' }, 'Feed order'), ...columns.filter(([key]) => SORT_KEYS.includes(key)).flatMap(([key, label]) => [
@@ -57,23 +75,31 @@ sortSelect.setAttribute('aria-describedby','qxfd-sort-hint');
 const filterFields={};
 const filterDetails=el('details',{class:'qxfd-filter-details'},el('summary',{},'Filters'));
 const filterGrid=el('div',{class:'qxfd-filter-grid'});
-for(const [key,label] of [['liquidityMin','Min liquidity, $'],['capMin','Min cap / FDV, $'],['capMax','Max cap / FDV, $'],['volumeMin','Min 24h volume, $'],['transactionsMin','Min 24h transactions'],['ageMaxHours','Max age, hours'],['venue','Venue']]){
+for(const [key,label] of [['liquidityMin','Min liquidity, $'],['liquidityMax','Max liquidity, $'],['capMin','Min cap / FDV, $'],['capMax','Max cap / FDV, $'],['volumeMin','Min 24h volume, $'],['transactionsMin','Min 24h transactions'],['ageMinHours','Min age, hours'],['ageMaxHours','Max age, hours'],['devMaxPct','Max dev holding, %'],['top10MaxPct','Max top-10 holding, %'],['venue','Venue']]){
  const input=el('input',{type:'text',inputmode:key==='venue'?'text':'decimal','aria-label':label,placeholder:key==='venue'?'Any venue':'Any'});filterFields[key]=input;filterGrid.append(el('label',{},el('span',{},label),input));
 }
+for(const [key,label]of [['hasSocials','Has social links'],['sameBlock','Snipers · entry signal'],['sharedFunding','Insiders · funding signal']]){const input=el('select',{'aria-label':label},el('option',{value:''},'Any'),el('option',{value:'yes'},key==='hasSocials'?'Has links':'Signal observed'));filterFields[key]=input;filterGrid.append(el('label',{},el('span',{},label),input));}
+filterGrid.append(el('p',{class:'qxfd-filter-coverage'},'Holder filters use recent Holder X-ray reads on this device. Unknown values are excluded. Entry and funding signals do not prove sniper or insider activity.'));
 const applyFilters=button('Apply filters'),resetFilters=button('Reset'),viewName=el('input',{type:'text',maxlength:32,'aria-label':'Saved view name',placeholder:'Name this view'}),saveView=button('Save view'),removeView=button('Delete view');
 const viewSelect=el('select',{'aria-label':'Saved market views'}),filterMessage=el('p',{role:'status','aria-live':'polite',class:'qxfd-filter-message'});
 const renderViews=()=>{viewSelect.replaceChildren(el('option',{value:''},'Saved views'),...savedViews.list().map(v=>el('option',{value:v.name},v.name)));};renderViews();
-filterDetails.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();filterDetails.open=false;filterDetails.querySelector('summary').focus();}});
-filterDetails.append(filterGrid,el('div',{class:'qxfd-filter-actions'},applyFilters,resetFilters),el('div',{class:'qxfd-saved-views'},viewSelect,viewName,saveView,removeView),filterMessage);
+filterDetails.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();filterDetails.open=false;listOptions.open=false;listOptions.querySelector('summary').focus();}});
+filterDetails.append(el('div',{class:'qxfd-saved-views'},viewSelect,viewName,saveView,removeView),filterGrid,el('div',{class:'qxfd-filter-actions'},applyFilters,resetFilters),filterMessage);
+const presetBar=el('div',{class:'qxfd-filter-actions','aria-label':'Market filter presets'});
+const presetChips=[];
+for(const [label,filters] of [['Active',{liquidityMin:'10000',volumeMin:'10000',transactionsMin:'20'}],['Today',{liquidityMin:'1000',volumeMin:'1000',transactionsMin:'10',ageMaxHours:'24'}]]){
+ const preset=button(label,{'aria-pressed':'false'});presetChips.push({button:preset,filters:validateDiscoveryFilters(filters)});preset.addEventListener('click',()=>{const same=JSON.stringify(state.filters)===JSON.stringify(validateDiscoveryFilters(filters));state.filters=validateDiscoveryFilters(same?{}:filters);for(const [k,input]of Object.entries(filterFields))input.value=state.filters[k]||'';filterDetails.open=false;filterDetails.querySelector('summary').focus({preventScroll:true});filterMessage.textContent=same?'Filters cleared.':label+' filters applied.';renderRows();refresh();});presetBar.append(preset);
+}
+// Common presets live in the instant chip row.
 function captureFilters(){return validateDiscoveryFilters(Object.fromEntries(Object.entries(filterFields).map(([k,v])=>[k,v.value])));}
-function updateWindow(){for(const b of windows.children)b.setAttribute('aria-pressed',String(b.dataset.window===state.window));const label=WINDOWS.find(([k])=>k===state.window)?.[1]||'24h';headers.get('move')?.querySelector('button')?.replaceChildren(label+' change');}
+function updateWindow(){if(typeof windowChip!=='undefined')windowChip.value=state.window;for(const b of windows.children)b.setAttribute('aria-pressed',String(b.dataset.window===state.window));const label=WINDOWS.find(([k])=>k===state.window)?.[1]||'24h';headers.get('move')?.querySelector('button')?.replaceChildren(label+' change');}
 windows.addEventListener('click',event=>{const key=event.target.closest('[data-window]')?.dataset.window;if(!WINDOWS.some(([k])=>k===key)||key===state.window)return;state.window=key;savePreference(storage,'window',key);updateWindow();refresh();});
-applyFilters.addEventListener('click',()=>{try{state.filters=captureFilters();filterMessage.textContent='Filters applied to this list.';renderRows();refresh();}catch(error){filterMessage.textContent=error.message;}});
+applyFilters.addEventListener('click',()=>{try{state.filters=captureFilters();filterDetails.open=false;filterDetails.querySelector('summary').focus({preventScroll:true});filterMessage.textContent='Filters applied to this list.';renderRows();refresh();}catch(error){filterMessage.textContent=error.message;}});
 const widen=button('Widen filters',{class:'qxfd-widen'});widen.addEventListener('click',()=>resetFilters.click());
 resetFilters.addEventListener('click',()=>{state.filters=validateDiscoveryFilters();for(const input of Object.values(filterFields))input.value='';filterMessage.textContent='Filters cleared.';renderRows();refresh();});
-saveView.addEventListener('click',()=>{try{state.filters=captureFilters();savedViews.save({name:viewName.value,chain:state.chain,tab:state.tab,window:state.window,filters:state.filters});renderViews();viewSelect.value=viewName.value.trim();filterMessage.textContent='View saved on this device.';renderRows();refresh();}catch(error){filterMessage.textContent=error.message;}});
+saveView.addEventListener('click',()=>{try{state.filters=captureFilters();savedViews.save({name:viewName.value,chain:state.chain,tab:state.tab,window:state.window,filters:state.filters,layout:state.layout,stage:pulse.stage()});renderViews();viewSelect.value=viewName.value.trim();filterMessage.textContent='View saved on this device.';renderRows();refresh();}catch(error){filterMessage.textContent=error.message;}});
 removeView.addEventListener('click',()=>{try{if(!viewSelect.value)return;savedViews.remove(viewSelect.value);renderViews();filterMessage.textContent='View deleted.';}catch(error){filterMessage.textContent=error.message;}});
-viewSelect.addEventListener('change',()=>{const v=savedViews.list().find(v=>v.name===viewSelect.value);if(!v)return;if(state.wallet)clearSearch();state.tab=v.tab;state.window=v.window;state.chain=CHAINS.some(([k])=>k===v.chain)?v.chain:'all';state.filters=v.filters;state.data=null;for(const [k,input]of Object.entries(filterFields))input.value=v.filters[k]||'';for(const b of chainGroup.children)b.setAttribute('aria-pressed',String(b.dataset.chain===state.chain));viewName.value=v.name;renderTabs();updateWindow();refresh();});
+viewSelect.addEventListener('change',()=>{const v=savedViews.list().find(v=>v.name===viewSelect.value);if(!v)return;if(state.wallet)clearSearch();loader.cancel();state.layout=v.layout==='pulse'?'pulse':'list';try{storage?.setItem('qhooks:discovery:layout:v1',state.layout);}catch{}state.tab=v.tab;state.window=v.window;state.chain=CHAINS.some(([k])=>k===v.chain)?v.chain:'all';state.filters=v.filters;state.data=null;for(const [k,input]of Object.entries(filterFields))input.value=v.filters[k]||'';for(const b of chainGroup.children)b.setAttribute('aria-pressed',String(b.dataset.chain===state.chain));viewName.value=v.name;pulse.select(v.stage||'new');renderTabs();updateWindow();renderRows();refresh();});
 const panel = el('div', { role: 'tabpanel', id: 'qxfd-panel', class: 'qxfd-panel' });
 const noticeText = el('span');
 const retry = button('Retry', { class: 'qxfd-retry' });
@@ -94,7 +120,8 @@ for (const [key, label] of columns) {
 const tbody = el('tbody');
 table.append(el('thead', {}, header), tbody);
 scroll.append(table);
-const empty = el('div', { class: 'qxfd-empty', hidden: '' });
+const emptyCopy=el('p',{class:'qxfd-empty-copy'}),empty = el('div', { class: 'qxfd-empty', hidden: '' },emptyCopy);
+const nextSteps=mountDiscoveryNext({onTrending:()=>showTrending()});
 const walletPanel = el('div', {class: 'qxfd-wallet-slot', hidden: ''});
 const count = el('span');
 const source = el('span');
@@ -102,17 +129,38 @@ const heading = el('h1', {}, 'Tokens');
 panel.append(notice, scroll, empty, walletPanel);
 // While a wallet is shown, the list controls (tabs, chains, sort, windows) step aside so the wallet starts at the top.
 const walletBack = button('← Tokens', { class: 'qxfd-wallet-back', hidden: '' });
-const listControls = [el('div', { class: 'qxfd-toolbar' }, tabs, quickSlot),
-  el('div', { class: 'qxfd-filterbar' }, chainGroup, el('div',{class:'qxfd-sort-tools'},sortHint,sortSelect)),
-  el('div',{class:'qxfd-viewbar'},windows,filterDetails)];
+const listOptions=el('details',{class:'qxfd-list-options'},el('summary',{},'Filters'));
+listOptions.append(el('div',{class:'qxfd-list-options-body'},quickSlot,
+ el('div',{class:'qxfd-filterbar'},chainGroup,el('div',{class:'qxfd-sort-tools'},sortHint,sortSelect)),
+ el('div',{class:'qxfd-viewbar'},windows,pauseUpdates,arrivals),filterDetails));
+listOptions.addEventListener('toggle',()=>{if(listOptions.open)filterDetails.open=true;});
+listOptions.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.defaultPrevented){e.preventDefault();listOptions.open=false;listOptions.querySelector('summary').focus();}});
+const chainChip=el('select',{'aria-label':'Filter chain',class:'qxfd-chain-chip'},...CHAINS.map(([id,name])=>el('option',{value:id,title:name},({all:'All',solana:'SOL','4663':'RH','56':'BNB','99901':'Ely','1':'ETH','8453':'Base','42161':'ARB','143':'MON'})[id]||name)));
+chainChip.value=state.chain;chainChip.addEventListener('change',()=>chainGroup.querySelector('[data-chain="'+chainChip.value+'"]')?.click());
+const windowChip=el('select',{'aria-label':'Change window',class:'qxfd-window-chip'},...WINDOWS.map(([id,label])=>el('option',{value:id},label)));windowChip.value=state.window;windowChip.addEventListener('change',()=>windows.querySelector('[data-window="'+windowChip.value+'"]')?.click());
+const settings=button('⚙',{'aria-label':'Trade settings',class:'qxfd-settings'}),quickChip=button('⚡ 0.01 ETH',{'aria-label':'Quick-buy amounts in Trade settings',class:'qxfd-quick-chip'});
+const settingsChain=()=>state.chain==='all'?'4663':state.chain;
+for(const control of[settings,quickChip])control.addEventListener('click',()=>openQuickAmountSettings({chainId:settingsChain(),opener:control}));
+const instant=el('div',{class:'qxfd-instant'},chainChip,windowChip,...presetChips.map(p=>p.button),listOptions,settings);
+const listControls=[el('div',{class:'qxfd-toolbar'},tabs),instant];
+for(const control of[applyFilters,resetFilters,...presetChips.map(p=>p.button)])control.addEventListener('click',()=>{listOptions.open=false;listOptions.querySelector('summary').focus({preventScroll:true});});
+document.addEventListener('pointerdown',event=>{if(listOptions.open&&!listOptions.contains(event.target))listOptions.open=false;});
+
 root.append(
-  el('div', { class: 'qxfd-heading' }, walletBack, heading, status),
+  el('div', { class: 'qxfd-heading' }, walletBack, heading, layoutControls, quickChip, status),
   ...listControls,
   panel,
   el('div', { class: 'qxfd-footer' }, count, source,
     el('span', { class: 'qxfd-hint' }, '↑ ↓ Navigate · Enter Open · / Search · Esc Tokens')),
 );
 main.prepend(root);
+const loaderOptions=changed=>({fetcher:(...args)=>fetch(...args),timeout:25000,serverTimeout:12000,browserDelay:600,storage,browser:opts=>browserFeed(opts),cacheRead:readCachedFeed,cacheWrite:writeCachedFeed,priceCache:discoveryPrices,changed});
+pulse=mountPulseBoard({host:panel,el,storage,makeLoader:({changed})=>createFeedLoader(loaderOptions(changed)),makeRow,updateRow,
+ onTrending:()=>showTrending(),context:()=>({chain:state.chain,window:state.window,filters:state.filters,factsOf:evidenceMetrics}),visible:()=>!document.hidden&&!root.hidden&&pulseMode(),
+ viewModels:rows=>sortRows(rows.filter(discoveryCandidate).map(r=>rowViewModel(r,{quick:api?.quickForChain?.(r.chainId)||api?.state.quick||{},window:state.window})),state.sort),
+ onModels:models=>{if(!pulseMode())return;text(count,models.length+' tokens in Pulse');text(source,'New · Near bond ≥80% · Migrated with a destination');}
+});
+
 const back = button('← Tokens', { class: 'qxfd-back', 'aria-label': 'Back to tokens' });
 document.getElementById('qxt-head').prepend(back);
 
@@ -127,7 +175,7 @@ async function loadLaunches() {
   } catch {}
 }
 const launchMarkets = () => allLaunches || state.markets;
-const availableTabs = () => (launchMarkets().some(m => m.live) || founding.launches.length) ? [['launches', 'QHooks launches'], ...TABS] : TABS;
+const availableTabs = () => [['launches','QHooks launches'],...TABS];
 function renderTabs() {
   const active = document.activeElement?.dataset.tab;
   tabs.replaceChildren(...availableTabs().map(([id, label]) => button(label, {
@@ -164,12 +212,13 @@ sortSelect.addEventListener('change', () => {
 });
 
 function visibleRows() {
+  const quickByChain=new Map(),quickFor=id=>{if(!quickByChain.has(id))quickByChain.set(id,api?.quickForChain?.(id)||api?.state.quick||{});return quickByChain.get(id);};
   const seenLaunch = new Set(), launches = launchMarkets().filter(m => m.live && !seenLaunch.has(m.chainId + ':' + m.controller) && seenLaunch.add(m.chainId + ':' + m.controller)).map(launchRow).map(r => { const p = livePatches.get(launchKey(r)); return p && Date.now() - p.observedAt < 120000 && r.priceUsd == null ? applyRowPatch(r, p) : r; });
   let rows = state.tab === 'launches' ? launches : state.data?.rows || [];
   const q = state.query.toLowerCase();
   // The tab's own filter (Gainers needs a positive move in the chosen window, etc.) applies to the list, never to search
   // hits: a hit carries only a 24 h change, so on Gainers 6h every pasted contract read "No tokens match" (2026-11-10).
-  rows = filterDiscovery(rows,{tab:state.tab,window:state.window,filters:state.filters});
+  rows = filterDiscovery(rows,{tab:state.tab,window:state.window,filters:state.filters,factsOf:evidenceMetrics});
   if (q) {
     rows = [...rows, ...launches].filter(r => [r.token?.symbol, r.token?.name, r.token?.address, r.launch?.controller]
       .some(value => typeof value === 'string' && value.toLowerCase().includes(q)));
@@ -181,8 +230,9 @@ function visibleRows() {
       seen.add(key); return true;
     });
   }
+  else if(state.tab!=='launches') rows=rows.filter(discoveryCandidate);
   return sortRows(rows.filter(r => state.chain === 'all' || String(r.chainId) === state.chain)
-    .map(r => rowViewModel(r, { quick: api?.state.quick || {},window:state.window })), state.sort);
+    .map(r => rowViewModel(r, { quick: quickFor(r.chainId),window:state.window })), state.sort);
 }
 
 function makeRow(vm) {
@@ -200,23 +250,29 @@ function makeRow(vm) {
   const chain = el('img', { class: 'qxfd-chain-icon', width: 13, height: 13, alt: '' });
   const open = button('', { class: 'qxfd-open', tabindex: '-1' });
   open.append(avatar, el('span', { class: 'qxfd-identity' }, el('span', { class: 'qxfd-symline' }, symbol, boost), name), chain, rowAge);
-  cells.token.append(open);
+  const watch=button('☆',{class:'qxfd-watch','aria-pressed':'false','aria-label':'Add token to watchlist'});
+  watch.addEventListener('click',async event=>{event.stopPropagation();if(!api?.library||!tr.isConnected)return;watch.disabled=true;watch.dataset.pending='true';try{const asset=libraryAsset(tr.__tokenVM);await api.library.watch(asset,!api.library.has(asset));}catch(error){notice.hidden=false;text(noticeText,error.message||'Could not save this token.');}finally{delete watch.dataset.pending;watch.disabled=false;}});
+  watch.addEventListener('keydown',event=>{if(event.key!=='Tab')event.stopPropagation();});
+  cells.token.append(watch,open);
   const cap = el('span'), capKind = el('small', { class: 'qxfd-cap-kind' });
   cells.mcap.append(cap, capKind);
   const buys = el('span', { class: 'up' }), sells = el('span', { class: 'down' });
   cells.txns.append(buys, el('span', { class: 'qxfd-divider', 'aria-hidden': 'true' }, ' / '), sells);
   const safe = el('span', { class: 'qxfd-safety-mark' });
   const tip = el('span', { class: 'qxfd-tooltip', role: 'tooltip' });
-  cells.safety.append(safe, tip);
+  cells.safety.classList.add('qxfd-evidence');cells.evidence=cells.safety;
   const buy = button('', { class: 'qxfd-buy' });
   const blocked = el('span', { class: 'qxfd-blocked', hidden: '' }, 'not tradable here');
   cells.buy.append(buy, blocked);
-  return { tr, cells, avatar, letter, logo, symbol, boost, name, rowAge, chain, open, cap, capKind, buys, sells, safe, tip, buy, blocked, vm: null };
+  return { tr, cells, avatar, letter, logo, symbol, boost, name, rowAge, chain, open, watch, cap, capKind, buys, sells, safe, tip, buy, blocked, vm: null };
 }
 
 function updateRow(node, vm) {
   const old = node.vm;
-  node.vm = vm;
+  const evidence=discoveryBadges(vm.row,{h:el,compact:true}),evidenceKey=evidence.outerHTML;if(node.evidenceKey!==evidenceKey){node.evidenceKey=evidenceKey;const prior=node.cells.evidence.querySelector('details'),focused=prior?.contains(document.activeElement);if(prior?.open)evidence.querySelector('details').open=true;node.cells.evidence.replaceChildren(evidence);if(focused)evidence.querySelector('summary').focus({preventScroll:true});}
+  node.vm = vm; node.tr.__tokenVM=vm;node.watch.disabled=!api?.library||node.watch.dataset.pending==='true';
+  const watching=!!api?.library?.has(libraryAsset(vm));
+  text(node.watch,watching?'★':'☆');node.watch.setAttribute('aria-pressed',String(watching));node.watch.setAttribute('aria-label',(watching?'Remove ':'Add ')+vm.symbol+(watching?' from':' to')+' watchlist');
   text(node.letter, vm.letter); text(node.symbol, vm.symbol); text(node.name, vm.name + (founding.slots.has(vm.chainId+':'+(vm.chainId==='solana'?String(vm.address):String(vm.address).toLowerCase())) ? ' · Founding #' + founding.slots.get(vm.chainId+':'+(vm.chainId==='solana'?String(vm.address):String(vm.address).toLowerCase())) : '')); text(node.rowAge, vm.lifecycle.stage==='bonding'?'Bond '+Math.round(vm.lifecycle.progress*100)+'%':vm.lifecycle.stage==='migrated'?'Migrated · '+vm.age:vm.age);node.rowAge.dataset.stage=vm.lifecycle.stage;
   node.name.title = vm.name;
   node.boost.hidden = !vm.boosted;
@@ -227,23 +283,23 @@ function updateRow(node, vm) {
     node.chain.alt = vm.chainName;
   }
   if(JSON.stringify(old?.avatarSources)!==JSON.stringify(vm.avatarSources)){node.unbindAvatar?.();node.unbindAvatar=bindTokenAvatar(node.logo,{},vm.avatarSources);}
-  for (const key of ['price', 'move', 'volume', 'liquidity', 'makers']) text(node.cells[key], vm[key]);
+  for (const key of ['price', 'move', 'volume', 'liquidity', 'makers','holders']) text(node.cells[key], vm[key]);
+  node.cells.liquidity.dataset.known = String(vm.liquidity !== DASH);
+  if(vm.priceRefreshing)node.cells.price.append(el('small',{class:'qxfd-price-refreshing'},'Refreshing'));
   for (const key of ['move']) {
     node.cells[key].classList.toggle('up', vm.numeric[key] > 0);
     node.cells[key].classList.toggle('down', vm.numeric[key] < 0);
   }
-  node.cells.move.setAttribute('data-label',(WINDOWS.find(([k])=>k===state.window)?.[1]||'24h')+' change');
-  text(node.cap, vm.mcap); text(node.capKind, vm.capKind);
+  node.cells.move.setAttribute('data-label',(WINDOWS.find(([k])=>k===state.window)?.[1]||'24h')+' change');node.cells.move.setAttribute('data-window',WINDOWS.find(([k])=>k===state.window)?.[1]||'24h');
+  text(node.cap, vm.mcap); text(node.capKind, vm.priceRefreshing?'Refreshing':vm.capKind);
+  node.cells.mcap.setAttribute('data-label',vm.capKind||'MC');node.cells.mcap.dataset.refreshing=String(vm.priceRefreshing);
   text(node.buys, vm.buys); text(node.sells, vm.sells);
   node.cells.txns.setAttribute('aria-label', `${vm.buys === DASH ? 'Unknown' : vm.buys} buys, ${vm.sells === DASH ? 'unknown' : vm.sells} sells in 24 hours`);
   node.cells.makers.title=vm.row.makersKind==='unique_wallets'?'Unique wallets in the received 24h swaps.':'Provider buyer and seller activity; a wallet may be counted on both sides.';
   text(node.safe, vm.safety.label);
-  node.cells.safety.dataset.flag = vm.safety.flag || '';
-  node.cells.safety.title = vm.safety.title;
-  node.cells.safety.setAttribute('aria-label', vm.safety.title);
-  node.cells.safety.tabIndex = vm.safety.flag ? 0 : -1;
+  node.cells.safety.removeAttribute('data-flag');node.cells.safety.removeAttribute('title');node.cells.safety.removeAttribute('aria-label');node.cells.safety.tabIndex=-1;
   text(node.tip, vm.safety.title);
-  const label = `⚡ ${vm.quick.value} ${vm.quick.unit}`;
+  const label = `${vm.quick.value} ${vm.quick.unit}`; // auditC: the bolt is a line icon drawn by CSS (.qxfd-buy::before), not an emoji
   text(node.buy, label);
   node.buy.setAttribute('aria-label', vm.quick.supported ? `Buy ${vm.symbol} with ${vm.quick.value} ${vm.quick.unit}` : `Open ${vm.symbol} in the trade ticket; quick buy is unavailable`);
   node.buy.title = vm.quick.supported ? `Buy ${vm.symbol} with ${vm.quick.value} ${vm.quick.unit}` : 'Open the trade ticket; quick buy is unavailable for this token';
@@ -283,7 +339,10 @@ function pinFounding() {
   if (tbody.firstChild !== foundingTr) tbody.insertBefore(foundingTr, tbody.firstChild);
 }
 function renderRows() {
-  const wallet = state.wallet;
+  for(const b of layoutControls.children)b.setAttribute('aria-pressed',String(b.dataset.layout===state.layout));
+  const isPulse=pulseMode();pauseUpdates.hidden=isPulse;arrivals.hidden=isPulse;pulse?.setActive(isPulse&&!root.hidden&&!document.hidden);
+  chainChip.value=state.chain;windowChip.value=state.window;for(const p of presetChips)p.button.setAttribute('aria-pressed',String(JSON.stringify(state.filters)===JSON.stringify(p.filters)));const quickChain=settingsChain(),quick=api?.quickForChain?.(quickChain)||api?.state.quick||{},unit=quickChain==='56'?'bnb':quickChain==='99901'?'hype':quickChain==='solana'?'usd':'eth';text(quickChip,'⚡ '+(quick[unit]||({eth:'0.01',bnb:'0.05',hype:'0.1',usd:'10'})[unit])+' '+({eth:'ETH',bnb:'BNB',hype:'HYPE',usd:'USDC'})[unit]);
+  const wallet = state.wallet;layoutControls.hidden=!!wallet;quickChip.hidden=!!wallet;
   walletPanel.hidden = !wallet;
   scroll.hidden = !!wallet;
   walletBack.hidden = !wallet;
@@ -296,7 +355,10 @@ function renderRows() {
     panel.setAttribute('aria-busy', String(!!wallet.loading));
     return;
   }
-  const rows = visibleRows(),activeFilters=Object.values(state.filters).filter(x=>x!=='').length;filterDetails.querySelector('summary').textContent=activeFilters?'Filters · '+activeFilters:'Filters';
+  const activeFilters=Object.values(state.filters).filter(x=>x!=='').length;filterDetails.querySelector('summary').textContent=activeFilters?'Advanced filters · '+activeFilters:'Advanced filters';listOptions.querySelector('summary').textContent=activeFilters?'Filters · '+activeFilters:'Filters';
+  if(isPulse){root.querySelector('.qxfd-toolbar').hidden=true;if(quickChip.parentNode!==pulse.quickHost)pulse.quickHost.append(quickChip);scroll.hidden=true;empty.hidden=true;notice.hidden=true;text(heading,'Tokens');text(status,'');tabs.hidden=true;panel.removeAttribute('aria-labelledby');panel.setAttribute('aria-label','Pulse');panel.setAttribute('aria-busy','false');pulse?.render();return;}
+  root.querySelector('.qxfd-toolbar').hidden=false;if(quickChip.parentNode!==listControls[0])listControls[0].append(quickChip);tabs.hidden=false;panel.removeAttribute('aria-label');panel.setAttribute('aria-labelledby','qxfd-tab-'+state.tab);
+  const rows = visibleRows();
   const previousFocus = document.activeElement;
   const previousIndex = [...nodes.keys()].indexOf(focusedKey);
   const y = scroll.scrollTop, pageY = window.scrollY;
@@ -318,14 +380,16 @@ function renderRows() {
   if (initialLoading) skeleton();
   empty.hidden = !!rows.length || initialLoading;
   const missingWindow=['gainers','losers'].includes(state.tab)&&state.data?.rows?.length&&!state.data.rows.some(r=>Number.isFinite(r.change?.[state.window]));
-  const emptyText = !state.query&&missingWindow?'No '+(WINDOWS.find(([k])=>k===state.window)?.[1]||'selected-window')+' history is available for this received set yet.':activeFilters&&!state.query?'No tokens match these filters.':!state.query&&['bonding','migrated'].includes(state.tab)&&!state.error?'No confirmed '+(state.tab==='bonding'?'curves above 80% graduation':'migrations')+' in the received market set.':state.query ? (state.searching ? 'Searching tokens…' : 'No tokens match this search.') : state.error ? 'The token feed could not be loaded. Retry above.' : 'No tokens in this list yet. Try another chain or tab.';
+  const emptyText = !state.query&&missingWindow?'No '+(WINDOWS.find(([k])=>k===state.window)?.[1]||'selected-window')+' history is available for this received set yet.':activeFilters&&!state.query?'No tokens match these filters.':!state.query&&['bonding','migrated'].includes(state.tab)&&!state.error?'No confirmed '+(state.tab==='bonding'?'curves above 80% graduation':'migrations')+' in the received market set.':state.query ? (state.searching ? 'Searching tokens…' : 'No tokens match this search.') : state.error ? 'The token feed could not be loaded. Retry above.' : state.tab==='launches'?'No QHooks launches in this view yet.':'No tokens in this list yet. Try another chain or tab.';
   // Honest count (discofeed): the server's matched total when it cut the list at its top 100.
   const matched = state.tab !== 'launches' && !state.query && Number.isFinite(state.data?.total) && state.data.total > rows.length ? state.data.total : null;
   text(count, initialLoading ? 'Loading tokens…' : `${rows.length}${matched ? ' of ' + matched : ''} token${(matched || rows.length) === 1 ? '' : 's'} · ${rows.filter(r=>r.numeric.move!==null).length} with ${WINDOWS.find(([k])=>k===state.window)?.[1]} history`);
   panel.setAttribute('aria-busy', String(state.loading || state.searching));
-  renderFeedFeedback({state,heading,status,notice,noticeText,empty,retry,emptyText});
+  renderFeedFeedback({state,heading,status,notice,noticeText,empty,emptyMessage:emptyCopy,retry,emptyText});
   // Never a dead-empty filter result: offer to widen (clears the filters and reloads the whole list).
-  if (!rows.length && activeFilters && !state.query && !initialLoading && !state.loading) { empty.hidden = false; empty.append(' ', widen); }
+  if (!rows.length && activeFilters && !state.query && !initialLoading && !state.loading) { empty.hidden = false; empty.append(widen); }else widen.remove();
+  nextSteps.update({count:rows.length,loading:initialLoading||state.searching,failed:!!(state.error||state.searchError),filtered:!!activeFilters||!!state.query,kind:state.tab==='launches'?'launches':'feed',compact:!rows.length});
+  if(!nextSteps.element.hidden){if(rows.length){scroll.append(nextSteps.element);}else{empty.append(nextSteps.element);empty.hidden=false;scroll.hidden=true;}}
   text(source, state.tab === 'launches' ? '' : [state.data?.source,state.data?.coverage?.description].filter(Boolean).join(' · '));
   scroll.scrollTop = y;
   if (window.scrollY !== pageY) window.scrollTo({ top: pageY, behavior: 'instant' });
@@ -341,7 +405,8 @@ function withLive(rows) {
 }
 let liveRowsBusy = false;
 async function refreshLiveRows() {
-  if (liveRowsBusy || document.hidden || root.hidden || state.wallet || (state.tab !== 'launches' && !state.data?.rows?.length)) return;
+  if(pulseMode())return;
+  if (liveRowsBusy || discoveryUpdates.held || document.hidden || root.hidden || state.wallet || (state.tab !== 'launches' && !state.data?.rows?.length)) return;
   liveRowsBusy = true;
   try {
     const shown = visibleRows().map(v => v?.row || v).filter(r => (!r.launch || r.priceUsd == null) && DEX_CHAINS[r.chainId] && r.token?.address).slice(0, 60), byChain = new Map();
@@ -363,17 +428,33 @@ function repeatTokenTask(task, delay) {
   setTimeout(tick, delay);
 }
 repeatTokenTask(refreshLiveRows, 30000);
-const loader = createFeedLoader({ fetcher: (...args) => fetch(...args), timeout: 25000, serverTimeout: 12000, browserDelay: 1500, storage, browser: opts => browserFeed(opts), cacheRead: readCachedFeed, cacheWrite: writeCachedFeed, changed: update => {
+const discoveryUpdates=createDiscoveryUpdates({apply:update=>{
   if (update?.data?.rows) update = { ...update, data: { ...update.data, rows: withLive(update.data.rows) } };
   Object.assign(state, update); renderRows();
   if (!livePatches.size && update?.data?.rows?.length) setTimeout(() => { void refreshLiveRows(); }, 1500);
-} });
+},changed:info=>{
+  pauseUpdates.setAttribute('aria-pressed',String(info.manual));
+  text(pauseUpdates,info.manual?'Resume updates':'Pause updates');
+  text(arrivals,info.newTokens?info.newTokens+' new · '+(info.manual?'resume to show':'updates paused'):info.held?'Updates paused':'');
+}});
+pauseUpdates.addEventListener('click',()=>discoveryUpdates.hold('manual',pauseUpdates.getAttribute('aria-pressed')!=='true'));
+scroll.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse'&&!state.loading)discoveryUpdates.hold('pointer',true);});
+scroll.addEventListener('pointermove',event=>{if(event.pointerType==='mouse'&&!state.loading)discoveryUpdates.hold('pointer',true);});
+scroll.addEventListener('pointerdown',()=>discoveryUpdates.hold('press',true));
+scroll.addEventListener('click',()=>setTimeout(()=>discoveryUpdates.hold('press',false),0),{capture:true});
+scroll.addEventListener('pointercancel',()=>discoveryUpdates.hold('press',false));
+scroll.addEventListener('pointerleave',()=>{discoveryUpdates.hold('pointer',false);discoveryUpdates.hold('press',false);});
+scroll.addEventListener('focusin',()=>discoveryUpdates.hold('focus',true));
+scroll.addEventListener('focusout',event=>{if(!scroll.contains(event.relatedTarget))discoveryUpdates.hold('focus',false);});
+const loader = createFeedLoader(loaderOptions(update=>discoveryUpdates.receive(update)));
 function refresh() {
   // Only while the token list is on screen: a token page must not keep reading list providers in the background.
   if (document.hidden || root.hidden || state.wallet) return;
+  if(pulseMode()){pulse.configure();void pulse.refreshNext();return;}
   if (state.tab === 'launches') { state.loading = false; state.data = null; state.error = null; renderRows(); }
   else loader.load(state.tab, state.chain, state.window, state.filters);updateWindow();
 }
+function showTrending(){loader.cancel();clearTimeout(searchTimer);searchController?.abort();searchGeneration++;search.value='';state.query='';state.hits=[];state.searchError=null;state.searching=false;state.wallet=null;lastLibrarySearch='';walletPanel.replaceChildren();state.layout='list';state.tab='trending';state.chain='all';state.filters=validateDiscoveryFilters();state.data=null;state.error=null;state.loading=true;filterDetails.open=false;listOptions.open=false;for(const input of Object.values(filterFields))input.value='';for(const b of chainGroup.children)b.setAttribute('aria-pressed',String(b.dataset.chain==='all'));renderTabs();renderRows();tabs.querySelector('[data-tab=trending]')?.focus({preventScroll:true});refresh();}
 function setTab(tab) {
   if (!availableTabs().some(([id]) => id === tab)) return;
   wantedLaunch = false;
@@ -424,7 +505,7 @@ function scheduleSearch({restoreFeed = true} = {}) {
   clearTimeout(searchTimer); searchController?.abort(); searchGeneration++;
   const wasWallet = !!state.wallet;
   state.wallet = null; walletPanel.replaceChildren();
-  state.query = search.value.trim(); state.hits = []; state.searchError = null;
+  state.query = search.value.trim(); if(!state.query)lastLibrarySearch=''; state.hits = []; state.searchError = null;
   state.searching = state.query.length >= 2;
   renderRows();
   if (wasWallet && !state.query && restoreFeed) refresh();
@@ -531,7 +612,7 @@ async function runSearch({walletOnly = false} = {}) {
     } else state.searchError = error.name === 'AbortError' ? 'Token search timed out. Try again.' : plainMarketError();
   } finally {
     clearTimeout(ceiling);
-    if (mine === searchGeneration) { state.searching = false; renderRows(); }
+    if (mine === searchGeneration) { state.searching = false; renderRows(); rememberSearchResults(); }
   }
 }
 search.addEventListener('input', event => {
@@ -542,19 +623,19 @@ search.addEventListener('input', event => {
 function showTokens({ restore = true, clearHash = true } = {}) {
   root.hidden = false;
   document.body.classList.add('qxt-discover-mode');
-  refresh();
+  renderRows();refresh();
   if (quickRow) quickSlot.append(quickRow);
   if (clearHash && hasTokenHash(location.hash)) history.replaceState(history.state, '', location.pathname + location.search);
   if (search.value.trim() !== state.query) scheduleSearch();
   scroll.scrollTop = savedScroll;
   if (restore) {
-    (nodes.get(focusedKey)?.open || tabs.querySelector('[aria-selected="true"]'))?.focus({ preventScroll: true });
+    ((pulseMode()?pulse.getNode(focusedKey)?.open:null) || nodes.get(focusedKey)?.open || tabs.querySelector('[aria-selected="true"]'))?.focus({ preventScroll: true });
     window.scrollTo({ top: savedWindowScroll, behavior: 'instant' });
   }
 }
 function showToken() {
   if (!root.hidden) { savedScroll = scroll.scrollTop; savedWindowScroll = window.scrollY; }
-  root.hidden = true;
+  root.hidden = true;pulse?.setActive(false);loader.cancel();
   document.body.classList.remove('qxt-discover-mode');
   if (quickRow && quickHome) quickHome.append(quickRow);
 }
@@ -583,18 +664,19 @@ function openRow(node, buy = false) {
   const vm = node.vm;
   return openSelection({chainId: vm.chainId, address: vm.address, controller: vm.row.launch?.controller, stock: vm.quick.stock, key: vm.key}, buy, node.buy);
 }
-tbody.addEventListener('click', event => {
-  if (event.target.closest('.qxfd-safety, .qxfd-blocked')) return;
+root.addEventListener('click', event => {
+  if (event.target.closest('.qxfd-safety, .qxfd-blocked, .qxfd-watch, .qxfd-evidence')) return;
   const tr = event.target.closest('tr[data-key]');
-  if (tr) openRow(nodes.get(tr.dataset.key), !!event.target.closest('.qxfd-buy'));
+  if (tr&&tr.closest('.qxfd-table')){const node=pulseMode()?pulse.getNode(tr.dataset.key):nodes.get(tr.dataset.key);if(node)openRow(node,!!event.target.closest('.qxfd-buy'));}
 });
-tbody.addEventListener('focusin', event => {
+root.addEventListener('focusin', event => {
   const tr = event.target.closest('tr[data-key]');
   if (!tr) return;
-  focusedKey = tr.dataset.key;
+  focusedKey = tr.dataset.key;if(pulseMode()){pulse.focusKey(focusedKey,tr);return;}
   for (const [key, node] of nodes) node.open.tabIndex = key === focusedKey ? 0 : -1;
 });
 function focusRow(delta) {
+  if(pulseMode()){pulse.focusRow(delta);return;}
   if (state.wallet) { walletPanel.querySelector('[aria-selected="true"]')?.focus(); return; }
   const list = [...tbody.querySelectorAll('tr[data-key]')];
   if (!list.length) return;
@@ -621,12 +703,23 @@ document.addEventListener('keydown', event => {
   const key = event.key.toLowerCase();
   if (key === '/') { event.preventDefault(); search.focus(); }
   else if (['arrowdown', 'arrowup', 'j', 'k'].includes(key)) { event.preventDefault(); focusRow(key === 'arrowdown' || key === 'j' ? 1 : -1); }
+  else if(pulseMode()&&/^[1-3]$/.test(key)){event.preventDefault();pulse.select(['new','bonding','migrated'][Number(key)-1]);}
   else if (/^[1-5]$/.test(key)) { event.preventDefault(); setTab(availableTabs()[Number(key) - 1]?.[0]); }
 });
 
+function libraryAsset(vm){return vm?{kind:vm.row?.launch?.controller?'launch':'external',chainId:String(vm.chainId),token:vm.address,controller:vm.row?.launch?.controller,symbol:vm.symbol,name:vm.name,priceUsd:vm.row?.priceUsd,change24:vm.row?.change?.h24,observedAt:vm.row?.observedAt||vm.row?.launch?.synced?.at,stale:vm.row?.stale||vm.priceRefreshing}:null;}
+function rememberSearchResults(){
+ const key=state.chain+':'+state.query;if(!state.query){lastLibrarySearch='';return;}
+ if(!api?.library||state.wallet||state.searching||state.query.length<2||key===lastLibrarySearch)return;
+ const rows=visibleRows().slice(0,8).map(libraryAsset);if(rows.length){api.library.rememberSearch(rows);lastLibrarySearch=key;}
+}
+document.addEventListener('qxt:discovery-evidence',()=>{if(!root.hidden)renderRows();});
+document.addEventListener('qxt:library',()=>{if(pulseMode())pulse.render();for(const node of nodes.values())if(node.vm){const watched=!!api?.library?.has(libraryAsset(node.vm));text(node.watch,watched?'★':'☆');node.watch.setAttribute('aria-pressed',String(watched));node.watch.setAttribute('aria-label',(watched?'Remove ':'Add ')+node.vm.symbol+(watched?' from':' to')+' watchlist');}});
 function connectTerminal() {
   if (api || !window.qxTerminal) return;
   api = window.qxTerminal;
+  tokenLibraryUI=mountTokenLibrary(api,{discoveryHeading:root.querySelector('.qxfd-heading'),marketRows:()=>(pulseMode()?pulse.getModels().map(libraryAsset):[...nodes.values()].map(n=>libraryAsset(n.vm))).filter(Boolean)});
+  rememberSearchResults();
   quickRow = document.querySelector('.qxt-quick'); quickHome = quickRow?.parentElement;
   if (quickRow) {
     quickRow.addEventListener('input', () => renderRows());
@@ -640,6 +733,7 @@ function connectTerminal() {
     renderTabs(); renderRows();
   });
 }
+document.addEventListener('qhooks:quick-settings',()=>renderRows());
 document.addEventListener('qxt:ready', connectTerminal);
 renderTabs(); updateSort();
 if (hasTokenHash(location.hash)) showToken();
@@ -648,7 +742,7 @@ connectTerminal(); refresh(); void loadLaunches();
 if (globalThis.__qxTokenQuery?.search && !hasTokenHash(location.hash)) { search.value = globalThis.__qxTokenQuery.search; scheduleSearch(); }
 repeatTokenTask(() => { refresh(); void loadLaunches(); if (state.query.length >= 2 && classifyQuery(state.query) === 'text') void runSearch(); }, 30000);
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { loader.cancel(); searchController?.abort(); clearTimeout(searchTimer); searchGeneration++; if (state.wallet?.loading) showWallet({address: state.wallet.address, error: true}); }
+  if (document.hidden) { pulse?.setActive(false);loader.cancel(); searchController?.abort(); clearTimeout(searchTimer); searchGeneration++; if (state.wallet?.loading) showWallet({address: state.wallet.address, error: true}); }
   else { refresh(); if (state.query.length >= 2 && !state.wallet) runSearch(); }
 });
 loadFounding(); repeatTokenTask(loadFounding, 300000);

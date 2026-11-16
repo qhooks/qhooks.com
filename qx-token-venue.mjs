@@ -26,7 +26,7 @@ async function calls(chainId, list, {fetcher = globalThis.fetch, signal} = {}) {
     return list.map((_, i) => typeof by.get(i)?.result === 'string' ? by.get(i).result : null);
   }
   const {ethCall} = await import('./qx-chain.mjs');
-  return Promise.all(list.map(([to, data]) => ethCall(chainId, to, data).catch(() => null)));
+  return Promise.all(list.map(([to, data]) => ethCall(chainId, to, data, undefined, {purpose: 'display', signal}).catch(() => null)));
 }
 
 export function decodeString(hex) {

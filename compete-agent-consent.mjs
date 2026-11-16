@@ -1,0 +1,9 @@
+// Public message format only; no wallet/network access. Joining requires an explicit wallet signature.
+export const COMPETE_AGENT_ORIGIN='https://qhooks.com';
+export const COMPETE_AGENT_JOIN_MS=300000;
+const exact=(v,keys)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).sort().join(',')===[...keys].sort().join(',');
+export function competeAgentClient(value){if(typeof value!=='string')throw Error('invalid_client');const s=value.normalize('NFKC').trim();if(s.length<1||s.length>32||/[\p{C}<>\\/=:]/u.test(s)||/https?|www\.|0x[0-9a-f]{12}/i.test(s))throw Error('invalid_client');return s;}
+export function competeAgentJoinMessage(e){
+ if(!exact(e,['version','action','origin','wallet','client','nonce','issuedAt','expiresAt','publicTrades','enter'])||e.version!==1||e.action!=='compete_join'||e.origin!==COMPETE_AGENT_ORIGIN||e.publicTrades!==true||e.enter!==true||typeof e.wallet!=='string'||/^0x0{40}$/.test(e.wallet)||!/^0x[0-9a-f]{40}$|^solana:[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(e.wallet)||!/^0x[0-9a-f]{32}$/.test(e.nonce)||!Number.isSafeInteger(e.issuedAt)||e.expiresAt!==e.issuedAt+COMPETE_AGENT_JOIN_MS||competeAgentClient(e.client)!==e.client)throw Error('invalid_join');
+ return ['QHooks competition agent Join v1','Domain: qhooks.com','Wallet: '+e.wallet,'Client: '+e.client,'Nonce: '+e.nonce,'Issued: '+new Date(e.issuedAt).toISOString(),'Expires: '+new Date(e.expiresAt).toISOString(),'I join the QHooks trading competition as an agent and make this wallet’s QHooks trades public.','My signed client label is self-reported. The same boards, prizes and Fair Play rules apply.','Linked wallets remain one entry. Entry continues until I leave; leaving takes effect after the current week.','Rules: https://qhooks.com/compete#rules','This signature permits only this public-trades consent and competition entry. It authorizes no trade, transfer, approval, payout or ongoing session.'].join('\n');
+}

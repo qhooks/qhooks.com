@@ -1,3 +1,6 @@
 @import url("./setup-base.css");
 .setup-flow #builder-copy + h2, .setup-flow #builder-ready { margin-top: 40px; }
 .setup-flow #builder-status { margin-top: 16px; }
+.setup-flow .builder-full-address { color: var(--qa-tx); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: clamp(11px, 3vw, 13px); line-height: 1.6; overflow-wrap: anywhere; user-select: all; }
+
+.setup-flow #builder-target{width:100%;min-height:48px;padding:12px;font:inherit;font-size:14px;color:var(--qa-tx);background:var(--qa-wash);border:1px solid var(--qa-rule);border-radius:10px;box-sizing:border-box;margin:10px 0}.setup-flow #builder-target:focus-visible{outline:2px solid var(--qa-gold);outline-offset:3px}.setup-flow #builder-target[aria-invalid=true]{border-color:var(--qa-bad,#ef7777)}.setup-flow label[for=builder-target]{display:block;margin-top:16px}.setup-flow #builder-address+h2,.setup-flow #builder-target-help{margin-bottom:16px}@media(max-width:600px){.setup-flow #builder-target{font-size:16px}}

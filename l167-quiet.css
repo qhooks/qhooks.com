@@ -30,7 +30,6 @@
 .q167-quiet .hero .market-networks { display:flex; gap:26px; align-items:center; margin-top:auto; padding-top:100px; list-style:none; flex-wrap:wrap; }
 .q167-quiet .hero .market-networks li { display:inline-flex; align-items:center; gap:10px; margin:0; padding:0; border:0; border-radius:0; color:var(--muted); font-weight:400; font-size:13px; }
 .q167-quiet .hero .chain-symbol { width:21px; height:21px; flex-basis:21px; filter:grayscale(1); opacity:.85; }
-:root[data-theme="dark"] .q167-quiet .hero .chain-symbol[data-chain-symbol="8453"] { filter:grayscale(1) brightness(6); }
 .q167-quiet .catalog-section { padding-block:72px; }
 .q167-quiet .catalog-section h2 { line-height:1.12; letter-spacing:-.025em; }
 .q167-quiet #catalog { border-top:1px solid var(--line); }

@@ -1,3 +1,4 @@
+import{mountSimpleTokenView}from'/qx-token-simple-view.mjs';
 // QHooks System A: the terminal and token page (token lane, 2026-11-11).
 // Presentation only. Every number here comes from what the terminal already loaded (window.qxTerminal.state /
 // display(), the 'qxt:paint' event after each market read) or from public reads the page already makes (community
@@ -7,6 +8,7 @@ import { mountShell } from '/qx-a/shell.mjs';
 import { shown, shownKids } from '/qx-shown.mjs';
 import { activityQuery } from '/qx-community-activity.mjs';
 import { profileUrl } from '/qx-profile-address.mjs';
+import {mountProofPopover} from '/qx-proof-popover.mjs';
 
 const doc = document, root = doc.documentElement, body = doc.body;
 const $ = (id) => doc.getElementById(id);
@@ -175,54 +177,10 @@ function readProofChecks() {
   }).sort((a, b) => PROOF_RANK[a.st] - PROOF_RANK[b.st]);
   return { list, link: rp?.querySelector('.qpr-report-link')?.href || '' };
 }
-const proofScrim = h('div', { class: 'qa-scrim ta-proofscrim', hidden: true });
-const proofPop = h('div', { class: 'ta-proofpop', id: 'ta-proofpop', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'ta-proofpop-h', hidden: true });
-proofChip.setAttribute('aria-haspopup', 'dialog'); proofChip.setAttribute('aria-controls', 'ta-proofpop'); proofChip.setAttribute('aria-expanded', 'false');
-body.append(proofScrim, proofPop);
 const proofRow = (c) => h('li', { class: 'ta-pc is-' + c.st }, h('span', { class: 'ta-pc__dot', 'aria-hidden': 'true' }),
   h('div', { class: 'ta-pc__txt' }, h('b', null, c.title), c.why ? h('span', null, c.why) : null), h('span', { class: 'ta-pc__st' }, PROOF_WORD[c.st]));
-function paintProofPop() {
-  const { list, link } = readProofChecks(), scored = list.filter((c) => c.st !== 'info'), notes = list.filter((c) => c.st === 'info');
-  const passed = scored.filter((c) => c.st === 'clear').length, look = scored.filter((c) => c.st === 'danger' || c.st === 'caution').length;
-  const unchecked = scored.filter((c) => c.st === 'unknown').length;
-  const close = h('button', { type: 'button', class: 'qa-btn qa-btn--icon ta-proofpop__x', 'aria-label': 'Close checks' }, h('span', { 'aria-hidden': 'true' }, '×'));
-  close.addEventListener('click', () => closeProof(true));
-  const full = link ? h('a', { class: 'qa-btn qa-btn--secondary qa-btn--sm ta-proofpop__full', href: link, target: '_blank', rel: 'noopener noreferrer' }, 'Full report', icon('out'))
-    : h('button', { type: 'button', class: 'qa-btn qa-btn--secondary qa-btn--sm ta-proofpop__full' }, 'Full report');
-  if (!link) full.addEventListener('click', () => { closeProof(); $('qxt-repoproof')?.scrollIntoView({ block: 'start', behavior: RM ? 'auto' : 'smooth' }); });
-  proofPop.replaceChildren(...[
-    desk.matches ? null : h('span', { class: 'qa-sheet__grip', 'aria-hidden': 'true' }),
-    h('header', { class: 'ta-proofpop__head' }, h('div', null, h('h2', { id: 'ta-proofpop-h' }, 'Proof checks'),
-      h('p', null, scored.length ? passed + ' of ' + scored.length + ' passed' + (look ? ' · ' + look + ' to look at' : '') + (unchecked ? ' · ' + unchecked + ' not checked' : '') : 'Refreshing…')), close),
-    scored.length ? h('ul', { class: 'ta-pcs' }, scored.map(proofRow)) : null,
-    notes.length ? h('details', { class: 'ta-pcs-notes' }, h('summary', null, notes.length + (notes.length === 1 ? ' note' : ' notes')), h('ul', { class: 'ta-pcs' }, notes.map(proofRow))) : null,
-    h('footer', { class: 'ta-proofpop__foot' }, h('span', null, 'Checked by QProof'), full)].filter(Boolean));
-}
-function placeProofPop() {
-  if (!desk.matches) { proofPop.style.removeProperty('top'); proofPop.style.removeProperty('left'); return; }
-  const r = proofChip.getBoundingClientRect(), w = proofPop.offsetWidth || 400;
-  proofPop.style.top = Math.round(r.bottom + scrollY + 10) + 'px';
-  proofPop.style.left = Math.round(Math.max(16, Math.min(r.left + scrollX, scrollX + doc.documentElement.clientWidth - w - 16))) + 'px';
-}
-let proofOpen = false;
-function openProof() {
-  paintProofPop(); proofOpen = true;
-  proofPop.classList.toggle('qa-sheet', !desk.matches); proofPop.classList.toggle('is-pop', desk.matches);
-  proofPop.hidden = false; proofScrim.hidden = desk.matches; placeProofPop();
-  proofChip.setAttribute('aria-expanded', 'true');
-  proofPop.querySelector('.ta-proofpop__x')?.focus({ preventScroll: true });
-}
-function closeProof(refocus) {
-  if (!proofOpen) return; proofOpen = false; proofPop.hidden = true; proofScrim.hidden = true;
-  proofChip.setAttribute('aria-expanded', 'false'); if (refocus) proofChip.focus({ preventScroll: true });
-}
-proofChip.addEventListener('click', (e) => { e.stopPropagation(); proofOpen ? closeProof() : openProof(); });
-proofScrim.addEventListener('click', () => closeProof());
-doc.addEventListener('click', (e) => { if (proofOpen && desk.matches && !proofPop.contains(e.target) && !proofChip.contains(e.target)) closeProof(); });
-addEventListener('keydown', (e) => { if (proofOpen && e.key === 'Escape') closeProof(true); });
-addEventListener('resize', () => { if (proofOpen) { proofPop.classList.toggle('qa-sheet', !desk.matches); proofPop.classList.toggle('is-pop', desk.matches); proofScrim.hidden = desk.matches; placeProofPop(); } });
-addEventListener('hashchange', () => closeProof());
-new MutationObserver(() => { paintProof(); if (proofOpen) paintProofPop(); }).observe($('qxt-repoproof'), { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['hidden'] });
+const proofView=mountProofPopover({document:doc,window,chip:proofChip,desktop:desk,h,readChecks:readProofChecks,renderRow:proofRow,report:$('qxt-repoproof'),reduceMotion:RM});
+new MutationObserver(() => { paintProof(); if (!proofView.element.hidden) proofView.render(); }).observe($('qxt-repoproof'), { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['hidden'] });
 
 /* ================= stats: the terminal's own strip, ruled, with ticks ================= */
 const statsEl = $('qxt-stats');
@@ -254,7 +212,7 @@ const pressure = h('div', { class: 'ta-pressure', hidden: true }, h('div', { cla
   h('div', { class: 'qa-pressure__legend' }, h('span', { class: 'qa-up' }), h('span', null, 'trades, last 24h'), h('span', { class: 'qa-down' })));
 chartWrap.append(pressure);
 // line or candles (gold line on graphite is the default; candles stay one tap away)
-let mode = 'line'; try { mode = localStorage.getItem('qa-chart-mode') === 'candles' ? 'candles' : 'line'; } catch {}
+let mode = 'candles'; try { mode = localStorage.getItem('qa-chart-mode') === 'line' ? 'line' : 'candles'; } catch {}
 const modeBtn = h('button', { type: 'button', class: 'ta-mode', 'aria-pressed': String(mode === 'candles'), title: 'Candles' }, icon('candles'));
 modeBtn.addEventListener('click', () => { mode = mode === 'line' ? 'candles' : 'line'; try { localStorage.setItem('qa-chart-mode', mode); } catch {} modeBtn.setAttribute('aria-pressed', String(mode === 'candles')); modeBtn.replaceChildren(icon(mode === 'line' ? 'candles' : 'line')); modeBtn.title = mode === 'line' ? 'Candles' : 'Line'; syncSeries(true); });
 modeBtn.replaceChildren(icon(mode === 'line' ? 'candles' : 'line'));
@@ -268,7 +226,11 @@ function syncSeries(force = false) {
   const { chart, candles } = H;
   let bars; try { bars = candles.data(); } catch { return H; }
   const last = bars.at(-1), sig = mode + ':' + bars.length + ':' + (last ? last.time + ':' + last.close : '');
-  if (!force && sig === C.lastSig) return H;
+  if (!force && sig === C.lastSig) {
+    // A wallet read can finish between price ticks; Line must receive those personal trade arrows too.
+    if (mode === 'line' && C.area) try { C.area.setMarkers(candles.markers()); } catch {}
+    return H;
+  }
   C.lastSig = sig;
   // A chart opened before its history arrived keeps its first few-bar window; once the history lands, show the
   // latest 90 bars the way the terminal frames a fresh chart (only until the reader moves the chart).
@@ -309,24 +271,8 @@ function drawOverlay() {
   const light = root.dataset.theme === 'light';
   const css = getComputedStyle(body), col = (n) => css.getPropertyValue(n).trim();
   const goldHi = col('--qa-gold-hi') || '#F0DAAE', g = col('--qa-gold') || '#D2AD72', buy = col('--qa-buy'), sell = col('--qa-sell'), fire = col('--qa-fire'), floor = col('--qa-floor');
-  // trades, buybacks and calls on the line (the bucket's close), drawn under the beacon
-  const tf = api()?.state?.tf || 60, byTime = new Map(bars.map((b) => [b.time, b]));
-  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, plotW, plotH); ctx.clip();
-  for (const t of C.marks) {
-    const b = byTime.get(Math.floor(t.ts / tf) * tf); if (!b) continue;
-    const mx = ts.timeToCoordinate(b.time), my = series.priceToCoordinate(b.close); if (mx == null || my == null || mx < 0 || mx > plotW) continue;
-    const r = t.kind === 'burn' ? 2.4 : Math.min(5, 1.8 + Math.log10(1 + (t.usd || 1)) * .95);
-    ctx.beginPath(); ctx.arc(mx, my, r + 1.4, 0, 7); ctx.fillStyle = floor; ctx.fill();
-    ctx.beginPath(); ctx.arc(mx, my, r, 0, 7); ctx.fillStyle = t.kind === 'burn' ? fire : t.kind === 'buy' ? buy : sell; ctx.fill();
-  }
-  for (const p of C.pins) {
-    const b = byTime.get(Math.floor(p.ts / tf) * tf); if (!b) continue;
-    const px = ts.timeToCoordinate(b.time), py = series.priceToCoordinate(b.close); if (px == null || py == null || px < 0 || px > plotW) continue;
-    ctx.setLineDash([2, 4]); ctx.strokeStyle = g; ctx.globalAlpha = .55; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px, 6); ctx.lineTo(px, py - 11); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
-    ctx.beginPath(); ctx.arc(px, py, 8.5, 0, 7); ctx.fillStyle = floor; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = g; ctx.stroke();
-    ctx.fillStyle = goldHi; ctx.font = '800 9.5px "Mona Sans"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('C', px, py + .5);
-  }
-  ctx.restore();
+  // auditC: the line stays plain. Trades, buybacks and calls are not beaded onto it; the marker layers
+  // (You / Following / Smart / Calls / Dev) draw as axis ticks once the viewer turns them on.
   // the live price hangs from a fine gold line dropped from the top of the chart; trades tug it
   let off = 0; if (C.spring && !RM) { const st = (now - C.spring.t0) / 1000; off = C.spring.a * Math.exp(-st * 4.2) * Math.cos(st * 17); if (st > 1.6) C.spring = null; }
   const y = y0 + off;
@@ -345,7 +291,7 @@ doc.addEventListener('visibilitychange', () => { if (!doc.hidden) startOverlay()
 // the chart's own parts: marker layers beside the live label, timeframes under the chart (inside its stage, so they
 // come along into fullscreen), tools below them
 function placeChartParts() {
-  const legend = chartWrap.querySelector('.qxt-layer-legend'); if (legend && legend.parentElement !== liveSlot) liveSlot.append(legend);
+  const legend = chartWrap.querySelector('.qxt-layer-legend'); if (legend && !legend.closest('.ta-chart-more') && legend.parentElement !== liveSlot) liveSlot.append(legend);
   const stageEl = chartWrap.querySelector('.qxt-chart-stage'), bar = doc.querySelector('.qxt-chartbar');
   if (stageEl && bar && bar.previousElementSibling !== chartBox) chartBox.after(bar);
 }
@@ -366,24 +312,23 @@ side.append(slabExtras);
 const limitBtn = $('qx-pro-limit');
 const limitTab = h('button', { type: 'button', class: 'ta-limit-tab', hidden: true }, 'Limit');
 limitTab.addEventListener('click', () => limitBtn?.click());
-function placeLimit() { const t = $('qxt-ticket')?.querySelector('.qxt-side-toggle'); if (t && limitTab.previousElementSibling !== t) t.after(limitTab); limitTab.hidden = !limitBtn || limitBtn.hidden; }
+function placeLimit() { const t = $('qxt-ticket')?.querySelector('.qxt-side-toggle'); if (t && limitTab.parentElement !== t) t.append(limitTab); limitTab.hidden = !limitBtn || limitBtn.hidden; }
 if (limitBtn) new MutationObserver(placeLimit).observe(limitBtn, { attributes: true, attributeFilter: ['hidden'] });
 new MutationObserver(placeLimit).observe($('qxt-ticket'), { childList: true });
+
+const ticketIdentity=h('div',{class:'ta-ticket-identity'},h('img',{alt:'',width:36,height:36}),h('div',{},h('strong',{},'Token'),h('span',{},'Refreshing price')));
+let ticketMeta=null;
+function placeTicketIdentity(){const ticket=$('qxt-ticket');if(!ticketMeta)return;const head=ticket.querySelector('.qv2-sheet-head'),into=head||ticket;if(ticketIdentity.parentElement!==into){const sides=into.querySelector('.qxt-side-toggle');if(sides?.parentElement===into)into.insertBefore(ticketIdentity,sides);else into.prepend(ticketIdentity);}const[img,copy]=ticketIdentity.children;const src=coinImg.getAttribute('src')||iconSrc(ticketMeta);if(src&&img.getAttribute('src')!==src)img.src=src;img.hidden=!src;copy.children[0].textContent=ticketMeta.symbol||'Token';copy.children[1].textContent=P.price.el.textContent==='—'?'Price refreshing':P.price.el.textContent;ticket.setAttribute('aria-label','Trade '+(ticketMeta.symbol||'token'));}
+new MutationObserver(placeTicketIdentity).observe($('qxt-ticket'),{childList:true,subtree:false});
+addEventListener('qx:sheet',placeTicketIdentity);
 
 /* ================= phone dock ================= */
 const dk = dock({ onBuy: () => window.qxSheet?.open('buy'), onSell: () => window.qxSheet?.open('sell') });
 dk.classList.add('ta-dock'); body.append(dk);
 addEventListener('qx:sheet', (e) => body.classList.toggle('ta-sheet-open', !!e.detail?.open));
 
-/* ================= section nav: Traders / Callers / Holders / Builder ================= */
-const SECTIONS = [['traders', 'Traders'], ['callers', 'Callers'], ['holders', 'Holders'], ['builder', 'Builder']];
-const secTabs = tabs(SECTIONS.map(([id, label]) => ({ id, label })), { active: 'traders', variant: 'section', label: 'Sections', onChange: (id) => { spyHold = Date.now() + 900; const el = $(id); if (el) scrollTo({ top: el.getBoundingClientRect().top + scrollY - stickyTop() - 8, behavior: RM ? 'auto' : 'smooth' }); } });
-secTabs.el.classList.add('ta-secnav');
-$('traders').before(secTabs.el);
-let spyHold = 0;
-const stickyTop = () => (hdr?.getBoundingClientRect().bottom || 0) + secTabs.el.offsetHeight;
-const spy = new IntersectionObserver((es) => { if (Date.now() < spyHold) return; for (const e of es) if (e.isIntersecting) secTabs.set(e.target.id); }, { rootMargin: '-35% 0px -60% 0px' });
-for (const [id] of SECTIONS) spy.observe($(id));
+/* ================= one token data row ================= */
+const simpleView=mountSimpleTokenView({document:doc,h});
 
 /* ================= Traders: the terminal's own tape, as an A tape ================= */
 const pane = $('qxt-pane');
@@ -498,7 +443,7 @@ function renderHolders(d) {
   holdersCount.textContent = Number.isFinite(s.holders) ? String(s.holders) : '';
   if (!list.length) {
     if (holderSig === 'none') return; holderSig = 'none'; holdersNote.textContent = '';
-    holdersEl.replaceChildren(h('div', { class: 'ta-empty' }, h('p', null, 'Holder balances for this token are in the Traders tabs.'), h('button', { type: 'button', class: 'qa-btn qa-btn--secondary qa-btn--sm', onclick: () => { doc.querySelector('#qxt-data-tabs [data-pane="holders"]')?.click(); $('traders')?.scrollIntoView({ block: 'start' }); } }, 'Open holders')));
+    holdersEl.replaceChildren(h('div', { class: 'ta-empty' }, h('p', null, 'Holder balances appear above.'), h('button', { type: 'button', class: 'qa-btn qa-btn--secondary qa-btn--sm', onclick: () => { doc.querySelector('#qxt-data-tabs [data-pane="holders"]')?.click(); $('traders')?.scrollIntoView({ block: 'start' }); } }, 'Open holders')));
     return;
   }
   const price = Number(s.priceUsd ?? (d.ext ? s.price : NaN));
@@ -554,6 +499,7 @@ function renderAbout(d) {
   if (launched && !d.ext) rows.push(['Launched', fmt.age(Date.now() / 1000 - launched) + ' ago']);
   if (!d.ext && feed.kind === 'simple') rows.push(['Launch', [feed.style ? feed.style[0].toUpperCase() + feed.style.slice(1) : 'Simple', feed.bonded ? 'bonded' : feed.progressBps != null ? (feed.progressBps / 100).toFixed(1) + '% to bond' : ''].filter(Boolean).join(' · ')]);
   if (m.token) rows.push(['Contract', h('span', { class: 'ta-who' }, EXPLORER[chainId] ? h('a', { href: EXPLORER[chainId] + (chainId === 'solana' ? '/token/' : '/token/') + m.token, target: '_blank', rel: 'noopener' }, fmt.short(m.token), icon('out')) : fmt.short(m.token))]);
+  if (isOfficial(m)) rows.push(['CoinGecko', h('a', {href:'https://www.coingecko.com/en/coins/qhooks',target:'_blank',rel:'noopener noreferrer'}, 'QHOOKS listing', icon('out'))]);
   rows.push(['Chain', CHAIN[chainId] || chainId]);
   // walletpos: replaceChildren() prints null as the text "null" (an outside token has no launch CTA): only nodes go in, and
   // rows whose value is missing are left out; with nothing to say the block hides.
@@ -586,7 +532,7 @@ const T = { key: '', trades: null, holders: null, lastPrice: null, lastTs: 0 };
 function setMode(token) {
   body.classList.toggle('ta-token', token);
   body.classList.toggle('qa-shell--detail', token);
-  body.classList.toggle('qa-shell--over-art', token);
+  body.classList.toggle('qa-shell--over-art', false);
   top.hidden = !token;
   const drop = doc.querySelector('.qx-drop[data-drop-banner]');
   if (drop && token && drop.parentElement !== chartWrap) chartWrap.append(drop);
@@ -594,13 +540,14 @@ function setMode(token) {
   if (token) startOverlay();
 }
 function paint() {
-  const A = api(), d = A?.display?.(); if (!d?.meta) return;
+  const A = api(), d = A?.display?.(); if (!d?.meta) {ticketMeta=null;ticketIdentity.remove();return;}
   const sel = A.state.sel, m = d.meta, s = d.summary || {};
   const key = sel ? (sel.ext ? 't:' + sel.chainId + ':' + sel.ext : 'm:' + sel.chainId + ':' + sel.controller) : '';
   setMode(true);
   const switched = key !== T.key;
   if (switched) {
     T.key = key; T.trades = null; T.holders = null; T.lastPrice = null; seenRows = null; holderSig = ''; aboutSig = ''; statKey = key;
+    simpleView?.select('trades');
     CL.calls = []; CL.seeded = false; clearInterval(CL.timer); C.marks = []; C.pins = []; paintedArt = '';
     art.feed = (A.state.markets || []).find((x) => String(x.chainId) === String(m.chainId) && String(x.token || '').toLowerCase() === String(m.token || '').toLowerCase()) || null;
     art.profile = null; callsEl.replaceChildren(); callsCount.textContent = ''; holdersEl.replaceChildren(); slabTape.replaceChildren();
@@ -622,7 +569,8 @@ function paint() {
   if (live != null) { P.price.set(live, dir); P.price.el.classList.remove('ta-quote-unit'); }
   else if (q > 0) { P.price.el.textContent = fmt.price(q).slice(1) + ' ' + (m.quoteSymbol || ''); P.price.el.classList.add('ta-quote-unit'); }
   else { P.price.el.textContent = '—'; }
-  const ch = Number(s.change24);
+  ticketMeta=m;placeTicketIdentity();
+  const ch = s.change24==null?NaN:Number(s.change24);
   if (Number.isFinite(ch)) { const delta = live != null && ch > -1 ? live - live / (1 + ch) : null; P.change.set(ch, { label: '24h', delta, words: 'past day', pulse: !!dir }); P.change.el.hidden = false; } else P.change.el.hidden = true;
   if (live != null) T.lastPrice = live;
   // pressure: buys vs sells, last 24h
@@ -630,11 +578,11 @@ function paint() {
   if (b24 + s24 > 0) { pressure.hidden = false; const [pb, ps] = pressure.querySelectorAll('.qa-pressure__bar span'); pb.style.flexGrow = b24; ps.style.flexGrow = s24; const lg = pressure.querySelectorAll('.qa-pressure__legend span'); lg[0].textContent = b24.toLocaleString('en-US') + ' buys'; lg[2].textContent = s24.toLocaleString('en-US') + ' sells'; } else pressure.hidden = true;
   // live label + trades
   const trades = (d.trades || []).filter((t) => t && t.ts);
-  const latest = trades.reduce((a, t) => Math.max(a, t.ts), Number(s.lastTradeAt) || 0);
+  const eventNow = Date.now(), summaryTrade = Number(s.lastTradeAt);
+  const latest = trades.filter(t=>t.via!=='eth'&&typeof t.tx==='string'&&t.tx).reduce((a,t)=>Number.isFinite(t.ts)&&t.ts>0&&t.ts*1000<=eventNow+5000?Math.max(a,t.ts):a,
+    Number.isSafeInteger(summaryTrade)&&summaryTrade>0&&summaryTrade*1000<=eventNow+5000?summaryTrade:0);
   const tradeKey = (t) => t.id || t.tx + ':' + (t.logIndex ?? t.idx ?? '');
   const usdOf = (t) => Number(t.valueUsd ?? (d.ext ? t.quote : NaN));
-  if (d.refreshing || d.providerLive) P.live.refreshing(false);
-  if (latest) P.live.setLast(Math.max(0, Date.now() - latest * 1000));
   // chart marks: the latest trades and buybacks
   C.marks = trades.slice(0, 80).map((t) => ({ ts: t.ts, kind: C.burnTx.has(String(t.tx || '').toLowerCase()) ? 'burn' : t.buy ? 'buy' : 'sell', usd: usdOf(t) || 1 }));
   if (T.trades) {
@@ -651,6 +599,9 @@ function paint() {
     slabTape.replaceChildren(); [...trades].sort((a, b) => b.ts - a.ts).slice(0, 9).reverse().forEach((t) => pushSlab(t, d, false));
   }
   T.trades = new Set(trades.map(tradeKey));
+  // Arrival animations may discover old swaps. Restore the event clock after hit(), never the receipt clock.
+  if (latest) P.live.setLast(Math.max(0, eventNow - latest * 1000));
+  P.live.refreshing(!latest||!!s.pricesRefreshing);
   if (!d.ext && d.holders?.length) T.holders = new Set(d.holders.map((x) => String(x.holder).toLowerCase()));
   // sections
   renderHolders(d); renderAbout(d); tickCalls(d); void loadBuybacks(m);
@@ -666,7 +617,7 @@ function pushSlab(t, d, enter) {
   slabTape.prepend(li); while (slabTape.children.length > 9) slabTape.lastElementChild.remove();
 }
 setInterval(() => { const now = Date.now() / 1000; for (const n of slabTape.querySelectorAll('[data-ts]')) n.textContent = fmt.age(now - +n.dataset.ts); }, 1000);
-function clear() { setMode(false); if (shell) shell.setTitle('Trade'); clearInterval(CL.timer); T.key = ''; root.style.removeProperty('--qa-banner-blur'); paintedArt = ''; }
+function clear() { ticketMeta=null;ticketIdentity.remove();setMode(false); if (shell) shell.setTitle('Trade'); clearInterval(CL.timer); T.key = ''; root.style.removeProperty('--qa-banner-blur'); paintedArt = ''; }
 
 doc.addEventListener('qxt:paint', paint);
 doc.addEventListener('qxt:clear', () => { if (!api()?.state?.sel) clear(); });

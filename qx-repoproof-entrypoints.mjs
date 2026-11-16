@@ -61,7 +61,7 @@ export async function bootRepoProofEntrypoints(doc=globalThis.document){
   if(!doc)return;
   const share=doc.getElementById('qc-share-pack');if(share)mountCompletedLaunchProof(share,{document:doc});
   const root=doc.getElementById('qa-root');if(!root||!doc.getElementById('qa-evm-panel')||doc.getElementById('qa-wallet-checks'))return;
-  const container=el(doc,'div',null,{class:'qre-account-host'});root.before(container);
+  const container=el(doc,'div',null,{class:'qre-account-host'});root.after(container);
   try{
     const [{getWalletHub},{solAddress,onSolChange}]=await Promise.all([import('./wallet-hub.mjs'),import('./qx-solana.mjs')]);
     if(!container.isConnected)return;

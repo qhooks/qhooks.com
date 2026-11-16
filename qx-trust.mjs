@@ -8,6 +8,9 @@ import { BLOCK_FIELDS, BLOCK_BITS } from '/full-launch/packages/multichain-launc
 import { modulesAmong, loadModules } from '/full-launch/packages/multichain-launch/market-modules.mjs';
 import { BLOCKS, AUCTION_ADDRESS } from '/qx-block-catalog.mjs';
 import { extraAddress, isLive } from '/qx-extras.mjs';
+// Report links open on qhooks.com/qproof (older cached reports carry the proof engine's own link: same id).
+const qproofHref = u => { const id = /\/(?:q?proof)\/([0-9a-f-]{36})$/.exec(String(u || ''))?.[1]; return id ? '/qproof/' + id : null; };
+
 
 const SEL = { config: '0x79502c55', previewRate: '0xb9c3fc44', currentOwner: '0xb387ef92', recoveryEta: '0x1479b3da', recoveryBy: '0xaa19ddc3', locksSummary: '0x9522a80a', totalSupply: '0x18160ddd' };
 const ZERO = '0x' + '0'.repeat(40);
@@ -26,7 +29,7 @@ const keyOf = (chainId, controller) => chainId + ':' + String(controller).toLowe
 // ---- Server data ----
 export const trustOf = (chainId, controller) => once('t:' + keyOf(chainId, controller), 20000, () => getJson(`/api/trust/market/${chainId}/${String(controller).toLowerCase()}`)).catch(() => null);
 export const verdictOf = (chainId, controller) => once('v:' + keyOf(chainId, controller), 20000, async () => {
-  const address=String(controller).toLowerCase(),response=await fetch('/api/repoproof/check?'+new URLSearchParams({kind:'launch',chainId:String(chainId),address}),{cache:'no-store'}),value=await response.json();
+  const address=String(controller).toLowerCase(),response=await fetch('/api/qproof/subject?'+new URLSearchParams({kind:'launch',chainId:String(chainId),address}),{cache:'no-store'}),value=await response.json();
   if(value?.version!==1||value.subject?.kind!=='launch'||String(value.subject?.chainId)!==String(chainId)||value.subject?.address?.toLowerCase()!==address)return null;
   const report=value.report;
   if(!report||!['danger','caution','clear','unknown'].includes(report.level)||!Array.isArray(report.checks))return {level:null,unavailable:true,state:value.state,source:'QProof via QHooks',checkedAt:value.checkedAt||null,cached:!!value.cached,stale:!!value.stale,retryAt:value.retryAt||null};
@@ -192,7 +195,7 @@ export async function renderRisk(el, pool, { quiet = false, tries = 0, timers = 
     (v?.checks||[]).some(c=>c.status!=='danger'&&c.status!=='caution')?h('ul',{},...(v.checks.filter(c=>c.status!=='danger'&&c.status!=='caution').map(c=>h('li',{},c.title)))):null,
     f?h('p',{class:'qtr-evidence'},factsMeta(f)):h('p',{class:'qtr-evidence'},'Launch contract observations refreshing.'),
     f?h('ul',{},...f.facts.filter(fact=>fact.tone!=='warn').map(factLine)):null,
-    h('a', { href: v?.url || 'https://repoproof.online/proof#q=' + encodeURIComponent('https://qhooks.com/l/' + pool.chainId + '/' + pool.controller), target: '_blank', rel: 'noopener' }, v?.url && v.level ? 'Evidence on QProof ↗' : 'Full check on QProof ↗'));
+    h('a', { href: qproofHref(v?.url) || '/qproof?q=' + encodeURIComponent('https://qhooks.com/l/' + pool.chainId + '/' + pool.controller) }, v?.url && v.level ? 'Evidence on QProof' : 'Full check on QProof'));
   // Native details/summary retains browser keyboard behavior without a second action or any scan.
   const coverageIncomplete=!v?.level||v.level==='unknown'||!completeCoverage(v)||partialReads||!t;
   const details=h('details',{class:'qtr-risk-details'},h('summary',{class:'qtr-risk-summary'},level?(coverageIncomplete?'Sources · incomplete coverage':'Sources & launch observations'):summary),body);

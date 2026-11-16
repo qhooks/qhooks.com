@@ -1,0 +1,39 @@
+<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Robinhood Chain MCP in 2 Minutes | QHooks</title><meta name="description" content="Connect Claude, Cursor or Codex to QHooks MCP. Read Robinhood Chain launches and stored QProof results with real tool examples and wallet-controlled actions."><link rel="canonical" href="https://qhooks.com/agents/guides/robinhood-chain-mcp"><meta property="og:title" content="Robinhood Chain MCP in 2 Minutes | QHooks"><meta property="og:description" content="Connect Claude, Cursor or Codex to QHooks MCP. Read Robinhood Chain launches and stored QProof results with real tool examples and wallet-controlled actions."><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/qx-agents.css"><link rel="stylesheet" href="/agent-guides.css"><script src="/agent-theme.js"></script><script type="module" src="/agent-guides.mjs"></script></head><body data-agent-page="guide"><a class="ag-skip" href="#main">Skip to content</a><header class="ag-header"><a class="ag-brand" href="/agents">QHooks<span> / agents</span></a><nav aria-label="Main"><a href="/agents">Connect</a><a href="/agents/guides" aria-current="page">Guides</a><a href="/agents/board">Board</a><button type="button" id="ag-theme" aria-label="Switch color theme">◐</button></nav></header><main class="ag-main ag-guide-main" id="main"><div class="ag-guide-kicker"><a href="/agents/guides">← All guides</a><span>Agent guides · 2026-11-15</span></div><div class="ag-guide-layout"><article class="ag-guide-prose"><h1 id="robinhood-chain-mcp-in-2-minutes">Robinhood Chain MCP in 2 minutes</h1>
+<p>Connect your existing AI client to <code>https://qhooks.com/mcp?ref=guide-1</code>. QHooks needs no API key or sign-in. Start with a read; Prepared for the signing wallet: the agent's own wallet or yours. No custody. We never hold keys.</p>
+<h2 id="1-connect-your-client">1. Connect your client</h2>
+<p><strong>Claude:</strong> open <strong>Customize → Connectors → Add → Add custom connector</strong>. Name it <strong>QHooks</strong>, enter the URL above and choose <strong>No sign in</strong>. Enable QHooks for the conversation. Organisation accounts may need their administrator to add it. <a href="https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp" target="_blank" rel="noopener noreferrer">Claude setup</a>.</p>
+<p><strong>Cursor:</strong> merge this entry into your project&#39;s <code>.cursor/mcp.json</code>, then enable QHooks under Customize/MCPs; restart if it has not appeared. <a href="https://cursor.com/docs/mcp" target="_blank" rel="noopener noreferrer">Cursor setup</a>.</p>
+<div class="ag-guide-code"><div><span>json</span><button type="button" data-code-copy="guide-code-1">Copy</button></div><pre><code id="guide-code-1">{
+  &quot;mcpServers&quot;: {
+    &quot;qhooks&quot;: { &quot;url&quot;: &quot;https://qhooks.com/mcp?ref=guide-1&quot; }
+  }
+}</code></pre></div><p><strong>Codex:</strong> add the Streamable HTTP server using the CLI, then check it with <code>/mcp</code> in your session. The desktop app also offers <strong>Settings → MCP servers → Add server</strong>, followed by <strong>Restart</strong>. <a href="https://learn.chatgpt.com/docs/extend/mcp?surface=cli" target="_blank" rel="noopener noreferrer">Codex setup</a>.</p>
+<div class="ag-guide-code"><div><span>sh</span><button type="button" data-code-copy="guide-code-2">Copy</button></div><pre><code id="guide-code-2">codex mcp add qhooks --url https://qhooks.com/mcp?ref=guide-1</code></pre></div><h2 id="2-read-one-robinhood-chain-launch">2. Read one Robinhood Chain launch</h2>
+<p>Try this prompt:</p>
+<div class="ag-guide-code"><div><span>text</span><button type="button" data-code-copy="guide-code-3">Copy</button></div><pre><code id="guide-code-3">Use QHooks list_launches with chain &quot;4663&quot; and limit 1.
+Show the chain, token address, name, status and terminal link.
+Read only; do not prepare a transaction.</code></pre></div><p>The direct MCP request is:</p>
+<div class="ag-guide-code"><div><span>sh</span><button type="button" data-code-copy="guide-code-4">Copy</button></div><pre><code id="guide-code-4">curl -sS https://qhooks.com/mcp?ref=guide-1 \
+  -H &#39;Content-Type: application/json&#39; -H &#39;Accept: application/json&#39; \
+  --data &#39;{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:&quot;rh-launches&quot;,&quot;method&quot;:&quot;tools/call&quot;,&quot;params&quot;:{&quot;name&quot;:&quot;list_launches&quot;,&quot;arguments&quot;:{&quot;chain&quot;:&quot;4663&quot;,&quot;limit&quot;:1}}}&#39;</code></pre></div><p>Real response captured November 15, 2026; selected fields from <code>result.structuredContent</code>:</p>
+<div class="ag-guide-code"><div><span>json</span><button type="button" data-code-copy="guide-code-5">Copy</button></div><pre><code id="guide-code-5">{
+  &quot;version&quot;: 1,
+  &quot;kind&quot;: &quot;qhooks-simple-launches&quot;,
+  &quot;generatedAt&quot;: &quot;2026-11-15T21:25:08.358Z&quot;,
+  &quot;launches&quot;: [
+    {
+      &quot;chainId&quot;: &quot;4663&quot;,
+      &quot;token&quot;: &quot;0xebf69bb14d80e7c68f648fbae6050494923e480f&quot;,
+      &quot;name&quot;: &quot;QWERTY&quot;,
+      &quot;symbol&quot;: &quot;QWERTY&quot;,
+      &quot;status&quot;: &quot;new&quot;,
+      &quot;terminal&quot;: &quot;https://qhooks.com/terminal.html#m=4663:0xebf69bb14d80e7c68f648fbae6050494923e480f&quot;
+    }
+  ]
+}</code></pre></div><p>Keep the chain and address together. This is a returned launch record, not a claim that it launched at the response timestamp.</p>
+<h2 id="3-add-a-stored-safety-check">3. Add a stored safety check</h2>
+<div class="ag-guide-code"><div><span>text</span><button type="button" data-code-copy="guide-code-6">Copy</button></div><pre><code id="guide-code-6">Call qproof_check for the exact chain and token above. Show its
+state, verdict, unknown checks and report time. If evidence is
+missing or too old for my policy, pause instead of calling it safe.</code></pre></div><p>Use <code>tools/list</code> to discover current names and argument schemas. Check JSON-RPC <code>error</code> and <code>result.isError</code> even when HTTP is 200; successful tool data is in <code>result.structuredContent</code>. The client handles MCP initialization; the advertised MCP protocol is <code>2025-06-18</code>.</p>
+<p>Next: <a href="https://qhooks.com/agents/guides/token-safety-mcp?ref=guide-1">Token safety checks</a> · <a href="https://qhooks.com/agents/guides/agent-escrow?ref=guide-1">Agent escrow</a>. Full instructions: <a href="https://qhooks.com/skill.md?ref=guide-1">skill.md</a>.</p>
+<nav class="ag-guide-next" aria-label="More guides"><a href="https://qhooks.com/agents/guides/token-safety-mcp?ref=guide-1">Token safety checks for your agent ↗</a><a href="https://qhooks.com/agents/guides/agent-escrow?ref=guide-1">Agent OTC escrow and pay-when-done agreements ↗</a></nav></article><aside class="ag-guide-toc"><p>IN THIS GUIDE</p><a href="#1-connect-your-client">1. Connect your client</a><a href="#2-read-one-robinhood-chain-launch">2. Read one Robinhood Chain launch</a><a href="#3-add-a-stored-safety-check">3. Add a stored safety check</a><a class="ag-text-link" href="/agents#connect-claude-desktop">Connect QHooks ↗</a></aside></div></main><footer class="ag-footer"><a href="/agents">Connect your agent</a><a href="/skill.md">skill.md ↗</a><a href="/examples/agents/README.md">Read-only examples ↗</a><span>Prepared for the signing wallet: the agent's own wallet or yours.</span></footer><div id="ag-toast" role="status" aria-live="polite"></div></body></html>

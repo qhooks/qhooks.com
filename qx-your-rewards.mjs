@@ -1,3 +1,6 @@
+import {portfolioReader} from './qx-portfolio-read.mjs';
+import {chainById} from './chains.mjs';
+import {OFFICIAL} from './qx-official.mjs';
 // "Your rewards" on /me (catalyst 7b, 2026-11-08): cashback earned, referral earnings and staking payouts for the
 // connected wallet, from /api/qhooks/rewards (on-chain events plus what is claimable now), and a share card with the
 // wallet's referral link. Only amounts that already exist on chain: no estimates, rates or projections.
@@ -12,25 +15,41 @@ export function units(wei, decimals = 18) {
   const lead = frac.match(/^0*/)[0].length;
   return lead >= 8 ? '< 0.00000001' : '0.' + frac.slice(0, lead + 2).replace(/0+$/, '');
 }
+// Address-bound prices prevent a token with a copied ticker from repricing rewards.
+export function rewardPrices(report){
+ const prices={};
+ for(const c of report?.chains||[]){
+  const native=c.native?.priceUsd,chain=chainById(c.chainId);
+  if(Number.isFinite(native)&&native>0){prices[c.chainId+':'+'0x'+'0'.repeat(40)]=native;if(chain?.wrappedNative)prices[c.chainId+':'+chain.wrappedNative.toLowerCase()]=native;if(c.native.symbol==='ETH')prices[c.chainId+':WETH']=native;}
+  for(const t of c.tokens||[])if(Number.isFinite(t.priceUsd)&&t.priceUsd>0){const address=String(t.address||'').toLowerCase();prices[c.chainId+':'+address]=t.priceUsd;const official=OFFICIAL.find(x=>String(x.chainId)===String(c.chainId)&&x.token===address);if(official)prices[c.chainId+':'+official.symbol]=t.priceUsd;}
+ }
+ return prices;
+}
 /// The page model: one line per chain and currency with a non-zero amount; empty lists mean zero.
+export function rewardAmount(raw,decimals,symbol,where,price){
+ const amount=Number(raw||0)/10**decimals,usd=Number.isFinite(price)&&price>0?amount*price:null;
+ const dollars=usd===null?'—':usd>0&&usd<.01?'<$0.01':new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(usd);
+ return dollars+' · '+units(raw,decimals)+' '+symbol+' · '+where;
+}
 export function rewardsModel(d) {
   const cashback = [], referral = [];
   for (const c of d?.chains || []) for (const x of c.currencies || []) {
     const where = NAMES[c.chainId] || c.name;
-    if (BigInt(x.cashbackEarnedWei || 0) > 0n) cashback.push(units(x.cashbackEarnedWei, x.decimals) + ' ' + x.symbol + ' · ' + where);
-    if (BigInt(x.referralEarnedWei || 0) > 0n) referral.push(units(x.referralEarnedWei, x.decimals) + ' ' + x.symbol + ' · ' + where);
+    if (BigInt(x.cashbackEarnedWei || 0) > 0n) cashback.push(rewardAmount(x.cashbackEarnedWei,x.decimals,x.symbol,where,d.prices?.[c.chainId+':'+String(x.address||'').toLowerCase()]));
+    if (BigInt(x.referralEarnedWei || 0) > 0n) referral.push(rewardAmount(x.referralEarnedWei,x.decimals,x.symbol,where,d.prices?.[c.chainId+':'+String(x.address||'').toLowerCase()]));
   }
   const s = d?.staking, pair = (t, q) => [BigInt(t || 0) > 0n && units(t) + ' ' + s.token, BigInt(q || 0) > 0n && units(q) + ' ' + s.quote].filter(Boolean).join(' + ');
   const paid = s ? pair(s.paidTokenWei, s.paidQuoteWei) : '', pending = s ? pair(s.pendingTokenWei, s.pendingQuoteWei) : '';
   const claimable = (d?.chains || []).some(c => (c.currencies || []).some(x => BigInt(x.claimableWei || 0) > 0n));
-  const partial = (d?.partial || []).map(id => id === 'staking' ? 'staking' : NAMES[id] || id);
-  return {cashback, referral, paid, pending, claimable, partial, link: d?.referralLink || ''};
+  const partial = (d?.partial || []).map(id => id === 'staking' ? 'staking' : NAMES[id] || d.chains?.find(c=>String(c.chainId)===String(id))?.name || chainById(id)?.name || 'a network');
+  const stakingLines=(t,q)=>[[t,s?.token],[q,s?.quote]].filter(([raw])=>BigInt(raw||0)>0n).map(([raw,symbol])=>rewardAmount(raw,18,symbol,NAMES[s.chainId]||s.chainId,d.prices?.[s.chainId+':'+symbol]));
+  return {cashback, referral, paid, pending,paidLines:s?stakingLines(s.paidTokenWei,s.paidQuoteWei):[],pendingLines:s?stakingLines(s.pendingTokenWei,s.pendingQuoteWei):[], claimable, partial, link: d?.referralLink || ''};
 }
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 function tile(title, lines, zero, note) {
   const t = el('div', 'qyr-tile'); t.append(el('h4', null, title));
-  if (!lines.length) t.append(el('p', 'qyr-amt', '0'));
-  else { const ul = el('ul', 'qyr-lines'); for (const l of lines) ul.append(el('li', 'qyr-amt', l)); t.append(ul); }
+  if (!lines.length) t.append(el('p', 'qyr-amt', '$0.00'));
+  else { const ul = el('ul', 'qyr-lines'); for (const l of lines) {const item=el('li','qyr-amt'),parts=l.split(' · ');if(parts.length===3){item.title='USD estimate from portfolio prices. Token amounts are earned rewards.';item.append(el('span','qyr-number',parts[0]+' · '+parts[1]),el('span','qyr-sep',' · '),el('span','qyr-chain',parts[2]));}else item.textContent=l;ul.append(item);} t.append(ul); }
   if (note) t.append(el('p', 'qyr-note', note)); else if (!lines.length) t.append(el('p', 'qyr-note', zero));
   return t;
 }
@@ -69,10 +88,10 @@ export function renderRewards(root, d, now = Date.now()) {
   grid.append(
     tile('Cashback earned', m.cashback, 'Trade in the terminal to earn cashback.', m.claimable ? 'Claim balances in the cashback card below.' : ''),
     tile('Referral earnings', m.referral, 'Share your link. You earn when wallets you bring trade.'),
-    tile('Staking payouts', m.paid ? [m.paid + ' paid'] : [], 'Stake QHOOKS to receive a share of its income.', m.pending ? 'Claimable now: ' + m.pending : ''));
+    tile('Staking payouts', m.paidLines, 'Stake QHOOKS to receive a share of its income.', m.pendingLines.length ? 'Claimable now: ' + m.pendingLines.join('; ') : ''));
   const live = el('p', 'qyr-live', 'Live · ' + Math.max(0, Math.round((now - (d?.observedAt || now)) / 1000)) + 's ago');
   root.append(grid);
-  if (m.partial.length) root.append(el('p', 'qyr-note', 'Refreshing ' + m.partial.join(', ') + '.'));
+  if (m.partial.length) grid.children[0].append(el('p', 'qyr-note', m.partial.join(', ') + ' rewards refreshing'));
   if (m.link) root.append(shareCard(m.link));
   root.append(live);
   return m;
@@ -88,7 +107,14 @@ async function load(root, me) {
     try {
       if (mine !== seq) return;
       const r = await fetch('/api/qhooks/rewards?wallet=' + me);
-      if (r.ok) { const d = await r.json(); if (mine !== seq) return; renderRewards(root, d); if (d.partial?.length && i < 2) { await new Promise(x => setTimeout(x, 15000)); continue; } return; }
+      if (r.ok) {
+        const d=await r.json(),reader=portfolioReader();
+        const paint=report=>{if(mine!==seq)return;renderRewards(root,{...d,prices:rewardPrices(report)});};
+        paint(reader.cached('evm',me)?.report);
+        try{paint(await reader.read('evm',me));}catch{}
+        if(mine!==seq)return;
+        if(d.partial?.length&&i<2){await new Promise(x=>setTimeout(x,15000));continue;}return;
+      }
     } catch {}
     if (mine !== seq) return;
     if (!root.querySelector('.qyr-grid')) root.replaceChildren(el('p', 'qyr-note', 'Refreshing your rewards.'));

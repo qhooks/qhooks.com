@@ -1,6 +1,7 @@
 // /call/<id> in System A: the server draws the call (who, what, the thesis, the result since the call). This adds the site
 // shell, the caller's face and verified X badge, the token's art, the caller's own position (only when the chain record is
 // complete, from /api/community/call/<id>), reactions and Thank caller on the board post, and live Now prices.
+import {xAttachment} from '/qx-x-attachment.mjs';
 import { ambient, setArt, xBadge, restart } from '/qx-a/components.mjs';
 import { laneShell, QHOOKS_ART, face, person, h, fmt, RM, flashOnce, tokenMark, tokenArt, readMarkets, onMarkets, livePrice, positionBars, reactRow, boardPosts, priceIn, visiblePoll } from '/qx-a/pages/community-common.mjs';
 
@@ -11,6 +12,7 @@ laneShell({ active: 'community', mode: 'detail', title: d.symbol ? sym + ' call'
 document.body.prepend(ambient()); setArt({ blur: QHOOKS_ART.blur });
 
 if (main && d.call) {
+  const thesis=main.querySelector('.qcall-thesis'),attachment=xAttachment(thesis?.textContent);if(attachment)thesis.after(attachment);
   const board = d.kind === 'launch' ? { kind: 'launch', chainId: d.chain, controller: d.controller, token: d.token, symbol: d.symbol } : { kind: 'token', chainId: d.chain, address: d.address, symbol: d.symbol };
   // the caller's face and name
   const slot = main.querySelector('[data-face]');

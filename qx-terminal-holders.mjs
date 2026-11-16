@@ -86,3 +86,11 @@ export function renderHolderView({h,who,link,short,chainId,view,onMore=null}){
   ...(view.next&&onMore?[h('button',{type:'button',class:'qxt-more',onclick:event=>{event.currentTarget.disabled=true;event.currentTarget.textContent='Loading…';onMore();}},'Show next 100 holders')]:[])];
 }
 export function renderMarketHolders(options){return renderHolderView({...options,view:holderView(options)});}
+
+// Largest Solana accounts may share an owner. Keep labelled balances separate.
+export function holderOwners(view){
+ if(view.kind!=='solana')return view;
+ const found=new Map();for(const r of view.rows){const key=r.holder+'|'+(r.excluded?(r.label||r.account||'excluded'):'');const old=found.get(key);if(old){old.accounts.push(r.account);if(r.amount)old.amounts.push(r.amount);else old.amountUnknown=true;}else found.set(key,{...r,accounts:[r.account],amountUnknown:!r.amount,amounts:r.amount?[r.amount]:[]});}
+ const rows=[...found.values()].map(r=>{const amount=!r.amountUnknown&&r.amounts.length?sum(r.amounts):null;if(amount){const digits=amount.n.toString().padStart(amount.scale+1,'0');amount.text=amount.scale?digits.slice(0,-amount.scale)+'.'+digits.slice(-amount.scale):digits;}return {...r,amount,amountText:formatHolderAmount(amount),shareText:share(amount,view.supply)};});
+ rows.sort((a,b)=>a.amount&&b.amount?compare(a.amount,b.amount):a.amount?-1:1);return {...view,rows};
+}

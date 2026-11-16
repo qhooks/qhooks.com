@@ -93,3 +93,18 @@ body.qa.tp-qhooks-token dl.rm-tiles :is(dt, dd) { overflow-wrap: normal; word-br
   body.qa.tp-qhooks-token dl.rm-tiles div { padding: 14px 12px; }
   body.qa.tp-qhooks-token dl.rm-tiles dd { font-size: clamp(18px, 5.2vw, 24px); }
 }
+
+/* Plan charts in the noir palette (audit #26): gold tints + graphite, ivory as the one accent.
+   Adjacent slots alternate light/dark so the stacked unlock layers stay apart. */
+body.qa.tp-qhooks-token { --rm-c1: #C9A36A; --rm-c2: #EAE1CC; --rm-c3: #8E6C3A; --rm-c4: #77756D; --rm-c5: #DCC08E; --rm-c6: #4A4944; }
+:root[data-theme="light"] body.qa.tp-qhooks-token { --rm-c1: #B38A4B; --rm-c2: #2B2A26; --rm-c3: #D9BE8C; --rm-c4: #8A877E; --rm-c5: #7A5A2C; --rm-c6: #C8C3B7; }
+body.qa.tp-qhooks-token .rm-seg.rm-s1 b,
+body.qa.tp-qhooks-token .rm-seg.rm-s2 b, body.qa.tp-qhooks-token .rm-seg.rm-s5 b { color: #1A1712; }
+body.qa.tp-qhooks-token .rm-seg.rm-s3 b, body.qa.tp-qhooks-token .rm-seg.rm-s4 b, body.qa.tp-qhooks-token .rm-seg.rm-s6 b { color: #F4F1E9; }
+:root[data-theme="light"] body.qa.tp-qhooks-token .rm-seg.rm-s2 b, :root[data-theme="light"] body.qa.tp-qhooks-token .rm-seg.rm-s5 b { color: #F4F1E9; }
+:root[data-theme="light"] body.qa.tp-qhooks-token .rm-seg.rm-s3 b, :root[data-theme="light"] body.qa.tp-qhooks-token .rm-seg.rm-s6 b { color: #1A1712; }
+
+/* No banner slogan or barb behind the plan headline (audit #29); the page's ambient light stays. */
+body.qa.tp-qhooks-token .tp-hero-art { display: none; }
+body.qa.tp-qhooks-token .tp-ident { margin-top: 28px; }
+@media (min-width: 1100px) { body.qa.tp-qhooks-token .tp-ident { margin-top: 0; } }

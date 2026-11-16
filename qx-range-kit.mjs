@@ -12,7 +12,7 @@ import {abiEncode} from './full-launch/packages/launchpad/abi-encode.mjs';
 
 export const RANGE_MAKER = '0x31ce07323c2132e02257e947df620dc67cf1327e';
 export const PQ_CREATOR = '0x9b1559adc9b9c2dce8a32957f3024f3393ae5bf3';
-export const RANGE_SHARES = Object.freeze([[5000, '50%'], [8000, '80%'], [10000, '100%']]);
+export const RANGE_SHARES = Object.freeze([[5000, '50%'], [8000, '80%'], [9000, '90%'], [10000, '100%']]);
 /// Default share of LP fees kept as liquidity: half builds depth around the price, half still pays the creator.
 export const DEFAULT_RANGE_BPS = 5000;
 const SEL = {make: '0xa5b7705d', predict: '0x85e09383', setPayout: '0x6f71a693', pqSetPayout: '0x24337d97', pqMessage: '0xfa2fcc1a', launchOf: '0xd4bf17c5'};

@@ -24,3 +24,7 @@
  .chain-symbol { width: 1.2rem; height: 1.2rem; flex-basis: 1.2rem; }
  .chain-select-symbol { margin-inline-start: .35rem; }
 }
+/* Mark sits left of the select in one row, never under or over it (audit #18). */
+.chain-select-control:has(> .chain-select-symbol) { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+.chain-select-control > select { flex: 1; min-width: 0; }
+.chain-select-control > .chain-select-symbol { order: -1; flex: none; margin: 0; }

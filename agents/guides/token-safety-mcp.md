@@ -6,10 +6,12 @@ canonical: "https://qhooks.com/agents/guides/token-safety-mcp"
 slug: "token-safety-mcp"
 date: "2026-11-15"
 keywords: ["token safety mcp"]
-draft: false
+draft: true
 ---
 
 # Token safety checks for your agent
+
+Prepared for the signing wallet: the agent's own wallet or yours. No custody. We never hold keys.
 
 `qproof_check` reads the latest **stored** QProof report for one chain and token. It starts no fresh check and runs no code. Its name is not a promise of current safety.
 

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head><meta charset="utf-8">
+<link rel="modulepreload" href="/qx-a/shell.mjs" data-qx-preload>
+<link rel="modulepreload" href="/qx-a/components.mjs" data-qx-preload>
+<link rel="modulepreload" href="/qx-a/pages/hooks-lane.mjs" data-qx-preload>
+<link rel="modulepreload" href="/qx-a/pages/qproof.mjs" data-qx-preload><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>QProof · proof before you buy | QHooks</title><meta name="description" content="Paste any token, pool, wallet or chart link. QProof reads the chain and returns one verdict with the evidence: fixed code, risky functions, liquidity, a buy-and-sell test, holders and the creator trail."><script src="/theme.js"></script>
+<link rel="preload" href="/qx-a/fonts/mona-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/qx-a/tokens.css">
+<link rel="stylesheet" href="/qx-a/components.css">
+<link rel="stylesheet" href="/qx-a/shell.css">
+<link rel="stylesheet" href="/wallet-site.css">
+<link rel="stylesheet" href="/qx-a/pages/hooks-lane.css">
+<link rel="stylesheet" href="/qx-a/pages/qproof.css">
+<link rel="icon" href="/qhooks-logo.jpg" type="image/jpeg">
+<link rel="modulepreload" href="/wallet-site.mjs"><link rel="modulepreload" href="/wallet-hub.mjs"><link rel="modulepreload" href="/wallet-hub-fresh.mjs"><link rel="modulepreload" href="/full-launch/prototypes/qwallet/client/wallet-session.mjs"><link rel="modulepreload" href="/wallet-discovery.mjs"><link rel="modulepreload" href="/wallet-preference.mjs"><link rel="modulepreload" href="/wallet-rpc-compat.mjs"><link rel="modulepreload" href="/chain-catalog.mjs"><link rel="modulepreload" href="/wallet-login.mjs"><link rel="modulepreload" href="/embedded-wallet-provider.mjs"><meta property="og:type" content="website"><meta property="og:site_name" content="QHooks"><meta property="og:title" content="QProof · proof before you buy | QHooks"><meta property="og:description" content="One verdict with the evidence for any token, pool or wallet: fixed code, risky functions, liquidity, a buy-and-sell test, holders and the creator trail."><meta property="og:url" content="https://qhooks.com/qproof"><meta name="twitter:title" content="QProof · proof before you buy | QHooks"><meta name="twitter:description" content="One verdict with the evidence for any token, pool or wallet."><meta property="og:image" content="https://qhooks.com/og/qhooks-card.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://qhooks.com/og/qhooks-card.png"><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/app-icons/apple-touch-icon.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="QHooks"><meta name="theme-color" content="#090B0A">
+</head>
+<body class="qa" data-a-shell data-qa-active="trade">
+<a class="skip-link" href="#main">Skip to content</a>
+<button type="button" id="qhc-trigger" class="qhc-trigger" aria-haspopup="dialog">Connect wallet</button>
+<main id="main" class="qa-page hl-main qp">
+ <nav class="qa-tabs hl-subnav qp-tabs" aria-label="QProof"><a class="qa-tab" href="#check" aria-current="page">Check</a><a class="qa-tab" href="#code">Code</a><a class="qa-tab" href="#how">How it works</a><a class="qa-tab" href="/lp-proof">Liquidity proof</a></nav>
+ <section class="qp-hero" id="check">
+  <p class="hl-eyebrow eyebrow">QProof</p>
+  <h1 class="hl-h1">Proof before <span class="hl-gold">you buy</span></h1>
+  <p class="hl-lede">Paste a token, pool or wallet address, a chart link or a GitHub repository. QProof reads the chain and returns one verdict with its evidence. No wallet needed.</p>
+  <form class="qp-form" id="qp-form" autocomplete="off" novalidate>
+   <label class="qa-vh" for="qp-q">Address, chart link or repository</label>
+   <input class="qp-input" id="qp-q" name="q" type="text" inputmode="text" spellcheck="false" autocapitalize="off" placeholder="0x…, Solana mint, chart link or github.com/…" maxlength="2048" required>
+   <div class="qp-row">
+    <label class="qa-vh" for="qp-chain">Chain</label>
+    <select class="qp-select" id="qp-chain" name="chain">
+     <option value="">Chain: auto-detect</option><option value="robinhood">Robinhood Chain</option><option value="base">Base</option><option value="ethereum">Ethereum</option><option value="arbitrum">Arbitrum</option><option value="bnb">BNB Chain</option><option value="elysium">Elysium</option><option value="solana">Solana</option>
+    </select>
+    <button class="qa-btn qa-btn--primary qp-go" id="qp-go" type="submit">Check</button>
+   </div>
+   <p class="qp-detected" id="qp-detected" aria-live="polite"></p>
+   <p class="qp-msg" id="qp-msg" role="status" aria-live="polite"></p>
+  </form>
+  <div class="qp-tries" id="qp-tries" aria-label="Try one"></div>
+ </section>
+ <section class="qp-report" id="qp-report" hidden aria-live="polite"></section>
+ <section class="qp-code qa-section" id="code" aria-labelledby="qp-code-h">
+  <h2 class="qp-h2" id="qp-code-h">Code: scan it, then run it</h2>
+  <p class="qp-p">Anyone can scan a public GitHub repository: QProof pins it to one commit, reads it and lists the checks it would run. No wallet needed. Running those checks in an isolated sandbox is for QHOOKS holders.</p>
+  <form class="qp-form" id="qp-code-form" autocomplete="off" novalidate>
+   <label class="qa-vh" for="qp-repo">GitHub repository</label>
+   <input class="qp-input" id="qp-repo" type="url" inputmode="url" spellcheck="false" autocapitalize="off" placeholder="https://github.com/owner/repo" maxlength="300">
+   <div class="qp-row"><button class="qa-btn qa-btn--secondary qp-go" id="qp-scan" type="submit">Scan code</button></div>
+   <p class="qp-msg" id="qp-code-msg" role="status" aria-live="polite"></p>
+  </form>
+  <div id="qp-scan-out"></div>
+  <div class="qp-run" id="qp-run" aria-live="polite"><p class="qp-p">Loading the holder rule…</p></div>
+ </section>
+ <section class="qp-how qa-section" id="how" aria-labelledby="qp-how-h">
+  <h2 class="qp-h2" id="qp-how-h">How QProof works</h2>
+  <p class="qp-p">Every check is a public read: chain nodes, the token’s own code, its pools and public listings. Nothing is signed or traded. Each line in a report links the reads behind it.</p>
+  <ol class="qp-checks">
+   <li><b>Code is fixed</b><span>Reads the upgradeable-proxy storage slots. If one is set, the code behind the token can be swapped later.</span></li>
+   <li><b>No mint, blacklist, pause or fee switches</b><span>Scans the deployed bytecode for 43 risky function signatures: minting new supply, blocking wallets, pausing transfers, changing buy and sell fees, trading limits and admin roles.</span></li>
+   <li><b>Liquidity depth</b><span>Reads the deepest pool’s reserves (Uniswap V2, V3 and V4, Solana pools and bonding curves) at one block.</span></li>
+   <li><b>Launch liquidity locked</b><span>Checks whether the launch liquidity is burned or held by a contract with no way to remove it.</span></li>
+   <li><b>Buy-and-sell test</b><span>On EVM chains it buys from the deepest pool and sells straight back inside one simulated call, with nothing sent. That shows the true tax and fees, and whether selling works at all.</span></li>
+   <li><b>Holder concentration</b><span>Ranks the top wallets and splits supply into pools, locked, staked, burned and everyone else. Known exchange wallets are named.</span></li>
+   <li><b>Creator trail</b><span>On Solana it reads the creator’s token account history to show whether they sold.</span></li>
+  </ol>
+  <h3 class="qp-h3">What the results mean</h3>
+  <dl class="qp-legend">
+   <div><dt><i class="qp-dot is-clear" aria-hidden="true"></i>Passed</dt><dd>The read came back and found nothing to worry about.</dd></div>
+   <div><dt><i class="qp-dot is-caution" aria-hidden="true"></i>Caution</dt><dd>Something worth a look before you buy, like a young pool or thin liquidity.</dd></div>
+   <div><dt><i class="qp-dot is-danger" aria-hidden="true"></i>Failed</dt><dd>A red flag: a risky switch in the code, a sell that fails, or a large hidden tax.</dd></div>
+   <div><dt><i class="qp-dot is-unknown" aria-hidden="true"></i>Not checked</dt><dd>A source did not answer or does not cover this chain. A report with gaps is never called clear.</dd></div>
+  </dl>
+  <h3 class="qp-h3">What QProof is not</h3>
+  <ul class="qp-not">
+   <li>Not an audit. It reads public data at one block; it does not review every line of code.</li>
+   <li>Not financial advice. A clean report does not mean a token is a good buy.</li>
+   <li>It cannot see the future. Owners, pools and holders can change after the check.</li>
+  </ul>
+ </section>
+</main><dialog id="qhc-dialog" class="qhc-dialog" aria-labelledby="qhc-title">
+ <div class="qhc-heading"><h2 id="qhc-title">Your wallet</h2><button id="qhc-close" type="button" aria-label="Close wallet dialog">×</button></div>
+ <section class="qhc-login"><button id="qhc-email-login" type="button" class="qhc-choice">Continue with email or Google</button><p>No wallet extension needed. Your QWallet quantum key stays separate.</p><button id="qhc-email-logout" type="button" class="qhc-secondary" hidden>Sign out of QHooks login</button><p id="qhc-login-status" role="status" aria-live="polite"></p></section><section class="qhc-mobile">
+ <label for="qhc-mobile-chain">Mobile wallet network</label><select id="qhc-mobile-chain"></select>
+ <button id="qhc-mobile-login" type="button" class="qhc-choice">MetaMask Mobile</button>
+ <p id="qhc-mobile-status" role="status" aria-live="polite">Connect your phone with a QR code.</p>
+ <button id="qhc-mobile-disconnect" type="button" class="qhc-secondary" hidden>Disconnect mobile session</button>
+ <p class="qhc-sdk-notice">Uses MetaMask Connect, copyright ConsenSys. <a href="/metamask/LICENSE.txt" target="_blank" rel="noopener">License</a></p>
+</section>
+<div id="qhc-choices">
+  <p>Choose an EVM wallet.</p>
+  <div id="qhc-wallets" class="qhc-wallets"></div>
+  <div id="qhc-empty"><p>No wallet detected in this browser.</p><p>Open <strong>qhooks.com</strong> in Chrome with your wallet extension enabled, or in your wallet app’s built-in browser.</p><p>The in-app preview cannot access Chrome’s wallet extensions. Use MetaMask Mobile above to pair your phone.</p></div>
+  <button id="qhc-rescan" type="button" class="qhc-secondary">Detect wallets again</button>
+ </div>
+ <div id="qhc-account" hidden><p id="qhc-address" class="qhc-address"></p><p id="qhc-chain"></p><p id="qhc-remembered"></p><button id="qhc-forget" type="button" class="qhc-secondary">Disconnect and forget</button></div>
+ <div id="qhc-email-network" hidden><label for="qhc-embedded-chain">Embedded wallet network</label><select id="qhc-embedded-chain"></select><button id="qhc-embedded-switch" type="button" class="qhc-secondary">Switch network</button></div><p id="qhc-status" role="status" aria-live="polite"></p>
+ <p class="qhc-footnote">Connecting does not authorize spending. Every signature and transaction needs your approval. Never enter your recovery phrase here.</p>
+</dialog><script src="/wallet-early.js"></script>
+<script type="module" src="/wallet-site.mjs"></script><script type="module" src="/wallet-page-resume.mjs"></script><script type="module" src="/wallet-login.mjs"></script><script type="module" src="/l121-mobile-login.mjs"></script><script type="module" src="/qx-a/pages/hooks-lane.mjs"></script>
+<script type="module" src="/qx-shell.mjs"></script>
+
+<script type="module" src="/qx-appbar.mjs"></script><script type="module" src="/qx-a/pages/qproof.mjs"></script>
+</body>
+</html>

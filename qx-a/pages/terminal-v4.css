@@ -26,7 +26,8 @@ body.qa.qxt .ta-quote .qa-price:not(.ta-quote-unit)::after { content: ''; positi
               repeating-linear-gradient(90deg, var(--qa-rule-2) 0 1px, transparent 1px 40px) 0 100% / 100% 6px no-repeat; }
 
 /* section headings: one scale with the rest of the site (same words) */
-body.qa.qxt :is(#traders-h, #callers-h, #holders-h, #builder-h) { font-size: clamp(32px, 4.2vw, 56px); line-height: .9; font-weight: 880; font-stretch: 125%; letter-spacing: -.03em; text-transform: uppercase; }
+/* auditC #20: section labels, not posters: 20 px, sentence case (same words) */
+body.qa.qxt :is(#traders-h, #callers-h, #holders-h, #builder-h) { font-size: 20px; line-height: 1.2; font-weight: 700; font-stretch: 100%; letter-spacing: 0; text-transform: none; }
 
 /* bannerfit (2026-11-12, main): the creator's 3:1 banner shown WHOLE on the token terminal (creators put text in it; a cover
    crop cut QWERTY's "The six ke…"). Terminal only, qa-stage itself unchanged: the frame becomes an exact 3:1 box and the image
@@ -45,7 +46,7 @@ body.qa.qxt .ta-stage:not(.ta-noart) .qa-stage__img { left: 0; top: 0; width: 10
 /* stakev4 (2026-11-12, overhaul polish): the staking tools (/stake opens the terminal on Builder › Staking): the same words and
    controls, raised to the site's bar. Big figures on a hairline, the overhaul heading scale, full-size controls with the action
    in gold, readable lock terms. CSS only; ids, buttons and flows untouched. */
-body.qa.qxt :is(#qtz, #qtzl) h2 { font-size: clamp(28px, 3.4vw, 44px); line-height: .92; font-weight: 880; font-stretch: 125%; letter-spacing: -.025em; text-transform: uppercase; margin-bottom: 12px; }
+body.qa.qxt :is(#qtz, #qtzl) h2 { font-size: 18px; line-height: 1.25; font-weight: 700; font-stretch: 100%; letter-spacing: 0; text-transform: none; margin-bottom: 8px; } /* auditC #20: was a 44 px caps poster */
 body.qa.qxt :is(#qtz, #qtzl) > p:not(.qtx-status) { max-width: 68ch; font-size: 15px; line-height: 1.55; color: var(--qa-tx-2); }
 body.qa.qxt #qtz .qtb-now { gap: 0; margin: 22px 0 18px; box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
 body.qa.qxt #qtz .qtb-now > div { padding: 16px 18px 16px 0; display: grid; gap: 6px; align-content: start; border: 0; box-shadow: none; }
@@ -88,3 +89,23 @@ body.qa.qxt #qtz .qtb-now b { white-space: nowrap; }
   body.qa.qxt #qxt-pane[data-mode="trades"] table.qxt-table:not(.ta-tape) :is(th, td):nth-child(3) { display: none; }
   body.qa.qxt #qxt-pane[data-mode="trades"] table.qxt-table:not(.ta-tape) td { white-space: normal; overflow-wrap: anywhere; }
 }
+
+/* auditC #22 (2026-11-12): quick-buy bolts are a small line icon in the text colour, not an emoji. Drawn here so the buttons'
+   labels, handlers and hidden states stay exactly as they were. */
+:is(.qxfd-table button.qxfd-buy, .qxt-qb, .qxt-quick .qx-bolt)::before { content: ''; display: inline-block; width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px; flex: none; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 4 14h7l-1 8 9-12h-7l1-8z'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 4 14h7l-1 8 9-12h-7l1-8z'/%3E%3C/svg%3E") center / contain no-repeat; }
+
+/* auditC #24 (2026-11-12): the Builder tab's 9-12 px faint text (builder record, market checks, the Proof report, staking notes,
+   credits) reads at 13 px minimum in a readable grey. Sizes and colour only; layout, links and buttons unchanged. */
+body.qa.qxt #builder :is(.qa-head__note, .qxt-builder, .qxt-builder-head, .qxt-builder-tag, .qxt-builder dt, .qxt-builder dd, .qxt-builder-note, .qxt-builder-fine,
+  .qxt-checks-body, .qxt-checks-body dt, .qxt-checks-body dd, .qxt-checks-note, .qxt-data-health b, .qxt-data-health small, .qxt-coverage-gap, .qtb-note, .qxt-tools span, .qxt-credits) { font-size: 13px; line-height: 1.5; }
+body.qa.qxt #builder :is(.qxt-builder-tag, .qxt-builder dt, .qxt-checks-body dt) { text-transform: none; letter-spacing: 0; }
+body.qa.qxt #builder :is(.qa-head__note, .qxt-builder-head, .qxt-builder dt, .qxt-builder-note, .qxt-builder-fine, .qxt-checks-body dt, .qxt-checks-note, .qtb-note, .qxt-credits) { color: var(--qa-tx-2); }
+body.qa.qxt #builder .qpr { font-size: 13px; }
+body.qa.qxt #builder .qpr :is(p, span, code, dt, dd, summary, small, li, h4, h5, a:not(.qa-btn), .qpr-evidence, .qpr-category, .qpr-detail) { font-size: 13px; }
+body.qa.qxt #builder .qpr :is(.qpr-meta dt, .qpr-check-status) { text-transform: none; letter-spacing: 0; }
+/* the ticket's 3-line notice clamp (qx-ticket-notices.css) also caught these Builder notes; at 13 px they need their full height */
+body.qa.qxt #builder :is(.qxt-data-health, .qxt-builder-note, .qxt-checks-note, .qxt-coverage-gap, .qtb-note, .qpr [class*="-status"], .qpr [role="status"]):not([hidden]) { max-height: none !important; -webkit-line-clamp: unset !important; line-clamp: unset !important; overflow: visible !important; }
+body.qa.qxt #builder .qxt-data-health:not([hidden]) { display: flex !important; }
+body.qa.qxt #builder :is(.qxt-builder-note, .qxt-checks-note, .qxt-coverage-gap, .qtb-note):not([hidden]) { display: block !important; }

@@ -9,11 +9,13 @@ export function bannerFileCheck(file){
  if(file.size>=8000000)throw Error('Choose a banner under 8 MB.');
 }
 export function bannerCrop(width,height){const w=Math.min(width,height*3),h=w/3;return [(width-w)/2,(height-h)/2,w,h,0,0,1500,500];}
-export async function prepareTokenBanner(file,{bitmap=globalThis.createImageBitmap,canvas=()=>document.createElement('canvas')}={}){
+export async function prepareTokenBanner(file,{bitmap=globalThis.createImageBitmap,canvas=()=>document.createElement('canvas'),blur=false}={}){
  bannerFileCheck(file);const image=await bitmap(file);
  try{
   const c=canvas();c.width=1500;c.height=500;const ctx=c.getContext('2d');
+  if(blur)ctx.filter='blur(20px)';
   ctx.drawImage(image,...bannerCrop(image.width,image.height));
+  if(blur){ctx.filter='none';ctx.fillStyle='rgba(9,11,10,.18)';ctx.fillRect(0,0,1500,500);}
   const webp=c.toDataURL('image/webp',.85).startsWith('data:image/webp;');
   if(!webp){ctx.globalCompositeOperation='destination-over';ctx.fillStyle='#0c100e';ctx.fillRect(0,0,1500,500);ctx.globalCompositeOperation='source-over';}
   for(const q of [.85,.7,.5,.3,.15]){const data=c.toDataURL(webp?'image/webp':'image/jpeg',q);if(data.length<=PROFILE_LIMITS.banner)return profileImage(data,'banner');}

@@ -45,6 +45,11 @@
 .qd-row__main { min-width: 0; }
 .qd-record-name { display: block; font-size: 15.5px; font-weight: 720; color: var(--qa-tx); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qd-record-name.is-unnamed { color: var(--qa-tx-2); font-weight: 640; }
+/* Unnamed hooks: short address + small "unverified" tag (audit #36). */
+.qd-record-name.is-unnamed { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-width: 0; white-space: normal; }
+.qd-record-name.is-unnamed .hl-addr { flex: none; font-size: 14.5px; color: var(--qa-tx-2); }
+.qd-record-name.is-unnamed .qd-unverified { flex: none; margin-left: 0; }
+.qd-unverified { display: inline-block; margin-left: 8px; padding: 1px 6px; border: 1px solid var(--qa-rule); border-radius: 4px; font-size: 10.5px; font-weight: 600; line-height: 1.5; letter-spacing: .04em; text-transform: uppercase; color: var(--qa-tx-3); vertical-align: 2px; }
 .qd-record-name:hover { color: var(--qa-gold-hi); }
 .qd-board-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 0; margin-top: 3px; font-size: 12.5px; font-weight: 560; color: var(--qa-tx-3); }
 .qd-board-meta > * { padding: 0 9px; }

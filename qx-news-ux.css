@@ -1,0 +1,47 @@
+/* /news only: market discovery first, readable metadata, existing actions. */
+body.qn {font-size:14px}
+.qn-no-tape .qn-board {grid-template-columns:repeat(3,minmax(0,1fr));grid-template-areas:"movers launches launches" "trending trending social" "proof proof calendar" "updates updates updates" "headlines headlines headlines";align-items:start}
+body.qn #news-launch-alerts {grid-area:launches}
+body.qn #news-quick-proof {grid-area:proof}
+body.qn #news-dev-updates {grid-area:updates}
+body.qn .qn-headline-stack {grid-area:headlines}
+body.qn :is(.qn-kicker,.qn-mast-end p,.qn-button,.qn-link,.qn-market-name,.qn-market-name span,.qn-price-source,.qn-toolbar,.qn-panel-head h2 span,.qn-stamp,.qn-headline-meta,.qn-coverage,.qn-mover,.qn-mover-rank,.qn-mover-name small,.qn-panel-foot,.qn-session,.qn-cal-row time,.qn-cal-row strong,.qn-cal-row small,.qn-note,.qn-muted,.qn-empty,.qn-trend-code,.qn-trend p,.qn-trend .qn-link,.qn-trend button,.qn-board-foot,.qn-draft-dialog label,.qn-trend-story span,.qn-trend-tags span,.nl5-meta,.nl5-links,.nl5-review pre,.nl5-pending pre,.qa-tabbar__a) {font-size:12px}
+body.qn :is(.qn-price-source,.qn-mover-name small,.qn-stamp,.qn-headline-meta,.qn-trend-code,.qn-trend-tags span,.qn-session,.qn-cal-row small) {line-height:1.4}
+body.qn .qn-panel-head h2 {font-size:15px;line-height:1.3}
+body.qn .qn-panel-head {min-height:44px;flex-wrap:wrap}
+body.qn .qn-mover {min-height:50px;padding:8px 12px;line-height:1.3}
+body.qn .qn-mover-name {font-weight:600}
+body.qn .qn-mover b {font-size:14px;white-space:nowrap}
+body.qn .qn-mover-rank {width:20px}
+body.qn .qn-market-name {flex-wrap:wrap;gap:4px}
+body.qn .qn-market {min-width:0}
+body.qn .qn-price-source {max-width:100%}
+body.qn .qn-mast-end time {font-size:14px}
+body.qn .qn-mast-end button {min-height:40px}
+body.qn .qn-toolbar {flex-wrap:wrap}
+body.qn .nt3-launches {max-height:310px;overflow:auto;overscroll-behavior:contain}
+body.qn .nt3-row {padding:12px;gap:10px}
+body.qn .nt3-filters {border-top:1px solid var(--qn-line)}
+body.qn .nt3-filters>summary {padding:12px;min-height:44px;font-size:13px;cursor:pointer}
+body.qn .nt3-scope {margin:10px 0}
+body.qn .qn-x-actions {flex-wrap:wrap}
+body.qn .qn-trend-tags {min-height:24px}
+body.qn .qn-board-foot {line-height:1.5}
+@media(max-width:1050px) {body.qn .qn-market {flex-basis:164px}}
+@media(max-width:680px) {
+ .qn-no-tape .qn-board {grid-template-columns:minmax(0,1fr);grid-template-areas:"movers" "launches" "trending" "proof" "updates" "calendar" "social" "headlines"}
+ body.qn .qn-mast {align-items:start;gap:12px}
+ body.qn .qn-mast-end {max-width:190px}
+ body.qn .qn-mast-end p {max-width:190px}
+ body.qn .qn-mast-end time {display:none}
+ body.qn .qn-panel-head {padding:10px}
+ body.qn .qn-cal-row time {width:76px;flex:none}
+ body.qn .nt3-row {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 10px}
+ body.qn .nt3-row span:last-child {grid-column:1/-1;color:var(--qn-dim)}
+ body.qn .nt3-form {padding:12px;gap:10px}
+ body.qn .qn-trends {padding-inline:10px}
+ body.qn .qn-trend {flex-basis:260px}
+}
+
+/* Keep the existing returning-wallet total note readable on this page too. */
+body.qn .qa-hdr .qa-bal span {font-size:12px}

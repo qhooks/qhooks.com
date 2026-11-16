@@ -1,3 +1,4 @@
+import {mountDiscoveryNext} from './qx-discovery-next.mjs';
 // Owned UX-C entry, derived from l131-market-browser.mjs; its directory and pool validation are retained.
 import {mountMarketFallback} from './qx-market-fallback.mjs';
 import {officialFor, impostorOf, rowMark, impostorBanner} from './qx-official.mjs';
@@ -397,6 +398,7 @@ export function createMarketBrowserClient({ fetchImpl = globalThis.fetch, origin
 
 // apps/marketplace-preview/l131-market-page.mjs
 export function bindMarketBrowser({ document: d = document, target = window, client = createMarketBrowserClient({ origin: target.location.origin }), fallback = mountMarketFallback(d.getElementById("qm-outside"), {document:d}) } = {}) {
+  const nextSteps=mountDiscoveryNext({document:d});
   const ids = ["form", "chain", "search", "results", "status", "count", "previous", "next", "retry"];
   const $ = (id) => d.getElementById("qm-" + id);
   for (const id of ids) if (!$(id)) throw Error("Missing market control " + id);
@@ -460,7 +462,7 @@ export function bindMarketBrowser({ document: d = document, target = window, cli
     fallback.hide();
     $("results").replaceChildren();
     $("count").textContent = "";
-    note("Refreshing\u2026");
+    note("Loading markets\u2026");
     try {
       const found = await client.list(next, { signal });
       if (!current(ticket)) return;
@@ -468,11 +470,12 @@ export function bindMarketBrowser({ document: d = document, target = window, cli
       page = found;
       renderMarketCards({ document: d, container: $("results"), rows: page.rows, chainFor: launchChain, onOpen: open });
       $("count").textContent = page.total ? (page.total === 1 ? "1 QHooks market" : page.total + " QHooks markets") : "";
+      nextSteps.update({count:page.rows.length,kind:'markets',filtered:!!next.query||next.chainId!=='all',compact:false});if(!nextSteps.element.hidden)$("results").append(nextSteps.element);
       if (!page.rows.length) void fallback.show(next);
-      note(page.rows.length ? "Showing " + (query.offset + 1) + "\u2013" + (query.offset + page.rows.length) + " of " + page.total + "." : "No QHooks markets match yet. Explore outside tokens or launch your own.");
+      note(page.rows.length ? "Showing " + (query.offset + 1) + "\u2013" + (query.offset + page.rows.length) + " of " + page.total + "." : "");
     } catch (error) {
       if (current(ticket)) {
-        note("QHooks markets are refreshing. Explore outside tokens below, or retry.");
+        note("Market list unavailable. Retry or explore below.");nextSteps.update({count:0,kind:"markets",failed:true});$("results").append(nextSteps.element);
         void fallback.show(next);
         $("retry").hidden = false;
       }

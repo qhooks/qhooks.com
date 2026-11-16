@@ -5,7 +5,8 @@ const errors = {
   refreshing: 'Refreshing. Try again in a moment.',
   nonce_expired: 'Signature expired. Try again.',
   invalid_signature: 'Signature could not be verified. Try again.',
-  invalid_wallet: 'Connect your wallet and try again.'
+  invalid_wallet: 'Connect your wallet and try again.',
+  invalid_builder: 'Enter the receiving builder wallet address and try again.'
 };
 async function api(path, options, fetchImpl) {
   let response, body;
@@ -26,21 +27,22 @@ export async function isSafeOwner(address, fetchImpl = (...args) => globalThis.f
   if (owners.some(word => !/^0{24}[0-9a-f]{40}$/i.test(word))) throw Error(errors.refreshing);
   return owners.some(word => '0x' + word.slice(24).toLowerCase() === address.toLowerCase());
 }
-export async function changeBuilderFee({address, action, provider, isCurrent = () => true, fetchImpl = (...args) => globalThis.fetch(...args)}) {
+export async function changeBuilderFee({address, builder, action, provider, isCurrent = () => true, fetchImpl = (...args) => globalThis.fetch(...args)}) {
+  if (action === 'on' && (!/^0x[0-9a-f]{40}$/i.test(builder || '') || /^0x0{40}$/i.test(builder))) throw Error(errors.invalid_builder);
   async function guard() {
     if (!isCurrent()) throw Error('Wallet changed. Review again.');
     const accounts = await provider.request({method: 'eth_accounts'});
     if (!isCurrent() || accounts?.[0]?.toLowerCase() !== address.toLowerCase()) throw Error('Wallet changed. Review again.');
   }
   await guard();
-  const challenge = await api('/api/perps/builder/challenge?address=' + encodeURIComponent(address) + '&action=' + action, {}, fetchImpl);
+  const challenge = await api('/api/perps/builder/challenge?address=' + encodeURIComponent(address) + '&action=' + action + (action === 'on' ? '&builder=' + encodeURIComponent(builder) : ''), {}, fetchImpl);
   const lines = typeof challenge.message === 'string' ? challenge.message.split('\n') : [];
-  if (!/^[0-9a-f]{32}$/.test(challenge.nonce) || lines.length !== 6 || lines[0] !== 'QHooks perps builder fee' || lines[1] !== 'Action: Turn ' + action || lines[2].toLowerCase() !== 'address: ' + address.toLowerCase() || lines[3] !== 'Fee: 0.1% per fill' || lines[4] !== 'Nonce: ' + challenge.nonce || !lines[5].startsWith('Issued: ')) throw Error(errors.refreshing);
+  if (!/^[0-9a-f]{32}$/.test(challenge.nonce) || lines.length !== 7 || lines[0] !== 'QHooks perps builder fee' || lines[1] !== 'Action: Turn ' + action || lines[2].toLowerCase() !== 'address: ' + address.toLowerCase() || lines[3].toLowerCase() !== 'builder: ' + (action === 'on' ? builder.toLowerCase() : 'none') || lines[4] !== 'Fee: 0.1% per fill' || lines[5] !== 'Nonce: ' + challenge.nonce || !lines[6].startsWith('Issued: ')) throw Error(errors.refreshing);
   await guard();
   const message = '0x' + Array.from(new TextEncoder().encode(challenge.message), x => x.toString(16).padStart(2, '0')).join('');
   const signature = await provider.request({method: 'personal_sign', params: [message, address]});
   await guard();
-  const result = await api('/api/perps/builder', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({address, nonce: challenge.nonce, signature})}, fetchImpl);
-  if (!result.ok || (action === 'on' ? result.builder?.toLowerCase() !== address.toLowerCase() : result.builder !== null)) throw Error(errors.refreshing);
+  const result = await api('/api/perps/builder', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({address, builder: action === 'on' ? builder : null, nonce: challenge.nonce, signature})}, fetchImpl);
+  if (!result.ok || (action === 'on' ? result.builder?.toLowerCase() !== builder.toLowerCase() : result.builder !== null)) throw Error(errors.refreshing);
   return result;
 }

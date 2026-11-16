@@ -1,6 +1,8 @@
 import {getWalletHub} from './wallet-hub.mjs';
 import {launchChains} from './chain-catalog.mjs';
+import {installOverlayDismissal} from './qx-overlays.mjs';
 export function bindSiteWallet({document:d=document,target=window,hub=getWalletHub(target)}={}){
+ installOverlayDismissal({document:d,window:target});
  const $=id=>d.getElementById('qhc-'+id),trigger=$('trigger'),dialog=$('dialog');if(!trigger||!dialog)return;
  const label=id=>launchChains.find(c=>c.id===id)?.name||'Chain '+id;
  let dead=false;
@@ -17,8 +19,8 @@ export function bindSiteWallet({document:d=document,target=window,hub=getWalletH
  }
  function render(s){
   if(dead)return;const c=s.current;
-  trigger.textContent=s.busy?'Connecting…':c?c.owner.slice(0,6)+'…'+c.owner.slice(-4):'Connect wallet';
-  trigger.setAttribute('aria-label',c?'Wallet '+c.owner+' on '+label(c.chainId):'Connect wallet');
+  trigger.textContent=s.busy?'Connecting…':c?c.owner.slice(0,6)+'…'+c.owner.slice(-4):'Connect';
+  trigger.setAttribute('aria-label',c?'Wallet '+c.owner+' on '+label(c.chainId):'Connect');
   trigger.disabled=false;$('account').hidden=!c;$('choices').hidden=!!c;
   $('address').textContent=c?.owner||'';$('chain').textContent=c?label(c.chainId):'';
   $('remembered').textContent=c?(s.remembered?'Connection remembered on this browser. Your wallet must stay unlocked and authorized.':'Connected for this page. This wallet or browser does not support remembering this selection.') :'';

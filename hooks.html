@@ -19,18 +19,18 @@
 <link rel="stylesheet" href="/qx-a/pages/hooks-hooks.css">
 <link rel="stylesheet" href="/qx-a/pages/hooks-v4.css">
 <link rel="modulepreload" href="/wallet-site.mjs"><link rel="modulepreload" href="/wallet-hub.mjs"><link rel="modulepreload" href="/wallet-hub-fresh.mjs"><link rel="modulepreload" href="/full-launch/prototypes/qwallet/client/wallet-session.mjs"><link rel="modulepreload" href="/wallet-discovery.mjs"><link rel="modulepreload" href="/wallet-preference.mjs"><link rel="modulepreload" href="/wallet-rpc-compat.mjs"><link rel="modulepreload" href="/chain-catalog.mjs"><link rel="modulepreload" href="/wallet-login.mjs"><link rel="modulepreload" href="/embedded-wallet-provider.mjs"><meta property="og:type" content="website"><meta property="og:site_name" content="QHooks"><meta property="og:title" content="Builders Lab | QHooks"><meta property="og:description" content="Build your own hook: write a module, test it, list it, and set a builder share of up to 10%, fixed in its code. Or build through MCP."><meta property="og:image" content="https://qhooks.com/og/qhooks-card.png?v=2"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://qhooks.com/og/qhooks-card.png?v=2"><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/app-icons/apple-touch-icon.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="QHooks"><meta name="theme-color" content="#090B0A">
-</head>
+<link rel="stylesheet" href="/ux-simple.css"></head>
 <body class="qa" data-a-shell data-qa-active="hooks">
 <a class="skip-link" href="#main">Skip to content</a>
-<button type="button" id="qhc-trigger" class="qhc-trigger" aria-haspopup="dialog">Connect wallet</button>
+<button type="button" id="qhc-trigger" class="qhc-trigger" aria-haspopup="dialog">Connect</button>
 <main id="main" class="qa-page hl-main hk">
  <section class="hk-hero hl-hero hk4-hero" aria-labelledby="hk-title">
   <div class="hk4-stage" aria-hidden="true"><p class="hk4-tag" id="hk4-tag" hidden></p></div>
   <div class="hk-hero-copy">
    <p class="hl-eyebrow">Builders Lab</p>
-   <h1 id="hk-title" class="hl-h1">Build your own <span class="hl-gold hk4-h1b">hook.</span></h1>
-   <p class="hl-lede">Write a module. Test it. List it. Set a builder share of up to 10%, fixed in its code.</p>
-   <div class="hl-cta"><a class="qa-btn qa-btn--primary" href="/builders#guide">Start building</a><a class="qa-btn qa-btn--secondary" href="/lab">Open the Lab</a></div>
+   <h1 id="hk-title" class="hl-h1">Build a hook.</h1>
+   
+   <div class="hl-cta"><a class="qa-btn qa-btn--primary" href="/builders#guide">Start building</a><a class="qa-btn qa-btn--secondary" href="/lab">Open the Lab</a></div><p class="hl-lede">Write a module. Test it. List it. Set a builder share of up to 10%, fixed in its code.</p>
    <p class="hk-create-link">Launching a token? <a class="qa-link" href="/create">Go to Create</a> <span data-qc-entry="ask"></span></p>
    <p class="hk-pulse" id="hk-pulse" aria-live="polite"></p>
   </div>
@@ -48,7 +48,7 @@
   <div class="hk-open-row">
    <span class="hl-gt hl-gt--lg" data-hl-glyph="module"></span>
    <div><h2 class="hl-h3 hk-open-t" id="hk-agents-h">Build with an agent</h2>
-    <p class="hl-p">Point any MCP client at <a class="qa-link" href="/api#agents">qhooks.com/mcp</a>. It reads launches and tokens, quotes, and prepares launches and trades. Your wallet signs; agents can&rsquo;t deploy or list.</p>
+    <p class="hl-p">Point any MCP client at <a class="qa-link" href="/api#agents">qhooks.com/mcp</a>. It reads launches and tokens, quotes, and prepares launches and trades. Prepared for the signing wallet: the agent's own wallet or yours. No custody. We never hold keys.</p>
     <p class="hl-small hk-agents-tools">Tools: list_launches · token_info · quote · prepare_launch · prepare_trade · send_feedback.</p>
     <p class="hl-small hk-agents-feedback">Your agent can send feedback with send_feedback. We read it every day.</p></div>
    <span class="hk-agents-act"><button class="qa-btn qa-btn--secondary" type="button" id="hk-mcp-copy" data-copy="https://qhooks.com/mcp">Copy MCP address</button><a class="qa-link" href="/api#agents">Agent docs</a></span>

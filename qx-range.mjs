@@ -216,23 +216,42 @@ async function render() {
   if (S.msg) kids.push(el('p', {class: 'qfl-status', role: 'status', 'data-tone': S.tone}, S.msg));
   root.replaceChildren(...kids);
 }
+/// Why the steps are not offered. visitor: the wallet in view is not (or no wallet is) the creator/protector, so the
+/// page shows nothing at all (an owner-only prompt is not a visitor's error). The locked note is plain info for anyone.
 function roleNote(f, conn) {
-  if (f.creator === ZERO) return 'This launch\'s fee routing is locked, so a range can\'t be added.';
+  if (f.creator === ZERO) return {text: 'This launch\'s fee routing is locked, so a range can\'t be added.'};
   if (f.creator === cfg.pqCreator) {
-    if (!conn) return 'Connect the wallet that protects ' + f.symbol + '.';
-    if (f.role && conn.owner.toLowerCase() !== f.role.wallet) return 'Only the wallet that protects this launch (' + short(f.role.wallet) + ') can point its fees at a range.';
+    if (!conn) return {visitor: true};
+    if (f.role && conn.owner.toLowerCase() !== f.role.wallet) return {visitor: true};
     return null;
   }
-  if (!conn) return 'Connect the wallet that launched ' + f.symbol + '.';
-  if (conn.owner.toLowerCase() !== f.creator) return 'Only the launch\'s creator wallet (' + short(f.creator) + ') can point its fees at a range.';
+  if (!conn) return {visitor: true};
+  if (conn.owner.toLowerCase() !== f.creator) return {visitor: true};
   return null;
+}
+const noteLine = note => note.visitor ? null : el('p', {class: 'qfl-note'}, note.text);
+
+// ---------- band chart ----------
+// The three symmetric bands sit at centre ±OFF0/OFF1/OFF2 ticks (QRange.sol); ticks are log price, so a linear tick axis
+// is a log price axis. Drawn from what readRange() already holds: center, tick, liquidities, lastRun. No extra reads.
+const BANDS = [[1000, '±10%', 0], [2200, '±25%', 1], [4000, '±49%', 2]];
+const ago = s => { const d = Math.max(0, Date.now() / 1000 - s); return d < 90 ? 'just now' : d < 5400 ? Math.round(d / 60) + 'm ago' : d < 129600 ? Math.round(d / 3600) + 'h ago' : Math.round(d / 86400) + 'd ago'; };
+function bandChart(fl) {
+  const c = tokenTick(fl.center), now = tokenTick(fl.tick), half = 4000 + 600;
+  const lo = Math.min(c - half, now - 300), hi = Math.max(c + half, now + 300), x = t => ((t - lo) / (hi - lo) * 100).toFixed(2) + '%';
+  const rows = BANDS.map(([off, label, i]) => el('div', {class: 'qrg-band__row'}, el('span', {class: 'qrg-band__lbl'}, label),
+    el('span', {class: 'qrg-band__track'}, el('span', {class: 'qrg-band__bar' + (fl.liq[i] > 0n ? '' : ' is-empty'), style: 'left:' + x(c - off) + ';right:calc(100% - ' + x(c + off) + ')'}))));
+  return el('figure', {class: 'qrg-band', 'aria-label': 'Liquidity bands around the price'},
+    el('div', {class: 'qrg-band__head'}, el('span', {}, 'Mcap now ' + capText(now)), fl.lastRun ? el('span', {}, 'Last run ' + ago(fl.lastRun)) : null),
+    el('div', {class: 'qrg-band__plot'}, ...rows, el('span', {class: 'qrg-band__now', style: 'left:calc(var(--qrg-lbl) + (100% - var(--qrg-lbl)) * ' + ((now - lo) / (hi - lo)).toFixed(4) + ')', 'aria-hidden': 'true'})),
+    el('div', {class: 'qrg-band__axis', 'aria-hidden': 'true'}, el('span', {}, capText(lo)), el('span', {}, capText(hi))));
 }
 function createCard(f, fl, conn) {
   const note = roleNote(f, conn);
   return el('section', {class: 'qfl-card'},
     field('Share of LP fees kept as liquidity', choice('Share', cfg.shares, S.share, v => { S.share = v; })),
     el('p', {class: 'qfl-note'}, (S.share === 10000 ? 'All LP fees become liquidity.' : 'The rest goes to your wallet.') + ' Liquidity sits in bands around the price (±10%, ±25%, ±49%) and moves with it after big moves. Nobody can withdraw it.'),
-    note ? el('p', {class: 'qfl-note', 'data-tone': 'bad'}, note) : el('button', {type: 'button', class: 'qtx-mini qas-go', disabled: S.busy, onclick: doMake}, '1 · Create range'));
+    note ? noteLine(note) : el('button', {type: 'button', class: 'qtx-mini qas-go', disabled: S.busy, onclick: doMake}, '1 · Create range'));
 }
 function rangeCard(f, fl, conn) {
   const note = roleNote(f, conn), points = f.payout === fl.address, pq = f.creator === cfg.pqCreator;
@@ -248,14 +267,14 @@ function rangeCard(f, fl, conn) {
   const acts = [];
   const needKey = pq && !note && (!points || !locked);
   showKey(needKey);
-  if (!points) acts.push(note ? el('p', {class: 'qfl-note', 'data-tone': 'bad'}, note)
+  if (!points) acts.push(note ? noteLine(note)
     : pq ? el('button', {type: 'button', class: 'qtx-mini qas-go', disabled: S.busy || !signer, onclick: doPointPq}, signer ? '2 · Point this launch\'s LP fees here (wallet + quantum key)' : '2 · Open your quantum key below first')
     : el('button', {type: 'button', class: 'qtx-mini qas-go', disabled: S.busy, onclick: doPoint}, '2 · Point this launch\'s LP fees here'));
   else if (!locked && !note) acts.push(pq
     ? el('button', {type: 'button', class: 'qtx-mini', disabled: S.busy || !signer, onclick: doLockPq}, signer ? '3 · Lock it for good (optional, permanent)' : '3 · Open your quantum key below to lock (optional)')
     : el('button', {type: 'button', class: 'qtx-mini', disabled: S.busy, onclick: doLock}, '3 · Lock it for good (optional, permanent)'));
   if (locked) acts.push(el('p', {class: 'qfl-note'}, 'Locked: this launch\'s LP fees go to the range for good.'));
-  return el('section', {class: 'qfl-card'}, el('dl', {class: 'qfl-facts'}, ...rows.flatMap(([a, b]) => [el('dt', {}, a), el('dd', {}, b)])),
+  return el('section', {class: 'qfl-card'}, fl.placed ? bandChart(fl) : null, el('dl', {class: 'qfl-facts'}, ...rows.flatMap(([a, b]) => [el('dt', {}, a), el('dd', {}, b)])),
     el('p', {class: 'qfl-note'}, 'Range contract ', el('a', {href: (chainById(S.chainId)?.explorer || '') + '/address/' + fl.address, target: '_blank', rel: 'noopener'}, short(fl.address)),
       fl.lastRun ? ' · last run ' + new Date(fl.lastRun * 1000).toLocaleString() : ''), ...acts);
 }

@@ -27,7 +27,8 @@ export function repoProofSellEvidence(report){
  const block=simulation.block==null?'Block not reported':'Block '+scalar(simulation.block);
  return{headline:headlines[simulation.outcome]||'Sell probe outcome is unknown',detail:'eth_call probe · '+block+(simulation.venue?' · '+scalar(simulation.venue):'')+'. This snapshot does not establish current sell execution or execution for your order size.'};
 }
-const reportURL=raw=>{try{const url=new URL(raw);return url.protocol==='https:'&&url.hostname==='repoproof.online'&&!url.port&&!url.username&&!url.password&&/^\/proof\/[a-zA-Z0-9_-]{1,160}$/.test(url.pathname)&&!url.search&&!url.hash?url.href:null;}catch{return null;}};
+// Reports open on qhooks.com/qproof/<id>; an older cached report may still carry the engine's own link to the same id.
+const reportURL=raw=>{try{const url=new URL(raw);const id=/^\/q?proof\/([0-9a-f-]{36})$/.exec(url.pathname)?.[1];return url.protocol==='https:'&&!url.port&&!url.username&&!url.password&&!url.search&&!url.hash&&id?'/qproof/'+id:null;}catch{return null;}};
 export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,onReport=()=>{},document:doc=container?.ownerDocument||globalThis.document,fetcher=(...args)=>globalThis.fetch(...args)}={}){
  const target=repoProofSubject(subject);if(!target||!container?.replaceChildren||!doc?.createElement)throw TypeError('Supply an exact supported QProof subject and report container.');
  const h=(tag,attrs={},...children)=>{const node=doc.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')node.className=v;else if(k.startsWith('on'))node.addEventListener(k.slice(2),v);else if(k in node)node[k]=v;else node.setAttribute(k,v);}node.append(...children.flat().filter(v=>v!==null&&v!==undefined&&v!==false));return node;};
@@ -78,7 +79,7 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
     ' · Checked '+knownCount(coverage.checked)+' · Unknown '+knownCount(coverage.unknown)),
    h('dl',{class:'qpr-meta'},h('div',{},h('dt',{},'Provider retrieval'),h('dd',{},time(report.retrievedAt))),h('div',{},h('dt',{},'Report completed'),h('dd',{},time(report.completedAt))),h('div',{},h('dt',{},'Evidence as of'),h('dd',{},time(envelope.checkedAt)))),
    report.snapshot?fields({snapshot:report.snapshot}):h('p',{class:'qpr-unknown'},'Snapshot chain/block/slot not reported.'),
-   link?h('a',{class:'qpr-report-link',href:link,target:'_blank',rel:'noopener noreferrer'},'Open full QProof report ↗'):h('p',{class:'qpr-unknown'},'Report link not available.'));
+   link?h('a',{class:'qpr-report-link',href:link},'Open full QProof report'):h('p',{class:'qpr-unknown'},'Report link not available.'),h('a',{class:'qpr-how-link',href:'/qproof'},'How QProof works · Check any token'));
   const sellNode=target.kind==='token'||target.kind==='launch'||report.observations?.simulation?h('div',{class:'qpr-sell'},h('h4',{},'Sell evidence'),h('b',{},sell.headline),h('p',{},sell.detail)):null;
   const receiptIds=new Map(receipts.filter(r=>Number.isSafeInteger(r?.index)&&r.index>=0).map(r=>[r.index,id+'-receipt-'+r.index]));
   const rows=checks.map((c,i)=>{const status=['danger','caution','clear','unknown','info'].includes(c?.status)?c.status:'unknown',evidence=Array.isArray(c?.evidence)?c.evidence:[];
@@ -104,7 +105,7 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
   const requestController=controller,signal=requestController.signal,timer=setTimeout(()=>requestController.abort(),method==='POST'?60000:10000),data={kind:target.kind,chainId:target.chainId,address:target.address};
   requestTimer=timer;
   try{
-   const response=await fetcher('/api/repoproof/check'+(method==='GET'?'?'+new URLSearchParams(data):''),{method,cache:'no-store',signal,...(method==='POST'?{headers:{'content-type':'application/json'},body:JSON.stringify(data)}:{})});
+   const response=await fetcher('/api/qproof/subject'+(method==='GET'?'?'+new URLSearchParams(data):''),{method,cache:'no-store',signal,...(method==='POST'?{headers:{'content-type':'application/json'},body:JSON.stringify(data)}:{})});
    if(disposed||mine!==revision)return false;if(!current()){loseContext();return false;}
    const body=await response.json();if(disposed||mine!==revision)return false;if(!current()){loseContext();return false;}
    if(body?.version!==1||!sameRepoProofSubject(target,body.subject,{revision:false})||!STATES.has(body.state))throw Error('The report response did not match this asset. Refresh the cached report to retry.');

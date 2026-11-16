@@ -11,6 +11,8 @@
 //  - a chain that doesn't answer keeps its last reading, marked refreshing, instead of blanking;
 //  - prices, the token behind each market and the launch lists are cached, so held tokens never wait on a cold
 //    market read after the first time.
+import {portfolioReader,chainReadState} from './qx-portfolio-read.mjs';
+import {assetPriceFields} from './qx-price-state.mjs';
 import { visibleChains, isArcFamily, chainById } from './chains.mjs';
 
 // Dollar stablecoin per chain: [symbol, address, decimals] (addresses/decimals checked on chain 2026-11-05).
@@ -36,7 +38,7 @@ function cachePut(key, value) { const v = { at: Date.now(), value }; memo.set(ke
 
 const timeout = (ms) => (typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined);
 async function rpc(fetcher, url, method, params, ms = MS) {
-  const r = await fetcher(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }), signal: timeout(ms) });
+  const r = await fetcher(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }), signal: timeout(ms), qhooksReadPurpose: 'display' });
   const j = await r.json(); if (j.error || typeof j.result !== 'string') throw Error(j.error?.message || 'no result'); return j.result;
 }
 const getJson = async (fetcher, url) => { const r = await fetcher(url, { cache: 'no-store', signal: timeout(MS) }); if (!r.ok) throw Error('HTTP ' + r.status); return r.json(); };
@@ -118,9 +120,14 @@ async function launchUsd(fetcher, chainId, token, quoteUsd) {
 }
 
 const rowValue = r => (r.native.usd || 0) + (r.stable?.usd || 0) + (r.tokens || []).reduce((a, x) => a + (x.usd || 0), 0);
+// Legacy inventory survives a failed canonical read, but its undated USD cache cannot value it.
+export function legacyBalancePrices(rows,now=Date.now()) {
+  return rows.map(r=>{const clean=a=>{if(!a)return a;const p=assetPriceFields({...a,units:a.amount,valueUsd:a.usd},{chainId:r.chainId,token:a.address,now});return {...a,usd:p.valueUsd,pricesRefreshing:p.pricesRefreshing};};const native=clean(r.native),stable=clean(r.stable),tokens=(r.tokens||[]).map(clean);return {...r,native,stable,tokens,pricesRefreshing:!!native?.pricesRefreshing||!!stable?.pricesRefreshing||tokens.some(t=>t.pricesRefreshing)};});
+}
 function summarize(owner, rows) {
+  rows=legacyBalancePrices(rows);
   return { owner: owner.toLowerCase(), at: Date.now(), total: rows.reduce((t, r) => t + rowValue(r), 0),
-    partial: rows.some(r => r.error || r.refreshing || (r.native.amount > 0 && r.native.usd == null) || r.tokens.some(x => x.error || (x.amount > 0 && x.usd == null))), rows };
+    partial: rows.some(r => r.error || r.refreshing || r.pricesRefreshing || (r.native.amount > 0 && r.native.usd == null) || r.tokens.some(x => x.error || (x.amount > 0 && x.usd == null))), rows };
 }
 
 /// Reads every visible chain for `owner`. Returns { owner, at, total, partial, rows:[{ chainId, name, icon, native:{symbol,
@@ -172,7 +179,7 @@ export function balanceTotalNote(data) {
   const rows = data?.rows || [], unpriced = [...new Set(rows.flatMap(r => [r.native, r.stable, ...(r.tokens || [])])
     .filter(a => a?.amount > 0 && a.usd == null).map(a => a.symbol))];
   const notes = unpriced.length ? [unpriced.join(', ') + ' not in total'] : [];
-  if (rows.some(r => r.error || r.refreshing || r.tokens?.some(t => t.error)) || data?.partial && !notes.length) notes.push('Some chains refreshing');
+  if (rows.some(r => r.error || r.refreshing || r.pricesRefreshing || r.tokens?.some(t => t.error)) || data?.partial && !notes.length) notes.push('Refreshing');
   return notes.length ? ' · ' + notes.join(' · ') : '';
 }
 
@@ -180,8 +187,10 @@ const mem = new Map();
 /// Cached reading for `owner`: { data, fresh }. `data` may be older than a minute (shown while refreshing); it survives
 /// reloads (localStorage), so the menu paints the last balances at once.
 export function cachedBalances(owner) {
+  const canonical=portfolioReader().cached('evm',owner);if(canonical)return {data:portfolioBalanceRows(canonical.report),fresh:canonical.fresh};
   const k = owner.toLowerCase(); let data = mem.get(k);
   if (!data && store) { try { data = JSON.parse(store.getItem(KEY + k) || 'null'); } catch {} if (data?.rows) mem.set(k, data); else data = null; }
+  if(data){const aged=summarize(k,data.rows);data={...data,rows:aged.rows,total:aged.total,partial:!!data.partial||aged.partial};}
   return { data: data || null, fresh: !!data && !data.reading && Date.now() - data.at < TTL };
 }
 const inflight = new Map();
@@ -189,7 +198,7 @@ const inflight = new Map();
 /// chain's row lands, with the rows still being read carried over from the last reading and marked `refreshing`.
 /// A chain that doesn't answer keeps its last reading (refreshing) instead of an empty row. opts.chains limits the read
 /// to those chains (the rest keep their reading).
-export function refreshBalances(owner, opts = {}) {
+function refreshLegacyBalances(owner, opts = {}) {
   const k = owner.toLowerCase(), chains = opts.chains || visibleChains(), ids = chains.map(c => c.id), key = k + '|' + ids.join(',');
   const listeners = inflight.get(key)?.listeners;
   if (listeners) { if (opts.onProgress) listeners.add(opts.onProgress); return inflight.get(key).promise; }
@@ -217,4 +226,55 @@ export function refreshBalances(owner, opts = {}) {
     .finally(() => inflight.delete(key));
   inflight.set(key, { promise, listeners: subs });
   return promise;
+}
+
+// The menu and header use the same complete inventory as /portfolio, including outside tokens.
+export function portfolioBalanceRows(report){
+ const rows=report.chains.map(c=>{
+  const cfg=chainById(String(c.chainId)),stable=STABLE[String(c.chainId)],status=chainReadState(c);
+  const asset=a=>a?{address:a.address,symbol:a.symbol,decimals:a.decimals,amount:typeof a.units==='number'?a.units:a.balance!=null?Number(a.balance)/10**a.decimals:null,rawAmount:a.balance??null,usd:a.valueUsd??null}:null;
+  const tokens=c.tokens.filter(t=>!t.spam).map(t=>({...asset(t),kind:String(t.address).toLowerCase()===cfg?.wrappedNative?.toLowerCase()?'wrapped':t.qhooks?'launch':'token'}));
+  const st=stable?tokens.find(t=>t.address?.toLowerCase()===stable[1].toLowerCase()):null;
+  return {chainId:String(c.chainId),name:cfg?.name||c.name,icon:cfg?.icon,native:asset(c.native),stable:st||null,tokens:tokens.filter(t=>t!==st),refreshing:status.balances,pricesRefreshing:status.prices,error:c.native.balance==null};
+ });
+ return {owner:report.address,at:report.at,total:report.totals.valueUsd,partial:!!report.partial,rows,source:'portfolio'};
+}
+export function refreshBalances(owner,opts={}){
+ const reader=portfolioReader({fetchImpl:opts.fetcher||globalThis.fetch}),saved=reader.cached('evm',owner);
+ if(saved)try{opts.onProgress?.(portfolioBalanceRows(saved.report));}catch{}
+ return reader.read('evm',owner,{force:true,purpose:opts.purpose==='header-total'?'header-total':'portfolio'}).then(report=>{const data=portfolioBalanceRows(report);try{opts.onProgress?.(data);}catch{}return data;},error=>{
+  const last=reader.cached('evm',owner);if(last){const data=portfolioBalanceRows(last.report);data.reading=true;return data;}
+  return refreshLegacyBalances(owner,opts).then(legacy=>{const newer=reader.cached('evm',owner);return newer?portfolioBalanceRows(newer.report):legacy;});
+ });
+}
+
+// Send is a money decision: never reuse the display/portfolio balance cache. The
+// stable candidate is included even when it was zero/missing in the menu row.
+export async function freshChainBalances(row, owner, {rpc: read} = {}) {
+  if (!/^0x[0-9a-f]{40}$/i.test(owner || '')) throw Error('Connect your wallet first.');
+  const cfg = chainById(String(row.chainId)); if (!cfg) throw Error('Network unavailable.');
+  read ||= (await import('./qx-chain.mjs')).rpc;
+  const options = {purpose:'transaction', signal:AbortSignal.timeout(8000)};
+  const amount = value => { if (!/^0x[0-9a-f]{1,64}$/i.test(value || '')) throw Error('Balance is refreshing.'); return BigInt(value).toString(); };
+  const stable = isArcFamily(cfg.id) ? null : STABLE[cfg.id];
+  const candidates = new Map();
+  for (const t of [...(row.tokens || []), ...(row.stable ? [row.stable] : []),
+    ...(cfg.wrappedNative ? [{address:cfg.wrappedNative,symbol:WRAPPED[cfg.native] || 'W'+cfg.native,decimals:18,kind:'wrapped'}] : []),
+    ...(stable ? [{address:stable[1],symbol:stable[0],decimals:stable[2]}] : [])]) {
+    if (!/^0x[0-9a-f]{40}$/i.test(t.address || '') || !Number.isInteger(t.decimals) || t.decimals < 0 || t.decimals > 36) throw Error('Token is refreshing.');
+    candidates.set(t.address.toLowerCase(), {...t,address:t.address.toLowerCase()});
+  }
+  const tokens = [...candidates.values()], pad = owner.slice(2).toLowerCase().padStart(64,'0');
+  const nativeP = read(cfg.id,'eth_getBalance',[owner,'latest'],options).then(amount);
+  // Small concurrency bound; no all-chain refresh, prices, polling or discovery scans.
+  const results = new Array(tokens.length); let cursor=0;
+  await Promise.all([nativeP, ...Array.from({length:Math.min(4,tokens.length)},async()=>{
+    for (;;) { const i=cursor++; if(i>=tokens.length)return;const t=tokens[i];
+      results[i]={...t,rawAmount:amount(await read(cfg.id,'eth_call',[{to:t.address,data:'0x70a08231'+pad},'latest'],options))};
+    }
+  })]);
+  const stableAddress = stable?.[1].toLowerCase();
+  return {...row,native:{...row.native,symbol:cfg.native,rawAmount:await nativeP},
+    stable:results.find(t=>t.address===stableAddress)||null,tokens:results.filter(t=>t.address!==stableAddress),
+    refreshing:false,tokensPending:false,error:false};
 }

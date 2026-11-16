@@ -136,3 +136,13 @@
 .setup.qa-shell--detail { padding-bottom: calc(var(--qa-tabbar-h) + env(safe-area-inset-bottom)); }
 .setup.qa-shell--detail.qa-shell--tg { padding-bottom: env(safe-area-inset-bottom); }
 .setup .qwallet-consent { min-height: 44px; }
+
+/* Setup/signing pages: no token banner art behind the headline (audit #29); the ambient glow stays. */
+.setup .setup-art { display: none; }
+.setup .setup-intro { padding-top: 28px; }
+@media (min-width: 760px) { .setup .setup-intro { padding-top: 48px; } }
+/* Chain mark sits left of the network select in one row (audit #18). */
+.setup .chain-select-control:has(> .chain-select-symbol) { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.setup .chain-select-control > select { flex: 1; min-width: 0; }
+.setup .chain-select-control > .chain-select-symbol { order: -1; flex: none; margin: 0; }
+.setup .chain-select-control > .chain-select-symbol img { display: block; width: 22px; height: 22px; }

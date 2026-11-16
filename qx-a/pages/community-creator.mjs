@@ -1,3 +1,4 @@
+import {SPLITTERS,splitterPath} from '/qx-splitter-registry.mjs';
 // /creator in System A: the site shell, and the launch's own art as the page light. Presentation only: qx-creator.mjs and
 // the shared launch panels still read every number and run every action.
 import { ambient, setArt, coin } from '/qx-a/components.mjs';
@@ -10,11 +11,16 @@ const connect = document.querySelector('.qc-hero-actions [data-qa-connect]');
 if (connect) new MutationObserver(() => connect.classList.toggle('is-connected', /^0x/i.test(connect.textContent.trim()))).observe(connect, { childList: true, characterData: true, subtree: true });
 
 async function paint() {
+  const context=location.hash;
   const m = /^#m=(\d{1,6}):(0x[0-9a-fA-F]{40})/.exec(location.hash);
   const slot = document.getElementById('qc-coin'); if (!slot) return;
+  const activity=document.getElementById('qc-splitter-activity'); if(activity)activity.hidden=true;
   if (!m) { slot.replaceChildren(); return; }
   await readMarkets();
+  if(context!==location.hash)return;
   const board = { kind: 'launch', chainId: m[1], controller: m[2].toLowerCase() }, art = tokenArt(board), mk = marketFor(board);
+  const splitter=SPLITTERS.find(c=>String(c.chainId)===m[1]&&c.token===String(mk?.token||m[2]).toLowerCase());
+  if(activity&&splitter){document.getElementById('qc-splitter-activity-link').href=splitterPath(splitter);activity.hidden=false;}
   slot.replaceChildren(art.logo ? coin(art.logo, { size: 'md', alt: '' }) : h('span', { class: 'cx-tok' }, String(mk?.symbol || '?').slice(0, 1)));
   if (art.blur || art.banner || art.logo) setArt({ blur: art.blur || art.banner || art.logo });
 }

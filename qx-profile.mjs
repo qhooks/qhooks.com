@@ -1,3 +1,5 @@
+import {xAttachment} from './qx-x-attachment.mjs';
+import {publishedPost} from './qx-a/pages/community-common.mjs';
 import {memberWallet,memberWalletKey} from './qx-member-wallet.mjs';
 import {profileUrl,resolveProfileAddress,replaceProfileAddress} from './qx-profile-address.mjs';
 import {normalizeProfileHandle} from './qx-profile-handle-core.mjs';
@@ -19,6 +21,7 @@ import {readPendingMemberLink} from './qx-member-linked-editor.mjs';
 import {createMemberProfileClient,mountMemberProfileEditor,callerMethodElement} from './qx-member-profile.mjs';
 import {appendMemberAccountChips,appendUnverifiedMemberLinks} from './qx-member-accounts.mjs';
 import { ethCall, words, toAddress, erc20, CHAIN_NAME, h } from '/qx-chain.mjs';
+import { isTestLaunch, orderLaunches, testTag } from '/qx-test-tag.mjs';
 import { BLOCK_FIELDS } from '/full-launch/packages/multichain-launch/launch-blocks.mjs';
 import { stakeVaultAddress } from '/full-launch/packages/multichain-launch/stake-vault.mjs';
 import { modulesAmong, loadModules } from '/full-launch/packages/multichain-launch/market-modules.mjs';
@@ -53,6 +56,7 @@ function showMemberHeader(value){
   if(value.profile.bio)details.append(h('p',{class:'qmp-bio'},value.profile.bio));
   appendMemberAccountChips(details,value.accounts?.filter(row=>row.kind!=='x'),{document});
   appendUnverifiedMemberLinks(details,value.profile.links,{document});
+  for(const link of value.profile.links||[]){const attachment=xAttachment(link.url);if(attachment)details.append(attachment);}
   const old=target.querySelector('.qmp-profile-details');if(old)old.replaceWith(details);else target.prepend(details);
   $('qp-avatar').replaceChildren(...(value.profile.image?[h('img',{src:value.profile.image,alt:'',width:'88',height:'88'})]:[]));
 }
@@ -118,9 +122,10 @@ async function blocksOf(chainId, blocks) {
 async function launchCard(L, T) {
   const link = '/terminal#m=' + L.chainId + ':' + L.controller;
   const facts = h('dl', { class: 'qa-facts' }, h('div', {}, h('dt', {}, 'Reading'), h('dd', {}, 'on chain…')));
-  const card = h('article', { class: 'qa-launch qp-launch' },
+  const test = isTestLaunch(L);
+  const card = h('article', { class: 'qa-launch qp-launch', ...(test ? { 'data-test': '' } : {}) },
     h('div', { class: 'qa-launch-head' },
-      h('div', {}, h('h3', {}, L.name + ' ', h('small', {}, L.symbol)),
+      h('div', {}, h('h3', {}, L.name + ' ', h('small', {}, L.symbol), test ? testTag() : null),
         h('span', { class: 'qa-chain' }, CHAIN_NAME[L.chainId] || L.chainId), h('span', { class: 'qp-state' + (L.live ? '' : ' is-off') }, L.live ? 'Listed' : 'No longer listed'),
         h('span', { class: 'qp-date' }, 'Listed ' + day(L.listedAt)), ...(T ? [T.badge, T.copy].filter(Boolean) : [])),
       h('div', { class: 'qa-launch-links' }, h('a', { class: 'qa-btn qa-btn-primary', href: link }, 'Trade'),
@@ -183,6 +188,7 @@ async function load(published) {
   if(!$('qp-root').querySelector('[data-qp-early]'))$('qp-root').replaceChildren(h('p', { class: 'qa-loading' }, 'Loading calls…'));
   const get = u => fetch(u, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null);
   const early=globalThis.__qxProfileEarly,callerURL='/api/community/v2/caller/'+who;
+  const publishedRead=get('/api/callouts/profile/'+who);
   const callerRead=early&&early.url===callerURL?early.body.then(b=>b?structuredClone(b):get(callerURL)):get(callerURL);
   // Profile identity paints as soon as its own read finishes; optional reads cannot hide it.
   const accountsRevision=linkedRevision;
@@ -190,7 +196,7 @@ async function load(published) {
   const [acct, , member, social] = await Promise.all([get('/api/account/' + who + '/launches'), loadModules().catch(() => null), memberRead, get('/api/community/v2/wallet/' + who)]);
   if(mine!==seq)return;
   const callerActions=h('div',{});$('qp-member-identity').append(callerActions);const callerControl=mountProfileCallerActions(callerActions,{wallet:who,label:member?.profile.name||short(who),hub,document});profileControls.push(callerControl);
-  const caller=await callerRead;if(mine!==seq)return;callerControl.update(caller,social?.callStats);
+  const [caller,publishedCallouts]=await Promise.all([callerRead,publishedRead]);if(mine!==seq)return;callerControl.update(caller,social?.callStats);
   let held=member?.profile.shareHoldings?memberHoldingsObservation(await get('/api/terminal/wallet/'+who),who):null;
   if (mine !== seq) return;
   const launches = acct?.launches || [];
@@ -217,7 +223,7 @@ async function load(published) {
     holdingTile,
     tile('Board posts', socialReadable?String(posts.length >= 20 ? '20+' : posts.length):'Unavailable', social?.boards ? 'on ' + social.boards + ' board' + (social.boards === 1 ? '' : 's') : 'none yet'),
     tile('First launch', launches.length ? day(first) : '—'));
-  const extra = [!member?h('p',{class:'qa-empty'},'Profile details could not be read. Holdings stay hidden.'):null,!acct?h('p',{class:'qa-empty'},'The launch directory did not answer. Calls and profile details are still shown below.'):null,badgeSection(launches, social), callsSection(caller, social?.callStats), holdingPanel, postsSection(posts)].filter(Boolean);
+  const extra = [!member?h('p',{class:'qa-empty'},'Profile details could not be read. Holdings stay hidden.'):null,!acct?h('p',{class:'qa-empty'},'The launch directory did not answer. Calls and profile details are still shown below.'):null,badgeSection(launches, social),h('section',{class:'qa-section','aria-labelledby':'qp-callouts-h'},h('h2',{id:'qp-callouts-h'},'Callouts'),...(publishedCallouts?.callouts?.filter(c=>c.kind==='buy'||c.kind==='post').map(c=>publishedPost(c))||[]),!(publishedCallouts?.callouts?.some(c=>c.kind==='buy'||c.kind==='post'))?h('p',{class:'qa-empty'},publishedCallouts?'No public buy callouts yet.':'Callouts are refreshing. Try this profile again.'):null),callsSection(caller, social?.callStats), holdingPanel, postsSection(posts)].filter(Boolean);
   if (!launches.length) {
     $('qp-root').replaceChildren(...extra, h('section', { class: 'qa-section' }, h('div', { class: 'qa-section-head' }, h('h2', {}, 'Launches')),
       h('p', { class: 'qa-empty' }, acct?'No launches from this wallet. Launches show up here once they are listed on QHooks Markets; only the wallet that created a launch counts as its creator.':'Launches are unavailable right now. Retry this profile in a moment.')));
@@ -240,7 +246,8 @@ async function load(published) {
     for (const L of launches) { const k = L.chainId + ':' + L.controller.toLowerCase(), c = list?.[k]?.copyOf; if (c) T.set(k, { ...(T.get(k) || {}), copy: trust.copyLabel(c, { compact: true }) }); }
     if (mine === seq) $('qp-verified').replaceChildren(...badges);
   } catch { /* labels only */ }
-  const cards = await Promise.all(launches.map(L => launchCard(L, T.get(L.chainId + ':' + L.controller.toLowerCase()))));
+  // walletmenu (2026-11-12): real launches first, then the creator's tagged test launches
+  const cards = await Promise.all(orderLaunches(launches).map(L => launchCard(L, T.get(L.chainId + ':' + L.controller.toLowerCase()))));
   if (mine !== seq) return;
   $('qp-root').replaceChildren(...extra, h('section', { class: 'qa-section', 'aria-labelledby': 'qp-launches-h' }, launchesHead(), ...cards));
 }
@@ -283,7 +290,7 @@ function callsSection(caller, fallbackStats) {
   const confirmedEmpty=confirmedEmptyCalls(caller,fallbackStats);
   const recordsKnown=stats?.sample?.total>0||stats?.sample?.loaded>0||stats?.calls>0;
   const line=stats?.version===2?scoreHeadline(stats):'The versioned call record did not answer. Try again in a moment.';
-  return h('section', { class: 'qa-section', 'aria-labelledby': 'qp-calls-h' }, h('div', { class: 'qa-section-head' }, h('h2', { id: 'qp-calls-h' }, 'Calls'),h('a',{class:'qmp-thanks-link',href:'/community#make-a-call'},'Make your own call →'),confirmedEmpty?null:h('p', { class: 'qb-call-stats' }, line)),!confirmedEmpty&&stats?.version===2?h('p',{class:'qmp-score-coverage'},scoreCoverageText(stats)):null,!confirmedEmpty&&stats?.version===2?h('p',{class:'qmp-score-coverage'},'Median 24h/7d move '+qualityText(stats.quality)+' · '+numCalls(stats.qualityN)+' completed calls'):null,callerMethodElement(document),
+  return h('section', { class: 'qa-section', 'aria-labelledby': 'qp-calls-h' }, h('div', { class: 'qa-section-head' }, h('h2', { id: 'qp-calls-h' }, 'Scored calls'),h('a',{class:'qmp-thanks-link',href:'/community#make-a-call'},'Make your own call →'),confirmedEmpty?null:h('p', { class: 'qb-call-stats' }, line)),!confirmedEmpty&&stats?.version===2?h('p',{class:'qmp-score-coverage'},scoreCoverageText(stats)):null,!confirmedEmpty&&stats?.version===2?h('p',{class:'qmp-score-coverage'},'Median 24h/7d move '+qualityText(stats.quality)+' · '+numCalls(stats.qualityN)+' completed calls'):null,callerMethodElement(document),
     ...(calls.length ? calls.map(p => {
       const c=p.call||{},b=p.board||{},labels=callLabelPills({...c,boardKind:b.kind}),point=checkpointView(c,'day'),change=point.status==='observed'?moveText(point.price,c.price):point.note,direction=point.status!=='observed'?'':point.price>c.price?' is-up':point.price<c.price?' is-down':'';
       const thanks=mountProfileCallThanks(p,{hub,sessions:profileSessions,document});if(thanks)profileControls.push(thanks);
@@ -292,8 +299,8 @@ function callsSection(caller, fallbackStats) {
         h('div', { class: 'qb-callline-prices' }, h('span', {}, 'Entry '+priceText(c.price) + ' · latest source quote ' + priceText(c.priceNow) + ' ' + (c.quoteSymbol || '')), h('span', { class: 'qb-call-result' + direction,title:point.note }, point.label+' '+change)),
         point.status==='observed'?h('p',{class:'qmp-score-coverage'},h('time',{datetime:new Date(point.observedAt).toISOString()},point.note),' · ',EXPLORER[b.chainId]?h('a',{href:EXPLORER[b.chainId]+'/tx/'+point.provenance.transaction,target:'_blank',rel:'noopener noreferrer'},'Block '+point.provenance.block+' ↗'):'Block '+point.provenance.block):null,
         labels.length ? h('div', { class: 'qb-call-labels' }, ...labels) : null,
-        p.text ? h('p', { class: 'qb-call-thesis' }, p.text) : null, h('div',{class:'qa-actions'},h('a',{class:'qmp-thanks-link',href:'/call/'+p.id},'Read call →'),callMarketLink(b,p),thanks?.element));
-    }) : [h('p', { class: 'qa-empty' }, confirmedEmpty ? 'No calls from this wallet yet. Choose a token to make your own call.' : recordsKnown?'Call records exist, but their public details are unavailable in this view.':'Calls couldn’t be read just now.')]));
+        p.text ? h('p', { class: 'qb-call-thesis' }, p.text) : null,xAttachment(p.text,{hidden:!!p.hidden||!!p.folded}), h('div',{class:'qa-actions'},h('a',{class:'qmp-thanks-link',href:'/call/'+p.id},'Read call →'),callMarketLink(b,p),thanks?.element));
+    }) : [h('p', { class: 'qa-empty' }, confirmedEmpty ? 'No scored calls from this wallet yet.' : recordsKnown?'Call records exist, but their public details are unavailable in this view.':'Calls couldn’t be read just now.')]));
 }
 async function loadSolanaProfile(identity,mine){
   const {key,address}=identity;$('qp-input').value=address;$('qp-title').textContent=short(address);$('qp-full').textContent=address;$('qp-addr').hidden=false;$('qp-verified').replaceChildren();$('qp-avatar').replaceChildren();$('qp-member-identity').replaceChildren();$('qp-tiles').replaceChildren();

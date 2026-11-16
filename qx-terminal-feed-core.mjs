@@ -1,12 +1,15 @@
+import{createFeedPriceCache}from'./qx-feed-price-cache.mjs';
+import {assetPriceFields,priceState,priceObservation} from './qx-price-state.mjs';
 import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
 import {tokenAvatar,tokenAvatarSources,avatarImage} from './qx-token-avatar.mjs';
 // Discover's data contract and presentation helpers. No DOM, wallet calls or currency estimates.
-import {WINDOWS,DISCOVERY_TABS,lifecycle} from './qx-discovery-model.mjs';
+import {WINDOWS,DISCOVERY_TABS,lifecycle,filterDiscovery} from './qx-discovery-model.mjs';
 import { stockPair } from './full-launch/packages/multichain-launch/stock-pairs.mjs';
 import { chainById } from './chains.mjs';
 import { DIRECT_CHAINS } from './qx-elysium-direct.mjs';
 import {safetyChecked,plainMarketError} from './qx-terminal-data.mjs';
 import {officialLogo} from './qx-official.mjs';
+import {discoveryCandidate,rankDiscovery} from './qx-discovery-rank.mjs';
 
 export const DASH = '—';
 // Chip order (Randall, 2026-11-09): "sol-rh-bnb-Elysium-eth-base-arb".
@@ -18,11 +21,11 @@ export const CHAINS = [
 export const TABS = DISCOVERY_TABS;
 export function feedSourceLabel(source){
  if(typeof source!=='string')return '';
- if(/dex\s*screener/i.test(source)&&/boost|promot/i.test(source))return 'Boosted tokens · DexScreener';
- if(/geckoterminal.*trending.*pool/i.test(source))return 'Trending pools · GeckoTerminal'+(/prices from dex\s*screener/i.test(source)?' · prices from DexScreener':'');
+ if(/^dex\s*screener (boosted(?:\/promoted)? tokens|boosts|promoted tokens)$/i.test(source))return 'Boosted tokens · DexScreener';
+ if(/^geckoterminal trending pools(?: · prices from dex\s*screener)?$/i.test(source))return 'Trending pools · GeckoTerminal'+(/prices from dex\s*screener/i.test(source)?' · prices from DexScreener':'');
  return source;
 }
-export const SORT_KEYS = ['price', 'm5', 'm15', 'h1', 'h6', 'h12', 'h24', 'd7', 'move', 'volume', 'liquidity', 'mcap', 'txns', 'makers'];
+export const SORT_KEYS = ['price', 'm5', 'm15', 'h1', 'h6', 'h12', 'h24', 'd7', 'move', 'volume', 'liquidity', 'mcap', 'txns', 'makers', 'holders'];
 export const number = value => typeof value === 'number' && Number.isFinite(value) ? value : null;
 const nonnegative = value => number(value) !== null && value >= 0 ? value : null;
 const trim = value => value.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1');
@@ -116,7 +119,7 @@ export function launchRow(market) {
     chainId: String(market.chainId), pool: market.controller, dex: 'QHooks', launch: market,
     token: { address: market.token, symbol: market.symbol, name: market.name, profileImage:market.profileImage,launchImage:market.launchImage,logo: tokenAvatar(market).src || officialLogo(market.chainId, market.token) },
     quote: { symbol: market.quoteSymbol }, createdAt: market.launchedAt,
-    priceUsd: s.priceUsd ?? null, volumeUsd: { h24: s.volume24Usd ?? null }, liquidityUsd: s.liquidityUsd ?? null,
+    priceUsd: s.priceUsd ?? null,priceAt:s.priceAt??market.priceAt??market.observedAt??(s.lastTradeAt?s.lastTradeAt*1000:null),priceSource:s.priceSource,pricePoolId:s.pricePoolId,pricesRefreshing:s.pricesRefreshing, volumeUsd: { h24: s.volume24Usd ?? null }, liquidityUsd: s.liquidityUsd ?? null,
     marketCapUsd: s.mcapUsd ?? null, fdvUsd: s.fdvUsd ?? null,
     quoteAmounts: { price: s.price, volume: s.volume24, liquidity: s.liquidity, mcap: s.mcap, unit: market.quoteSymbol },
     change: { m5: null, h1: null, h6: null, h24: s.change24 ?? null },
@@ -126,7 +129,7 @@ export function launchRow(market) {
 
 export function searchRow(hit) {
   return { chainId: String(hit.chainId), pool: '', token: hit, createdAt: hit.createdAt ?? null,
-    priceUsd: hit.priceUsd ?? null, change: { h24: hit.change24 ?? null },
+    priceUsd: hit.priceUsd ?? null,priceAt:hit.priceAt??hit.observedAt,priceSource:hit.priceSource,pricePoolId:hit.pricePoolId, change: { h24: hit.change24 ?? null },
     volumeUsd: { h24: hit.volume24Usd ?? null }, liquidityUsd: hit.liquidityUsd ?? null,
     marketCapUsd: hit.mcapUsd ?? null, fdvUsd: hit.fdvUsd ?? null, safety: null };
 }
@@ -136,8 +139,12 @@ export function rowKey(row) {
   return String(row.chainId) + ':' + (String(row.chainId) === 'solana' ? address : address.toLowerCase()) + ':' + (row.pool || '');
 }
 
+export function knownHolderCount(row){const candidates=[row.holdersCount,row.holderCount,typeof row.holders==='number'?row.holders:null,row.launch?.summary?.holders];return candidates.find(n=>Number.isSafeInteger(n)&&n>=0)??null;}
+
 export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24' } = {}) {
   const chainId = String(row.chainId), token = row.token || {};
+  row=assetPriceFields(row,{chainId,token:token.address,at:row.observedAt,now});
+  if(!priceState(row.priceAt,now).usable&&row.quoteAmounts)row={...row,quoteAmounts:{...row.quoteAmounts,price:null,mcap:null}};
   const chain = CHAINS.find(([id]) => id === chainId);
   // Zero means the provider doesn't know the cap: fall back to FDV (tagged), else a dash.
   const known = value => nonnegative(value) > 0 ? value : null;
@@ -145,7 +152,7 @@ export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24'
   const buys = nonnegative(row.txns?.h24?.buys), sells = nonnegative(row.txns?.h24?.sells);
   const numeric = {
     ...Object.fromEntries(WINDOWS.map(([key])=>[key,number(row.change?.[key])])),move:number(row.change?.[window]),price: nonnegative(row.priceUsd), m5: number(row.change?.m5), h1: number(row.change?.h1), h6: number(row.change?.h6), h24: number(row.change?.h24),
-    volume: nonnegative(row.volumeUsd?.h24), liquidity: nonnegative(row.liquidityUsd), mcap: cap,
+    holders:knownHolderCount(row),volume: nonnegative(row.volumeUsd?.h24), liquidity: nonnegative(row.liquidityUsd), mcap: cap,
     txns: buys !== null && sells !== null ? buys + sells : null, makers: nonnegative(row.makers?.h24),
   };
   const quote = row.quoteAmounts;
@@ -154,16 +161,16 @@ export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24'
   const symbol = typeof token.symbol === 'string' && token.symbol.trim() ? token.symbol : '?';
   const address = typeof token.address === 'string' ? token.address : '';
   return {
-    key: rowKey(row), row, chainId, chainName: chain?.[1] || chainId, chainIcon: chain?.[2], address,
+    key: rowKey(row), row, priceRefreshing:!!row.pricesRefreshing, chainId, chainName: chain?.[1] || chainId, chainIcon: chain?.[2], address,
     lifecycle:lifecycle(row),move:percent(numeric.move),symbol, name: typeof token.name === 'string' ? token.name : '', logo: safeLogo(token.logo) || safeLogo(officialLogo(chainId, address)),
     avatarSources:tokenAvatarSources({...row.launch,...row,...token},[officialLogo(chainId,address)]),
     letter: symbol.replace(/^\$/, '').slice(0, 1).toUpperCase() || '?', age: age(row.createdAt, now),
     price: displayMoney('price', true), m5: percent(numeric.m5), h1: percent(numeric.h1), h6: percent(numeric.h6), h24: percent(numeric.h24),
-    volume: displayMoney('volume'), liquidity: displayMoney('liquidity'), mcap: displayMoney('mcap'),
+    holders:compact(numeric.holders),volume: displayMoney('volume'), liquidity: displayMoney('liquidity'), mcap: displayMoney('mcap'),
     capKind: known(row.marketCapUsd) === null && known(row.fdvUsd) !== null ? 'FDV' : '',
     buys: compact(buys), sells: compact(sells), makers: compact(numeric.makers), numeric,
     // A paid DexScreener boost says so (server/market-freshness.mjs stamps the boosts fallback's rows).
-    boosted: !row.launch && row.provenance?.discoverySource === 'dexscreener_token_boosts',
+    boosted: !row.launch && (row.provenance?.discoverySource === 'dexscreener_token_boosts'||row.provenance?.promoted===true),
     safety: safetyLabel(row.safety), quick: row.launch ? launchQuick(row.launch, quick) : externalQuick(chainId, address, quick),
   };
 }
@@ -208,13 +215,21 @@ export const hasTokenHash = hash => /^#(?:t|m|pool)=/.test(hash || '');
 // server has not answered with a full, current list within browserDelay (or at once when the server fails), and
 // whichever answers first paints. Server rows stay first once both are in (dedupe by chain + token). The last good
 // list per view is kept on the device, so a reload paints it at once and a failed refresh keeps it ("Refreshing…").
-export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTimeout = 12000, browserDelay = 2500, browser = null, storage = null, minRows = 12, cacheRead = null, cacheWrite = null }) {
+export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTimeout = 12000, browserDelay = 2500, browser = null, storage = null, minRows = 12, cacheRead = null, cacheWrite = null, priceCache = null }) {
   let generation = 0, active = null;
-  const cache = new Map();
+  const cache = new Map(),prices=priceCache||createFeedPriceCache({storage});
   function cancel() { generation++; active?.abort(); active = null; }
   const usable = rows => (Array.isArray(rows) ? rows : []).filter(r => r && r.token && typeof r.token.address === 'string' && CHAINS.some(([id]) => id !== 'all' && id === String(r.chainId)));
   // A server-filtered list (discofeed) is the whole answer for its filters, however short: never top it up or re-floor it.
-  const full = data => !!data && data.stale !== true && (data.filtered === true || data.rows.length >= minRows);
+  const full = (data,chain,filters) => {
+    if(!data||data.stale===true)return false;
+    if(data.filtered===true&&data.coverage?.degraded!==true&&data.status!=='unavailable'&&!data.error&&(data.rows.length===0?data.refreshing!==true:filterParams(filters).length>0))return true;
+    const rows=data.rows.filter(discoveryCandidate);
+    if(rows.length<minRows)return false;
+    if(chain!=='all')return true;
+    const chains=new Map();for(const r of rows)chains.set(String(r.chainId),(chains.get(String(r.chainId))||0)+1);
+    return [...chains.values()].filter(n=>n>=3).length>=3;
+  };
   // The server's discovery feed has no Elysium list (400 invalid_query, polled every 30 s): read it in the browser only.
   const SERVER_SKIP = new Set(['99901']);
   // Gainers/Losers rank the whole received set by the window's move; dust (under $10k liquidity or 24 h volume) can't top it.
@@ -232,7 +247,7 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
     return rows.length ? { ...data, rows } : data;
   }
   // Filters travel to the server (it filters the whole pool before its top-N cut); only the set ones are sent.
-  const filterParams = filters => Object.entries(filters || {}).filter(([, v]) => v !== '' && v != null).sort(([a], [b]) => (a < b ? -1 : 1));
+  const filterParams = filters => Object.entries(filters || {}).filter(([k, v]) => ['liquidityMin','liquidityMax','capMin','capMax','volumeMin','transactionsMin','ageMinHours','ageMaxHours','venue','hasSocials'].includes(k) && v !== '' && v != null).sort(([a], [b]) => (a < b ? -1 : 1));
   async function serverRead(tab, chain, window, parent, filters) {
     if (SERVER_SKIP.has(String(chain))) return null;
     const controller = new AbortController(), abort = () => controller.abort(), timer = setTimeout(abort, serverTimeout);
@@ -244,13 +259,21 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
       return { ...body, rows: usable(body.rows) };
     } catch { return null; } finally { clearTimeout(timer); parent.removeEventListener('abort', abort); }
   }
-  function merged(server, own, tab, chain, window) {
-    const extra = usable(own?.rows);
+  function merged(server, own, tab, chain, window, filters = {}) {
+    const extra = filterDiscovery(usable(own?.rows),{tab,window,filters:Object.fromEntries(filterParams(filters))});
     if (!extra.length) return server?.rows.length ? server : null;
-    const seen = new Set(), rows = [];
-    for (const r of [...(server?.rows || []), ...extra]) { const k = String(r.chainId) + ':' + (String(r.chainId) === 'solana' ? r.token.address : r.token.address.toLowerCase()); if (!seen.has(k)) { seen.add(k); rows.push(r); } }
+    const seen = new Map(), rows = [];
+    for (const r of [...(server?.rows || []), ...extra]) {
+      const k = String(r.chainId) + ':' + (String(r.chainId) === 'solana' ? r.token.address : r.token.address.toLowerCase());
+      if (!seen.has(k)) { seen.set(k,rows.length); rows.push(r); }
+      else {
+        const i=seen.get(k),a=rows[i],newer=r.stale!==true&&(a.stale===true||(r.observedAt||0)>(a.observedAt||0))?r:a;
+        rows[i]={...newer,provenance:{...newer.provenance,...(a.provenance?.promoted===true||r.provenance?.promoted===true?{promoted:true}:{})}};
+      }
+    }
     const serverFresh = server && server.rows.length && server.stale !== true;
-    return { version: 1, ...(server || {}), tab, chain, window, rows, browser: true, status: undefined, error: undefined, fallback: undefined,
+    const ordered=tab==='trending'?rankDiscovery(rows,{window,chain,limit:chain==='all'?100:Infinity}):rows;
+    return { version: 1, ...(server || {}), tab, chain, window, rows:ordered, total:ordered.length, pool:rows.filter(discoveryCandidate).length, browser: true, status: undefined, error: undefined, fallback: undefined,
       source: [server?.rows.length ? feedSourceLabel(server.source) : null, ...String(own.source || '').split(' · ')].filter((v, i, all) => v && !all.slice(0, i).some(p => p && p.includes(v))).join(' · ') || null,
       observedAt: serverFresh ? server.observedAt : own.observedAt, stale: serverFresh ? !!server.stale : false };
   }
@@ -259,29 +282,33 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
     const fkey = filterParams(filters).map(([k, v]) => k + '=' + v).join('&');
     const mine = generation, key = tab + ':' + chain + ':' + window + (fkey ? ':' + fkey : ''), controller = new AbortController();
     active = controller;
-    const retained = cache.get(key) || cacheRead?.(storage, key) || null;
+    const retained = prices.reconcile(cache.get(key) || cacheRead?.(storage, key) || null);
     changed({ key, loading: true, data: retained, error: null });
     const timer = setTimeout(() => controller.abort(), timeout);
-    let server = null, serverDone = false, own = null, ownRun = null, early;
-    const live = () => mine === generation;
-    const paintPartial = () => { const data = ranked(merged(server, own, tab, chain, window), tab, window); if (live() && data?.rows.length) changed({ key, loading: true, data, error: null }); };
+    let server = null, serverDone = false, own = null, ownRun = null, early, settled = false;
+    const live = () => mine === generation && !settled;
+    const paintPartial = () => { const data = ranked(merged(server, own, tab, chain, window,filters), tab, window); if (live() && data?.rows.length) changed({ key, loading: true, data, error: null }); };
     const startOwn = () => {
       if (!browser) return Promise.resolve();
-      return ownRun ||= browser({ tab, chain, window, signal: controller.signal, onPartial: d => { if (!own) { own = d; paintPartial(); own = null; } } }).catch(() => null).then(d => { own = d; if (!serverDone) paintPartial(); });
+      return ownRun ||= browser({ tab, chain, window, signal: controller.signal, onPartial: d => {
+        if(!live())return;
+        d=prices.reconcile(d);own = {...d,rows:merged(own,d,tab,chain,window,filters)?.rows||[]};
+        paintPartial();
+      } }).catch(() => null).then(d => { own = prices.reconcile(d) || own; if (!serverDone) paintPartial(); });
     };
     try {
       if (browser) early = setTimeout(() => { if (!serverDone) void startOwn(); }, browserDelay);
-      server = await serverRead(tab, chain, window, controller.signal, filters); serverDone = true;
+      server = prices.reconcile(await serverRead(tab, chain, window, controller.signal, filters)); serverDone = true;
       if (!live()) return;
       // Movers count as full only when enough rows survive the ranking (the server's All list is mostly unranked boosts).
-      const enough = d => full(d) && (d.filtered === true || !MOVERS.includes(tab) || rankRows(d.rows, tab, window).length >= minRows);
+      const enough = d => full(d,chain,filters) && (d.filtered === true || !MOVERS.includes(tab) || rankRows(d.rows, tab, window).length >= minRows);
       if (browser && !enough(server)) {
         // Paint whatever the server had while the browser read finishes.
         if (server?.rows.length) paintPartial();
         await startOwn();
         if (!live()) return;
       }
-      let data = ranked(enough(server) ? server : merged(server, own, tab, chain, window), tab, window);
+      let data = ranked(enough(server) ? server : merged(server, own, tab, chain, window,filters), tab, window);
       // A provider limit can make one refresh much thinner than the last good list: keep those rows behind the new ones
       // and say "Refreshing…" (stale) until a full read lands, instead of shrinking the list on screen.
       if (data?.rows.length && data.filtered !== true && retained?.rows?.length && data.rows.length < retained.rows.length / 2) {
@@ -299,8 +326,10 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
       if (!live()) return;
       changed({ key, loading: false, data: retained, error: error.name === 'AbortError' ? 'Feed request timed out. Try again.' : plainMarketError() });
     } finally {
+      settled = true;
+      controller.abort();
       clearTimeout(timer); clearTimeout(early);
-      if (live()) active = null;
+      if (mine === generation) active = null;
     }
   }
   return { load, cancel };

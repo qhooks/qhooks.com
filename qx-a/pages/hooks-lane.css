@@ -106,8 +106,9 @@ html.q-has-tabbar [data-a-shell] { padding-bottom: calc(var(--qa-tabbar-h) + env
   .hl-main *, .hl-main *::before, .hl-main *::after { animation: none !important; transition: none !important; }
 }
 
-/* chain pickers enhanced by chain-symbols.mjs: the chain mark sits inside the underline field */
-.qa .hl-main .chain-select-control { position: relative; display: block; }
-.qa .hl-main .chain-select-symbol { position: absolute; left: 0; top: 50%; width: 22px; height: 22px; transform: translateY(-58%); pointer-events: none; }
-.qa .hl-main .chain-select-symbol img, .qa .hl-main .chain-select-symbol svg { display: block; width: 22px; height: 22px; border-radius: 6px; }
-.qa .hl-main .chain-select-control select { padding-left: 32px !important; }
+/* chain pickers enhanced by chain-symbols.mjs: the chain mark sits in the row, left of the select.
+   Not an overlay: iOS WebKit ignores select padding, so an overlaid mark covered the first letter (audit #18). */
+.qa .hl-main .chain-select-control { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.qa .hl-main .chain-select-control select { flex: 1; min-width: 0; }
+.qa .hl-main .chain-select-symbol { position: static; order: -1; flex: none; width: 22px; height: 22px; margin: 0; transform: none; pointer-events: none; }
+.qa .hl-main .chain-select-symbol img, .qa .hl-main .chain-select-symbol svg { display: block; width: 22px; height: 22px; border-radius: 50%; }

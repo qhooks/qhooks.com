@@ -5,18 +5,19 @@
 import {hasCurveVenue, curveVenuesFor, ALLOWANCE_HOLDER} from './qx-curve-venues.mjs';
 import {SEL, pad, word, big, aggregate3, decodeAggregate3, directBuyQuote} from './qx-curve-core.mjs';
 
-const none = new Set(), stats = new Map();
-const key = (chainId, token) => String(chainId) + ':' + String(token).toLowerCase();
+const none = new Map(), stats = new Map();
+const key = (chainId, token) => String(chainId) + ':' + (String(chainId) === 'solana' ? String(token) : String(token).toLowerCase()); // Solana mints are case-sensitive
 
 /// The curve venue for a token ({phase:'curve'|'graduating'|'pool'|'rescued', …}) or null when it isn't a launchpad token.
 export async function readCurve(chainId, token, {fetcher = globalThis.fetch, signal} = {}) {
   const k = key(chainId, token);
-  if (String(chainId) === 'solana' || !hasCurveVenue(chainId) || none.has(k)) return null;
+  if (!hasCurveVenue(chainId) || (none.get(k) || 0) > Date.now()) return null;
+  none.delete(k);
   const r = await fetcher('/api/curve/' + k.replace(':', '/'), {cache: 'no-store', signal});
-  if (r.status === 404) { none.add(k); return null; }
+  if (r.status === 404) { none.set(k, Date.now() + 60000); if (none.size > 400) none.delete(none.keys().next().value); return null; }
   if (!r.ok) throw Error('curve_' + r.status);
   const c = await r.json();
-  return c && c.token === k.split(':')[1] ? c : null;
+  return c && c.token === k.split(':')[1] && String(c.chainId) === String(chainId) ? c : null;
 }
 
 const SHORT = a => a ? a.slice(0, 6) + '…' + a.slice(-4) : '';
@@ -26,17 +27,25 @@ const SHORT = a => a ? a.slice(0, 6) + '…' + a.slice(-4) : '';
 export function curveHeader(c, t = null) {
   const s = stats.get(key(c.chainId, c.token)) || {};
   const q = c.quote || {}, phase = c.phase;
-  const listed = (t?.pools || []).find(p => String(p.address).toLowerCase() === c.pool?.id);
-  const pools = phase === 'curve' ? [{address: c.curve, dex: c.venue.name + ' curve', kind: 'curve', quoteAddress: q.address, quoteSymbol: q.symbol, liquidityUsd: c.raisedUsd ?? null, volume24Usd: s.volumeUsd ?? null}]
-    : phase === 'pool' && c.pool?.id ? [{address: c.pool.id, dex: c.venue.name + ' pool', kind: 'pool', quoteAddress: q.address, quoteSymbol: q.symbol, liquidityUsd: listed?.liquidityUsd ?? null, volume24Usd: listed?.volume24Usd ?? null}]
+  const same = (a, b) => c.chainId === 'solana' ? String(a) === String(b) : String(a).toLowerCase() === String(b).toLowerCase();
+  // The curve's "pool" is the address its chart and trades are keyed by: the curve itself, or (four.meme) the token, which
+  // GeckoTerminal lists as the curve's pool. Once graduated, the launchpad's own pool: a v4 pool id or a v2 pair address.
+  const poolAddr = c.pool?.id || c.pool?.address || null;
+  const pools = phase === 'curve' ? [{address: c.history === 'pool' && c.historyPool ? c.historyPool : c.curve, dex: c.venue.name + ' curve', kind: 'curve', quoteAddress: q.address, quoteSymbol: q.symbol, liquidityUsd: c.raisedUsd ?? null, volume24Usd: s.volumeUsd ?? null}]
+    : phase === 'pool' && poolAddr ? [{address: poolAddr, dex: c.venue.name + ' pool', kind: 'pool', quoteAddress: q.address, quoteSymbol: q.symbol, liquidityUsd: (t?.pools || []).find(p => same(p.address, poolAddr))?.liquidityUsd ?? null, volume24Usd: null}]
     : [];
   const links = {website: c.links?.website || t?.links?.website || null, x: c.links?.x || t?.links?.x || null, telegram: c.links?.telegram || t?.links?.telegram || null};
-  const graduated = phase === 'pool';
+  // DexScreener lists some curves as a pseudo-pair of their own (four.meme "fourmeme", flap "flapsh"): its 24h numbers are the
+  // curve's, so they stand in until the curve's own trades are read. Any other pair's numbers are a third-party pool's.
+  const ownPair = c.chainId === 'solana'
+    ? !!t?.pools?.[0]?.address && same(t.pools[0].address, phase === 'pool' ? poolAddr : c.historyPool || c.curve)
+    : (t?.pools || []).some(p => new RegExp(c.venue?.source || '^$', 'i').test(String(p.dex || '').replace(/sh$/, '')));
+  const graduated = c.chainId === 'solana' ? ownPair : phase === 'pool' || ownPair;
   return {chainId: String(c.chainId), address: c.token, symbol: c.symbol || t?.symbol || 'token', name: c.name || t?.name || c.symbol || '',
     logo: t?.logo || c.logo || null, logoURI: t?.logoURI || c.logo || null, decimals: c.decimals ?? 18,
     priceUsd: c.priceUsd ?? (graduated ? t?.priceUsd : null) ?? null, change24: s.change24 ?? (graduated ? t?.change24 : null) ?? null,
     mcapUsd: c.mcapUsd ?? null, fdvUsd: c.mcapUsd ?? null,
-    liquidityUsd: phase === 'curve' ? c.raisedUsd ?? null : listed?.liquidityUsd ?? null,
+    liquidityUsd: phase === 'curve' ? c.raisedUsd ?? null : pools[0]?.liquidityUsd ?? null,
     volume24Usd: s.volumeUsd ?? (graduated ? t?.volume24Usd : null) ?? null, buys24: s.buys ?? null, sells24: s.sells ?? null,
     pools, links, description: c.description || null, source: c.venue.name, observedAt: c.observedAt || Date.now(), stale: false, curve: c};
 }
@@ -45,7 +54,7 @@ export function curveHeader(c, t = null) {
 /// then the pool's (the caller merges). Null when the route can't answer yet.
 export async function curveHistory({chainId, token, tf, signal, fetcher = globalThis.fetch}) {
   try {
-    const r = await fetcher('/api/curve/' + String(chainId) + '/' + String(token).toLowerCase() + '/history?tf=' + tf, {cache: 'no-store', signal});
+    const r = await fetcher('/api/curve/' + key(chainId, token).replace(':', '/') + '/history?tf=' + tf, {cache: 'no-store', signal});
     if (!r.ok) return null;
     const b = await r.json();
     if (!Array.isArray(b?.candles) || !Array.isArray(b?.trades)) return null;
@@ -72,17 +81,21 @@ export function curveStatCells(h, c) {
   if (!c) return [];
   if (c.phase === 'graduating') return [h('div', {class: 'qxt-curve-cell'}, h('dt', {}, 'Bonding curve'), h('dd', {}, 'Complete · moving to its pool'))];
   if (c.phase !== 'curve') return [];
+  if (c.progress == null) return [h('div', {class: 'qxt-curve-cell'}, h('dt', {}, 'Bonding curve'), h('dd', {}, c.progressTitle || 'Progress unavailable'))];
   const pct = Math.max(0, Math.min(100, Math.round((c.progress || 0) * 1000) / 10)), q = c.quote || {};
-  const bar = h('span', {class: 'qxt-curve-bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(pct), 'aria-label': 'Bonding curve progress'}, h('i', {style: 'width:' + pct + '%'}));
-  return [h('div', {class: 'qxt-curve-cell', title: 'Graduates to a ' + (q.symbol || '') + ' pool at ' + fmtQ(c.threshold, q.decimals ?? 18) + ' ' + (q.symbol || '') + ' raised'},
-    h('dt', {}, 'Bonding curve'), h('dd', {}, pct + '% · ' + fmtQ(c.raised, q.decimals ?? 18) + ' / ' + fmtQ(c.threshold, q.decimals ?? 18) + ' ' + (q.symbol || ''), bar))];
+  const label = c.progress > 0 && pct === 0 ? '<0.1' : String(pct);
+  const text = c.progressText || (label + '% · ' + fmtQ(c.raised, q.decimals ?? 18) + ' / ' + fmtQ(c.threshold, q.decimals ?? 18) + ' ' + (q.symbol || ''));
+  const bar = h('span', {class: 'qxt-curve-bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(pct), 'aria-valuetext': text, 'aria-label': 'Bonding curve progress'}, h('i', {style: 'width:' + pct + '%'}));
+  return [h('div', {class: 'qxt-curve-cell', title: c.progressTitle || 'Graduates to a ' + (q.symbol || '') + ' pool at ' + fmtQ(c.threshold, q.decimals ?? 18) + ' ' + (q.symbol || '') + ' raised'},
+    h('dt', {}, 'Bonding curve'), h('dd', {}, text, bar))];
 }
 /// The plain "where it trades" line under the stats.
 export function curveSyncLine(c) {
   const n = c.venue?.name || 'Launchpad';
-  if (c.phase === 'curve') return n + ' bonding curve ' + SHORT(c.curve) + ' · buys go straight to the curve, sells via 0x · QHooks router';
+  const suffix = c.chainId === 'solana' ? '' : ' · QHooks router';
+  if (c.phase === 'curve') return n + ' bonding curve ' + SHORT(c.curve) + ' · ' + (c.venue?.buy === 'direct' ? 'buys go straight to the curve, sells via 0x' : 'trades through the curve via ' + (c.venue?.via || '0x')) + suffix;
   if (c.phase === 'graduating') return n + ' curve complete · its pool opens in a moment';
-  if (c.phase === 'pool') return 'Graduated from the ' + n + ' curve · pool ' + SHORT(c.pool?.id) + ' · execution via 0x · QHooks router';
+  if (c.phase === 'pool') return 'Graduated from the ' + n + ' curve · pool ' + SHORT(c.pool?.id || c.pool?.address) + ' · execution via ' + (c.venue?.via || '0x') + suffix;
   return n + ' launch closed (rescued) · no trading';
 }
 /// Ticket text for a phase without a trade route; null when the token can be traded.
@@ -120,4 +133,21 @@ export async function curveBuyQuote({c, amountIn, slippageBps, router, feeBps, r
   return q;
 }
 /// Curve fee line for the quote (the launchpad's own fee and the creator's tax, both fixed at launch).
-export const curveFeeText = c => c ? (c.venue?.name || 'Curve') + ' fee ' + ((c.feeBps + c.creatorTaxBps) / 100).toFixed(c.creatorTaxBps % 100 || c.feeBps % 100 ? 1 : 0) + '% (protocol ' + (c.feeBps / 100) + '% + creator ' + (c.creatorTaxBps / 100) + '%)' : '';
+export const curveFeeText = c => {
+  if (!c) return '';
+  const n = c.venue?.name || 'Curve', pct = b => (b / 100).toFixed(b % 100 ? 1 : 0) + '%';
+  if (c.feeBps == null) return n + ' fees included in the quote';
+  if (c.creatorTaxBps) return n + ' fee ' + pct(c.feeBps + c.creatorTaxBps) + ' (protocol ' + (c.feeBps / 100) + '% + creator ' + (c.creatorTaxBps / 100) + '%)';
+  const tax = c.taxBps && (c.taxBps.buy || c.taxBps.sell) ? ' + token tax ' + pct(c.taxBps.buy || 0) + ' buy / ' + pct(c.taxBps.sell || 0) + ' sell' : '';
+  return n + ' fee ' + pct(c.feeBps || 0) + tax;
+};
+/// A 0x quote for a buy on a curve must come through that curve, and must not take more tokens than the curve has left
+/// before graduation (the curve would fill part of it and hand the rest back to 0x). Returns a plain sentence or null.
+export function curveQuoteProblem(c, q, side) {
+  if (!c || c.phase !== 'curve') return null;
+  const src = new RegExp(c.venue?.source || '^$', 'i');
+  if (!(q?.sources || []).some(x => src.test(String(x)))) return 'No route through the curve for this trade right now.';
+  if (side === 'buy' && c.tokensLeft != null && BigInt(q.buyAmount || 0) * 1000n > BigInt(c.tokensLeft) * 999n)
+    return 'This buy would finish the curve. Buy a smaller amount; the rest of the curve fills at graduation.';
+  return null;
+}

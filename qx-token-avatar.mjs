@@ -15,15 +15,20 @@ export function tokenAvatarSources(m={},fallback=[]){
 // The letter stays visible until an image has decoded. A failed profile walks
 // the launch/legacy sources, then removes the image rather than covering it up.
 export function bindTokenAvatar(img,market={},fallback=[]){
-  // The image stays hidden until it decodes, and a hidden lazy image never loads, so load eagerly.
-  img.loading='eager';
+  // Keep a layout box for native lazy loading while the letter remains visible.
+  // display:none/hidden prevents that browser admission and used to force every art resource eager.
+  img.loading='lazy';
+  if(!img.getAttribute('width'))img.width=40;
+  if(!img.getAttribute('height'))img.height=40;
+  const visibility=img.style.visibility;
+  const conceal=()=>{img.style.visibility='hidden';};
   const sources=tokenAvatarSources(market,fallback);let next=0,stopped=false;
   const advance=()=>{
-    if(stopped)return;img.hidden=true;
-    if(next>=sources.length){img.removeAttribute('src');img.dataset.avatarState='letter';return;}
-    img.dataset.avatarState='loading';img.src=sources[next++];
+    if(stopped)return;conceal();
+    if(next>=sources.length){img.hidden=true;img.removeAttribute('src');img.dataset.avatarState='letter';return;}
+    img.hidden=false;img.dataset.avatarState='loading';img.src=sources[next++];
   };
-  const loaded=()=>{if(stopped)return;if(img.naturalWidth>0){img.hidden=false;img.dataset.avatarState='image';}else advance();};
+  const loaded=()=>{if(stopped)return;if(img.naturalWidth>0){img.hidden=false;img.style.visibility=visibility;img.dataset.avatarState='image';}else advance();};
   img.addEventListener('error',advance);img.addEventListener('load',loaded);advance();
-  return ()=>{stopped=true;img.removeEventListener('error',advance);img.removeEventListener('load',loaded);};
+  return ()=>{stopped=true;img.removeEventListener('error',advance);img.removeEventListener('load',loaded);img.hidden=true;img.removeAttribute('src');img.style.visibility=visibility;};
 }

@@ -2,3 +2,9 @@
 .qx-boardpage .qa-page { padding-bottom: 8px; }
 .qx-boardpage .qa-loading { padding: 40px 0; }
 @media (max-width: 1099px) { .qb-actions-top .qcf-control { flex: 0 0 auto; } }
+/* Board index hero: kicker, headline, intro and links in one left column on desktop (the room's two-column hero grid
+   put the headline top-right). */
+@media (min-width: 1100px) {
+  .qb-hero--index .qb-hero-main { grid-template-columns: minmax(0, 1fr); align-items: start; justify-items: start; }
+  .qb-hero--index .qa-lede { max-width: 620px; }
+}

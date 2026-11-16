@@ -418,3 +418,12 @@
 .qv2 .qxt-chart-ohlc-change.up{color:var(--q-up)}
 .qv2 .qxt-chart-ohlc-change.down{color:var(--q-down)}
 .qv2 .qxt-chart-ohlc-volume{color:var(--q-text-3)}
+
+/* Explicit custom ticket owner: controls stay mounted while its header remains reachable. */
+.qv2 .qv2-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+@media(max-width:1099px){
+ .qv2.qv2-sheet .qv2-sheet-head{position:sticky;top:0;z-index:4;display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center;margin:-1px -1px 10px;padding:8px 0;background:var(--q-raised);touch-action:pan-x}
+ .qv2.qv2-sheet .qv2-sheet-head .qv2-grip{grid-column:1/-1}
+ .qv2 .has-market #qxt-ticket .qv2-sheet-head .qxt-side-toggle{margin:0}
+ .qv2 .has-market #qxt-ticket .qv2-sheet-head .qv2-sheet-x{position:static;width:44px;min-width:44px;height:44px;display:grid}
+}

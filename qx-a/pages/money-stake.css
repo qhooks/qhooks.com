@@ -1,5 +1,41 @@
-/* QHOOKS staking (System A, money lane): /stake opens the terminal's staking tab at once; this is what shows on the way. */
-.mn-stake { display: grid; justify-items: start; padding-top: 44px; padding-bottom: 40px; }
-.mn-stake .mn-coin { margin-bottom: 22px; }
+/* A stable QHOOKS staking page; the shared vault panel keeps the terminal's transaction flow. */
+.mn-stake { display: grid; justify-items: start; padding-top: 32px; padding-bottom: 40px; }
+.mn-stake .mn-coin { width: 64px; height: 64px; margin-bottom: 18px; }
+.mn-stake .mn-coin img { width: 100%; height: 100%; }
 .mn-stake .mn-h1 { margin-top: 12px; }
-.mn-stake__go { margin-top: 26px; }
+.mn-stake__panel { width: 100%; max-width: 760px; min-width: 0; margin-top: 28px; padding: 24px 0; border-block: 1px solid var(--qa-rule-2); }
+.mn-stake__panel h2 { margin: 0 0 12px; font-size: 24px; font-weight: 780; }
+.mn-stake__panel .qtb-note { color: var(--qa-tx-2); line-height: 1.6; }
+.mn-stake__panel .qtb-now { margin: 20px 0; }
+.mn-stake__panel .qtx-actions { margin-top: 16px; gap: 10px; }
+.mn-stake__panel :is(.qtx-mini, .workspace-button) { min-height: 44px; border: 1px solid var(--qa-rule-2); border-radius: var(--qa-r-m); padding: 10px 16px; background: var(--qa-wash-2); color: var(--qa-tx); font: 700 14px var(--qa-sans); cursor: pointer; }
+.mn-stake__panel button:disabled { opacity: .45; cursor: default; }
+.mn-stake__panel .qtx-mini-input { min-width: 0; width: 100%; max-width: 240px; min-height: 44px; background: var(--qa-wash); color: var(--qa-tx); border-color: var(--qa-rule-2); font-family: var(--qa-sans); }
+.mn-stake__panel :is(button, input):focus-visible { outline: 2px solid var(--qa-gold-hi); outline-offset: 3px; }
+.mn-stake__panel .qtx-status:empty { display: none; }
+.mn-stake__go { margin-top: 20px; }
+@media (min-width: 1100px) { .mn-stake { padding-top: 44px; } }
+
+/* Keep the Claim action and its reason visible, even when no rewards have accrued. */
+.mn-stake__panel .qtz-rewards { margin-block: 22px; padding: 20px; border: 1px solid var(--qa-rule-2); border-radius: var(--qa-r-m); background: var(--qa-wash); }
+.mn-stake__panel .qtz-rewards h3 { margin: 0; font-size: 18px; }
+.mn-stake__panel .qtz-wallet { margin: 6px 0 14px; color: var(--qa-tx-2); font-size: 13px; overflow-wrap: anywhere; }
+.mn-stake__panel .qtz-reward-amount { margin: 0 0 10px; font-size: clamp(20px, 4vw, 28px); font-weight: 760; overflow-wrap: anywhere; }
+.mn-stake__panel .qtz-claim { background: var(--qa-gold-metal); color: #16130d; border-color: var(--qa-gold); }
+.mn-stake__panel .qtz-claim:disabled { background: var(--qa-wash-2); color: var(--qa-tx); opacity: .75; border-color: var(--qa-rule-2); }
+@media (max-width: 480px) { .mn-stake__panel .qtz-rewards { padding: 16px; } .mn-stake__panel .qtz-rewards .qtx-actions { display: grid; grid-template-columns: 1fr; } }
+
+.mn-stake__panel .qtz-daily-rate{white-space:nowrap;font-size:clamp(14px,3.8vw,18px)}
+.mn-stake__panel .qtz-amount-group{margin-top:24px}
+.mn-stake__panel .qtz-amount-group h3{font-size:16px;margin:0 0 8px}
+.mn-stake__panel .qtz-amount-group .qtx-actions{margin-top:8px;flex-wrap:wrap}
+.mn-stake__panel .qtz-presets button{min-width:64px}
+.mn-stake__panel .qtz-hold{text-align:left;white-space:normal;margin-top:4px}
+@media(max-width:480px){.mn-stake__panel .qtz-amount-group .qtx-mini-input{flex:1 1 100%;max-width:none}}
+.mn-stake__panel .qtz-daily-rate{color:inherit;font-weight:inherit;font-size:clamp(16px,4.2vw,19px)}
+@media(max-width:480px){.mn-stake__panel .qtb-now>div:nth-child(3){grid-column:1/-1}.mn-stake__panel .qtb-now>div:nth-child(3)>b{font-size:clamp(16px,4vw,20px);white-space:nowrap}}
+
+#qtzl .qtx-lock{border-color:var(--qa-rule-2)!important;gap:12px!important;padding-block:18px!important}
+#qtzl .qtx-lock>button{justify-self:start}
+#qtzl .qtx-row{display:flex;flex-wrap:wrap;gap:10px}
+#qtzl .qtx-row :is(input,select){min-height:44px;min-width:0;max-width:100%;padding:10px;font:inherit;color:var(--qa-tx);background:var(--qa-wash);border:1px solid var(--qa-rule-2)}

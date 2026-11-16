@@ -1,0 +1,225 @@
+/* Portfolio v6 (2026-11-13): the approved mockup on the live page. Site tokens only (var(--qa-*)), Mona Sans only, no
+   italics, no circles/rings/donuts (token art and badges are rounded squares, the live mark is a square). White headlines;
+   gold only on the primary action and the stat figures. Rows about 85 px on a phone. Markup: portfolio.html #qp-content;
+   painted by qx-portfolio.mjs. */
+main.pf6 [hidden] { display: none !important; }
+main.pf6 .pf6-who { margin: 14px 0 0; }
+main.pf6 .pf6-viewing { display: inline-flex; vertical-align: 1px; margin-left: 8px; align-items: center; height: 20px; padding: 0 7px; border-radius: var(--qa-r-s); font-size: var(--qa-fs-micro); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--qa-tx-3); box-shadow: inset 0 0 0 1px var(--qa-rule-2); }
+
+/* no circles on this page: token art, chain badges and the live mark are squares */
+main.pf6 .qp-art { border-radius: 10px; }
+main.pf6 .qp-art > img:not(.qp-art__chain) { border-radius: 10px; }
+main.pf6 .qp-art__chain { border-radius: 4px; }
+main.pf6 .qp-art--wallet { border-radius: 8px; }
+main.pf6 .qa-live__dot { width: 7px; height: 7px; border-radius: 2px; animation: none; box-shadow: none; }
+main.pf6 .mn-pf-notes p::before { border-radius: 1px; }
+/* portfolio-v4's annotation (01/02 counters, the scale under the total) belongs to the old hero */
+main.pf6 :is(#qp-value-label, #qp-pnl, #qp-change)::before { content: none !important; }
+main.pf6 #qp-total { padding-bottom: 0; margin-bottom: 0; }
+main.pf6 #qp-total::after { content: none !important; }
+
+/* ---------- header ---------- */
+main.pf6 .pf6-hero { padding-top: 10px; }
+main.pf6 .pf6-hero__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; }
+main.pf6 .pf6-total { margin-top: 6px; font-size: clamp(46px, 12.5vw, 96px); line-height: .92; font-weight: 860; font-stretch: 112%; letter-spacing: -.045em; color: var(--qa-tx); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color var(--qa-t-flash) var(--qa-ease), text-shadow var(--qa-t-flash) var(--qa-ease); }
+main.pf6 .pf6-total small { font-size: .5em; color: var(--qa-tx-3); letter-spacing: -.02em; }
+main.pf6 .pf6-total.is-up { color: var(--qa-buy); text-shadow: 0 0 24px rgba(62,221,143,.6); transition: none; }
+main.pf6 .pf6-total.is-down { color: var(--qa-sell); text-shadow: 0 0 24px rgba(255,94,100,.6); transition: none; }
+main.pf6 .pf6-total.qp-skeleton { color: var(--qa-tx-3); }
+main.pf6 .pf6-split { margin-top: 16px; }
+main.pf6 .pf6-split .qp-bar { height: 8px; }
+main.pf6 .pf6-split__legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 9px; font-size: var(--qa-fs-small); color: var(--qa-tx-3); }
+main.pf6 .pf6-split__legend b { color: var(--qa-tx-2); font-weight: 700; font-variant-numeric: tabular-nums; }
+main.pf6 .pf6-split__legend i { font-style: normal; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+main.pf6 .pf6-split__legend i.qp-tone-0 { background: var(--qa-gold); }
+main.pf6 .mn-pf-reading { margin-top: 10px; }
+/* one status line: Live · 12s ago · Refresh · Some chains refreshing (tap for per-chain detail) */
+main.pf6 .pf6-status { display: flex; flex-wrap: nowrap; align-items: center; gap: 5px; min-width: 0; font-size: 12px; color: var(--qa-tx-3); white-space: nowrap; }
+main.pf6 .pf6-status .qa-btn--quiet { flex: none; margin: 0; padding: 0; height: auto; font-size: 12px; color: var(--qa-gold-hi); }
+main.pf6 .pf6-status .qa-live__dot { flex: none; }
+main.pf6 .pf6-more { flex: 0 1 auto; min-width: 0; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: inherit; color: var(--qa-tx-3); text-decoration: underline; text-decoration-color: var(--qa-rule-2); text-underline-offset: 3px; cursor: pointer; }
+main.pf6 .pf6-more[aria-expanded="true"] { color: var(--qa-tx-2); }
+main.pf6 #qp-notes { margin-top: 6px; }
+main.pf6 .pf6-share { height: 36px; padding: 0 14px; font-size: 14px; border-radius: 11px; }
+main.pf6 .pf6-share .qa-i { width: 16px; height: 16px; }
+main.pf6 .pf6-pnl { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 10px 14px; margin-top: 16px; }
+main.pf6 .pf6-pnl__main { min-width: 0; }
+main.pf6 .pf6-pnl__l { display: block; font-size: var(--qa-fs-small); font-weight: 620; color: var(--qa-tx-3); margin-bottom: 2px; }
+main.pf6 .pf6-pnl__v { display: block; font-size: 22px; font-weight: 800; font-stretch: 110%; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--qa-tx); }
+main.pf6 .pf6-pnl__v.qp-positive { color: var(--qa-buy); }
+main.pf6 .pf6-pnl__v.qp-negative { color: var(--qa-sell); }
+main.pf6 .pf6-pnl__v.is-wait, main.pf6 .pf6-stats dd.is-wait { font-size: 15px; font-weight: 650; color: var(--qa-tx-3); }
+main.pf6 .pf6-pnl__n { display: block; margin: 4px 0 0; font-size: var(--qa-fs-micro); color: var(--qa-tx-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+main.pf6 .pf6-pnl__n:empty { display: none; }
+main.pf6 .pf6-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--qa-wash); }
+main.pf6 .pf6-seg button { height: 30px; padding: 0 13px; border-radius: 8px; font-size: 13px; font-weight: 700; color: var(--qa-tx-3); }
+main.pf6 .pf6-seg button[aria-pressed="true"] { color: var(--qa-tx); background: var(--qa-wash-2); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+main.pf6 .pf6-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 16px 0 0; box-shadow: 0 -1px 0 var(--qa-rule), 0 1px 0 var(--qa-rule); }
+main.pf6 .pf6-stats:empty { display: none; }
+main.pf6 .pf6-stats div { padding: 10px 0; min-width: 0; }
+main.pf6 .pf6-stats div + div { padding-left: 14px; box-shadow: -1px 0 0 var(--qa-rule); }
+main.pf6 .pf6-stats dt { font-size: var(--qa-fs-micro); font-weight: 650; color: var(--qa-tx-3); white-space: nowrap; }
+main.pf6 .pf6-stats dd { margin: 3px 0 0; font-size: 17px; font-weight: 780; font-stretch: 108%; letter-spacing: -.015em; color: var(--qa-gold-hi); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- tabs and filters ---------- */
+main.pf6 .pf6-tabs-wrap { margin-top: 22px; }
+main.pf6 .pf6-tabs { margin: 0 calc(var(--qa-pad) * -1); padding: 0 var(--qa-pad); box-shadow: 0 1px 0 var(--qa-rule); }
+main.pf6 .pf6-tabs .qa-tab { position: relative; display: inline-flex; align-items: center; gap: 5px; height: 46px; padding: 0 10px; font-size: 14px; }
+@media (min-width: 1100px) { main.pf6 .pf6-tabs .qa-tab { padding: 0 12px; font-size: 14.5px; } }
+main.pf6 .pf6-tabs .qa-tab:first-child { padding-left: 0; }
+main.pf6 .pf6-tabs .qa-tab small { font-size: 11.5px; font-weight: 650; color: var(--qa-tx-3); font-variant-numeric: tabular-nums; }
+main.pf6 .pf6-tabs .qa-tab.is-on { color: var(--qa-tx); }
+main.pf6 .pf6-tabs .qa-tab.is-on::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px; border-radius: 2px; background: var(--qa-gold); box-shadow: var(--qa-glow-gold); }
+main.pf6 .pf6-tabs .qa-tab:first-child.is-on::after { left: 0; }
+main.pf6 .pf6-filters { display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 calc(var(--qa-pad) * -1); padding: 10px var(--qa-pad); box-shadow: 0 1px 0 var(--qa-rule); }
+main.pf6 .pf6-filters::-webkit-scrollbar { display: none; }
+main.pf6 .pf6-chains { display: flex; gap: 8px; flex: none; }
+main.pf6 .pf6-chip { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 11px; border-radius: 9px; font-size: 13px; font-weight: 680; color: var(--qa-tx-2); background: var(--qa-wash); white-space: nowrap; cursor: pointer; border: 0; }
+main.pf6 .pf6-chip[aria-pressed="true"] { color: var(--qa-tx); box-shadow: inset 0 0 0 1px var(--qa-rule-2); background: var(--qa-wash-2); }
+main.pf6 select.pf6-chip--menu { appearance: none; -webkit-appearance: none; padding-right: 28px; color: var(--qa-tx); box-shadow: inset 0 0 0 1px var(--qa-rule-2); background: var(--qa-wash-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%23F4F1E9' stroke-width='1.6'/%3E%3C/svg%3E") right 9px center / 12px no-repeat; font-family: inherit; }
+main.pf6 .pf6-chip--chain { display: none; }
+main.pf6 .pf6-chip--tog input { appearance: none; -webkit-appearance: none; margin: 0; width: 13px; height: 13px; border-radius: 3px; box-shadow: inset 0 0 0 1.5px var(--qa-tx-3); }
+main.pf6 .pf6-chip--tog input:checked { box-shadow: none; background: var(--qa-gold) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.2 2.2 4.8-4.8' fill='none' stroke='%23211505' stroke-width='1.8'/%3E%3C/svg%3E") center / 12px no-repeat; }
+main.pf6 .pf6-chip--tog:has(input:checked) { color: var(--qa-tx); }
+main.pf6 .pf6-sep { flex: none; width: 1px; height: 18px; background: var(--qa-rule-2); }
+main.pf6 .pf6-search { display: none; }
+main.pf6 .pf6-group { padding: 16px 0 4px; font-size: var(--qa-fs-micro); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--qa-tx-3); }
+main.pf6 .pf6-foot { padding: 12px 0 0; font-size: var(--qa-fs-small); color: var(--qa-tx-3); }
+main.pf6 .pf6-wait { display: flex; align-items: center; gap: 8px; padding: 18px 0; }
+
+/* ---------- rows: about 85 px on a phone; the whole row opens the token ---------- */
+main.pf6 .pf6-list { margin: 0 calc(var(--qa-pad) * -1); }
+main.pf6 .pf6-list > .qa-empty, main.pf6 .pf6-list > .pf6-group { padding-left: var(--qa-pad); padding-right: var(--qa-pad); }
+main.pf6 .pf6-cols { display: none; }
+main.pf6 .pf6-row { position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: "art name val" "art sub pnl" "art meta act" "art st st"; column-gap: 12px; row-gap: 1px; align-items: center; padding: 8px var(--qa-pad); box-shadow: 0 1px 0 var(--qa-rule-row); transition: background-color var(--qa-t-quick) var(--qa-ease); }
+main.pf6 .pf6-row:hover { background: var(--qa-wash); }
+main.pf6 .pf6-row.is-spam { opacity: .55; }
+main.pf6 .pf6-row.is-up .pf6-val { animation: mn-flash-up var(--qa-t-flash) var(--qa-ease) both; }
+main.pf6 .pf6-row.is-down .pf6-val { animation: mn-flash-down var(--qa-t-flash) var(--qa-ease) both; }
+main.pf6 .pf6-row > .qp-art { grid-area: art; align-self: start; margin-top: 2px; width: 40px; height: 40px; }
+main.pf6 .pf6-name { grid-area: name; display: flex; align-items: center; gap: 7px; min-width: 0; }
+main.pf6 .pf6-name .qp-open-token { min-width: 0; position: static; display: block; color: var(--qa-tx); text-decoration: none; }
+main.pf6 .pf6-name .qp-open-token b { display: block; font-size: 16px; font-weight: 780; letter-spacing: -.01em; line-height: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+main.pf6 .pf6-name .qp-open-token::after { content: ""; position: absolute; inset: 0; z-index: 1; cursor: pointer; }
+main.pf6 .pf6-name .qp-open-token:focus-visible { outline: none; }
+main.pf6 .pf6-name .qp-open-token:focus-visible::after { outline: 2px solid var(--qa-gold-hi); outline-offset: -2px; }
+main.pf6 .pf6-chain, main.pf6 .pf6-tag { flex: none; display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: 5px; font-size: 10.5px; font-weight: 700; color: var(--qa-tx-2); background: var(--qa-wash); white-space: nowrap; }
+main.pf6 .pf6-tag { color: var(--qa-warn); background: color-mix(in srgb, var(--qa-warn) 12%, transparent); max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+main.pf6 .pf6-sub { grid-area: sub; min-width: 0; font-size: 12.5px; line-height: 16px; color: var(--qa-tx-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+main.pf6 .pf6-sub b { font-weight: 650; color: var(--qa-tx-2); }
+main.pf6 .pf6-meta { grid-area: meta; min-width: 0; font-size: 11.5px; color: var(--qa-tx-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+main.pf6 .pf6-val { grid-area: val; text-align: right; font-size: 16px; font-weight: 780; color: var(--qa-tx); font-variant-numeric: tabular-nums; white-space: nowrap; }
+main.pf6 .pf6-val.qp-positive { color: var(--qa-buy); } main.pf6 .pf6-val.qp-negative { color: var(--qa-sell); }
+main.pf6 .pf6-pl { grid-area: pnl; text-align: right; font-size: 12.5px; line-height: 16px; font-weight: 720; color: var(--qa-tx-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+main.pf6 .pf6-pl.qp-positive { color: var(--qa-buy); } main.pf6 .pf6-pl.qp-negative { color: var(--qa-sell); }
+main.pf6 .pf6-pl.pf6-dim { font-weight: 620; color: var(--qa-tx-3); }
+main.pf6 .pf6-act { grid-area: act; position: relative; z-index: 2; display: flex; gap: 5px; justify-content: flex-end; margin-top: 2px; }
+.mn main.pf6 .pf6-act .qa-btn { height: 27px; min-height: 27px; padding: 0 10px; font-size: 12.5px; font-weight: 740; border-radius: 8px; }
+.mn main.pf6 .pf6-act .pf6-sell { color: var(--qa-sell); background: var(--qa-sell-wash); box-shadow: none; }
+.mn main.pf6 .pf6-act .pf6-sell--all { color: #fff; background: var(--qa-sell-btn); }
+.mn main.pf6 .pf6-act .pf6-claim { color: var(--qa-tx-on-gold); background: var(--qa-gold-metal); box-shadow: inset 0 1px 0 rgba(255,255,255,.55); }
+.mn main.pf6 .pf6-act .pf6-quiet { color: var(--qa-tx); background: var(--qa-wash-2); box-shadow: none; }
+main.pf6 .pf6-status { grid-area: st; margin: 0; font-size: 12px; color: var(--qa-tx-2); }
+main.pf6 .pf6-status:empty { display: none; }
+main.pf6 .pf6-lockbar { grid-area: meta; display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 11.5px; color: var(--qa-tx-3); white-space: nowrap; }
+main.pf6 .pf6-lockbar__bar { flex: 1; min-width: 40px; height: 4px; border-radius: 2px; background: var(--qa-wash-2); overflow: hidden; }
+main.pf6 .pf6-lockbar__bar i { display: block; height: 100%; width: 0; background: var(--qa-gold); }
+/* launch-module stakes reuse qx-earnings.mjs rows (their reads and Claim actions), restyled as one compact row */
+main.pf6 .pf6-module.qa-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 10px var(--qa-pad); min-height: 0; box-shadow: 0 1px 0 var(--qa-rule-row); }
+main.pf6 .pf6-module.qa-row::before { display: none; }
+main.pf6 .pf6-module b { font-size: 15px; font-weight: 760; }
+main.pf6 .pf6-module .qa-sub { display: block; font-size: 12px; color: var(--qa-tx-3); }
+main.pf6 .pf6-module > div:nth-child(2) { text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; }
+main.pf6 .pf6-module .qa-actions { grid-column: 1 / -1; display: flex; gap: 6px; justify-content: flex-end; }
+main.pf6 .pf6-module .qa-actions .qa-btn { height: 30px; padding: 0 11px; font-size: 12.5px; border-radius: 8px; }
+main.pf6 .pf6-module .qa-status:empty { display: none; }
+main.pf6 .mn-pf-earn { padding-top: 36px; }
+
+@media (min-width: 1100px) {
+  main.pf6 .pf6-hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); column-gap: 64px; align-items: end; padding-top: 26px; }
+  main.pf6 .pf6-hero__side { padding-left: 40px; box-shadow: -1px 0 0 var(--qa-rule); }
+  main.pf6 .pf6-stats dd { font-size: 22px; }
+  main.pf6 .pf6-tabs-wrap { margin-top: 40px; }
+  main.pf6 .pf6-tabs, main.pf6 .pf6-filters, main.pf6 .pf6-list { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+  main.pf6 .pf6-list > .qa-empty, main.pf6 .pf6-list > .pf6-group, main.pf6 .pf6-module.qa-row { padding-left: 0; padding-right: 0; }
+  main.pf6 select.pf6-chip--menu { display: none; }
+  main.pf6 .pf6-chip--chain { display: inline-flex; }
+  main.pf6 .pf6-search { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: 0 1 260px; height: 32px; color: var(--qa-tx-3); box-shadow: 0 1px 0 var(--qa-rule-2); }
+  main.pf6 .pf6-search input { width: 100%; min-width: 0; height: 30px; background: none; border: 0; box-shadow: none; font-size: 14px; color: var(--qa-tx); }
+  main.pf6 .pf6-search:focus-within { box-shadow: 0 2px 0 var(--qa-gold); }
+  main.pf6 .pf6-cols, main.pf6 .pf6-row { grid-template-columns: 40px minmax(200px, 1.6fr) minmax(150px, 1fr) minmax(110px, .8fr) minmax(170px, 1fr) 200px; grid-template-areas: none; column-gap: 20px; }
+  main.pf6 .pf6-cols { display: grid; padding: 12px 0; font-size: var(--qa-fs-small); font-weight: 650; color: var(--qa-tx-3); box-shadow: 0 1px 0 var(--qa-rule); }
+  main.pf6 .pf6-cols span:first-child { grid-column: span 2; }
+  main.pf6 .pf6-cols span:nth-child(n+2) { text-align: right; }
+  main.pf6 .pf6-row { grid-template-rows: auto auto; padding: 12px 0; row-gap: 2px; }
+  main.pf6 .pf6-row > * { grid-area: auto; }
+  main.pf6 .pf6-row > .qp-art { grid-row: 1 / span 2; grid-column: 1; align-self: center; margin: 0; }
+  main.pf6 .pf6-name { grid-row: 1; grid-column: 2; }
+  main.pf6 .pf6-sub { grid-row: 2; grid-column: 2; }
+  main.pf6 .pf6-meta, main.pf6 .pf6-lockbar { grid-row: 1 / span 2; grid-column: 3; text-align: right; justify-content: flex-end; font-size: 14px; color: var(--qa-tx-2); }
+  main.pf6 .pf6-val { grid-row: 1 / span 2; grid-column: 4; font-size: 15px; }
+  main.pf6 .pf6-pl { grid-row: 1 / span 2; grid-column: 5; font-size: 14.5px; }
+  main.pf6 .pf6-act { grid-row: 1 / span 2; grid-column: 6; margin: 0; }
+  main.pf6 .pf6-status { grid-row: 3; grid-column: 2 / -1; text-align: right; }
+  .mn main.pf6 .pf6-act .qa-btn { height: 32px; min-height: 32px; }
+  main.pf6 .pf6-module.qa-row { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto; }
+  main.pf6 .pf6-module .qa-actions { grid-column: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  main.pf6 *, main.pf6 *::before, main.pf6 *::after { animation: none !important; transition: none !important; }
+}
+
+/* Keep the full fee-pool label readable on narrow screens. */
+@media (max-width:600px){main.pf6 .pf6-stats dt{white-space:normal;line-height:1.3;min-height:2.6em}}
+
+.pf6-mobile-chain{display:none}
+/* Phone holdings: price and average keep the row width; actions get their own line. */
+@media(max-width:430px){
+ main.pf6 .pf6-row{grid-template-columns:32px minmax(0,1fr) auto;grid-template-areas:"art name val" "art sub pnl" "art meta meta" "act act act" "st st st";column-gap:8px;row-gap:4px;padding-top:12px;padding-bottom:12px}
+ main.pf6 .pf6-row>.qp-art{width:32px;height:32px}
+ main.pf6 .pf6-name .pf6-chain{display:none}
+ main.pf6 .pf6-name .qp-open-token{flex:none;min-width:max-content}
+ main.pf6 .pf6-name .qp-open-token b{overflow:visible;text-overflow:clip;font-size:15px;font-stretch:100%}
+ main.pf6 .pf6-row .pf6-sub{overflow:visible;text-overflow:clip;font-size:11.5px}
+ main.pf6 .pf6-pl{font-size:11px}
+ main.pf6 .pf6-val{font-size:15px}
+ main.pf6 .pf6-meta{overflow:visible;text-overflow:clip;font-size:11.5px;line-height:18px}
+ main.pf6 .pf6-mobile-chain{display:inline;font-size:10px}
+ main.pf6 .pf6-act{justify-content:stretch;width:100%;gap:8px;margin-top:4px}
+ .mn main.pf6 .pf6-act .qa-btn{flex:1;height:36px;min-height:36px;font-size:13px}
+ main.pf6 .pf6-filters{flex-wrap:wrap;overflow:visible;gap:8px}
+ main.pf6 .pf6-search{display:none}
+ main.pf6 .pf6-chip{font-size:12px;padding:0 9px}
+}
+
+@media(max-width:430px){
+ main.pf6 .pf6-row .pf6-sub{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px;white-space:normal}
+ main.pf6 .pf6-avg{white-space:nowrap}
+ main.pf6 #qp-more{max-width:100%;height:auto;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.4}
+ main.pf6 .pf6-status{flex-wrap:wrap}
+}
+
+/* Dense holdings: one identity/value line, one basis/actions line. */
+main.pf6 .pf6-row.pf-holding,main.pf6 .pf-eth-summary{display:grid;grid-template-columns:28px minmax(0,1fr) auto;grid-template-areas:"art identity value" "basis basis actions";grid-template-rows:28px 28px;gap:2px 8px;align-items:center;min-height:70px;padding:6px var(--qa-pad);box-sizing:border-box;position:relative;color:var(--qa-tx);box-shadow:0 1px 0 var(--qa-rule-row)}
+main.pf6 .pf-holding>.qp-art{grid-area:art;width:28px;height:28px;margin:0;align-self:center}
+.pf-holding__name{grid-area:identity;display:flex;align-items:baseline;gap:7px;min-width:0;white-space:nowrap;font-size:11px;color:var(--qa-tx-3);font-variant-numeric:tabular-nums}
+.pf-holding__name a{color:var(--qa-tx);text-decoration:none;flex:none}.pf-holding__name b{font-size:14px;font-weight:780;letter-spacing:-.02em}.pf-holding__name>span{overflow:hidden;text-overflow:ellipsis}
+.pf-holding__value{grid-area:value;display:flex;flex-direction:column;text-align:right;white-space:nowrap;font-size:14px;font-weight:750;line-height:15px;font-variant-numeric:tabular-nums}.pf-holding__value small{font-size:11px;font-weight:650}.pf-holding__refreshing{font-size:11px;color:var(--qa-tx-3)}
+.pf-holding__basis{grid-area:basis;display:flex;align-items:center;gap:6px;font-size:11px;min-width:0;color:var(--qa-tx-3);white-space:nowrap}.pf-holding__basis>span{overflow:hidden;text-overflow:ellipsis}.pf-holding__details{min-width:0}.pf-holding__details summary{cursor:pointer;font-size:11px;color:var(--qa-tx-3);list-style:none}.pf-holding__details summary::after{content:' ⌄'}.pf-holding__details[open]{position:relative;z-index:4}.pf-holding__details p{position:absolute;left:0;top:100%;min-width:180px;max-width:250px;margin:4px 0 0;padding:12px;background:var(--qa-bg,#111);border:1px solid var(--qa-rule-2);border-radius:8px;white-space:normal;box-shadow:0 8px 24px #0008}
+.pf-holding__actions{grid-area:actions;display:flex;gap:3px;align-items:center;position:relative;z-index:2;justify-content:flex-end;font-size:11px}.pf-holding__actions .pf-holding__sell{width:34px;height:28px;padding:0;font:700 11px inherit;border:1px solid var(--qa-rule-2);border-radius:6px;color:var(--qa-sell);background:var(--qa-sell-wash)}.pf-holding__actions .pf-holding__sell:hover{background:var(--qa-wash-2)}.pf-holding__trade{color:var(--qa-gold-hi);padding:6px}
+.pf-holding button:focus-visible,.pf-holding a:focus-visible,.pf-eth-group summary:focus-visible{outline:2px solid var(--qa-gold-hi);outline-offset:2px}
+.pf-eth-group summary{list-style:none;cursor:pointer}.pf-eth-group summary::-webkit-details-marker{display:none}.pf-eth-children{border-left:2px solid var(--qa-rule-2);margin-left:15px}.pf-eth-children .pf-holding{padding-left:12px!important}
+.pf-row-sale{grid-column:1/-1;grid-row:3;position:relative;z-index:5;padding:10px;background:var(--qa-wash);border:1px solid var(--qa-rule-2);border-radius:8px;min-width:0}.pf-row-sale[hidden]{display:none}.pf-row-sale p{margin:0 0 5px;font-size:12px;line-height:1.45}.pf-row-sale__preview{color:var(--qa-tx-3);overflow-wrap:anywhere}.pf-row-sale__actions{display:flex;gap:8px}.pf-row-sale__actions .qa-btn{min-height:36px;height:36px;font-size:12px}.pf-row-sale__engine> :not(.qxt-risk){display:none!important}.pf-row-sale__engine .qxt-risk{font-size:12px}.pf-row-sale__engine .qxt-risk[hidden]{display:none!important}.pf-row-sale__engine .qxt-risk label{display:flex;align-items:center;gap:8px}.pf-row-sale[data-phase="sold"]>p:first-child{color:var(--qa-buy)}
+main.pf6 .pf6-cols{display:none}
+@media(min-width:1100px){main.pf6 .pf6-row.pf-holding,main.pf6 .pf-eth-summary{grid-template-columns:32px minmax(0,1fr) 190px;min-height:70px;padding-left:8px;padding-right:8px}.pf-holding__name b{font-size:15px}.pf-holding__name{font-size:12px}.pf-holding__basis{font-size:12px}.pf-holding__details summary{font-size:12px}.pf-holding__value{font-size:15px}}
+@media(max-width:360px){main.pf6 .pf6-row.pf-holding,main.pf6 .pf-eth-summary{column-gap:6px}.pf-holding__name{gap:4px}.pf-holding__name b{font-size:13px}.pf-holding__value{font-size:13px}.pf-holding__value small{font-size:11px}.pf-holding__basis{gap:4px}.pf-holding__actions .pf-holding__sell{width:30px}}
+.pf-holding__details[open]{position:static}.pf-holding__details p{left:8px;right:8px;min-width:0;max-width:none}
+/* The summary leads into positions without repeating the total or a period switch. */
+main.pf6 .pf6-who{margin:8px 0}main.pf6 .pf6-hero{padding-top:8px}main.pf6 .pf6-total{font-size:42px;margin:6px 0;line-height:1}main.pf6 .pf6-split{margin-top:10px}main.pf6 .pf6-pnl{margin-top:12px}main.pf6 .pf6-stats{margin-top:10px}main.pf6 .pf6-tabs-wrap{margin-top:16px}main.pf6 #qp-wallets{font-size:11px;margin:4px 0}main.pf6 .pf6-seg[hidden]{display:none}main.pf6 .pf6-stats dt{font-size:11px}
+@media(min-width:1100px){main.pf6 .pf6-total{font-size:52px}main.pf6 .pf6-hero{column-gap:40px}}
+.pf-eth-summary::before,.pf-eth-summary::after{display:none!important}
+main.pf6 .pf6-who{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0}main.pf6 .pf6-who .qp-art{display:none}main.pf6 .pf6-who .qp-address{display:flex;align-items:center;gap:4px;font-size:11px;min-width:0}main.pf6 .pf6-who .qa-btn{height:28px;min-height:28px;font-size:11px;padding:0 5px}main.pf6 .pf6-who .qp-addr{font-size:11px;min-width:0}
+.pf-wallet-options{position:relative;font-size:11px;flex:none}.pf-wallet-options>summary{cursor:pointer}.pf-wallet-options[open]>#qp-wallets{position:absolute;z-index:10;right:0;top:100%;width:240px;padding:12px;background:var(--qa-bg);border:1px solid var(--qa-rule-2);border-radius:8px}.pf-chain-split>summary{font-size:11px;color:var(--qa-tx-3);cursor:pointer;padding:4px 0}.pf-chain-split[open]{padding-bottom:6px}
+@media(max-width:1099px){main.pf6 .pf6-hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}main.pf6 .pf6-total{font-size:30px}main.pf6 .pf6-pnl{margin-top:0}main.pf6 .pf6-pnl__v{font-size:20px}main.pf6 .pf6-pnl__n{white-space:normal;font-size:11px}main.pf6 .pf6-stats{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:8px}main.pf6 .pf6-stats div{padding:6px 0}main.pf6 .pf6-stats div+div{padding-left:7px}main.pf6 .pf6-stats dd{font-size:14px}main.pf6 .pf6-stats dt{font-size:11px;white-space:normal}main.pf6 .pf6-status{flex-wrap:wrap;white-space:normal;font-size:11px;gap:4px}main.pf6 .pf6-status .qa-btn--quiet{font-size:11px}main.pf6 .pf6-tabs-wrap{margin-top:12px}}
+/* Override the older desktop auto-placement for the shared compact row. */
+main.pf6 .pf-holding>.pf-holding__name{grid-area:identity}main.pf6 .pf-holding>.pf-holding__value{grid-area:value}main.pf6 .pf-holding>.pf-holding__basis{grid-area:basis}main.pf6 .pf-holding>.pf-holding__actions{grid-area:actions}main.pf6 .pf-holding>.pf-row-sale{grid-column:1/-1;grid-row:3}

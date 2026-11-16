@@ -76,7 +76,7 @@ function mergeCallers(a=[],b=[]){const m=new Map(a.map(c=>[c.wallet,c]));for(con
 // New calls drop in at the top with a gold flash; a toast says who called what.
 async function poll(){
   if(!body)return;
-  const next=await read();if(!next||next.latestCursor===body.latestCursor)return;
+  const next=await read();if(!next)return;const updates=new Map();for(const c of next.calls||[])if(cards.get(c.id)?.updateRecord?.(c))updates.set(c.id,c);if(updates.size)body.calls=body.calls.map(c=>updates.get(c.id)||c);if(next.latestCursor===body.latestCursor)return;
   const known=new Set(body.calls.map(c=>c.id)),add=next.calls.filter(c=>!known.has(c.id));
   body={...next,calls:[...add,...body.calls].slice(0,80),callers:mergeCallers(next.callers,body.callers)};
   if(feed.querySelector('.qa-state'))feed.replaceChildren();

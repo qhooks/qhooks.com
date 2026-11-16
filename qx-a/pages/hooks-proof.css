@@ -149,3 +149,14 @@
 
 /* the shell already carries the gold Connect; the in-page one is secondary */
 .qa .pf .qvf-btn[data-qa-connect] { color: var(--qa-tx); background: var(--qa-wash-2); box-shadow: none; }
+
+/* Non-QHooks positions fold into one row that opens on tap (audit #14). */
+.lpp-others > summary { list-style: none; cursor: pointer; display: block; }
+.lpp-others > summary::-webkit-details-marker { display: none; }
+.lpp-ohead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto 10px; align-items: center; gap: 12px; font-size: 14.5px; }
+.lpp-ohead::after { content: ""; width: 8px; height: 8px; border-right: 1.8px solid var(--qa-tx-2); border-bottom: 1.8px solid var(--qa-tx-2); transform: rotate(45deg) translateY(-3px); }
+.lpp-others[open] .lpp-ohead::after { transform: rotate(-135deg) translateY(-1px); }
+.lpp-others > summary .lpp-sub { display: block; }
+.lpp-others > summary:hover .lpp-ohead strong:first-child { color: var(--qa-gold-hi); }
+.lpp-others-list { margin-top: 8px; padding-left: 14px; box-shadow: inset 1px 0 0 var(--qa-rule); }
+.lpp-others-list .lpp-holder:last-child { box-shadow: none; }

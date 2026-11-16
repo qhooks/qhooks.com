@@ -1,1 +1,13 @@
 @import url("./setup-base.css");
+
+.setup .qff-progress{display:grid;gap:10px;margin:20px 0;padding:18px;border:1px solid var(--qa-rule);border-radius:16px;background:var(--qa-wash)}
+.setup .qff-exact{color:var(--qa-tx);font-size:19px;font-weight:750}.setup .qff-hash{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;user-select:all;font-family:monospace;font-size:12px;line-height:1.6}
+.setup .qff-progress ol{display:grid;gap:8px;margin:0;padding-left:22px}.setup .qff-progress [data-approved="true"]{color:var(--qa-gold-hi)}.setup .qff-checked,.setup .qff-help{font-size:13px}
+.setup .qff-amount{display:grid;gap:8px;margin:20px 0}.setup .qff-amount input{width:min(100%,260px);min-height:48px;font-size:20px}
+.setup .qff-controls{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 12px}.setup .qff-controls button{min-height:48px}.setup .qff-share{display:grid;gap:10px;margin:18px 0}.setup .qff-link{width:100%;min-width:0;font-size:12px}.setup .qff-changed,.setup .qff-error{color:var(--qa-gold-hi);padding:12px 0}
+@media(max-width:600px){.setup .qff-controls{display:grid}.setup .qff-controls button{width:100%}.setup .qff-progress{padding:14px}}
+
+.setup #qff-weth{scroll-margin-top:90px}
+
+.setup .qff-amount-editor,.setup .qff-funding-facts{margin:20px 0;padding:12px 0;border-top:1px solid var(--qa-rule)}
+.setup .qff-amount-editor summary,.setup .qff-funding-facts summary{min-height:44px;cursor:pointer;display:list-item}

@@ -12,18 +12,22 @@ export function lifecycle(row){
  const bonding=!migrated&&(value.stage==='bonding'||value.completed===false)&&progress!==null&&progress>=0&&progress<1;
  return {stage:migrated?'migrated':bonding?'bonding':value.completed===true||value.stage==='completed'?'completed':'unknown',progress:progress!==null&&progress>=0&&progress<=1?progress:null,destination,venue:typeof value.venue==='string'?value.venue:null};
 }
+const createdMillis=row=>{const v=row.createdAt,at=typeof v==='number'?v:Date.parse(v);return Number.isFinite(at)?at<1e12?at*1000:at:0;};
 export function changeAt(row,window){return finite(row.change?.[window]);}
 export function validateDiscoveryFilters(raw={}){
  const out={};
- for(const key of ['liquidityMin','capMin','capMax','volumeMin','transactionsMin','ageMaxHours']){
+ for(const key of ['liquidityMin','liquidityMax','capMin','capMax','volumeMin','transactionsMin','ageMinHours','ageMaxHours','devMaxPct','top10MaxPct']){
   const text=String(raw[key]??'').trim();if(!text){out[key]='';continue;}
   if(!/^\d{1,15}(?:\.\d{1,8})?$/.test(text)||!Number.isFinite(Number(text)))throw Error('Use positive numbers in market filters.');
   out[key]=text;
  }
  if(out.capMin&&out.capMax&&Number(out.capMin)>Number(out.capMax))throw Error('Minimum market cap exceeds maximum.');
+ for(const [a,b,label] of [['liquidityMin','liquidityMax','liquidity'],['ageMinHours','ageMaxHours','age']])if(out[a]&&out[b]&&Number(out[a])>Number(out[b]))throw Error('Minimum '+label+' exceeds maximum.');
+ for(const k of ['devMaxPct','top10MaxPct'])if(out[k]&&Number(out[k])>100)throw Error('Holder percentages must be between 0 and 100.');
+ for(const k of ['sameBlock','sharedFunding','hasSocials']){const value=String(raw[k]||'');if(!['','yes'].includes(value))throw Error('Choose a supported signal filter.');out[k]=value;}
  out.venue=String(raw.venue||'').trim().slice(0,60);return out;
 }
-export function filterDiscovery(rows,{tab='trending',window='h24',filters={},now=Date.now()}={}){
+export function filterDiscovery(rows,{tab='trending',window='h24',filters={},now=Date.now(),factsOf=row=>row.discoveryFacts||{}}={}){
  const f=validateDiscoveryFilters(filters),lower=(v,key)=>!f[key]||(finite(v)!==null&&v>=Number(f[key]));
  let result=rows.filter(row=>{
   const stage=lifecycle(row);if(tab==='bonding'&&!(stage.stage==='bonding'&&stage.progress>=.8))return false;
@@ -32,18 +36,22 @@ export function filterDiscovery(rows,{tab='trending',window='h24',filters={},now
   const cap=finite(row.marketCapUsd)>0?row.marketCapUsd:row.fdvUsd;
   const tx=row.txns?.h24,transactions=finite(tx?.buys)!==null&&finite(tx?.sells)!==null?tx.buys+tx.sells:null;
   if(!lower(row.liquidityUsd,'liquidityMin')||!lower(cap,'capMin')||!lower(row.volumeUsd?.h24,'volumeMin')||!lower(transactions,'transactionsMin'))return false;
+  const facts={hasSocials:typeof row.hasSocials==='boolean'?row.hasSocials:null,...(factsOf(row)||{})};for(const [filter,key] of [['devMaxPct','devPct'],['top10MaxPct','top10Pct']])if(f[filter]&&(finite(facts[key])===null||facts[key]>Number(f[filter])))return false;
+  for(const key of ['sameBlock','sharedFunding','hasSocials'])if(f[key]&&facts[key]!==true)return false;
+  if(f.liquidityMax&&(finite(row.liquidityUsd)===null||row.liquidityUsd>Number(f.liquidityMax)))return false;
+  if(f.ageMinHours){const at=typeof row.createdAt==='number'?(row.createdAt<1e12?row.createdAt*1000:row.createdAt):Date.parse(row.createdAt);if(!Number.isFinite(at)||at>now||now-at<Number(f.ageMinHours)*3600000)return false;}
   if(f.capMax&&(finite(cap)===null||cap>Number(f.capMax)))return false;
   if(f.ageMaxHours){const at=typeof row.createdAt==='number'?(row.createdAt<1e12?row.createdAt*1000:row.createdAt):Date.parse(row.createdAt);if(!Number.isFinite(at)||at>now||now-at>Number(f.ageMaxHours)*3600000)return false;}
   return !f.venue||String(row.dex||'').toLowerCase().includes(f.venue.toLowerCase());
  });
  if(tab==='gainers'||tab==='losers')result.sort((a,b)=>(changeAt(a,window)-changeAt(b,window))*(tab==='gainers'?-1:1));
  else if(tab==='bonding')result.sort((a,b)=>lifecycle(b).progress-lifecycle(a).progress);
- else if(tab==='new')result.sort((a,b)=>(Date.parse(b.createdAt)||Number(b.createdAt)||0)-(Date.parse(a.createdAt)||Number(a.createdAt)||0));
+ else if(tab==='new')result.sort((a,b)=>createdMillis(b)-createdMillis(a));
  return result;
 }
 const VIEW_KEY='qhooks:terminal:market-views:v1';
 export function createMarketViews(storage){
  const read=()=>{try{const v=JSON.parse(storage?.getItem(VIEW_KEY)||'[]');return Array.isArray(v)?v.slice(0,12).filter(x=>x&&typeof x.name==='string'&&x.name.length<=32&&DISCOVERY_TABS.some(([k])=>k===x.tab)&&WINDOWS.some(([k])=>k===x.window)).map(x=>({...x,filters:validateDiscoveryFilters(x.filters)})):[];}catch{return [];}};
  const write=rows=>{if(!storage?.setItem)throw Error('This device cannot save views.');storage.setItem(VIEW_KEY,JSON.stringify(rows));return rows;};
- return {list:read,save(raw){const name=String(raw.name||'').trim();if(!name||name.length>32)throw Error('Name this view with 1–32 characters.');if(!DISCOVERY_TABS.some(([k])=>k===raw.tab)||!WINDOWS.some(([k])=>k===raw.window))throw Error('Choose a market view and time window.');const row={name,tab:raw.tab,window:raw.window,chain:String(raw.chain),filters:validateDiscoveryFilters(raw.filters)},rows=read(),i=rows.findIndex(x=>x.name.toLowerCase()===name.toLowerCase());if(i<0){if(rows.length>=12)throw Error('Keep at most twelve market views.');rows.push(row);}else rows[i]=row;return write(rows);},remove(name){return write(read().filter(x=>x.name!==name));}};
+ return {list:read,save(raw){const name=String(raw.name||'').trim();if(!name||name.length>32)throw Error('Name this view with 1–32 characters.');if(!DISCOVERY_TABS.some(([k])=>k===raw.tab)||!WINDOWS.some(([k])=>k===raw.window))throw Error('Choose a market view and time window.');const row={name,tab:raw.tab,window:raw.window,chain:String(raw.chain),filters:validateDiscoveryFilters(raw.filters),layout:raw.layout==='pulse'?'pulse':'list',stage:['new','bonding','migrated'].includes(raw.stage)?raw.stage:'new'},rows=read(),i=rows.findIndex(x=>x.name.toLowerCase()===name.toLowerCase());if(i<0){if(rows.length>=12)throw Error('Keep at most twelve market views.');rows.push(row);}else rows[i]=row;return write(rows);},remove(name){return write(read().filter(x=>x.name!==name));}};
 }

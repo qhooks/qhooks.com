@@ -1,3 +1,4 @@
+import {portraitWordScale,projectedWordFit} from './word-fit.mjs';
 // QHooks landing scene (2026-11-12): one fixed WebGL canvas behind the home page, driven by scroll progress P in [0, 6):
 //   0 hero · 1 builders · 2 callers · 3 holders · 4 traders · 5 close.
 // The look is the commercial's (work/qhooks-film-20261112/film.js): the same room environment, lights, brushed steel and
@@ -447,7 +448,7 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
       const tu = ch === 'traders' ? u : 0, leave = 0;
       const slot = .075, k = clamp(Math.floor((tu - .04) / slot), 0, CHAIN_NAMES.length - 1), at = .04 + k * slot, slam = easeOutQuint(span(tu, at, at + .05)), gone = ch === 'traders' ? easeInOut(span(u, .64, .72)) : 0;
       if (k !== nameIdx) { nameIdx = k; nameG.userData.setText(forcedWord || CHAIN_NAMES[k], '#F4F1E9', 0x3a3a38); flashV = Math.max(flashV, .08); zoomV = Math.max(zoomV, .03); }
-      const sc = PORT ? Math.min(.48, bandH ? bandH / 2.9 : .48) : (fig ? fig.scWord : .56), nx = PORT ? .72 : (fig ? fig.x : 1.55), ny = PORT ? (bandY != null ? bandY - .15 * sc : 1.3) : (fig ? fig.y : .5);
+      const sc = PORT ? portraitWordScale({width:W,height:H,cameraZ:cam.z,maxScale:Math.min(.48,bandH?bandH/2.9:.48)}) : (fig ? fig.scWord : .56), nx = PORT ? .72 : (fig ? fig.x : 1.55), ny = PORT ? (bandY != null ? bandY - .15 * sc : 1.3) : (fig ? fig.y : .5);
       nameG.position.set(nx, ny, lerp(-.8, .3, slam) - leave * 3); nameG.scale.setScalar(sc * lerp(1.3, 1, slam)); nameG.userData.setOpacity(slam * (1 - leave) * (1 - gone) * (tu > .02 ? 1 : 0)); nameG.position.y += gone * .6;
       nameG.rotation.set(-.06 + pointer.y * .04, PORT ? 0 : -.18 + pointer.x * .06, 0);
     } else nameIdx = -1;
@@ -463,6 +464,15 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     camera.position.set(cam.x + pointer.x * .12, cam.y + .04 * Math.sin(t * .3) - pointer.y * .08, cam.z);
     camera.lookAt(cam.x * .55, PORT ? .15 : cam.y * .6, 0);
     camera.fov = PORT ? 50 : 34; camera.updateProjectionMatrix();
+    if(nameG.visible){
+      camera.updateMatrixWorld();nameG.updateWorldMatrix(true,false);
+      let left=Infinity,right=-Infinity;
+      for(const x of [-2.9,2.9])for(const y of [-.68,.68])for(const z of [-.12,.12]){
+        const point=new THREE.Vector3(x,y,z).applyMatrix4(nameG.matrixWorld).project(camera),px=(point.x+1)/2*W;
+        left=Math.min(left,px);right=Math.max(right,px);
+      }
+      nameG.scale.multiplyScalar(projectedWordFit({left,right,width:W}));
+    }
     composer.render();
     raf = requestAnimationFrame(frame);
   }

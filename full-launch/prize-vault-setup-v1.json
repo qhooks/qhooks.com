@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "kind": "qhooks-prize-vault-setup",
+  "set": "prize-vault",
+  "chains": {
+    "4663": {
+      "steps": [
+        {
+          "id": "prize-vault",
+          "name": "QHOOKS prize vault",
+          "short": "Prize vault",
+          "address": "0x45e48e59bed7caade5ddc611cb0f980352dc1391",
+          "runtimeSha256": "fff5d3f71bb767db8c8cfdbca575da92bda59d511120f060c4b46e814924bcb8"
+        }
+      ]
+    }
+  }
+}

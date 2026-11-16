@@ -317,3 +317,7 @@ a.cx-who__link { display: inline-flex; align-items: center; gap: 3px; min-height
 a.cx-who__link:hover, a.cx-who__link:focus-visible { text-decoration-color: var(--qa-gold); color: var(--qa-gold-hi); }
 .cx-who__chev { font-weight: 700; font-size: 1.15em; line-height: 1; color: var(--qa-gold); transform: translateY(-1px); }
 a.cx-face { min-width: 44px; min-height: 44px; display: grid; place-items: start center; flex: none; align-self: start; border-radius: 50%; }
+
+/* Keep both actions and the Lab link distinct at the final invitation. */
+.hm-close .hm-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.hm-close > .qa-link { display: inline-flex; margin-top: 18px; }

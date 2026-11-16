@@ -152,7 +152,7 @@ export function planDesign({text, chainId = null, proposal = null, source = 'mod
 /// The Create link. Same shape as the agent API's prepare_launch link (qx-launch-prefill launchLink); the person adds
 /// name, ticker and image in Create, reviews and signs there.
 export function designLink(chain, ideaId, start, {name, ticker} = {}) {
- if (chain !== 'solana' && ideaId !== 'sale-first' && name && ticker) {
+ if (ideaId !== 'sale-first' && name && ticker) {
   const full = new URL(launchLink({name, ticker, chain, style: ideaId}));
   if (start && start !== 'standard') full.searchParams.set('start', start);
   return full.pathname + full.search + full.hash;

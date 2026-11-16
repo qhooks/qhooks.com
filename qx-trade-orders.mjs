@@ -1,3 +1,4 @@
+import {orderErrorText} from './qx-order-errors.mjs';
 // Trade page: limit orders on the selected pool through the chain's ownerless QLimitOrders contract.
 // A buy order escrows quote and fills when the token price falls to the target; a sell order escrows
 // tokens and fills when it rises to it. Anyone can fill a ready order and earn its tip, so the page
@@ -79,7 +80,7 @@ async function act(btn, status, fn) {
     await render();
     const fresh = card.querySelector('.qtx-status'); if (fresh) fresh.textContent = /…$/.test(last) ? 'Done.' : last || 'Done.';
     if (typeof followup === 'function') followup(fresh);
-  } catch (e) { status.textContent = e.message || 'That did not go through'; btn.disabled = false; }
+  } catch (e) { status.textContent = orderErrorText(e); btn.disabled = false; }
   finally { acting = false; if (pendingPool) { const pool = pendingPool; pendingPool = null; void show(pool); } }
 }
 const chainNow = async () => BigInt((await rpc(state.chainId, 'eth_getBlockByNumber', ['latest', false])).timestamp);
@@ -126,14 +127,15 @@ async function render() {
       if (balance >= amt) { place.disabled = false; return; }
       await funding.update({ owner: me, chainId, asset: fundingAsset(chainId, { address: state.quoteToken, decimals: state.qdec }),
         amountNeeded: amt, balance, review: () => review(amt) });
-    } catch (e) { if (mine === revision) status.textContent = e.message; }
+    } catch (e) { if (mine === revision) status.textContent = orderErrorText(e); }
   }
   for (const input of [side, amount, price, expiry, tip]) input.addEventListener('input', () => {
     if (localBusy) return; revision++; disarm(); recovery = null; followup.replaceChildren(); funding.clear(); place.disabled = true;
     clearTimeout(fundingTimer); fundingTimer = setTimeout(refreshFunding, 300);
   });
   side.addEventListener('change', () => { void refreshFunding(); });
-  async function placePress() {
+  async function placePress(){try{return await placePressRequest();}catch(error){status.textContent=orderErrorText(error);}}
+  async function placePressRequest() {
     if (localBusy || acting || selectedState !== state || !me) return;
     if (connectedAddress()?.toLowerCase() !== me.toLowerCase()) { status.textContent = 'Reconnect the wallet that reviewed this order.'; return; }
     if (!recovery && (place.disabled || funding.required && !funding.quote)) return;
@@ -178,9 +180,9 @@ async function render() {
           } finally { wallet.dispose(); }
         } else { await setup(); await placeArrived(amt); }
       });
-      if (recovery) followup.replaceChildren(recoveryView(h, recovery, placePress));
+      if (recovery) { if(recovery.error)s(orderErrorText(recovery.error)); followup.replaceChildren(recoveryView(h, recovery, placePress)); }
       else { await render(); const fresh = card.querySelector('.qtx-status'); if (fresh) fresh.textContent = 'Order placed.'; }
-    } catch (e) { s(e.message || 'That did not go through'); }
+    } catch (e) { s(orderErrorText(e)); }
     finally {
       localBusy = false; acting = false; funding.setBusy(false);
       for (const el of [side, amount, price, expiry, tip, place, ...followup.querySelectorAll('button')]) el.disabled = false;
@@ -209,11 +211,11 @@ async function render() {
         await cancelWithRefund({ owner: o.maker, chainId, asset, origin: o.maker === me ? orderOrigin(me, chainId, o.id) : null,
           cancel: () => send(chainId, { to: state.address, data: calldata(SEL.cancel, ['uint256'], [o.id]) }, s), offer: value => { refund = value; } });
         return fresh => { if (refund && fresh) { const back = h('button', { type: 'button', class: 'qtx-mini' }, 'Move back to ' + chainName(refund.origin.chainId));
-          back.addEventListener('click', () => { if (!acting) void offerMoveBack(refund).catch(e => { fresh.textContent = e.message; }); }); fresh.append(back); } };
+          back.addEventListener('click', () => { if (!acting) void offerMoveBack(refund).catch(e => { fresh.textContent = orderErrorText(e); }); }); fresh.append(back); } };
       })); actions.push(b); }
       if (xchainEnabled && o.maker === me && d.side === 'Sell' && o.receivedOut > 0n) {
         const proceeds = h('button', { type: 'button', class: 'qtx-mini' }, 'Move proceeds to cash');
-        proceeds.addEventListener('click', () => { if (!acting) void moveProceeds({ chainId, asset: { address: state.quoteToken, decimals: state.qdec, symbol: qsym }, amount: o.receivedOut }).catch(e => { status.textContent = e.message; }); }); actions.push(proceeds);
+        proceeds.addEventListener('click', () => { if (!acting) void moveProceeds({ chainId, asset: { address: state.quoteToken, decimals: state.qdec, symbol: qsym }, amount: o.receivedOut }).catch(e => { status.textContent = orderErrorText(e); }); }); actions.push(proceeds);
       }
       return h('li', {}, h('span', { class: 'qtx-side ' + d.side.toLowerCase() }, d.side), h('span', {}, d.amount), h('span', {}, 'at ' + d.price), h('span', { class: 'qtx-state' }, o.remaining === 0n ? 'filled' : o.expired ? 'expired' : o.ready ? 'ready' : o.key.hooks !== state.key.hooks ? 'old pool' : 'waiting'), h('span', { class: 'qtx-actions' }, ...actions));
     });

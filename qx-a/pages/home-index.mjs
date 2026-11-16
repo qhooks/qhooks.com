@@ -1,3 +1,5 @@
+import{homeTradeLink}from'/qx-home-trade-link.mjs';
+import{assetPriceFields,priceObservation}from'/qx-price-state.mjs';
 // QHooks System A: the home page runtime (2026-11-12, the scroll-driven 3D landing). One fixed WebGL stage behind the
 // page (qx-a/landing/scene.mjs, three self-hosted, the commercial's hook model) and six pinned chapters that scroll over
 // it: the brand line, then Builders, Callers, Holders, Traders, each with one hero object and its live data, then
@@ -38,12 +40,12 @@ const logoOf = (u) => { if (typeof u !== 'string' || !u) return null; if (u.star
 setArt({ banner: '/qx-a/img/qhooks-banner.jpg', blur: '/qx-a/img/qhooks-banner-blur.jpg' });
 const trigger = document.getElementById('qhc-trigger');
 if (trigger) trigger.classList.add('qa-btn', 'qa-btn--secondary', 'qa-wallet__btn');
-const shell = mountShell({ ribbon: true, wallet: trigger || undefined, logo: QLOGO, overArt: true });
+const shell = mountShell({ ribbon: false, wallet: trigger || undefined, logo: QLOGO, overArt: true });
 addEventListener('qa:wallet', () => trigger?.click());
 { // one footer: the site directory and the legal line move into the shell footer
   const foot = shell.footer, base = foot?.querySelector('.qa-foot__base');
   const dir = $('[data-a-dir]'), legal = $('[data-a-legal]');
-  if (foot && base) { if (dir) foot.insertBefore(dir, base); if (legal) base.after(legal); }
+  if (foot && base) { if (dir) foot.insertBefore(h('details',{class:'hm-directory'},h('summary',{},'Explore QHooks'),dir),base); if (legal) base.after(legal); }
 }
 const ribbon = shell.ribbon;
 fillChainCount();
@@ -76,7 +78,7 @@ function measure() {
   // the stage fades as the close chapter ends; the floor takes over
   const o = clamp(1 - (y - (endY - vh * 1.05)) / (vh * .45));
   stageEl?.style.setProperty('--l3-stage-o', o.toFixed(3));
-  const want = o > 0 && !document.hidden;
+  const want = o > 0 && !document.hidden && (stageEl?.getBoundingClientRect().bottom||0)>0;
   if (scene) { scene.setProgress(P); if (want !== stageOn) { stageOn = want; want ? scene.resume() : scene.pause(); } if (!want) scene.pause(); }
 }
 const onScroll = () => { if (scrollRaf) return; scrollRaf = requestAnimationFrame(() => { scrollRaf = 0; measure(); }); };
@@ -88,7 +90,7 @@ chapters[0]?.classList.add('is-in');
 
 // WebGL after the first paint: the text never waits on it. No WebGL, reduced motion or Save-Data keep the poster.
 const canGL = () => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } };
-if (glCanvas && !RM && !navigator.connection?.saveData && canGL()) {
+if (!document.body.classList.contains('ux-home-simple') && glCanvas && !RM && !navigator.connection?.saveData && canGL()) {
   const start = () => import('/qx-a/landing/scene.mjs').then(async ({ mountScene }) => {
     await (document.fonts?.load?.('900 100px "Mona Sans"') || Promise.resolve()).catch(() => {});
     scene = await mountScene(glCanvas, { icons: COIN_ICONS, logo: QLOGO });
@@ -183,13 +185,14 @@ function launchSub(m) {
   const t = num(m.summary?.trades24); if (t != null) parts.push(t + (t === 1 ? ' trade' : ' trades'));
   return parts.join(' · ');
 }
+function homePrice(m){const s=assetPriceFields(m.summary||{},{chainId:m.chainId,token:m.token,at:priceObservation(m.summary, m.observedAt??null)});return Number.isFinite(s.priceUsd)&&s.priceUsd>0?fmt.price(s.priceUsd)+(s.pricesRefreshing?' · Refreshing':''):'Price refreshing';}
 function launchRow(m, enter) {
-  const s = m.summary || {}, v = h('span', { class: 'hm-tick' }, num(s.mcapUsd) != null ? fmt.usd(s.mcapUsd) : '—');
+  const s = m.summary || {}, v = h('span', { class: 'hm-tick' }, homePrice(m));
   const ch = h('small', { class: 'hm-tick ' + pctCls(num(s.change24) ?? 0) }, num(s.change24) != null ? fmt.pct(s.change24) : '');
   const sub = h('span', { class: 'qa-row__s' }, launchSub(m));
   const el = h('a', { class: 'qa-row hm-launch-row' + (enter && !RM ? ' is-enter' : ''), href: launchHref(m), title: m.name || m.symbol },
     iconFor(m), h('span', { class: 'qa-row__main' }, h('span', { class: 'qa-row__t' }, m.symbol || m.name || 'Token'), sub), h('span', { class: 'qa-row__v' }, v, ch));
-  return { el, v, ch, sub };
+  const buy=homeTradeLink(m,{storage:localStorage}),card=h('article',{class:'hm-launch-card'},el);if(buy)card.append(h('a',{class:'hm-home-buy',href:buy.href,title:buy.amount+' '+buy.unit},buy.label));return { el:card, v, ch, sub };
 }
 function drawLaunches(fresh = new Set()) {
   if (!launchBox) return;
@@ -203,7 +206,7 @@ function drawLaunches(fresh = new Set()) {
   }
   for (const m of rows) {
     const r = launchRows.get(key(m)); if (!r) continue; const s = m.summary || {};
-    flash(r.v, num(s.mcapUsd) != null ? fmt.usd(s.mcapUsd) : '—');
+    flash(r.v, homePrice(m));
     r.ch.className = 'hm-tick ' + pctCls(num(s.change24) ?? 0); flash(r.ch, num(s.change24) != null ? fmt.pct(s.change24) : '');
     r.sub.textContent = launchSub(m);
   }
@@ -264,9 +267,9 @@ let ribbonFlushT = 0;
 function ribbonTrade(t, initial) {
   if (!ribbon) return;
   if (initial) { pendingRibbon.push(t); clearTimeout(ribbonFlushT); ribbonFlushT = setTimeout(flushRibbon, 900); return; }
-  ribbon.push(t);
+  ribbon?.push(t);
 }
-function flushRibbon() { pendingRibbon.sort((a, b) => (a.ts || 0) - (b.ts || 0)).splice(0).forEach((t) => ribbon.push(t)); }
+function flushRibbon() { pendingRibbon.sort((a, b) => (a.ts || 0) - (b.ts || 0)).splice(0).forEach((t) => ribbon?.push(t)); }
 
 /* ================= Traders: the QHOOKS tape; Holders: the live price ================= */
 const tradeBox = $('[data-hm-trade]'), priceBox = $('[data-hm-price]');

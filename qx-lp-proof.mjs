@@ -32,6 +32,33 @@ const OFFICIAL = {chain: '4663', pool: '0x007d77e43164a5d7d1251457f47f556c2be7f8
 const amt = (raw, sym) => { const n = Number(raw) / 1e18; return (n >= 1000 ? Math.round(n).toLocaleString('en-US') : n.toLocaleString('en-US', {maximumSignificantDigits: 4})) + ' ' + sym; };
 const KIND = {launch: 'Launch contract', flywheel: 'Liquidity flywheel', floor: 'Floor bid', unknown: 'Other'};
 
+// One holder row. Kept as before so lpproof-v5 still finds the "Launch contract" .lpp-hhead row.
+const holderRow = (x, syms) => el('div', {class: 'lpp-holder', 'data-kind': x.kind},
+  el('div', {class: 'lpp-hhead'}, el('strong', {}, KIND[x.kind] || x.kind), el('span', {class: 'lpp-bar', 'aria-hidden': 'true', 'data-share': String(x.valueShare)}), el('strong', {class: 'lpp-share'}, x.valueShare + '%')),
+  el('p', {class: 'lpp-sub'}, x.reason),
+  el('details', {class: 'hl-more lpp-more'}, el('summary', {}, 'Owner and source'),
+    el('dl', {class: 'lpp-facts'},
+      el('div', {}, el('dt', {}, 'Owner'), el('dd', {}, el('span', {class: 'hl-addr-full'}, x.owner), el('br'), el('span', {class: 'lpp-sub'}, x.name))),
+      el('div', {}, el('dt', {}, 'Share'), el('dd', {}, x.valueShare + '% of value · ' + (x.inRange ? x.activeLiquidityShare + '% of in-range liquidity' : 'out of range')
+        + (syms ? ' · ' + amt(x.amount0Raw, syms[0]) + ' + ' + amt(x.amount1Raw, syms[1]) : ''))),
+      el('div', {}, el('dt', {}, 'Why it can\'t be removed'), el('dd', {}, x.reason)),
+      el('div', {}, el('dt', {}, 'Verified source'), el('dd', {}, ...Object.entries(x.source || {}).flatMap(([n, u], i) => [i ? ' · ' : '', link(u, n)]))))));
+// 0% positions are hidden; two or more "Other" (non-QHooks) positions fold into one summary row that opens on tap.
+const isZero = x => !(Number(x.valueShare) > 0);
+const hiddenZero = list => list.filter(x => isZero(x) && x.kind !== 'launch').length;
+function holderRows(list, syms) {
+  const shown = list.filter(x => x.kind === 'launch' || !isZero(x));
+  const others = shown.filter(x => x.kind === 'unknown');
+  if (others.length < 2) return shown.map(x => holderRow(x, syms));
+  const total = Math.round(others.reduce((a, x) => a + (Number(x.valueShare) || 0), 0) * 100) / 100;
+  const group = el('details', {class: 'lpp-holder lpp-others', 'data-kind': 'unknown'},
+    el('summary', {class: 'lpp-others-sum'},
+      el('span', {class: 'lpp-ohead'}, el('strong', {}, 'Other positions · ' + others.length), el('span', {class: 'lpp-bar', 'aria-hidden': 'true', 'data-share': String(total)}), el('strong', {class: 'lpp-share'}, total + '%')),
+      el('span', {class: 'lpp-sub'}, 'Not QHooks contracts. Their owners may be able to remove this liquidity.')),
+    el('div', {class: 'lpp-others-list'}, ...others.map(x => holderRow(x, syms))));
+  return [...shown.filter(x => x.kind !== 'unknown').map(x => holderRow(x, syms)), group];
+}
+
 function holdersCard(j) {
   const h = j.holders; if (!h) return null;
   const syms = j.poolId === OFFICIAL.pool ? OFFICIAL.symbols : null;
@@ -39,16 +66,8 @@ function holdersCard(j) {
     el('h3', {}, 'Who holds this pool\'s liquidity'),
     h.total ? el('p', {class: 'lpp-total'}, h.total + '.') : el('p', {class: 'lpp-note', 'data-tone': h.complete ? 'bad' : null},
       h.complete ? 'Not every position in this pool belongs to a contract with no withdraw path. See the list below.' : 'The full position list could not be read right now. Try again in a moment.'),
-    ...h.positions.map(x => el('div', {class: 'lpp-holder', 'data-kind': x.kind},
-      el('div', {class: 'lpp-hhead'}, el('strong', {}, KIND[x.kind] || x.kind), el('span', {class: 'lpp-bar', 'aria-hidden': 'true', 'data-share': String(x.valueShare)}), el('strong', {class: 'lpp-share'}, x.valueShare + '%')),
-      el('p', {class: 'lpp-sub'}, x.reason),
-      el('details', {class: 'hl-more lpp-more'}, el('summary', {}, 'Owner and source'),
-        el('dl', {class: 'lpp-facts'},
-          el('div', {}, el('dt', {}, 'Owner'), el('dd', {}, el('span', {class: 'hl-addr-full'}, x.owner), el('br'), el('span', {class: 'lpp-sub'}, x.name))),
-          el('div', {}, el('dt', {}, 'Share'), el('dd', {}, x.valueShare + '% of value · ' + (x.inRange ? x.activeLiquidityShare + '% of in-range liquidity' : 'out of range')
-            + (syms ? ' · ' + amt(x.amount0Raw, syms[0]) + ' + ' + amt(x.amount1Raw, syms[1]) : ''))),
-          el('div', {}, el('dt', {}, 'Why it can\'t be removed'), el('dd', {}, x.reason)),
-          el('div', {}, el('dt', {}, 'Verified source'), el('dd', {}, ...Object.entries(x.source).flatMap(([n, u], i) => [i ? ' · ' : '', link(u, n)]))))))),
+    ...holderRows(h.positions, syms),
+    hiddenZero(h.positions) ? el('p', {class: 'lpp-note'}, hiddenZero(h.positions) + ' position' + (hiddenZero(h.positions) === 1 ? '' : 's') + ' at 0% not shown.') : null,
     el('p', {class: 'lpp-note'}, h.method + ' Scanned from block ' + h.scannedFromBlock.toLocaleString('en-US') + '. In-range liquidity of these positions: ' + fmtL(h.knownActiveLiquidity) + ' of the pool\'s ' + fmtL(h.activeLiquidity) + '.'));
 }
 

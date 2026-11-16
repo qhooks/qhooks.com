@@ -5,8 +5,17 @@
  <id>https://qhooks.com/changelog</id>
  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog"/>
  <link rel="self" type="application/atom+xml" href="https://qhooks.com/changelog.xml"/>
- <updated>2026-11-10T00:00:00Z</updated>
+ <updated>2026-11-14T12:19:19Z</updated>
  <author><name>QHooks</name><uri>https://qhooks.com</uri></author>
+ <entry>
+  <title>Your quantum key stays yours</title>
+  <id>tag:qhooks.com,2026-11-14:quantum-key-protection</id>
+  <link rel="alternate" type="text/html" href="https://qhooks.com/changelog#quantum-key-protection"/>
+  <published>2026-11-14T11:21:37Z</published>
+  <updated>2026-11-14T12:19:19Z</updated>
+  <category term="Protect"/>
+  <content type="html">&lt;p&gt;Your quantum key now opens only with Face ID / Touch ID or your passphrase. Your wallet or QHooks sign-in alone cannot open it.&lt;/p&gt;&lt;p&gt;Reported by &lt;a href=&quot;https://heyresearch.xyz&quot;&gt;HEY Research Lab&lt;/a&gt;.&lt;/p&gt;</content>
+ </entry>
  <entry>
   <title>Clean tokens on every chain</title>
   <id>tag:qhooks.com,2026-11-10:clean-tokens-on-every-chain</id>
@@ -221,7 +230,7 @@
   <published>2026-11-04T00:00:00Z</published>
   <updated>2026-11-04T00:00:00Z</updated>
   <category term="Trade"/>
-  <content type="html">&lt;p&gt;Creators can link their X account to their launch: their wallet signs a short message and they post the code it gives them. Verified launches show the creator&amp;#x27;s handle on the token page, in the terminal list and on share cards.&lt;/p&gt;&lt;p&gt;A launch that reuses the ticker or name of an earlier verified launch is labelled as a copy and listed below the rest. Nothing is blocked; you can still buy and sell it.&lt;/p&gt;&lt;p&gt;Every token page now shows a pre-buy check from RepoProof next to the launch&amp;#x27;s own facts, read from its contracts: blocks switched on, what a buy and a sell pay right now, permanent liquidity, team tokens, creator keys and modules.&lt;/p&gt;</content>
+  <content type="html">&lt;p&gt;Creators can link their X account to their launch: their wallet signs a short message and they post the code it gives them. Verified launches show the creator&amp;#x27;s handle on the token page, in the terminal list and on share cards.&lt;/p&gt;&lt;p&gt;A launch that reuses the ticker or name of an earlier verified launch is labelled as a copy and listed below the rest. Nothing is blocked; you can still buy and sell it.&lt;/p&gt;&lt;p&gt;Every token page now shows a pre-buy check from QProof next to the launch&amp;#x27;s own facts, read from its contracts: blocks switched on, what a buy and a sell pay right now, permanent liquidity, team tokens, creator keys and modules.&lt;/p&gt;</content>
  </entry>
  <entry>
   <title>Creator profiles and a community hub</title>

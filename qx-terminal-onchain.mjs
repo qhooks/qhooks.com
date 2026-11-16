@@ -1,5 +1,6 @@
 import {admitProviderChart} from './qx-provider-chart.mjs';
-import {renderMarketHolders,holderSource} from './qx-terminal-holders.mjs';
+import {holderSource} from './qx-terminal-holders.mjs';
+import {renderMarketHolders} from './qx-holder-xray.mjs';
 // Read-only fallback for an outside EVM selection. The server admits the index's
 // exact projections; this view adapter keeps their scope and source clocks.
 const CHAINS=Object.freeze({'8453':'base','1':'ethereum','56':'bsc','4663':'robinhood','42161':'arbitrum','solana':'solana'});

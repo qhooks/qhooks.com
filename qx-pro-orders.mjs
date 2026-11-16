@@ -1,16 +1,23 @@
-import { tradeError } from './qx-chain-guard.mjs';
+import {readOwnedOrders as myOrders} from './qx-orders-read.mjs';
+import {EXECUTOR,PERMIT2,ORDER_FIELDS} from './qx-order-policy.mjs';
+export {EXECUTOR,PERMIT2};
+import {ensureOrderAllowance,prepareOrderWallet} from './qx-order-approval.mjs';
+import {orderApprovalControl} from './qx-order-approval-ui.mjs';
+import {readOrderIntent,orderReviewNote} from './qx-order-intent.mjs';
+import {asOrderError,orderErrorText} from './qx-order-errors.mjs';
 // Limit orders (pro terminal phase C, 2026-11-10). You sign one order; the QHooks keeper fills it when the price is met,
 // through QFeeRouter (1% fee, 30% cashback back to you, referral to your referrer). Your tokens stay in your wallet until
 // the fill: Permit2 lets the order executor take exactly the signed amount, once, at no worse than your price.
 // Opens as /orders?m=<chain>:<controller>, or on 'qhooks:order-open' {chainId, controller} from any page.
 import '/qx-confirm-top.mjs'; // Privy confirms stay on top of these sheets
-import { connectedAddress, onWalletChange, signTypedData, send, ensureAllowance, calldata, parseUnits, formatUnits, erc20, h, rpc } from '/qx-chain.mjs';
+import { connectedAddress, onWalletChange, signTypedData, send, ensureAllowance, calldata, ethCall, parseUnits, formatUnits, erc20, h, rpc } from '/qx-chain.mjs';
 import { execute as relayExecute } from '/qx-relay.mjs';
 import { encodeBuyFor } from '/qx-pro-xbuy.mjs';
 import { createFundingRow, fundingAsset, destinationCosts, runFundedOrder, retryLanded, recoveryView, orderOrigin, offerMoveBack, moveProceeds, cashHome,
   chainName, loadFundingStyle, xchainEnabled } from '/qx-xchain-gate.mjs';
 import { relayWallet } from '/qx-relay-wallet.mjs';
-import { oneClickPlan, withOneClick } from '/qx-instant-bridge.mjs';
+import { oneClick,tradePrefs } from './qx-trade-prefs.mjs';
+import { oneClickPlan, withOneClick, silentActive } from '/qx-instant-bridge.mjs';
 import { getWalletHub } from '/wallet-hub.mjs';
 import { authHeaders, signIn, boardSession } from '/qx-board-session.mjs';
 import { savedReferrer } from '/qx-swap.mjs';
@@ -18,11 +25,7 @@ import { chainById } from '/chains.mjs';
 import { triggerFor, poolKeyEncoded, priceFromSqrt } from '/qx-pro-trigger.mjs';
 import { keccak_256 } from '/full-launch/prototypes/qpools/client/vendor/hashes/sha3.js';
 
-export const EXECUTOR = '0x5500f24e75ebb84ae8380d03e933678cf8322500';
-export const PERMIT2 = '0x000000000022d473030f116ddee9f6b43ac78ba3';
 const ZERO = '0x' + '0'.repeat(40), ZERO32 = '0x' + '0'.repeat(64), SCALE = 10n ** 36n, KEEPER_BPS = 30;
-const ORDER_FIELDS = [['trader', 'address'], ['tokenIn', 'address'], ['tokenOut', 'address'], ['amountIn', 'uint256'], ['minOutPerIn', 'uint256'], ['triggerPool', 'bytes32'], ['triggerSqrtPriceX96', 'uint160'],
-  ['triggerBelow', 'bool'], ['feeOnInput', 'bool'], ['keeperFeeBps', 'uint16'], ['referrer', 'address'], ['nonce', 'uint256'], ['deadline', 'uint256']];
 
 /// The EIP-712 payload the wallet signs: Permit2 PermitWitnessTransferFrom with the order as witness.
 export function typedOrder(chainId, o) {
@@ -53,14 +56,14 @@ const el = (tag, attrs = {}, ...kids) => {
 };
 const priceText = v => !Number.isFinite(v) ? '—' : v >= 1 ? v.toLocaleString('en-US', { maximumFractionDigits: 4 }) : v <= 0 ? '0' : v.toFixed(Math.min(20, 3 - Math.floor(Math.log10(v)))).replace(/0+$/, '');
 const plain = v => { if (!Number.isFinite(v) || v <= 0) return ''; const s = v.toPrecision(6); return s.includes('e') ? v.toFixed(18).replace(/0+$/, '') : String(Number(s)); };
-const says = { executor_not_deployed: 'Orders are not set up on this chain yet.', needs_approval_or_balance: 'Your wallet needs the balance and the one-time approval first.', invalid_signature: 'The signature did not match. Try again.',
-  too_many_orders: 'You have 50 open orders. Withdraw some first.', slow_down: 'Too many orders this hour. Try again shortly.', order_rejected: 'This order would not go through on chain. Check the amount and price.', invalid_deadline: 'Choose how long the order stays open.', sign_in: 'Sign in to withdraw orders.', not_cancellable: 'That order is no longer open.', try_again: 'The network is slow right now. Your order was not placed; try again.' };
-const say = e => says[e?.message] || tradeError(e);
+const orderReadNotes={order_amount_required:'Enter an amount greater than zero.',order_amount_format:'Enter a valid amount using the token’s decimal places.',order_price_required:'Enter a limit price or choose a percentage below.',order_price_format:'Enter a valid limit price greater than zero.',order_expiry:'Choose how long the order stays open.',order_balance_refresh:'Your token balance could not refresh. Try again before approving.',order_reservations_refresh:'Your open orders could not refresh. Try again before signing this order.'};
+const say = orderErrorText;
 
 // Instant (X2) stays behind a flag until Randall's small live test passes: ?instant=1 or localStorage qhooks:pro:instant=1.
 const INSTANT = (() => { try { return new URLSearchParams(location.search).has('instant') || localStorage.getItem('qhooks:pro:instant') === '1'; } catch { return false; } })();
+const PAGE_INTENT = typeof location === 'object' ? readOrderIntent(location.search) : null;
 let st = null, root = null, statusEl = null, ordersBox = null, goBtn = null;
-async function loadMarket(chainId, controller) {
+export async function loadMarket(chainId, controller) {
   const r = await fetch('/api/terminal/market/' + chainId + '/' + controller + '?tf=60', { cache: 'no-store' });
   if (!r.ok) throw Error('That market is refreshing. Try again in a moment.');
   const j = await r.json(), m = j.meta || {}, pool = (m.pools || []).find(p => p.label === 'launch') || (m.pools || [])[0];
@@ -68,13 +71,20 @@ async function loadMarket(chainId, controller) {
   return { chainId: String(chainId), controller, token: m.token.toLowerCase(), quote: m.quote.toLowerCase(), symbol: m.symbol || 'token', quoteSymbol: m.quoteSymbol || 'quote',
     tdec: Number(m.decimals ?? 18), qdec: Number(m.quoteDecimals ?? 18), key: pool.key, price: Number(j.summary?.price) || null };
 }
-async function myOrders(me) {
-  const r = await fetch('/api/orders?trader=' + me, { cache: 'no-store' }); if (!r.ok) return [];
-  return (await r.json()).orders || [];
+const orderReadFailure=(code,cause)=>Object.assign(Error(code,{cause}),{code});
+
+async function orderBalance(chainId,token,owner){
+  try {
+    // Market decimals/symbol are already known. Only money state is needed here;
+    // unavailable optional metadata must not prevent the allowance prompt.
+    const value=await ethCall(chainId,token,calldata('0x70a08231',['address'],[owner]),undefined,{purpose:'transaction',signal:AbortSignal.timeout(8000)});
+    if(!/^0x[0-9a-f]{1,64}$/i.test(value||''))throw Error('Balance is incomplete');
+    return BigInt(value);
+  }catch(e){throw orderReadFailure('order_balance_refresh',e);}
 }
 async function post(path, body, method = 'POST') {
   const r = await fetch(path, { method, headers: { 'content-type': 'application/json', ...authHeaders() }, body: body ? JSON.stringify(body) : undefined });
-  const j = await r.json().catch(() => ({})); if (!r.ok) throw Error(j.error || 'request_failed'); return j;
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw Object.assign(Error(j.error || 'request_failed'),{status:r.status}); return j;
 }
 
 /// What your open orders in `tokenIn` can take at most: each Permit2 nonce once (both legs of a TP/SL pair share one).
@@ -84,54 +94,104 @@ export function openAmount(orders, chainId, tokenIn) {
   return [...byNonce.values()].reduce((a, b) => a + b, 0n);
 }
 const poolIdOf = key => '0x' + Array.from(keccak_256(Uint8Array.from(poolKeyEncoded(key).slice(2).match(/../g).map(x => parseInt(x, 16)))), b => b.toString(16).padStart(2, '0')).join('');
-/// Take-profit and/or stop on a held token (phase D): one sell order per leg, both on one Permit2 nonce, so whichever
-/// fills first makes the other unfillable. Each leg fills only past its trigger (checked on the pool by the executor)
-/// and at no less than its floor.
-export async function placeExit({ amount, tp, sl, floorPct, days }) {
-  const me = connectedAddress(); if (!me) throw Error('Connect your wallet first');
-  const m = st.market, now = m.price;
-  const amountIn = parseUnits(amount, m.tdec); if (amountIn === 0n) throw new TypeError('Enter an amount');
+/// The legs of a take-profit / stop bracket (phase D): one sell order per leg, both on ONE Permit2 nonce, so whichever
+/// fills first makes the other unfillable on chain (OCO; no double sell). Each leg fills only past its trigger (checked on
+/// the pool by the executor) and at no less than its floor. Pure: same math the TP / SL tab has used since phase D.
+export function buildBracket({ market: m, owner, amountIn, tp, sl, floorPct, days, ref = '', nonce, nowSec }) {
+  if (!(typeof amountIn === 'bigint') || amountIn <= 0n) throw new TypeError('Enter an amount');
   if (!tp && !sl) throw new TypeError('Set a take-profit price, a stop price, or both');
+  const now = m.price;
   if (tp && now && Number(tp) <= now) throw new TypeError('Take profit must be above the current price');
   if (sl && now && Number(sl) >= now) throw new TypeError('The stop must be below the current price');
-  const bal = (await erc20(m.chainId, m.token, me)).balance;
-  if (bal < amountIn) throw Error('Your wallet has ' + formatUnits(bal, m.tdec) + ' ' + m.symbol + ' on ' + (chainById(m.chainId)?.name || 'this chain') + '.');
   const mk = { tokenIs0: m.token === m.key.currency0.toLowerCase(), tdec: m.tdec, qdec: m.qdec }, poolId = poolIdOf(m.key);
-  const ref = savedReferrer(), blocksPool = (BigInt(m.key.hooks) & 16383n) === 10956n;
+  const blocksPool = (BigInt(m.key.hooks) & 16383n) === 10956n;
   const hops = [{ key: m.key, zeroForOne: m.token === m.key.currency0.toLowerCase(), hookData: ref && blocksPool ? '0x' + ref.slice(2).padStart(64, '0') : '0x' }];
-  const nonce = randomNonce(), deadline = String(Math.floor(Date.now() / 1000) + days * 86400);
+  const deadline = String(nowSec + days * 86400);
   const legs = [...(tp ? [['take_profit', tp, plain(Number(tp) * 0.97)]] : []), ...(sl ? [['stop', sl, plain(Number(sl) * (1 - floorPct / 100))]] : [])];
-  await ensureAllowance(m.chainId, m.token, PERMIT2, openAmount(await myOrders(me), m.chainId, m.token) + amountIn, s => statusEl.textContent = s);
-  const placed = [];
-  for (const [kind, trigger, floor] of legs) {
+  return legs.map(([kind, trigger, floor]) => {
     const t = triggerFor(kind, trigger, mk);
-    const o = { trader: me, tokenIn: m.token, tokenOut: m.quote, amountIn: amountIn.toString(), minOutPerIn: rateFor('sell', floor, m.tdec, m.qdec).toString(), triggerPool: poolId,
-      triggerSqrtPriceX96: t.triggerSqrtPriceX96, triggerBelow: t.triggerBelow, feeOnInput: false, keeperFeeBps: KEEPER_BPS, referrer: ref || ZERO, nonce, deadline };
-    statusEl.textContent = 'Sign the ' + (kind === 'stop' ? 'stop' : 'take-profit') + (legs.length > 1 ? ' (' + (placed.length + 1) + ' of 2)' : '') + ' in your wallet. It costs nothing and moves nothing until it fills.';
-    const signature = await signTypedData(m.chainId, typedOrder(m.chainId, o));
-    placed.push(await post('/api/orders', { chainId: m.chainId, kind, order: o, signature, hops }));
+    return { kind, hops, order: { trader: owner, tokenIn: m.token, tokenOut: m.quote, amountIn: amountIn.toString(), minOutPerIn: rateFor('sell', floor, m.tdec, m.qdec).toString(), triggerPool: poolId,
+      triggerSqrtPriceX96: t.triggerSqrtPriceX96, triggerBelow: t.triggerBelow, feeOnInput: false, keeperFeeBps: KEEPER_BPS, referrer: ref || ZERO, nonce, deadline } };
+  });
+}
+/// What a new exit may still take: the wallet balance minus what open orders already reserve in that token (each Permit2
+/// nonce once). Refuses an exit that would only be fillable by taking tokens another open order is waiting to sell.
+export function freeToReserve(balance, orders, chainId, token) { const r = openAmount(orders, chainId, token); return balance > r ? balance - r : 0n; }
+const defaultDeps = () => ({ connectedAddress, erc20, myOrders, ensureAllowance:ensureOrderAllowance, signTypedData, post, savedReferrer, randomNonce, nowSec: () => Math.floor(Date.now() / 1000) });
+/// Places a bracket for `owner` on `market`. Every wallet step re-checks that the same wallet is still connected (a stale
+/// context never signs for another wallet). If the second leg is refused after the first was placed, the first stands alone
+/// (it is a complete order) and the error says so.
+export async function placeBracket(input,deps){try{if(input.allowOneClick===false||deps&&!getWalletHub(window).snapshot().current)return await placeBracketRequest(input,deps);return await orderPress(input.owner,input.market,'sell',input.amountIn,input.ticketConfirmed,assertPress=>placeBracketRequest({...input,assertContext:()=>{input.assertContext?.();assertPress();}},deps),{ticket:orderTicket({...input,kind:'bracket'}),assert:input.assertContext});}catch(error){throw asOrderError(error);}}
+async function placeBracketRequest({ market: m, owner, amountIn, tp, sl, floorPct, days, onStatus = () => {}, assertContext=()=>{} }, deps = {}) {
+  const d = { ...defaultDeps(), ...deps },initial=getWalletHub(window).snapshot().current,provider=initial?.owner?.toLowerCase()===owner?initial.entry?.provider:null;
+  const same = () => { assertContext(); if (!owner || d.connectedAddress() !== owner || provider&&getWalletHub(window).snapshot().current?.entry?.provider!==provider) throw Error('Reconnect the wallet that started this order.'); };
+  same();
+  const legs = buildBracket({ market: m, owner, amountIn, tp, sl, floorPct, days, ref: d.savedReferrer() || '', nonce: d.randomNonce(), nowSec: d.nowSec() });
+  const bal = deps?.erc20 ? (await d.erc20(m.chainId,m.token,owner)).balance : await orderBalance(m.chainId,m.token,owner), orders = await d.myOrders(owner,{required:true});
+  if (bal < amountIn) throw Error('Your wallet has ' + formatUnits(bal, m.tdec) + ' ' + m.symbol + ' on ' + (chainById(m.chainId)?.name || 'this chain') + '.');
+  const free = freeToReserve(bal, orders, m.chainId, m.token);
+  if (free < amountIn) throw Error('Your open orders already reserve ' + formatUnits(bal - free, m.tdec, 4) + ' ' + m.symbol + '. Withdraw one first, or set this on ' + formatUnits(free, m.tdec, 4) + ' or less.');
+  same();
+  await d.ensureAllowance(m.chainId, m.token, PERMIT2, openAmount(orders, m.chainId, m.token) + amountIn, onStatus,same);
+  const placed = [];
+  for (const leg of legs) {
+    try {
+    same();
+    onStatus((silentActive()?'Signing the ':'Sign the ') + (leg.kind === 'stop' ? 'stop' : 'take-profit') + (legs.length > 1 ? ' (' + (placed.length + 1) + ' of 2)' : '') + (silentActive()?'…':' in your wallet. It costs nothing and moves nothing until it fills.'));
+      const signature = await d.signTypedData(m.chainId, typedOrder(m.chainId, leg.order));
+      same();
+      placed.push(await d.post('/api/orders', { chainId: m.chainId, kind: leg.kind, order: leg.order, signature, hops: leg.hops }));
+    } catch (e) {
+      if (!placed.length) throw e;
+      throw Object.assign(Error((placed[0].kind === 'stop' ? 'The stop' : 'The take-profit') + ' is set; the ' + (leg.kind === 'stop' ? 'stop' : 'take-profit') + ' was not (' + say(e) + ').'), { placed });
+    }
   }
   return placed;
 }
+/// The TP / SL tab's submit: a bracket on the open market for the connected wallet.
+export async function placeExit({ amount, tp, sl, floorPct, days, ticketConfirmed=false,assertContext=()=>{} }) {
+  const me = connectedAddress(); if (!me) throw Error('Connect your wallet first');
+  const m = st.market, amountIn = parseUnits(amount, m.tdec); if (amountIn === 0n) throw new TypeError('Enter an amount');
+  return placeBracket({ market: m, owner: me, amountIn, tp, sl, floorPct, days, ticketConfirmed, assertContext:()=>{assertContext();if(st?.market!==m||st?.side!=='tpsl')throw Error('Your order ticket changed. Review it again.');}, onStatus: s => { statusEl.textContent = s; } });
+}
 
+function limitDraft({side,amount,price,days},m){
+  const fail=code=>{throw Object.assign(Error(code),{code});};
+  if(!['buy','sell'].includes(side))fail('order_amount_format');
+  if(!String(amount??'').trim())fail('order_amount_required');
+  const inDec=side==='buy'?m.qdec:m.tdec;let amountIn,rate;
+  try{amountIn=parseUnits(amount,inDec);}catch{fail('order_amount_format');}
+  if(amountIn<=0n)fail('order_amount_required');
+  if(!String(price??'').trim())fail('order_price_required');
+  try{rate=rateFor(side,price,m.tdec,m.qdec).toString();}catch{fail('order_price_format');}
+  if(!Number.isInteger(days)||days<1||days>30)fail('order_expiry');
+  return {amountIn,rate};
+}
 /// Places a limit order. With `funding` (a Relay quote from the funding row), the pay asset is first delivered to your own
 /// wallet on this chain (pro terminal X1: bridge at placement), then the order is signed for exactly what arrived.
-export async function placeOrder({ side, amount, price, days, funding = null }, { market = st?.market, onStatus = s => { statusEl.textContent = s; } } = {}) {
+export async function placeOrder(input,options){try{const market=options?.market||st?.market,amount=market?limitDraft(input,market).amountIn:0n;return await orderPress(connectedAddress(),market,input.side,amount,options?.ticketConfirmed,assertPress=>placeOrderRequest(input,{...options,assertContext:()=>{options?.assertContext?.();assertPress();}}),{ticket:orderTicket(input),assert:options?.assertContext});}catch(error){throw asOrderError(error);}}
+async function placeOrderRequest({ side, amount, price, days, funding = null }, { market = st?.market, onStatus = s => { statusEl.textContent = s; }, assertContext=()=>{} } = {}) {
   const me = connectedAddress(); if (!me) throw Error('Connect your wallet first');
+  const hub=getWalletHub(window),start=hub.snapshot().current,provider=start?.owner?.toLowerCase()===me?start.entry?.provider:null;
+  const assertOwner=()=>{assertContext();const current=hub.snapshot().current;if(connectedAddress()!==me||provider&&current?.entry?.provider!==provider)throw Error('Your wallet changed. Review this order again.');};
+  if(!market)throw Error('The order market is refreshing. Reopen this token and try again.');
   const m = market, tokenIn = side === 'buy' ? m.quote : m.token, tokenOut = side === 'buy' ? m.token : m.quote, inDec = side === 'buy' ? m.qdec : m.tdec;
-  const rate = rateFor(side, price, m.tdec, m.qdec).toString(); // validate the price before anything moves
+  const draft=limitDraft({side,amount,price,days},m),rate=draft.rate; // explicit inputs, same rate math before any wallet request
   const ref = savedReferrer(), blocksPool = (BigInt(m.key.hooks) & 16383n) === 10956n;
   const hops = [{ key: m.key, zeroForOne: tokenIn === m.key.currency0.toLowerCase(), hookData: ref && blocksPool ? '0x' + ref.slice(2).padStart(64, '0') : '0x' }];
   const deadline = String(Math.floor(Date.now() / 1000) + days * 86400);
   const submit = async amountIn => {
-    if (connectedAddress() !== me) throw Error('Reconnect the wallet that started this order.');
+    assertOwner();
     const o = { trader: me, tokenIn, tokenOut, amountIn: amountIn.toString(), minOutPerIn: rate, triggerPool: ZERO32, triggerSqrtPriceX96: '0',
       triggerBelow: false, feeOnInput: side === 'buy', keeperFeeBps: KEEPER_BPS, referrer: ref || ZERO, nonce: randomNonce(), deadline };
-    // A bounded allowance: this order plus your other open orders in the same token, never "unlimited".
-    const open = openAmount(await myOrders(me), m.chainId, tokenIn);
-    await ensureAllowance(m.chainId, tokenIn, PERMIT2, open + amountIn, onStatus);
-    onStatus('Sign the order in your wallet. It costs nothing and moves nothing until it fills.');
+    // Bounded mode reserves this order plus current open orders. Once mode requires the explicit token enable.
+    onStatus('Checking your open orders…');
+    const open = openAmount(await myOrders(me,{required:true}), m.chainId, tokenIn); assertOwner();
+    await ensureOrderAllowance(m.chainId, tokenIn, PERMIT2, open + amountIn, onStatus,assertOwner);
+    assertOwner();
+    onStatus(silentActive()?'Signing order…':'Sign the order in your wallet. It costs nothing and moves nothing until it fills.');
     const signature = await signTypedData(m.chainId, typedOrder(m.chainId, o));
+    assertOwner();
     onStatus('Checking the order…');
     return post('/api/orders', { chainId: m.chainId, order: o, signature, hops });
   };
@@ -145,46 +205,59 @@ export async function placeOrder({ side, amount, price, days, funding = null }, 
     if (!res.completed) { st.recovery = { result: res, submit, origin: q.funding.from }; throw Object.assign(Error(res.error?.message || 'Your funds arrived, but the order was not placed yet.'), { recovery: true }); }
     return res.result;
   }
-  const amountIn = parseUnits(amount, inDec); if (amountIn === 0n) throw new TypeError('Enter an amount');
-  const bal = (await erc20(m.chainId, tokenIn, me)).balance;
+  const amountIn = draft.amountIn;
+  if(provider&&String(start.chainId)!==String(m.chainId)&&typeof hub.switchChain==='function'){
+    onStatus('Switching your wallet to '+(chainById(m.chainId)?.name||'the order network')+'…');
+    await hub.switchChain(String(m.chainId));assertOwner();
+  }
+  onStatus('Checking your '+(side==='buy'?m.quoteSymbol:m.symbol)+' balance on '+(chainById(m.chainId)?.name||'this chain')+'…');
+  const bal = await orderBalance(m.chainId,tokenIn,me); assertOwner();
   if (bal < amountIn) throw Error('Your wallet has ' + formatUnits(bal, inDec) + ' ' + (side === 'buy' ? m.quoteSymbol : m.symbol) + ' on ' + (chainById(m.chainId)?.name || 'this chain') + '.' + (side === 'buy' && xchainEnabled ? ' Fund it from another chain above.' : ' Orders take only what you hold when they fill.'));
   return submit(amountIn);
 }
 
 function render() {
   if (!root || !st) return;
+  st.approval?.dispose();st.approval=null;st.disarmOrderReview=null;
   const m = st.market, me = connectedAddress();
-  if (!m) { root.replaceChildren(el('p', { class: 'qpo-note' }, st.error || 'Open a token in the terminal and choose Limit, or add ?m=chain:token to this page.')); return; }
+  if (!m) { root.replaceChildren(el('p', { class: 'qpo-note' }, st.error || 'Pick a token to set a limit.')); return; }
   const side = st.side;
   const head = el('div', { class: 'qpo-head' }, el('h2', {}, m.symbol, el('small', {}, ' on ' + (chainById(m.chainId)?.name || m.chainId))), el('p', { class: 'qpo-price' }, 'Now ' + priceText(m.price) + ' ' + m.quoteSymbol));
+  const header = [head], review = orderReviewNote(PAGE_INTENT,m,side);
+  if (review) header.push(el('p', {class:'qpo-note qpo-review-budget'},review));
   const tabs = el('div', { class: 'qpo-tabs', role: 'tablist' }, ...[['buy', 'Limit buy'], ['sell', 'Limit sell'], ['tpsl', 'TP / SL'], ...(INSTANT && xchainEnabled ? [['instant', 'Instant']] : [])].map(([k, l]) => el('button', { type: 'button', role: 'tab', class: 'qpo-tab', 'aria-selected': String(side === k), onclick: () => { st.side = k; st.price = ''; render(); } }, l)));
-  if (side === 'tpsl') { ordersBox = ordersView(); root.replaceChildren(head, exitForm(m, tabs), ordersBox); return; }
-  if (side === 'instant') { ordersBox = ordersView(); root.replaceChildren(head, instantForm(m, tabs), ordersBox); return; }
-  const amount = el('input', { class: 'qpo-in', inputmode: 'decimal', autocomplete: 'off', placeholder: '0.0', 'aria-label': side === 'buy' ? 'Spend (' + m.quoteSymbol + ')' : 'Sell (' + m.symbol + ')', value: st.amount || '' });
-  const price = el('input', { class: 'qpo-in', inputmode: 'decimal', autocomplete: 'off', placeholder: priceText(m.price), 'aria-label': 'Price (' + m.quoteSymbol + ' per ' + m.symbol + ')', value: st.price || '' });
+  if (side === 'tpsl') { ordersBox = ordersView(); root.replaceChildren(...header, exitForm(m, tabs), ordersBox); return; }
+  if (side === 'instant') { ordersBox = ordersView(); root.replaceChildren(...header, instantForm(m, tabs), ordersBox); return; }
+  const amount = el('input', { class: 'qpo-in', inputmode: 'decimal', autocomplete: 'off', placeholder: '0.0', required:true, 'aria-label': side === 'buy' ? 'Spend (' + m.quoteSymbol + ')' : 'Sell (' + m.symbol + ')', value: st.amount || '' });
+  const price = el('input', { class: 'qpo-in', inputmode: 'decimal', autocomplete: 'off', placeholder: 'Enter limit price', required:true, 'aria-label': 'Price (' + m.quoteSymbol + ' per ' + m.symbol + ')', value: st.price || '' });
   const chips = el('div', { class: 'qpo-chips' }, ...(side === 'buy' ? [-10, -25, -50] : [25, 100, 300]).map(p => el('button', { type: 'button', class: 'qpo-chip', onclick: () => { if (m.price) { st.price = plain(m.price * (1 + p / 100)); price.value = st.price; preview(); } } }, (p > 0 ? '+' : '') + p + '%')));
   const days = el('select', { class: 'qpo-in', 'aria-label': 'Open for' }, ...[[1, '1 day'], [7, '7 days'], [30, '30 days']].map(([d, l]) => el('option', { value: String(d), selected: st.days === d }, l)));
   const out = el('p', { class: 'qpo-out', 'aria-live': 'polite' }), small = el('p', { class: 'qpo-small', 'aria-live': 'polite' });
   let smallTimer = null;
   const preview = () => {
+    armedReview=null;if(go)go.textContent=goLabel();
     st.amount = amount.value; st.price = price.value; st.days = Number(days.value);
+    if(['order_amount_required','order_amount_format','order_price_required','order_price_format','order_expiry'].some(k=>statusEl.textContent===orderReadNotes[k])){try{limitDraft({side,amount:amount.value,price:price.value,days:Number(days.value)},m);statusEl.textContent='';}catch{}}
     clearTimeout(smallTimer); smallTimer = setTimeout(() => { const a = Number(amount.value), p = Number(price.value); void smallNote(small, m, side === 'buy' ? a : a * (p || m.price || 0), false); }, 300);
     try { const a = Number(amount.value), p = Number(price.value); if (!(a > 0 && p > 0)) { out.textContent = ''; return; }
       out.textContent = side === 'buy' ? 'Fills when you get at least ' + priceText(a / p) + ' ' + m.symbol + ' for ' + a + ' ' + m.quoteSymbol + ', after fees.' : 'Fills when you get at least ' + priceText(a * p) + ' ' + m.quoteSymbol + ' for ' + a + ' ' + m.symbol + ', after fees.';
     } catch { out.textContent = ''; }
   };
   amount.addEventListener('input', preview); price.addEventListener('input', preview); days.addEventListener('change', preview);
+  amount.addEventListener('invalid',()=>{statusEl.textContent=orderReadNotes.order_amount_required;});
+  price.addEventListener('invalid',()=>{statusEl.textContent=orderReadNotes.order_price_required;});
   const go = goBtn = el('button', { type: 'submit', class: 'qpo-btn qpo-primary' }, goLabel());
   // X1: fund a buy from another chain when this chain's balance is short (Relay to your own wallet here, then the order).
+  let armedReview=null,placing=false;st.disarmOrderReview=()=>{armedReview=null;go.textContent=goLabel();};
   const hub = getWalletHub(window), usdOf = q => Number(q?.details?.currencyIn?.amountUsd) || null;
   const planFor = q => { const who = connectedAddress(), c = hub.snapshot().current; return oneClickPlan(who, c?.owner?.toLowerCase() === who ? c.entry : null, usdOf(q)); };
   // Built even before a wallet connects (phones connect after opening the sheet); the owner is read when it is used.
-  const funding = side === 'buy' && xchainEnabled ? createFundingRow({ h, action: 'order', getPlan: planFor, onChange: ({ ready }) => { go.disabled = !ready; } }) : null;
+  const funding = side === 'buy' && xchainEnabled ? createFundingRow({ h, action: 'order', getPlan: planFor, onChange: ({ ready }) => { go.disabled = placing||!ready||!st.approval?.ready; } }) : null;
   st.funding = funding;
   if (funding) loadFundingStyle();
   let fundingTimer = null, fundingRev = 0;
   const refreshFunding = async () => {
-    const mine = ++fundingRev, owner = connectedAddress(); if (!funding) return; funding.clear(); go.disabled = false; if (!owner) return;
+    const mine = ++fundingRev, owner = connectedAddress(); if (!funding) return; funding.clear(); go.disabled = placing||!st.approval?.ready; if (!owner) return;
     let amt; try { amt = parseUnits(amount.value, m.qdec); } catch { return; } if (!(amt > 0n)) return;
     try {
       const asset = fundingAsset(m.chainId, { address: m.quote, decimals: m.qdec }), balance = (await erc20(m.chainId, m.quote, owner)).balance;
@@ -196,16 +269,17 @@ function render() {
   };
   if (funding) amount.addEventListener('input', () => { clearTimeout(fundingTimer); fundingTimer = setTimeout(refreshFunding, 350); });
   st.refreshFunding = funding ? refreshFunding : null;
+  const approval=st.approval=orderApprovalControl({chainId:m.chainId,token:side==='buy'?m.quote:m.token,symbol:side==='buy'?m.quoteSymbol:m.symbol,onStatus:t=>statusEl.textContent=t,onChange:state=>{st.disarmOrderReview?.();go.disabled=placing||!state.ready||(funding?.required&&!funding?.quote);}});
   const form = el('form', { class: 'qpo-form' }, tabs,
     el('label', {}, el('span', {}, side === 'buy' ? 'Spend' : 'Sell'), el('div', { class: 'qpo-row' }, amount, el('b', {}, side === 'buy' ? m.quoteSymbol : m.symbol))),
     el('label', {}, el('span', {}, 'At price'), el('div', { class: 'qpo-row' }, price, el('b', {}, m.quoteSymbol))), chips,
-    el('label', {}, el('span', {}, 'Open for'), days), out, small, funding?.element, go, el('div', { class: 'qpo-recovery' }),
+    el('label', {}, el('span', {}, 'Open for'), days), out, small, funding?.element, approval.element, go, el('div', { class: 'qpo-recovery' }),
     el('p', { class: 'qpo-note' }, 'Your tokens stay in your wallet until the order fills. Fills go through QHooks with the 1% fee: 30% of it comes back to you as cashback. The keeper that fills it earns up to 0.3%.'));
   form.addEventListener('submit', async e => {
     e.preventDefault();
     if (!connectedAddress()) { document.querySelector('[data-qa-connect],.qhc-open,#qhc-trigger')?.click(); return; }
-    go.disabled = true; preview(); funding?.setBusy(true);
-    try { const r = await withOneClick(planFor(funding?.quote), () => placeOrder({ side, amount: amount.value, price: price.value, days: Number(days.value), funding }));
+    if(placing)return;placing=true;go.disabled = true; funding?.setBusy(true);for(const field of form.querySelectorAll('input,select,button'))field.disabled=true;
+    try { const who=connectedAddress(),amountIn=parseUnits(amount.value,side==='buy'?m.qdec:m.tdec),input={side,amount:amount.value,price:price.value,days:Number(days.value),funding},value=Math.max(usdOf(funding?.quote)||0,await orderValue(m,side,amountIn)||0)||null,review=orderReview(who,m,side,amountIn,value,orderTicket(input)),plan=oneClickPlan(who,hub.snapshot().current?.entry,value);if(plan.ticketConfirm&&!orderReviewAdmitted(armedReview,review)){armedReview=review;go.textContent=value?'Confirm $'+value.toFixed(2):'Confirm order';return;}const confirmed=armedReview;armedReview=null;const r=await placeOrder(input,{market:m,ticketConfirmed:confirmed,assertContext:()=>assertOrderForm(form,m,side)});
       statusEl.textContent = r.dryRun === 'ready' ? 'Order placed. The price is already there: it fills within a minute or two.' : 'Order placed. It fills when the price gets there.';
       st.amount = ''; st.price = ''; await refreshOrders(); render();
     } catch (err) {
@@ -218,17 +292,17 @@ function render() {
           catch (e2) { statusEl.textContent = say(e2); }
         }));
       }
-    } finally { go.disabled = false; funding?.setBusy(false); }
+    } finally { placing=false;for(const field of form.querySelectorAll('input,select,button'))field.disabled=false;go.disabled = !approval.ready; funding?.setBusy(false); }
   });
   ordersBox = ordersView();
-  root.replaceChildren(head, form, ordersBox);
+  root.replaceChildren(...header, form, ordersBox);
   preview();
 }
 
 const goLabel = () => !connectedAddress() ? 'Connect wallet' : st?.side === 'tpsl' ? 'Set TP / SL' : st?.side === 'sell' ? 'Place limit sell' : 'Place limit buy';
 /// A wallet change refreshes the order list and the button only, never the form being typed into.
 async function onWallet() {
-  if (!st) return; await refreshOrders();
+  if (!st) return; st.disarmOrderReview?.(); await refreshOrders();
   if (!st.market || !ordersBox?.isConnected) { render(); return; }
   const next = ordersView(); ordersBox.replaceWith(next); ordersBox = next; if (goBtn) goBtn.textContent = goLabel();
   st.refreshFunding?.();
@@ -245,6 +319,7 @@ function exitForm(m, tabs) {
   const out = el('p', { class: 'qpo-out', 'aria-live': 'polite' }), small = el('p', { class: 'qpo-small', 'aria-live': 'polite' });
   let smallTimer = null;
   const preview = () => {
+    armedReview=null;if(go)go.textContent=goLabel();
     clearTimeout(smallTimer); smallTimer = setTimeout(() => { const a = Number(amount.value), x = Number(sl.value), t = Number(tp.value); void smallNote(small, m, a * (x || t || m.price || 0), x > 0); }, 300);
     st.exitAmount = amount.value; st.tp = tp.value; st.sl = sl.value; st.floorPct = Number(floor.value); st.days = Number(days.value);
     const a = Number(amount.value), t = Number(tp.value), x = Number(sl.value);
@@ -255,22 +330,24 @@ function exitForm(m, tabs) {
   for (const i of [amount, tp, sl]) i.addEventListener('input', preview);
   floor.addEventListener('change', preview); days.addEventListener('change', preview);
   const go = goBtn = el('button', { type: 'submit', class: 'qpo-btn qpo-primary' }, goLabel());
+  let armedReview=null,placing=false;st.disarmOrderReview=()=>{armedReview=null;go.textContent=goLabel();};const approval=st.approval=orderApprovalControl({chainId:m.chainId,token:m.token,symbol:m.symbol,onStatus:t=>statusEl.textContent=t,onChange:state=>{st.disarmOrderReview?.();go.disabled=placing||!state.ready;}});
   const form = el('form', { class: 'qpo-form' }, tabs,
     el('label', {}, el('span', {}, 'Sell'), el('div', { class: 'qpo-row' }, amount, el('b', {}, m.symbol))), el('div', { class: 'qpo-chips' }, max),
     el('label', {}, el('span', {}, 'Take profit at'), el('div', { class: 'qpo-row' }, tp, el('b', {}, m.quoteSymbol))), chipRow(tp, [25, 50, 100]),
     el('label', {}, el('span', {}, 'Stop at'), el('div', { class: 'qpo-row' }, sl, el('b', {}, m.quoteSymbol))), chipRow(sl, [-10, -20, -30]),
     el('label', {}, el('span', {}, 'Stop sells at no less than'), floor),
-    el('label', {}, el('span', {}, 'Open for'), days), out, small, go,
+    el('label', {}, el('span', {}, 'Open for'), days), out, small, approval.element, go,
     el('p', { class: 'qpo-note' }, 'Your tokens stay in your wallet until a leg fills. Each leg goes through QHooks with the 1% fee: 30% of it comes back to you as cashback. The keeper that fills it earns up to 0.3%.'));
   form.addEventListener('submit', async e => {
     e.preventDefault();
     if (!connectedAddress()) { document.querySelector('[data-qa-connect],.qhc-open,#qhc-trigger,#qxt-connect')?.click(); return; }
-    go.disabled = true; preview();
+    if(placing)return;placing=true;go.disabled = true;for(const field of form.querySelectorAll('input,select,button'))field.disabled=true;
     try {
-      const placed = await placeExit({ amount: amount.value, tp: tp.value.trim(), sl: sl.value.trim(), floorPct: Number(floor.value), days: Number(days.value) });
+      const who=connectedAddress(),amountIn=parseUnits(amount.value,m.tdec),input={amount:amount.value,tp:tp.value.trim(),sl:sl.value.trim(),floorPct:Number(floor.value),days:Number(days.value)},value=await orderValue(m,'sell',amountIn),review=orderReview(who,m,'sell',amountIn,value,orderTicket({...input,kind:'bracket',amountIn})),plan=oneClickPlan(who,getWalletHub(window).snapshot().current?.entry,value);if(plan.ticketConfirm&&!orderReviewAdmitted(armedReview,review)){armedReview=review;go.textContent=value?'Confirm $'+value.toFixed(2):'Confirm TP / SL';return;}const confirmed=armedReview;armedReview=null;
+      const placed = await placeExit({...input,ticketConfirmed:confirmed,assertContext:()=>assertOrderForm(form,m,'tpsl')});
       statusEl.textContent = placed.length > 1 ? 'Take profit and stop set. Whichever fills first cancels the other.' : 'Set. It sells when the price gets there.';
       st.exitAmount = ''; st.tp = ''; st.sl = ''; await refreshOrders(); render();
-    } catch (err) { statusEl.textContent = say(err); } finally { go.disabled = false; }
+    } catch (err) { statusEl.textContent = say(err); } finally { placing=false;for(const field of form.querySelectorAll('input,select,button'))field.disabled=false;go.disabled = !approval.ready; }
   });
   preview();
   return form;
@@ -287,7 +364,34 @@ async function nativeUsd(symbol) {
   if (!prices || Date.now() - pricesAt > 60000) { try { const r = await fetch('/api/funding/native-prices?symbols=ETH,BNB,HYPE', { cache: 'no-store' }); prices = r.ok ? (await r.json()).prices || {} : {}; pricesAt = Date.now(); } catch { prices = {}; } }
   return Number(prices[n]) || null;
 }
+export async function orderValue(m,side,amount){if(!m||amount<=0n)return null;const dec=side==='buy'?m.qdec:m.tdec,quote=Number(amount)/10**dec*(side==='buy'?1:Number(m.price)||0),usd=await nativeUsd(m.quoteSymbol);return quote>0&&usd>0?quote*usd:null;}
+const REVIEW=Symbol('order-ticket-review');
+const reviewError=()=>Object.assign(Error('This order changed. Review it again in the ticket.'),{code:'order_ticket_confirm'});
+export function orderTicket(input){return JSON.stringify(input.kind==='bracket'?['bracket',String(input.amountIn),String(input.tp||'').trim(),String(input.sl||'').trim(),Number(input.floorPct),Number(input.days)]:['limit',input.side,String(input.amount),String(input.price),Number(input.days),String(input.funding?.quote?.requestId||input.funding?.quote?.id||'')]);}
+const marketReviewKey=m=>JSON.stringify([String(m.chainId),m.controller,m.token,m.quote,m.tdec,m.qdec,m.price,m.key,NATIVE_OF[m.quoteSymbol]?Number(prices?.[NATIVE_OF[m.quoteSymbol]])||null:/^(USDC|USDG|USDT)$/.test(m.quoteSymbol)?1:null]);
+export function orderReview(owner,market,side,amount,value,ticket=''){
+ const current=getWalletHub(window).snapshot().current,pref=tradePrefs(owner);
+ return Object.freeze({[REVIEW]:true,at:Date.now(),owner,provider:current?.entry?.provider,chain:String(current?.chainId),rdns:current?.entry?.rdns,uuid:current?.entry?.uuid,market,marketKey:marketReviewKey(market),side,amount:String(amount),ticket,value:Number.isFinite(value)&&value>0?value:null,mode:pref.mode,cap:pref.capUsd,approval:pref.orderApproval});
+}
+function sameOrderReview(a,b,prepared=false){return !!a?.[REVIEW]&&!!b?.[REVIEW]&&a.owner===b.owner&&a.rdns===b.rdns&&a.uuid===b.uuid&&(prepared||a.provider===b.provider&&a.chain===b.chain)&&a.market===b.market&&a.marketKey===b.marketKey&&a.side===b.side&&a.amount===b.amount&&a.ticket===b.ticket&&a.mode===b.mode&&a.cap===b.cap&&a.approval===b.approval;}
+export function orderReviewAdmitted(review,current,{prepared=false,now=Date.now()}={}){return sameOrderReview(review,current,prepared)&&Number.isFinite(review.at)&&now>=review.at&&now-review.at<15000&&(review.value===null?current.value===null:current.value!==null&&current.value<=review.value);}
+function assertOrderForm(form,m,side){const dialog=form.closest?.('dialog');if(st?.market!==m||st?.side!==side||form.isConnected===false||dialog&&!dialog.open)throw reviewError();}
+export async function orderPress(owner,m,side,amount,ticketConfirmed,fn,{ticket='',assert=()=>{}}={}){
+ assert();const hub=getWalletHub(window),start=hub.snapshot().current;
+ const initialValue=await orderValue(m,side,amount);assert();const initial=orderReview(owner,m,side,amount,initialValue,ticket);
+ if(start?.owner?.toLowerCase()!==owner||start?.entry?.provider!==initial.provider)throw reviewError();
+ const plan=oneClickPlan(owner,start.entry,initialValue),inherited=ticketConfirmed===true&&silentActive();
+ if(ticketConfirmed&&ticketConfirmed!==true&&!orderReviewAdmitted(ticketConfirmed,initial)||plan.ticketConfirm&&!inherited&&!orderReviewAdmitted(ticketConfirmed,initial))throw reviewError();
+ const switched=String(start.chainId)!==String(m.chainId),ready=await prepareOrderWallet(owner,m.chainId,()=>{},assert);assert();
+ const readyProvider=ready?.entry?.provider,finalValue=await orderValue(m,side,amount);assert();const final=orderReview(owner,m,side,amount,finalValue,ticket),activePlan=oneClickPlan(owner,hub.snapshot().current?.entry,finalValue);
+ if(final.provider!==readyProvider||final.chain!==String(m.chainId)||hub.snapshot().current?.owner?.toLowerCase()!==owner||!sameOrderReview(initial,final,switched))throw reviewError();
+ if(activePlan.ticketConfirm&&!inherited&&!orderReviewAdmitted(ticketConfirmed,final,{prepared:switched}))throw reviewError();
+ return withOneClick(activePlan,()=>fn(()=>{assert();const current=orderReview(owner,m,side,amount,finalValue,ticket);if(hub.snapshot().current?.owner?.toLowerCase()!==owner||!sameOrderReview(final,current)||activePlan.silent&&(!silentActive()||!oneClick(owner,hub.snapshot().current?.entry)))throw reviewError();}));
+}
+
 const minCache = new Map();
+let gasHelpCache=null;
+async function availableGasHelp(chainId){if(String(chainId)!=='4663')return null;if(gasHelpCache&&Date.now()-gasHelpCache.at<15000)return gasHelpCache.value;let value=null;try{const r=await fetch('/api/orders/keeper',{cache:'no-store'});const help=r.ok?(await r.json()).gasHelp:null;if(help?.enabled&&/^[0-9]+$/.test(help.perFillWei)&&/^[0-9]+$/.test(help.availableWei))value=help;}catch{}gasHelpCache={at:Date.now(),value};return value;}
 export async function keeperMinimumUsd(chainId) {
   const hit = minCache.get(chainId); if (hit && Date.now() - hit.at < 60000) return hit.usd;
   const c = chainById(chainId), usdPerNative = await nativeUsd(c?.native === 'BNB' ? 'BNB' : c?.native === 'HYPE' ? 'HYPE' : 'ETH');
@@ -295,7 +399,10 @@ export async function keeperMinimumUsd(chainId) {
   try {
     const [block, tip] = await Promise.all([rpc(chainId, 'eth_getBlockByNumber', ['latest', false]), rpc(chainId, 'eth_maxPriorityFeePerGas', []).catch(() => '0x0')]);
     const maxFee = 2n * BigInt(block?.baseFeePerGas || '0x0') + BigInt(tip || '0x0'), costWei = 900000n * maxFee * 11n / 10n;
-    if (usdPerNative) usd = Number(costWei) / 1e18 / 0.003 * usdPerNative;
+    // The keeper helps with gas on these chains (server/order-keeper.mjs GAS_HELP): no minimum while one fill costs less than that help.
+    const help=await availableGasHelp(chainId);
+    if (help && costWei <= BigInt(help.perFillWei) && costWei <= BigInt(help.availableWei)) usd = 0;
+    else if (usdPerNative) usd = Number(costWei) / 1e18 / 0.003 * usdPerNative;
   } catch {}
   minCache.set(chainId, { at: Date.now(), usd }); return usd;
 }
@@ -385,7 +492,7 @@ function ordersView() {
     const acts = el('div', { class: 'qpo-acts' });
     if (x.status === 'open') {
       const wd = el('button', { type: 'button', class: 'qpo-btn' }, 'Withdraw');
-      wd.addEventListener('click', async () => { wd.disabled = true; try { if (!boardSession()) await signIn(); await post('/api/orders/' + x.hash, null, 'DELETE'); await refreshOrders(); render(); statusEl.textContent = 'Withdrawn. For a guarantee on chain, use Cancel on chain.'; } catch (e) { statusEl.textContent = say(e); wd.disabled = false; } });
+      wd.addEventListener('click', async () => { wd.disabled = true; try { if (!boardSession()) await signIn(); await post('/api/orders/' + x.hash, null, 'DELETE'); await refreshOrders(); render(); statusEl.textContent = (pair ? 'Withdrawn, with its pair. ' : 'Withdrawn. ') + 'For a guarantee on chain, use Cancel on chain.'; } catch (e) { statusEl.textContent = say(e); wd.disabled = false; } });
       acts.append(wd);
     }
     if (['open', 'cancelled'].includes(x.status)) {
@@ -397,12 +504,12 @@ function ordersView() {
     const origin = xchainEnabled && buy && connectedAddress() ? orderOrigin(connectedAddress(), x.chainId, x.hash) : null;
     if (origin && ['cancelled', 'expired', 'closed', 'failed'].includes(x.status)) {
       const mb = el('button', { type: 'button', class: 'qpo-btn' }, 'Move back to ' + chainName(origin.chainId));
-      mb.addEventListener('click', () => { void offerMoveBack({ chainId: Number(x.chainId), asset: { address: o.tokenIn, decimals: inDec, symbol: m?.quoteSymbol || '' }, amount: BigInt(o.amountIn), origin }).catch(e => statusEl.textContent = e.message); });
+      mb.addEventListener('click', () => { void offerMoveBack({ chainId: Number(x.chainId), asset: { address: o.tokenIn, decimals: inDec, symbol: m?.quoteSymbol || '' }, amount: BigInt(o.amountIn), origin }).catch(e => statusEl.textContent = say(e)); });
       acts.append(mb);
     }
     if (xchainEnabled && m && !buy && x.status === 'filled') {
       const home = cashHome(), mp = el('button', { type: 'button', class: 'qpo-btn' }, home && home !== Number(x.chainId) ? 'Move proceeds to ' + chainName(home) : 'Move proceeds');
-      mp.addEventListener('click', () => { void moveProceeds({ chainId: Number(x.chainId), asset: { address: m.quote, decimals: m.qdec, symbol: m.quoteSymbol }, amount: BigInt(o.amountIn) * BigInt(o.minOutPerIn) / SCALE, home }).catch(e => statusEl.textContent = e.message); });
+      mp.addEventListener('click', () => { void moveProceeds({ chainId: Number(x.chainId), asset: { address: m.quote, decimals: m.qdec, symbol: m.quoteSymbol }, amount: BigInt(o.amountIn) * BigInt(o.minOutPerIn) / SCALE, home }).catch(e => statusEl.textContent = say(e)); });
       acts.append(mp);
     }
     const explorer = chainById(x.chainId)?.explorer;
@@ -412,41 +519,51 @@ function ordersView() {
   return el('section', { class: 'qpo-mine', 'aria-label': 'Your orders' }, el('h3', {}, 'Your orders'), list);
 }
 
-export async function openOrders(chainId, controller) {
-  st = { side: 'buy', days: 7, orders: [], market: null };
-  try { st.market = await loadMarket(chainId, controller); } catch (e) { st.error = e.message; }
+export async function openOrders(chainId, controller, side) {
+  const owner = connectedAddress()?.toLowerCase() || null;
+  const requested = ['buy', 'sell', 'tpsl'].includes(side) ? side : null;
+  // Reopening the same intent keeps its draft, in-flight promise and recovery UI.
+  if (st?.market?.chainId === String(chainId) && st.market.controller?.toLowerCase() === controller.toLowerCase() && st.owner === owner && root?.childNodes.length && (!requested || st.side === requested || goBtn?.disabled || st.recovery)) {
+    if(st.approval?.disposed){render();return;}
+    if (!goBtn?.disabled && !st.recovery) await onWallet();
+    return;
+  }
+  st = { side: requested || 'buy', days: 7, orders: [], market: null, owner };
+  try { st.market = await loadMarket(chainId, controller); } catch (e) { st.error = say(e); }
   await refreshOrders(); render();
 }
 // ---- where it shows: the /orders page, or a sheet over the terminal ----
 let sheet = null;
-function openSheet(chainId, controller) {
+function openSheet(chainId, controller, side) {
   if (!sheet) {
     if (!document.querySelector('link[href="/qx-pro-orders.css"]')) document.head.append(el('link', { rel: 'stylesheet', href: '/qx-pro-orders.css' }));
     sheet = el('dialog', { class: 'qpo-sheet qpo-page', 'aria-label': 'Limit order' });
-    const close = el('button', { type: 'button', class: 'qpo-x', 'aria-label': 'Close', onclick: () => sheet.close() }, '×');
+    const close = el('button', { type: 'button', class: 'qpo-x', 'aria-label': 'Close', onclick: () => {st?.disarmOrderReview?.();st?.approval?.dispose();sheet.close();} }, '×');
     statusEl = el('p', { class: 'qpo-status', role: 'status', 'aria-live': 'polite' });
     root = el('div', { id: 'qpo-sheet-root' });
     sheet.append(el('div', { class: 'qpo-sheet-in' }, el('div', { class: 'qpo-sheet-bar' }, el('b', {}, 'Limit order'), close), statusEl, root));
-    sheet.addEventListener('click', e => { if (e.target === sheet) sheet.close(); });
+    sheet.addEventListener('click', e => { if (e.target === sheet) {st?.disarmOrderReview?.();st?.approval?.dispose();sheet.close();} });
+    sheet.addEventListener('cancel',()=>{st?.disarmOrderReview?.();st?.approval?.dispose();});
+    sheet.addEventListener('close',()=>{if(!sheet.open){st?.disarmOrderReview?.();st?.approval?.dispose();}});
     document.body.append(sheet);
     onWalletChange?.(() => { if (sheet.open) onWallet(); });
   }
   statusEl.textContent = '';
   if (!sheet.open) sheet.showModal();
-  return openOrders(chainId, controller);
+  return openOrders(chainId, controller, side);
 }
 /// The terminal's open market, from its address bar (#m=<chain>:<controller>), EVM markets only.
 export function terminalMarket(hash = location.hash) {
   const m = /^(\d+):(0x[0-9a-fA-F]{40})$/.exec(new URLSearchParams(String(hash).replace(/^#/, '')).get('m') || '');
   return m ? { chainId: m[1], controller: m[2].toLowerCase() } : null;
 }
-window.addEventListener('qhooks:order-open', e => { const d = e.detail || terminalMarket(); if (!d) return; if (document.getElementById('qpo-root')) openOrders(d.chainId, String(d.controller || '').toLowerCase()); else openSheet(d.chainId, String(d.controller || '').toLowerCase()); });
+window.addEventListener('qhooks:order-open', e => { const d = e.detail || terminalMarket(); if (!d) return; if (document.getElementById('qpo-root')) openOrders(d.chainId, String(d.controller || '').toLowerCase(), d.side); else openSheet(d.chainId, String(d.controller || '').toLowerCase(), d.side); });
 const node = document.getElementById('qpo-root');
 if (node) {
   import('/qx-account-wallet.mjs').catch(() => {});
   root = node; statusEl = document.getElementById('qpo-status');
-  const m = /^(\d+):(0x[0-9a-fA-F]{40})$/.exec(new URLSearchParams(location.search).get('m') || '');
-  if (m) openOrders(m[1], m[2].toLowerCase()); else { st = { orders: [], market: null }; refreshOrders().then(render); }
+  const intent = PAGE_INTENT;
+  if (intent) openOrders(intent.chainId, intent.controller, intent.side); else { st = { orders: [], market: null }; refreshOrders().then(render); }
   onWalletChange?.(onWallet);
 }
 // The terminal's "Limit order" button: shown while an EVM market is open; opens the sheet for it.

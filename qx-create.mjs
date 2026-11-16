@@ -1,3 +1,6 @@
+import {guidedSplitPreview,splitPreviewNode} from './qx-create-split-preview.mjs';
+import {mountCreateTrends,mountTrendDraftApply} from './qx-news-trends.mjs';
+import {profileImage} from './qx-token-profile-core.mjs';
 import {mountGuidedStart} from './qx-guided-start-control.mjs';
 import {mountSolCreate} from './qx-sol-launch.mjs';
 import {checkTicker,assertTickerFree,TickerTaken,tickerBlockNodes} from '/qx-ticker-guard.mjs';
@@ -99,6 +102,7 @@ function summaryNode(){const c=chainById(config.chainId),a=allocationAmounts(con
  appendArbRecaptureLine(box,c,CREATE_STYLES.find(p=>p.id===config.style)?.on||[],'studio');
  for(const r of config.allocations)box.append(line(r.label,r.pct+'% · '+(r.cliff?r.cliff/MONTH+' month cliff, ':'')+(r.duration?r.duration/MONTH+' months vesting':'available at launch')+' · '+r.notice/86400+' day notice'),line('Beneficiary',r.wallet));
  const lp=Number(workspaceFieldsForReview().lpFeePpm);box.append(el('p',{class:'qxc-fine'},'Creator LP fee: '+lp/10000+'%. Protocol pool fee: '+Math.floor(lp/5)/10000+'%. Selected block charges are shown above. Graduation needs your approval and both keys.'));
+ const splitOwner=hub.snapshot().current?.owner;box.append(splitPreviewNode(guidedSplitPreview(makeBlocks(config,splitOwner||'0x'+'1'.repeat(40)),splitOwner)));
  if(config.description)box.append(el('p',{},config.description));for(const[k,label]of Object.entries({x:'X',discord:'Discord',telegram:'Telegram',website:'Website'}))if(config[k])box.append(line(label,config[k]));return box;
 }
 function costNode(){const box=el('div'),view=createCostView(config,cost,usdPrices);
@@ -297,3 +301,10 @@ window.addEventListener('pagehide',()=>{balanceRevision++;reviewGate.clear();con
 
 startControl=mountGuidedStart({document,container:$('start-cap'),prefix:'qc-',getState:()=>({...config,disabled:busy||!!record}),onChange:next=>{Object.assign(config,next);changed();},request:rpcRead});
 solCreate=mountSolCreate({chainSelect:$('chainId'),onExit:()=>{render();}});
+mountCreateTrends();
+mountTrendDraftApply({target:document.querySelector('main'),getState:()=>({busy,record}),onApply:value=>{
+ const image=profileImage(value.image,'image'),banner=profileImage(value.banner,'banner');
+ Object.assign(config,{name:value.name,symbol:value.ticker,description:value.description,image,banner});
+ setTokenProfileDraft(config.chainId,{description:value.description,image,banner,links:editableTokenProfileDraft(config.chainId,profileScope).links},profileScope);
+ fill();changed();checkTickerSoon();note('Idea applied. Review the art and launch settings before continuing.');
+}});

@@ -1,5 +1,5 @@
 // Read-only history presentation. Receipt time never makes an old event current.
-import {freshnessState,historyState} from './qx-terminal-data.mjs';
+import {historyState} from './qx-terminal-data.mjs';
 const newest=(rows,field,scale,now)=>rows.reduce((at,row)=>Number.isFinite(row?.[field])&&row[field]>0&&row[field]*scale<=now+5000?Math.max(at,row[field]*scale):at,0)||null;
 const duration=(at,now)=>{const minutes=Math.max(1,Math.floor((now-at)/60000));return minutes<60?minutes+' min':Math.floor(minutes/60)+' h';};
 const dollars=value=>'$'+value.toLocaleString('en-US',{maximumSignificantDigits:5});
@@ -7,13 +7,25 @@ export function chartHistoryState(data,{now=Date.now(),formatPrice=dollars}={}){
  const bars=data?.candles||[],details=data?.historyFreshness?.candles||{};
  const lastEventAt=newest(bars,'time',1000,now)||details.lastEventAt;
  const status=historyState('candles',{...details,...(bars.length?{loading:false,available:true}:{}),lastEventAt},now),stale=!!bars.length&&status.stale;
- const header=freshnessState(data?.token||data,now),price=data?.summary?.price;
- const hasPrice=header.observedAt&&!header.stale&&Number.isFinite(price)&&price>0&&(!data?.meta?.quoteSymbol||/^(USD|USDC|USDT|DAI)$/.test(data.meta.quoteSymbol));
- return {stale,bars,message:stale?'Refreshing chart…'+(hasPrice?' · price now '+formatPrice(price):''):''};
+ const minutes=lastEventAt?Math.max(0,Math.floor((now-lastEventAt)/60000)):null;
+ const age=minutes==null?'':minutes<1?'just now':minutes<60?minutes+'m ago':minutes<1440?Math.floor(minutes/60)+'h ago':Math.floor(minutes/1440)+'d ago';
+ return {stale,bars,message:stale?'Refreshing'+(lastEventAt?' · last candle '+age:''):''};
+}
+// Retained history keeps its source clocks while the next header/history pair is read.
+export function retainHistoryFreshness(details={}) {
+ return {...details,...Object.fromEntries(['candles','trades'].map(kind=>[kind,{...details[kind],loading:false,stale:true,retained:true}]))};
+}
+// A history packet's metadata can lag merged curve/pool rows. Receipt time and native transfers are not swaps.
+export function tradeHistoryState(data,{rows=data?.trades||[],now=Date.now()}={}) {
+ const swaps=rows.filter(row=>row?.via!=='eth'&&typeof row?.tx==='string'&&row.tx.length>0);
+ const lastEventAt=newest(swaps,'ts',1000,now)||data?.historyFreshness?.trades?.lastEventAt||null;
+ return historyState('trades',{...data?.historyFreshness?.trades,lastEventAt},now);
 }
 export function renderChartHistory({element,message,data,now,formatPrice}){
  const view=chartHistoryState(data,{now,formatPrice});element.dataset.historyStale=String(view.stale);message.dataset.stale=String(view.stale);
- if(view.stale){message.textContent=view.message;message.hidden=false;}
+ if(view.stale)message.textContent=view.message;
+ // A retained chart has one quiet corner status; its candles remain unobscured.
+ if(view.bars.length)message.hidden=true;
  return view;
 }
 export function tapeHistoryState(rows,{now=Date.now()}={}){

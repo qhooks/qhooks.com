@@ -108,3 +108,8 @@ body.qa > #qhc-trigger:not(.qa-wallet #qhc-trigger) { position: fixed; top: 9px;
 
 /* the wallet dialog is styled globally by /qx-a/wallet.css */
 :where(.qa) *, :where(.qa) *::before { font-style: normal; }
+/* Chain mark sits left of the network select in one row (audit #18). */
+.qa .chain-select-control:has(> .chain-select-symbol) { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.qa .chain-select-control > select { flex: 1; min-width: 0; }
+.qa .chain-select-control > .chain-select-symbol { order: -1; flex: none; margin: 0; }
+.qa .chain-select-control > .chain-select-symbol img { display: block; width: 22px; height: 22px; }

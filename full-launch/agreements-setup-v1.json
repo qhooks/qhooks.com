@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "kind": "qhooks-agreements-setup",
+  "set": "agreements",
+  "chains": {
+    "4663": {
+      "steps": [
+        {
+          "id": "agreements",
+          "name": "Agreements",
+          "short": "Agreements",
+          "address": "0x9b6e579dd876c364bf232d2958d7cc45937809bf",
+          "runtimeSha256": "ed3ab83fd92dfbb26714a59e939be955e026e803f4f13770731b1c2bcc7be239"
+        }
+      ]
+    }
+  }
+}

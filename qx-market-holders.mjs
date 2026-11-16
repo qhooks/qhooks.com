@@ -1,4 +1,5 @@
-import {renderMarketHolders,holderSource} from './qx-terminal-holders.mjs';
+import {holderSource} from './qx-terminal-holders.mjs';
+import {renderMarketHolders} from './qx-holder-xray.mjs';
 export function createExternalHolderPanel({h,who,link,short,pct,fetcher=(...a)=>fetch(...a),now=Date.now}){
  const root=h('section',{class:'qxt-external-holders',ariaLabel:'Largest token accounts'}),cache=new Map();let key=null,chain=null,mint=null,market={},pending=null,generation=0,value=null,error=null,retryAfter=0;
  function render(){

@@ -249,6 +249,7 @@ function paintDone() {
 for (const inp of [nameIn, symIn]) inp?.addEventListener('input', () => { paintNames(); paintReady(); });
 watch($('qq-quick'), () => { paintIdea(); paintReady(); paintLaunch(); paintDone(); markPicked(); refreshOn(); }, { attributes: true, attributeFilter: ['hidden', 'src', 'disabled'], subtree: true, childList: true, characterData: true });
 if ($('qsf-root')) watch($('qsf-root'), () => { markPicked(); refreshOn(); }, { attributes: true, attributeFilter: ['hidden'] });
+watch(document.querySelector('.qq-preset'),()=>{paintIdea();paintReady();},{childList:true,subtree:true});
 watch($('qq-ideas'), () => { syncChains(); dressCards(); }, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'hidden'] });
 document.addEventListener('change', (e) => { if (e.target?.id === 'qq-chain') syncChains(); });
 document.addEventListener('visibilitychange', refreshOn);
@@ -285,3 +286,17 @@ const dressUploads = () => { for (const i of document.querySelectorAll('#qsf-roo
 watch($('main'), dressUploads, { childList: true, subtree: true });
 dressUploads();
 document.fonts?.ready.then(reelNav);
+
+// Existing unfinished guided launches stay visible when returning to /create.
+const resumeAdvanced=()=>{const custom=$('cr5-customize');if(custom&&['qc-saved-launch','qc-running','qc-screen-2','qc-screen-3'].some(id=>{const n=$(id);return n&&!n.hidden;}))custom.open=true;};
+for(const id of ['qc-saved-launch','qc-running','qc-screen-2','qc-screen-3'])watch($(id),resumeAdvanced,{attributes:true,attributeFilter:['hidden']});
+resumeAdvanced();
+// Keep the launch page short while retaining every footer destination.
+if(document.querySelector('.cr5')){
+ const footer=document.querySelector('footer.qa-foot');
+ if(footer&&!footer.querySelector('.cr5-explore')){
+  const details=document.createElement('details'),summary=document.createElement('summary');details.className='cr5-explore';summary.textContent='Explore QHooks';details.append(summary);
+  for(const node of [...footer.children])if(!node.classList.contains('qa-foot__base'))details.append(node);
+  footer.prepend(details);
+ }
+}
