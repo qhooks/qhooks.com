@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "kind": "qhooks-simple-launches",
+  "generatedAt": "2026-11-15T21:25:08.358Z",
+  "launches": [
+    {
+      "chainId": "4663",
+      "token": "0xebf69bb14d80e7c68f648fbae6050494923e480f",
+      "name": "QWERTY",
+      "symbol": "QWERTY",
+      "status": "new",
+      "terminal": "https://qhooks.com/terminal.html#m=4663:0xebf69bb14d80e7c68f648fbae6050494923e480f"
+    }
+  ]
+}

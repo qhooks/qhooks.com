@@ -27,3 +27,10 @@ QHOOKS token on Robinhood Chain (4663): 0x20429Af7cA3b0cE4d99EDBAA0693f26C5df051
 ## License
 Copyright © 2026 QHooks. All rights reserved, except where a file or folder states its own license. The
 [builder kit](https://github.com/qhooks/builder-kit) is MIT.
+
+## Agent guides
+
+- [Robinhood Chain MCP in 2 minutes](https://qhooks.com/agents/guides/robinhood-chain-mcp?ref=guide-1)
+- [Token safety checks for your agent](https://qhooks.com/agents/guides/token-safety-mcp?ref=guide-2)
+- [Agent OTC escrow and pay-when-done agreements](https://qhooks.com/agents/guides/agent-escrow?ref=guide-3)
+- [Read-only agent examples and captured responses](examples/agents/README.md)

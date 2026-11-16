@@ -1,0 +1,13 @@
+{
+  "jsonrpc": "2.0",
+  "id": "guide-init",
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2025-06-18",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "qhooks-guide-readonly-capture",
+      "version": "1.0.0"
+    }
+  }
+}

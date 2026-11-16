@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":"otc-status","method":"tools/call","params":{"name":"deal_status","arguments":{"chain":"4663","dealId":"1"}}}

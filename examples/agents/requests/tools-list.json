@@ -1,0 +1,6 @@
+{
+  "jsonrpc": "2.0",
+  "id": "guide-tools",
+  "method": "tools/list",
+  "params": {}
+}

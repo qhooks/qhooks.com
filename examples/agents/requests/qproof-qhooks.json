@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":"qproof-qhooks","method":"tools/call","params":{"name":"qproof_check","arguments":{"chain":"4663","token":"0x20429af7ca3b0ce4d99edbaa0693f26c5df05195"}}}

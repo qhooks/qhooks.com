@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":"rh-launches","method":"tools/call","params":{"name":"list_launches","arguments":{"chain":"4663","limit":1}}}

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "state": "ready",
+  "subject": {
+    "chain": "robinhood",
+    "address": "0x20429af7ca3b0ce4d99edbaa0693f26c5df05195"
+  },
+  "report": {
+    "status": "observed",
+    "verdict": {
+      "level": "clear",
+      "headline": "No red flags found",
+      "counts": {
+        "danger": 0,
+        "caution": 0,
+        "clear": 7,
+        "unknown": 1,
+        "info": 6
+      }
+    },
+    "retrievedAt": "2026-11-15T20:02:46.296Z",
+    "completedAt": "2026-11-15T20:02:48.697Z",
+    "cached": true,
+    "ageMs": 4942802
+  }
+}
