@@ -1,0 +1,7 @@
+// Offline canonical EVM count + total-chain copy check; no DOM/network/provider access.
+import{readFile,readdir}from'node:fs/promises';import{resolve}from'node:path';import{pathToFileURL}from'node:url';
+const root=resolve(process.argv[2]||'.'),{LIVE}=await import(pathToFileURL(root+'/chains.mjs')),{CHAIN_COUNT,CHAIN_WORD}=await import(pathToFileURL(root+'/qx-chain-count.mjs'));
+if(CHAIN_COUNT!==LIVE.length)throw Error('Canonical count drift');const hits=[];let markers=0;
+for(const n of await readdir(root)){if(!n.endsWith('.html'))continue;const t=await readFile(root+'/'+n,'utf8');for(const m of t.matchAll(/<[^>]+data-chain-count(?:="([^"]*)")?[^>]*>([^<]*)</g)){markers++;const expected=m[1]==='cap'?CHAIN_WORD[0].toUpperCase()+CHAIN_WORD.slice(1):CHAIN_WORD;if(m[2].trim()!==expected)hits.push(n+': data-chain-count differs');}}
+const feed=await readFile(root+'/qx-terminal-feed-core.mjs','utf8'),section=/export const CHAINS\s*=\s*\[([\s\S]*?)\];/.exec(feed)?.[1];if(!section)throw Error('Feed chain list missing');const ids=[...section.matchAll(/\['([^']+)'/g)].map(m=>m[1]),want=new Set(['all','solana',...LIVE.map(c=>String(c.id))]);if(ids.length!==want.size||ids.some(x=>!want.has(x)))hits.push('feed list differs from LIVE +all +Solana');
+console.log(JSON.stringify({evmChains:LIVE.length,totalIncludingSolana:LIVE.length+1,markers,hits}));if(hits.length)process.exitCode=1;

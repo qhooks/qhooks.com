@@ -1,0 +1,25 @@
+{
+  "at": "2026-11-16T23:56:36.426662+00:00",
+  "status": "RELEASE_OWNER_EXACT_HASH_REVIEW_APPROVED",
+  "sourceRelease": "c1a6837d-2be3-4e99-98fa-f163c00b315c",
+  "sourceWorkerSha256": "ac722e371131c2e84db0b746caeb72b694bc2fdeeee199aafe2a5b6889bb0979",
+  "path": "b/terminal/qx-terminal.7OBMQYRS.mjs",
+  "sha256": "3aa066e96f8d55e31e8232f1402da092bc95c2bb6ccc8b4daea9ae60d7898dca",
+  "bytes": 401778,
+  "reviewedReferences": [
+    "https://www.tradingview.com/?utm_medium=lwc-link&utm_campaign=lwc-chart",
+    "Charting by TradingView"
+  ],
+  "referencesExactly": 2,
+  "graphInput": {
+    "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+    "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+  },
+  "closedAdvancedChartsInputs": 0,
+  "existingApacheLicense": {
+    "path": "vendor/lightweight-charts/LICENSE",
+    "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+  },
+  "authority": "Release owner explicitly approved this exact additional derived path/hash after source-graph and attribution review.",
+  "scope": "Only this exact hash added to existing26; unconditional Advanced Charts path bans and unknown/changed bundle refusal remain unchanged."
+}

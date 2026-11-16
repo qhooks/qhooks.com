@@ -32,14 +32,10 @@ QHOOKS token on Robinhood Chain (4663): 0x20429Af7cA3b0cE4d99EDBAA0693f26C5df051
 
 ## Release integrity
 
-Each prepared mirror update includes a full static-source manifest. The local `.ci` tools validate changed, missing and
-extra public files, the licensed-content boundary and common credential patterns. These tools do not publish or deploy.
-
-```sh
-python3 .ci/release-manifest.py verify --root . --manifest .well-known/qhooks-release.json
-sh .ci/mirror-guard.sh .
-python3 .ci/secret-scan.py .
-```
+Each mirror update includes a full static-source manifest. CI rejects changed, missing and extra public files against it,
+checks the licensed-content boundary, scans tracked source for common credential patterns, and checks canonical chain counts
+and terminal filter membership. The chain-copy check covers marked copy; unmarked historical page prose needs source-owner
+updates and is not claimed canonical by this check. No CI job deploys or publishes the website.
 
 ## License
 Copyright © 2026 QHooks. All rights reserved, except where a file or folder states its own license. The
