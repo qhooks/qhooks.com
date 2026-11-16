@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "reason": "Existing Apache-2.0 Lightweight Charts allowance applied to exact hashed public bundle variants; Advanced Charts remains excluded. Every TradingView reference in these26files is LWC attribution.",
+  "releaseId": "ddebc592-2b26-4e99-aefa-c9714252e789",
+  "license": {
+    "path": "vendor/lightweight-charts/LICENSE",
+    "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+  },
+  "bundles": {
+    "b/discover-stale-root-20261116/terminal/qx-terminal.F33AOKSA.mjs": "c603fa8dcdae4832d140c18450130704e2f04a2de40bfd51d1418a6191c7271c",
+    "b/discovery-approved-root-20261116/terminal/qx-terminal.BZT2HQPS.mjs": "a663b152d672d06ad738ac4a4ca6ca4fb5a9a90af7c7db157622402ee7fe258c",
+    "b/empty-sync-approved-root-20261116/terminal/qx-terminal.BWRLCGXG.mjs": "a367ff2d1cb84cb025da386d1ff6e80063ac7306abc08c7ca2b706989930de5f",
+    "b/expert-approved-root-20261116/terminal/qx-terminal.ZHJKAW7I.mjs": "9cb14940ddfdefeada11bdeb17fa59604060e3f9c5ba7ea923d8e7d2b26bc115",
+    "b/portfolio-inline-approved-root-20261116/terminal/qx-terminal.GDNA2BAD.mjs": "ffc3e9af6c18fb371a4960c2d792c686b073e02e71519e8f7fe8ef97bd54b17f",
+    "b/portfolio-native-hotfix-20261116/terminal/qx-terminal.MUOKKG2A.mjs": "e93c3512bc40586dac4a671a447149d0c39e39ceea1564eadb0de4a3ce0a470c",
+    "b/prizes-20261115/terminal/qx-terminal.EVGZZL26.mjs": "fea668554af731128fc42fa0fea652fa5dd6496bd826aefbb29058020846893b",
+    "b/terminal/qx-terminal.2LGJ5GJS.mjs": "82e12aa3a4a8211b536aa20bc21d4aa4865540fdc1c11e559d8ce7dda8b8294b",
+    "b/terminal/qx-terminal.3USGPOPZ.mjs": "88eb30c648e1aa152cabbfc202f2bd0c29bf367ff21b233825534d8afc74c2fd",
+    "b/terminal/qx-terminal.4QUP7QA3.mjs": "68ce9fd2bd92c5ab50e41c73a453cd742a4528738ac51661dc8d6ec11a23435b",
+    "b/terminal/qx-terminal.A27A5F7E.mjs": "85f9b7b1113c80c520a3d1d16c3dd71b0e2ed62d75c30ff20bc9d71f70e2a346",
+    "b/terminal/qx-terminal.BVHDSPEP.mjs": "c01096ad0999c3b2178cab66d35a780b352f021cdb87a2f7cbf204842523368d",
+    "b/terminal/qx-terminal.EVGZZL26.mjs": "fea668554af731128fc42fa0fea652fa5dd6496bd826aefbb29058020846893b",
+    "b/terminal/qx-terminal.JU7HNNLT.mjs": "bf3d56618b82191aa660616eae24d2afbbea86679f339813f15cbab6feb4de7e",
+    "b/terminal/qx-terminal.KCJMGVNE.mjs": "aa5a43be2d643eda7becb16759a3caf8d2e536b87cffa4a3a7c5539f9cd5cac7",
+    "b/terminal/qx-terminal.MKRL53TQ.mjs": "fe99ce85f9db57f353bf873359d9a66da0c66399dc03028ff6176d6dd1cf8e74",
+    "b/terminal/qx-terminal.OSY4B4B4.mjs": "c36ec83c0c05db77ac4b240758fffba8cee2b9b58be521fb3afb8177026b2a26",
+    "b/terminal/qx-terminal.P6GTR23X.mjs": "15b03c47c59167d93ca60c92691f9232f782a2e95c0f631eacecb7893a6a8f27",
+    "b/terminal/qx-terminal.WFZEUOFZ.mjs": "b82e7cbc309d5d8872fc7fcad58727f84b70ee61eb7298764bbed460f83b6d1a",
+    "b/terminal/qx-terminal.YARVSCWH.mjs": "d5f0395123f6fe6f3ec1f14cef8d68e90486e5d9ae653edbe3b4d7730baff80c",
+    "b/terminal/qx-terminal.Z3SUG2A2.mjs": "a47f6c1a852ec647571de586a7da7bfea9c2732af07ad3345904093593695e73",
+    "b/ux-list-root-20261116/terminal/qx-terminal.VN2RJGMC.mjs": "3b84d0c47b3b384044728ad9be077114bb112b337b0acf24897d1355cc3887e8",
+    "b/ux-ra-20261116/terminal/qx-terminal.KCJMGVNE.mjs": "aa5a43be2d643eda7becb16759a3caf8d2e536b87cffa4a3a7c5539f9cd5cac7",
+    "b/ux-rb-root-20261116/terminal/qx-terminal.7IZUAJFL.mjs": "ac8c855fd1d147c09278aac5be5bdd3a4328ddad8af42a02f06a3f0b48f682d5",
+    "b/ux-token-root-20261116/terminal/qx-terminal.VN2RJGMC.mjs": "3b84d0c47b3b384044728ad9be077114bb112b337b0acf24897d1355cc3887e8",
+    "b/webkit-image-root-20261116/terminal/qx-terminal.7PPL4M54.mjs": "14d73c7281f8d8731bf53d949b393b4d758990d1d2e536a629cbc16ac750cc20"
+  },
+  "classificationSourceReleaseId": "df15e38a-fdcd-4fd2-af2c-5bed0051158b"
+}

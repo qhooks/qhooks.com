@@ -1,7 +1,8 @@
 # qhooks.com
 
-The front end of [qhooks.com](https://qhooks.com), published exactly as the site serves it: every page, script and style a
-visitor's browser already downloads. It is here so anyone can read what the site does before connecting a wallet.
+The public static source of [qhooks.com](https://qhooks.com). The release ID, Worker digest and SHA-256 checksums in
+[`.well-known/qhooks-release.json`](.well-known/qhooks-release.json) identify the accepted source snapshot mirrored here.
+It is here so anyone can read the browser code before connecting a wallet.
 
 QHooks is an ecosystem for token builders on Uniswap v4: pick or build the hooks a token trades through, launch it, trade
 it in one terminal, let holders stake, protect creator actions with a second post-quantum key, and integrate it all into
@@ -14,7 +15,10 @@ QHOOKS token on Robinhood Chain (4663): 0x20429Af7cA3b0cE4d99EDBAA0693f26C5df051
 - **What changed:** <https://qhooks.com/changelog> (feed: <https://qhooks.com/changelog.xml>) · **What's next:** <https://qhooks.com/roadmap.html>
 
 ## What is and isn't here
-- Everything in this repository is served publicly at qhooks.com; nothing here is a secret. Wallet keys and passphrases never
+- Public assets, including `b/` browser bundles, match the pinned release's `public/` source. README, CI tooling and release
+  metadata are repository files. The Worker can generate public documentation and API responses at request time; their served
+  bodies are covered by the release owner's live acceptance, separately from these static-source checksums.
+- Wallet keys and passphrases never
   leave the user's browser. A post-quantum account key is encrypted in the browser; QHooks stores only that encrypted copy
   (one per unlock method: passphrase, and Face ID / Touch ID via a passkey) and never receives anything that opens it.
   The wallet or a QHooks sign-in alone cannot open it. Security reports: team@qhooks.com (see /.well-known/security.txt).
@@ -23,6 +27,19 @@ QHOOKS token on Robinhood Chain (4663): 0x20429Af7cA3b0cE4d99EDBAA0693f26C5df051
   is public in the builder kit.
 - Third-party code keeps its own license: `vendor/lightweight-charts` (TradingView Lightweight Charts, Apache-2.0) and the
   wallet-login bundle in `privy/` (Privy).
+- Licensed TradingView Advanced Charts files (`charting_library*`, `datafeeds/`, `download/`) are excluded. The mirror guard
+  also rejects renamed library bundles; open-source Lightweight Charts remains included.
+
+## Release integrity
+
+Each prepared mirror update includes a full static-source manifest. The local `.ci` tools validate changed, missing and
+extra public files, the licensed-content boundary and common credential patterns. These tools do not publish or deploy.
+
+```sh
+python3 .ci/release-manifest.py verify --root . --manifest .well-known/qhooks-release.json
+sh .ci/mirror-guard.sh .
+python3 .ci/secret-scan.py .
+```
 
 ## License
 Copyright © 2026 QHooks. All rights reserved, except where a file or folder states its own license. The
