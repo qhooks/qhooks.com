@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "releaseId": "ad03ae84-d6d0-48e1-a634-871c61e7256a",
-  "sourceWorkerSha256": "6ceaf9c9e10b712095b31809477b014e83997fa417fb661eb7a4db467dce9be3",
+  "releaseId": "1181fea0-2596-4c3f-a765-edd40fbb0df1",
+  "sourceWorkerSha256": "f4135c7cee945023d8adf4a06bc434729ded51ef133eacf9a165b2013a516dc6",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -127211,5 +127211,5 @@
     }
   },
   "contentDigest": "ee113f6cbbabf6a787e04f7aaf13b634049bf995b136820da51aa8f022162f1a",
-  "provenance": "Frozen deployed ad03ae84 public/ source (same static bytes as5a3a2bc5); static bytes only. Worker-generated HTTP bodies require a separate root served-response receipt."
+  "provenance": "Exact deployed1181fea0 static public assets; identical bytes toad03ae84. Worker and secret bindings are private and not mirrored. Worker-generated HTTP bodies require separate served-response acceptance."
 }
