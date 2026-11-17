@@ -168,9 +168,9 @@ async function dexFeed(chainId, opts) {
   return mergeRows(searched.flat(),more).map(r=>knownBoosts.has(r.token.address)?{...r,provenance:{...r.provenance,promoted:true}}:r);
 }
 
-export function sortForTab(rows, tab, window = 'h24') {
+export function sortForTab(rows, tab, window = 'h24', options = {}) {
   const list = rows.filter(discoveryCandidate), v = (r, k) => num(k(r));
-  if(tab==='trending')return rankDiscovery(list,{window});
+  if(tab==='trending')return rankDiscovery(list,{window,...options});
   const desc = k => (a, b) => (v(b, k) ?? -Infinity) - (v(a, k) ?? -Infinity);
   if (tab === 'new') list.sort(desc(r => r.createdAt));
   else if (tab === 'volume') list.sort(desc(r => r.volumeUsd?.h24));
@@ -202,8 +202,8 @@ async function chainFeed(tab, chainId, window, opts) {
 }
 
 // The browser's own list for one Discover view, in the server's {version:1, rows} contract.
-export async function browserFeed({ tab = 'trending', chain = 'all', window = 'h24', fetcher = globalThis.fetch, now = Date.now, signal, onPartial } = {}) {
-  const partial = onPartial ? ({ rows, source }) => { try { onPartial({ version: 1, tab, chain, window, rows: sortForTab(rows, tab, window), observedAt: rows.length?Math.min(...rows.map(r=>r.observedAt||now())):now(), stale: rows.length>0&&rows.every(r=>r.stale===true), browser: true, source }); } catch {} } : null;
+export async function browserFeed({ tab = 'trending', chain = 'all', window = 'h24', filters = {}, fetcher = globalThis.fetch, now = Date.now, signal, onPartial } = {}) {
+  const partial = onPartial ? ({ rows, source }) => { try { onPartial({ version: 1, tab, chain, window, rows: sortForTab(rows, tab, window,{filters,now:now()}), observedAt: rows.length?Math.min(...rows.map(r=>r.observedAt||now())):now(), stale: rows.length>0&&rows.every(r=>r.stale===true), browser: true, source }); } catch {} } : null;
   const opts = { fetcher, now, signal, onRows: partial };
   let rows = [], sources = new Set();
   if (chain === 'all') {
@@ -233,8 +233,8 @@ export async function browserFeed({ tab = 'trending', chain = 'all', window = 'h
   } else {
     const got = await chainFeed(tab, chain, window, opts); rows = got.rows; if (got.source) for (const s of got.source.split(' · ')) sources.add(s);
   }
-  rows = sortForTab(mergeRows(rows, [],240), tab, window);
-  if(chain==='all'&&tab==='trending')rows=rankDiscovery(rows,{window,chain,limit:100});
+  rows = sortForTab(mergeRows(rows, [],240), tab, window,{filters,now:now()});
+  if(chain==='all'&&tab==='trending')rows=rankDiscovery(rows,{window,chain,filters,now:now(),limit:100});
   return { version: 1, tab, chain, window, rows, observedAt: rows.length?Math.min(...rows.map(r=>r.observedAt||now())):now(), stale: rows.length>0&&rows.every(r=>r.stale===true), browser: true, source: [...sources].join(' · ') || null };
 }
 

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "releaseId": "20e87d90-40ca-4227-9fb1-e3c5f4ba584a",
-  "sourceWorkerSha256": "2f4b5ce5319c105901cbd7585528e726a41cbc76e0c197a2dbd2916ada18ab21",
+  "releaseId": "70da633e-11e5-4f64-9098-6c869112a9b5",
+  "sourceWorkerSha256": "a55de1dfac208d9c6c99d04c2f6d8446a99347e082cfb82941094658f8569460",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -3189,6 +3189,10 @@
       "sha256": "788a8ad78152f1757ba5b24fc1ffd0e6341ca34c4daa7cadaf0434c60f743051",
       "bytes": 445
     },
+    "b/create/c.4B2IU7EI.mjs": {
+      "sha256": "8f75a09883e62a964cc753459351915e7857cd96052bbed29ab079b83ab296fe",
+      "bytes": 3445
+    },
     "b/create/c.4BEAV3EV.mjs": {
       "sha256": "632b945603c71b134840b04824fab17ee11ded21f667044a836eb2931b6eab16",
       "bytes": 27880
@@ -3901,6 +3905,10 @@
       "sha256": "4b81cc1fa49ed646ab4dc50cfa043abcc8fba8b1520a9c278685a8b13f523dec",
       "bytes": 422
     },
+    "b/create/c.MHBRONS7.mjs": {
+      "sha256": "bce108f434381b355778e383e51305e3b3eb355f924466eced0b9eccc9e927bb",
+      "bytes": 12406
+    },
     "b/create/c.MJ3DSUEN.mjs": {
       "sha256": "de1d01daf45cb3d8d7ca3e5c2c58cc72607f6306df21404dd3a1c87cf418b93d",
       "bytes": 2960
@@ -4593,6 +4601,10 @@
       "sha256": "df446676c4bebabd9e80904077761dc4f4cce3cd62217d605cfce87626ff80f0",
       "bytes": 28747
     },
+    "b/create/qx-a/pages/create-create.Z4TQ5ZF2.mjs": {
+      "sha256": "e9cdec28d226e73260e5023887dc8251dbd7d22723571a48d8fd5a2d9e76b2c2",
+      "bytes": 29732
+    },
     "b/create/qx-a/pages/create-v4.F4VD2WNN.mjs": {
       "sha256": "6d1f218d975b62ba73cd0a83910d8b5774331030ff5152386fe40195a2092267",
       "bytes": 10331
@@ -4628,6 +4640,10 @@
     "b/create/qx-qcaster-entry.DKQZ4TCV.mjs": {
       "sha256": "b20a954a6f842b4db49291e03fa71427f4b86785b7b72460ba98631e30e40583",
       "bytes": 588
+    },
+    "b/create/qx-quick-launch.5XRBMBQM.mjs": {
+      "sha256": "9c72f8f7313608755006842284c1459bd85a2f33bf2fb9fac509df8b630675a4",
+      "bytes": 53143
     },
     "b/create/qx-quick-launch.BY3X7JPL.mjs": {
       "sha256": "47f6f54ab08f34bfba3599375c5ffe029c2be74c42ed24c6e3b972acf01a6bda",
@@ -23117,6 +23133,10 @@
       "sha256": "fb083b1a39056e0f4c88541a1afcb444f7e6903036b5c8cf7ba83931c1a1386e",
       "bytes": 31201
     },
+    "b/markets/qx-market-browser.MULQJD7F.mjs": {
+      "sha256": "67df5aaf3b43c222ac1f7bcefe6324dbb40aa5d9d628cedf86ff9db0844707d6",
+      "bytes": 34008
+    },
     "b/markets/qx-market-browser.MV42MAAA.mjs": {
       "sha256": "ff360c79289709df054a0c2f6176806ffaf7ff0657bf0e0a7c945982eb2ad5f6",
       "bytes": 26140
@@ -39105,6 +39125,10 @@
       "sha256": "01d5cee59b7b17815998f2a4db9e58db56fd369ef6d084b4eddb584ecb477c8a",
       "bytes": 27929
     },
+    "b/qtoken-studio/c.XK6ITTLU.mjs": {
+      "sha256": "5f24773d3f97206b49a1380a538ec2bc97462b474bcaf90716bd7cd9a27e3624",
+      "bytes": 15774
+    },
     "b/qtoken-studio/c.XLIFKH5H.mjs": {
       "sha256": "bbca0e511f5176fccd0e47cbde8075e5aca5485d33b499a80df8179c8afe54f9",
       "bytes": 643
@@ -39176,6 +39200,10 @@
     "b/qtoken-studio/qx-pair.LVDSK4UC.mjs": {
       "sha256": "3ac3c21849a3afe3f11c7d4918638f475bd1745f158b9957bb4c507d860c8b22",
       "bytes": 1257
+    },
+    "b/qtoken-studio/qx-quick-launch.II6FAFIZ.mjs": {
+      "sha256": "d17b81a1a076f34fe7d5811093cd8aada5386e75afe51a27510f9eb47aa654f9",
+      "bytes": 85606
     },
     "b/qtoken-studio/qx-quick-launch.YKDY2ACK.mjs": {
       "sha256": "cd4707c61e73159c29dafab322a4392cd4076972f9ea2bca295d656810d46574",
@@ -40865,6 +40893,10 @@
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "bytes": 0
     },
+    "b/terminal/c.4BC3QN2U.mjs": {
+      "sha256": "ca7d8d5cf29edfbe67a7bd4bd8b529737324b99594f093ff9289171e29e49761",
+      "bytes": 47694
+    },
     "b/terminal/c.4FQ4XX26.mjs": {
       "sha256": "284469a435f216b2e16f00e0db3f625195310c2d1185483b85e5379277da0037",
       "bytes": 909
@@ -41036,6 +41068,10 @@
     "b/terminal/c.7DM3RPNT.mjs": {
       "sha256": "d55201017666727a6efa3b5eeb3e2b89fcb5021d8e7e0901f1cfc8800e726a8b",
       "bytes": 944
+    },
+    "b/terminal/c.7EZY5QZF.mjs": {
+      "sha256": "102502612b847744ad656f930e5e594a9315fdc498b35a5d4649b35e06aed5d6",
+      "bytes": 8165
     },
     "b/terminal/c.7KJ3WHUF.mjs": {
       "sha256": "b80ec3a03ba07b0a07b33ee8810acd93e198ed3317d04a999d7ab5377777c05d",
@@ -42157,6 +42193,10 @@
       "sha256": "8062fd9255b6ef79f6624b61079c5bc4c19e734360eb5f4993a12f806ca0a105",
       "bytes": 27965
     },
+    "b/terminal/c.XTGZTX2Y.mjs": {
+      "sha256": "cc95c08d03618da0c6b4c45b8fba82b4857e1981daef8ad581e1b0f9ec8f1bf1",
+      "bytes": 425
+    },
     "b/terminal/c.XVDOQVGX.mjs": {
       "sha256": "03c6e17b05bc21cad9cbcbcb43fb354e14a92d88d52f9bd27c7d4aa0ed51fab4",
       "bytes": 2398
@@ -42240,6 +42280,10 @@
     "b/terminal/c.ZLLR3HTX.mjs": {
       "sha256": "9af3385733fb0e07b37d3d354dd3ab78393660810c0d04955d5c88e83b199e95",
       "bytes": 11952
+    },
+    "b/terminal/c.ZOUJD7SB.mjs": {
+      "sha256": "0d6e10953d4a00a86d203aa1b01ead71533e47c61ea084bf5f1aad9935f3b610",
+      "bytes": 12205
     },
     "b/terminal/c.ZQKL32AX.mjs": {
       "sha256": "a1dfafbed19af3e3561e18d0fe754d89bfcc77e44ebae7e6ee9568a6c59ecbcd",
@@ -42585,6 +42629,10 @@
       "sha256": "2c9b9eafa10cc3b4af66c8f7a3a78b938ab8f8a5e08e6461bf8c4274331965ed",
       "bytes": 53560
     },
+    "b/terminal/qx-terminal-feed.QAZ6QL3S.mjs": {
+      "sha256": "7173f295315be75341b307c22038b35ba6c96b54eff4c3c82aacb2c94845916f",
+      "bytes": 73802
+    },
     "b/terminal/qx-terminal-feed.R6FIHBGK.mjs": {
       "sha256": "81f28ff70fe83aa1ed872552942067efb9ae573145ccbf2c626b48a4e28cf1c1",
       "bytes": 53560
@@ -42620,6 +42668,10 @@
     "b/terminal/qx-terminal.EVGZZL26.mjs": {
       "sha256": "fea668554af731128fc42fa0fea652fa5dd6496bd826aefbb29058020846893b",
       "bytes": 500319
+    },
+    "b/terminal/qx-terminal.FHRZTV2Q.mjs": {
+      "sha256": "659cdeea5831266ccc3868748f11a0e74b6bff305030ea8a26ac3eb286c22f7a",
+      "bytes": 419805
     },
     "b/terminal/qx-terminal.IHHK7G2D.mjs": {
       "sha256": "f8d46823b2ba13227e3e25400d16f0a8a691393cfd8bf18d77ad96072fd05dba",
@@ -60606,7 +60658,7 @@
       "bytes": 2653
     },
     "create.html": {
-      "sha256": "a9e9ae4382ef719bb9677295d4dc2a3c1ef43dc73a4d32a3ee164600e71d79ea",
+      "sha256": "b4f2554779eda617e38fab923679f151d7548a3f5263dae5b84deb454e0a8495",
       "bytes": 25970
     },
     "creator-draft.mjs": {
@@ -63082,7 +63134,7 @@
       "bytes": 246
     },
     "markets.html": {
-      "sha256": "60d4efadbb1fa83a1b3ac66ec6b4c4af9417eadff25ae7e3499e9c83b6590357",
+      "sha256": "6fae3a1d23511a430a08146d379f76ceed73975a69b4627d9c3df62def22aa67",
       "bytes": 6477
     },
     "me.html": {
@@ -68742,7 +68794,7 @@
       "bytes": 11908
     },
     "qtoken-studio.html": {
-      "sha256": "6f01daaa43fc3a4a24c57c0056dcb1c6570cbd7c345d5a67c83e97968d9056a6",
+      "sha256": "ffa3d0bd51d7c752db159103893a9d78431f8fa70608cc7881e991cdc5066e2f",
       "bytes": 37299
     },
     "qwallet-chain-entry.mjs": {
@@ -70402,8 +70454,8 @@
       "bytes": 47273
     },
     "qx-browser-market.mjs": {
-      "sha256": "436b29ab08c57490596480a6ed4831fe81a8b93090b5d3a4423dae3fa9feaeb0",
-      "bytes": 21263
+      "sha256": "c3f89bc3572a1d7018d8debc0d5f141a49a6341577e739cc9d618019848e5c30",
+      "bytes": 21360
     },
     "qx-burn-ticker.mjs": {
       "sha256": "2335c90c545a36d690f6d27c697c80e9db8cec67ab563af9a14871d55c70b9ee",
@@ -70810,8 +70862,8 @@
       "bytes": 2196
     },
     "qx-discovery-rank.mjs": {
-      "sha256": "b6c8a8817570dcf57c6313b11465078167c5774dc37d8ef26e88014f602d5386",
-      "bytes": 2654
+      "sha256": "9c1d45cfffa1226be401112caf0eddf4499334dfeaa9b8709c5ced2a2684a699",
+      "bytes": 3989
     },
     "qx-discovery-updates.mjs": {
       "sha256": "dfb150a65acfa21f829fdff3146c63b7c3022279a48a09171e61d6f1b084ab1e",
@@ -71273,6 +71325,10 @@
       "sha256": "e6459a033441bf25b439035ce65b37bbe05c7a9c9c06908824059fc1e0ec341b",
       "bytes": 13296
     },
+    "qx-major-assets.mjs": {
+      "sha256": "dc1e988c170dd704a24a9997ede0e9e2c82420ae28af67b99d1f474a103c87fa",
+      "bytes": 1116
+    },
     "qx-marker-labels.mjs": {
       "sha256": "4379f558164f01619d011ff3e6b790ba5fc30058d7cc256fdc0d185328c917ed",
       "bytes": 2771
@@ -71286,8 +71342,8 @@
       "bytes": 1380
     },
     "qx-market-browser.mjs": {
-      "sha256": "a4423512eecc57419e2aac85211b7abe9c8b77c151fc087ce6e86aa98c4219c0",
-      "bytes": 30213
+      "sha256": "bb162561a691febd94eed715000403bfc339ce3388032e41aec43bddb651ccb6",
+      "bytes": 30433
     },
     "qx-market-fallback.mjs": {
       "sha256": "35edf9fcd1a1e3b0e01f607a1c3c0f454a8007bbc22d4f3c2804f20df559241e",
@@ -71300,6 +71356,10 @@
     "qx-market-live.mjs": {
       "sha256": "277c40f470aabe0217cc4a3d9a43dc4719ebdfd698a4c75b9f2da77e4027ae86",
       "bytes": 6410
+    },
+    "qx-market-majors.mjs": {
+      "sha256": "fef1c8fec55f4e1716517afb5c51a966e88023c14b6c84fb13665f1e5b9df41e",
+      "bytes": 2447
     },
     "qx-market-position.mjs": {
       "sha256": "322e7a855f6350a7abd966f4a7624052f663babd6de81086431beb7fad2e85be",
@@ -72182,12 +72242,12 @@
       "bytes": 23344
     },
     "qx-terminal-density.css": {
-      "sha256": "81d90bb1435664c7943608417581375ae63b7b8d69c206d4abadf0e5769ce0b8",
-      "bytes": 13445
+      "sha256": "6b8276296e10c332eff4647334b594644c29f9e919bf1f916d7e83e662f38fd8",
+      "bytes": 16283
     },
     "qx-terminal-feed-core.mjs": {
-      "sha256": "eb929963e008beddf481c59085f8bc1df56b36c9dd6cdee7654c876524dd05a4",
-      "bytes": 22702
+      "sha256": "ea3345e6b07457d47c90bfe23c7571cfd0349cbdd3950f6883b167f262b74f43",
+      "bytes": 23138
     },
     "qx-terminal-feed-presentation.mjs": {
       "sha256": "b95b68ef988a5c377474128af2f5f938c2ab2052187755e0b8c3cce90ebe59b3",
@@ -72198,8 +72258,8 @@
       "bytes": 18470
     },
     "qx-terminal-feed.mjs": {
-      "sha256": "18c5a8d53210181da117c5e5e32cf6f6346da0e326c3e686f76d3a715893f839",
-      "bytes": 59808
+      "sha256": "ec0b3e9f1dbcbf73b2563772bebb16d112f40bd015cfada1efe82f866482f323",
+      "bytes": 61182
     },
     "qx-terminal-history.mjs": {
       "sha256": "732c7c589c46a1d07b1a505ae3dc45e2a99ea96b2eb479ddbf338cadddebebfa",
@@ -72782,7 +72842,7 @@
       "bytes": 6801
     },
     "terminal.html": {
-      "sha256": "539a5c9a2db6c3c197e1be89b5c0f2f2b1d8a32b7f3841622ba0e7f0b93a4b24",
+      "sha256": "7fcfd5851d444d03f0d356d933c3f70998aa78028cbb7b875de468156fb9ac8f",
       "bytes": 24493
     },
     "terms.html": {
@@ -73190,24 +73250,46 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "63da43a7cc3293c30162bef0fdd543699d822982d3944bb55e0115632d7247b1",
-  "provenance": "Accepted release public/ static source. Full G4 checksum map retained plus exact10new Safeutility hashes; Worker-generated HTTP bodies have separate root served-response acceptance.",
+  "contentDigest": "bef34262b2873d92b907052850c8c475f8d301b56714644c3d77b7aaa39bd30d",
+  "provenance": "Accepted G3 LIVE release public/ static source. Incremental hash map composed from published20e8 plus exactly32changed/new public files; Worker-generated HTTP bodies have separate root served-response acceptance.",
   "incrementalComposition": {
-    "baseRelease": "9cd5b130-75ef-4678-b4a9-7686571c6c6e",
-    "baseContentDigest": "90a10bf7622cd4745c559fb53e6b6fba086c0650f08fae56208d39215f6bfc01",
-    "baseMirrorCommit": "cef3e561c58a1b5faf69dd033ce23f8662140af7",
-    "addedPaths": [
-      "safe-treasury-cliff.html",
-      "safe-lock4-drops.html",
-      "safe-lock-core.mjs",
-      "safe-lock-pins.mjs",
-      "safe-lock-safe-reader.mjs",
-      "safe-lock-read.mjs",
-      "safe-lock-action.mjs",
-      "safe-lock-page.mjs",
-      "safe-lock-setup.mjs",
-      "safe-lock.css"
+    "baseRelease": "20e87d90-40ca-4227-9fb1-e3c5f4ba584a",
+    "baseContentDigest": "63da43a7cc3293c30162bef0fdd543699d822982d3944bb55e0115632d7247b1",
+    "baseMirrorCommit": "ada4487f25228d7b712adbedbb759d06f540b447",
+    "changedPaths": [
+      "b/create/c.4B2IU7EI.mjs",
+      "b/create/c.MHBRONS7.mjs",
+      "b/create/qx-a/pages/create-create.Z4TQ5ZF2.mjs",
+      "b/create/qx-quick-launch.5XRBMBQM.mjs",
+      "b/markets/qx-market-browser.MULQJD7F.mjs",
+      "b/qtoken-studio/c.XK6ITTLU.mjs",
+      "b/qtoken-studio/qx-quick-launch.II6FAFIZ.mjs",
+      "b/terminal/c.4BC3QN2U.mjs",
+      "b/terminal/c.7EZY5QZF.mjs",
+      "b/terminal/c.XTGZTX2Y.mjs",
+      "b/terminal/c.ZOUJD7SB.mjs",
+      "b/terminal/qx-terminal-feed.QAZ6QL3S.mjs",
+      "b/terminal/qx-terminal.FHRZTV2Q.mjs",
+      "board.html",
+      "community.html",
+      "create.html",
+      "creator.html",
+      "markets.html",
+      "me.html",
+      "portfolio.html",
+      "profile.html",
+      "qtoken-studio.html",
+      "qx-browser-market.mjs",
+      "qx-discovery-rank.mjs",
+      "qx-major-assets.mjs",
+      "qx-market-browser.mjs",
+      "qx-market-majors.mjs",
+      "qx-terminal-density.css",
+      "qx-terminal-feed-core.mjs",
+      "qx-terminal-feed.mjs",
+      "stake.html",
+      "terminal.html"
     ],
-    "unchangedBaseEntries": 18283
+    "unchangedBaseEntries": 18276
   }
 }

@@ -10,7 +10,7 @@ import { chainById } from './chains.mjs';
 import { DIRECT_CHAINS } from './qx-elysium-direct.mjs';
 import {safetyChecked,plainMarketError} from './qx-terminal-data.mjs';
 import {officialLogo} from './qx-official.mjs';
-import {discoveryCandidate,rankDiscovery} from './qx-discovery-rank.mjs';
+import {discoveryCandidate,rankDiscovery,compareHotNow} from './qx-discovery-rank.mjs';
 
 export const DASH = '—';
 // Chip order (Randall, 2026-11-09): "sol-rh-bnb-Elysium-eth-base-arb".
@@ -26,7 +26,7 @@ export function feedSourceLabel(source){
  if(/^geckoterminal trending pools(?: · prices from dex\s*screener)?$/i.test(source))return 'Trending pools · GeckoTerminal'+(/prices from dex\s*screener/i.test(source)?' · prices from DexScreener':'');
  return source;
 }
-export const SORT_KEYS = ['price', 'm5', 'm15', 'h1', 'h6', 'h12', 'h24', 'd7', 'move', 'volume', 'liquidity', 'mcap', 'txns', 'makers', 'holders'];
+export const SORT_KEYS = ['hot', 'price', 'm5', 'm15', 'h1', 'h6', 'h12', 'h24', 'd7', 'move', 'volume', 'liquidity', 'mcap', 'txns', 'makers', 'holders'];
 export const number = value => typeof value === 'number' && Number.isFinite(value) ? value : null;
 const nonnegative = value => number(value) !== null && value >= 0 ? value : null;
 const trim = value => value.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1');
@@ -162,7 +162,7 @@ export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24'
   const symbol = typeof token.symbol === 'string' && token.symbol.trim() ? token.symbol : '?';
   const address = typeof token.address === 'string' ? token.address : '';
   return {
-    key: rowKey(row), row, fund, priceRefreshing:!!row.pricesRefreshing, chainId, chainName: chain?.[1] || chainId, chainIcon: chain?.[2], address,
+    key: rowKey(row), row, fund, window, priceRefreshing:!!row.pricesRefreshing, chainId, chainName: chain?.[1] || chainId, chainIcon: chain?.[2], address,
     lifecycle:lifecycle(row),move:percent(numeric.move),symbol, name: typeof token.name === 'string' ? token.name : '', logo: safeLogo(token.logo) || safeLogo(officialLogo(chainId, address)),
     avatarSources:tokenAvatarSources({...row.launch,...row,...token},[officialLogo(chainId,address)]),
     letter: symbol.replace(/^\$/, '').slice(0, 1).toUpperCase() || '?', age: age(row.createdAt, now),
@@ -183,6 +183,7 @@ export function safeLogo(url) {
 
 export function sortRows(rows, sort = {}) {
   if (!SORT_KEYS.includes(sort.key)) return [...rows];
+  if(sort.key==='hot')return [...rows].sort((a,b)=>(sort.direction==='asc'?-1:1)*compareHotNow(a.row,b.row,{window:a.window||'h24'}));
   const sign = sort.direction === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {
     const x = number(a.numeric[sort.key]), y = number(b.numeric[sort.key]);
@@ -224,6 +225,7 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
   // A server-filtered list (discofeed) is the whole answer for its filters, however short: never top it up or re-floor it.
   const full = (data,chain,filters) => {
     if(!data||data.stale===true)return false;
+    if(data.tab==='trending'&&data.selectionPolicy?.id==='liquid-momentum-v1')return data.selectionPolicy.receivedSetFiltered===true&&data.filtered===true&&data.coverage?.degraded===false&&data.status!=='unavailable'&&!data.error&&data.refreshing!==true;
     if(data.filtered===true&&data.coverage?.degraded!==true&&data.status!=='unavailable'&&!data.error&&(data.rows.length===0?data.refreshing!==true:filterParams(filters).length>0))return true;
     const rows=data.rows.filter(discoveryCandidate);
     if(rows.length<minRows)return false;
@@ -273,7 +275,7 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
       }
     }
     const serverFresh = server && server.rows.length && server.stale !== true;
-    const ordered=tab==='trending'?rankDiscovery(rows,{window,chain,limit:chain==='all'?100:Infinity}):rows;
+    const ordered=tab==='trending'?rankDiscovery(rows,{window,chain,filters,limit:chain==='all'?100:Infinity}):rows;
     return { version: 1, ...(server || {}), tab, chain, window, rows:ordered, total:ordered.length, pool:rows.filter(discoveryCandidate).length, browser: true, status: undefined, error: undefined, fallback: undefined,
       source: [server?.rows.length ? feedSourceLabel(server.source) : null, ...String(own.source || '').split(' · ')].filter((v, i, all) => v && !all.slice(0, i).some(p => p && p.includes(v))).join(' · ') || null,
       observedAt: serverFresh ? server.observedAt : own.observedAt, stale: serverFresh ? !!server.stale : false };
@@ -291,7 +293,7 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
     const paintPartial = () => { const data = ranked(merged(server, own, tab, chain, window,filters), tab, window); if (live() && data?.rows.length) changed({ key, loading: true, data, error: null }); };
     const startOwn = () => {
       if (!browser) return Promise.resolve();
-      return ownRun ||= browser({ tab, chain, window, signal: controller.signal, onPartial: d => {
+      return ownRun ||= browser({ tab, chain, window, filters, signal: controller.signal, onPartial: d => {
         if(!live())return;
         d=prices.reconcile(d);own = {...d,rows:merged(own,d,tab,chain,window,filters)?.rows||[]};
         paintPartial();

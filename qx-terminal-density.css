@@ -111,3 +111,32 @@ body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row td.qxfd-buy{grid-area:1/5/3
 body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row .qxfd-price-refreshing{display:inline;margin-left:4px}
 body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row:has(.qxd-checks[open]){grid-template-rows:auto auto!important}
 }
+
+/* G3: liquidity remains visible without adding height to the mobile rows. */
+body.qa.qxt #qxt-discover .qxfd-table tr[data-key],body.qa.qxt #qxt-discover .qxfd-table thead tr{grid-template-columns:minmax(200px,2fr) repeat(4,minmax(76px,1fr)) minmax(55px,.7fr) minmax(60px,.7fr) minmax(80px,1fr) 110px}
+body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-liquidity{display:block!important;grid-column:5!important}
+body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-holders{grid-column:6!important}
+body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-move{grid-column:7!important;font-size:13px}
+body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-safety{grid-column:8!important}
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-table td.qxfd-safety.qxfd-evidence{grid-column:8!important;grid-row:1!important}
+body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-buy{grid-column:9!important}
+.qxfd-trending-note{font:12px/1.5 var(--qa-sans);color:var(--qa-tx-3);margin:12px;white-space:normal}
+@media(max-width:1099px) and (min-width:760px){
+body.qa.qxt #qxt-discover .qxfd-table tr[data-key],body.qa.qxt #qxt-discover .qxfd-table thead tr{grid-template-columns:minmax(160px,2fr) repeat(4,minmax(60px,1fr)) minmax(45px,.7fr) minmax(50px,.7fr) 90px}
+body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-buy{grid-column:8!important}
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-table td.qxfd-safety.qxfd-evidence{grid-area:2/1/3/-1!important}
+}
+@media(max-width:759px){
+body.qa.qxt #qxt-discover .qxfd-table tbody tr[data-key]:not(.qxfd-fund-row){grid-template-columns:repeat(5,minmax(0,1fr)) 76px!important}
+body.qa.qxt #qxt-discover .qxfd-table tbody tr:not(.qxfd-fund-row) td.qxfd-token{grid-area:1/1/2/6!important}
+body.qa.qxt #qxt-discover .qxfd-table tbody tr:not(.qxfd-fund-row) td.qxfd-liquidity{grid-area:2/3/3/4!important}
+body.qa.qxt #qxt-discover .qxfd-table tbody tr:not(.qxfd-fund-row) td.qxfd-holders{grid-area:2/4/3/5!important}
+body.qa.qxt #qxt-discover .qxfd-table tbody tr:not(.qxfd-fund-row) td.qxfd-move{grid-area:2/5/3/6!important}
+body.qa.qxt #qxt-discover .qxfd-table tbody tr:not(.qxfd-fund-row) td.qxfd-buy{grid-area:1/6/2/7!important}
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-table tbody tr:not(.qxfd-fund-row) td.qxfd-safety.qxfd-evidence{grid-area:2/6/3/7!important;justify-self:end}
+body.qa.qxt #qxt-discover .qxfd-table tbody td.qxfd-liquidity::before{content:'Liq';display:block!important;font:500 12px/1 var(--qa-sans);color:var(--qa-tx-3);margin-bottom:3px}
+body.qa.qxt #qxt-discover .qxfd-table tbody tr.qxfd-fund-row td.qxfd-liquidity{display:none!important}
+}
+@media(max-width:359px){body.qa.qxt #qxt-discover .qxfd-table tbody tr[data-key]:not(.qxfd-fund-row){grid-template-columns:repeat(5,minmax(0,1fr)) 70px!important}}
+
+body.qa.qxt #qxt-discover .qxfd-instant>.qxfd-hot-now{font-size:12px}

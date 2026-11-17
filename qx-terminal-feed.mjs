@@ -8,7 +8,7 @@ import{openQuickAmountSettings}from'./qx-quick-amount-settings.mjs';
 import {mountTokenLibrary} from './qx-token-library.mjs';
 import {bindTokenAvatar} from './qx-token-avatar.mjs';
 import {WINDOWS,filterDiscovery,createMarketViews,validateDiscoveryFilters} from './qx-discovery-model.mjs';
-import {discoveryCandidate} from './qx-discovery-rank.mjs';
+import {discoveryCandidate,trendingCandidate} from './qx-discovery-rank.mjs';
 import {createDiscoveryUpdates} from './qx-discovery-updates.mjs';
 import {plainMarketError} from './qx-terminal-data.mjs';
 import {fetchDexPairs,pickPair,rowPatch,applyRowPatch,DEX_CHAINS} from './qx-dex-live.mjs';
@@ -68,11 +68,13 @@ const pauseUpdates=button('Pause updates',{'aria-pressed':'false',class:'qxfd-up
 const arrivals=el('span',{class:'qxfd-arrivals',role:'status','aria-live':'polite'});
 const quickSlot = el('div', { class: 'qxfd-quick-slot' });
 const sortSelect = el('select', { 'aria-label': 'Sort tokens', class: 'qxfd-sort-select' },
-  el('option', { value: '' }, 'Feed order'), ...columns.filter(([key]) => SORT_KEYS.includes(key)).flatMap(([key, label]) => [
+  el('option', { value: '' }, 'Default order'), el('option',{value:'hot:desc'},'Hot now'), ...columns.filter(([key]) => SORT_KEYS.includes(key)).flatMap(([key, label]) => [
     el('option', { value: key + ':desc' }, label + ' ↓'), el('option', { value: key + ':asc' }, label + ' ↑'),
   ]));
 const sortHint=el('span',{class:'qxfd-sort-hint',id:'qxfd-sort-hint'},'Sort this list');
-sortSelect.setAttribute('aria-describedby','qxfd-sort-hint');
+const trendingNote=el('p',{class:'qxfd-trending-note',id:'qxfd-trending-note'},'Trending: $1K minimum liquidity · drops over 90% excluded. A custom liquidity range replaces the default.');
+sortSelect.setAttribute('aria-describedby','qxfd-sort-hint qxfd-trending-note');
+sortSelect.title='Hot now ranks fresh momentum, then observed 24h volume and activity.';
 const filterFields={};
 const filterDetails=el('details',{class:'qxfd-filter-details'},el('summary',{},'Filters'));
 const filterGrid=el('div',{class:'qxfd-filter-grid'});
@@ -123,6 +125,7 @@ table.append(el('thead', {}, header), tbody);
 scroll.append(table);
 const emptyCopy=el('p',{class:'qxfd-empty-copy'}),empty = el('div', { class: 'qxfd-empty', hidden: '' },emptyCopy);
 const nextSteps=mountDiscoveryNext({onTrending:()=>showTrending()});
+const marketsEmpty=el('a',{class:'qa-btn qa-btn--quiet',href:'/markets#major-assets'},'Browse Markets →');
 const walletPanel = el('div', {class: 'qxfd-wallet-slot', hidden: ''});
 const count = el('span');
 const source = el('span');
@@ -133,7 +136,7 @@ const walletBack = button('← Tokens', { class: 'qxfd-wallet-back', hidden: '' 
 const listOptions=el('details',{class:'qxfd-list-options'},el('summary',{},'Filters'));
 listOptions.append(el('div',{class:'qxfd-list-options-body'},quickSlot,
  el('div',{class:'qxfd-filterbar'},chainGroup,el('div',{class:'qxfd-sort-tools'},sortHint,sortSelect)),
- el('div',{class:'qxfd-viewbar'},windows,pauseUpdates,arrivals),filterDetails));
+ trendingNote,presetBar,el('div',{class:'qxfd-viewbar'},windows,pauseUpdates,arrivals),filterDetails));
 listOptions.addEventListener('toggle',()=>{if(listOptions.open)filterDetails.open=true;});
 listOptions.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.defaultPrevented){e.preventDefault();listOptions.open=false;listOptions.querySelector('summary').focus();}});
 const chainChip=el('select',{'aria-label':'Filter chain',class:'qxfd-chain-chip'},...CHAINS.map(([id,name])=>el('option',{value:id,title:name},({all:'All',solana:'SOL','4663':'RH','56':'BNB','99901':'Ely','1':'ETH','8453':'Base','42161':'ARB','143':'MON'})[id]||name)));
@@ -142,7 +145,8 @@ const windowChip=el('select',{'aria-label':'Change window',class:'qxfd-window-ch
 const settings=button('⚙',{'aria-label':'Trade settings',class:'qxfd-settings'}),quickChip=button('⚡ 0.01 ETH',{'aria-label':'Quick-buy amounts in Trade settings',class:'qxfd-quick-chip'});
 const settingsChain=()=>state.chain==='all'?'4663':state.chain;
 for(const control of[settings,quickChip])control.addEventListener('click',()=>openQuickAmountSettings({chainId:settingsChain(),opener:control}));
-const instant=el('div',{class:'qxfd-instant'},chainChip,windowChip,...presetChips.map(p=>p.button),listOptions,settings);
+const hotNow=button('Hot now',{class:'qxfd-hot-now','aria-pressed':'false',title:'Sort by fresh momentum and observed 24h volume'});hotNow.addEventListener('click',()=>setSort('hot','desc'));
+const instant=el('div',{class:'qxfd-instant'},chainChip,windowChip,presetChips[0].button,hotNow,listOptions,settings);
 const listControls=[el('div',{class:'qxfd-toolbar'},tabs),instant];
 for(const control of[applyFilters,resetFilters,...presetChips.map(p=>p.button)])control.addEventListener('click',()=>{listOptions.open=false;listOptions.querySelector('summary').focus({preventScroll:true});});
 document.addEventListener('pointerdown',event=>{if(listOptions.open&&!listOptions.contains(event.target))listOptions.open=false;});
@@ -178,6 +182,7 @@ async function loadLaunches() {
 const launchMarkets = () => allLaunches || state.markets;
 const availableTabs = () => [['launches','QHooks launches'],...TABS];
 function renderTabs() {
+  trendingNote.hidden=state.tab!=='trending';
   const active = document.activeElement?.dataset.tab;
   tabs.replaceChildren(...availableTabs().map(([id, label]) => button(label, {
     role: 'tab', id: 'qxfd-tab-' + id, 'data-tab': id, 'aria-controls': 'qxfd-panel',
@@ -195,6 +200,8 @@ for (const [id, name, icon] of CHAINS) {
 }
 
 function updateSort() {
+  hotNow.setAttribute('aria-pressed',String(state.sort.key==='hot'||!state.sort.key&&state.tab==='trending'));
+  sortSelect.options[0].textContent=state.tab==='trending'?'Hot now (default)':'Feed order';
   for (const [key, th] of headers) th.setAttribute('aria-sort', state.sort.key === key ? (state.sort.direction === 'asc' ? 'ascending' : 'descending') : 'none');
   sortSelect.value = state.sort.key ? state.sort.key + ':' + state.sort.direction : '';
 }
@@ -231,6 +238,7 @@ function visibleRows() {
       seen.add(key); return true;
     });
   }
+  else if(state.tab==='trending')rows=rows.filter(r=>trendingCandidate(r,{window:state.window,filters:state.filters}));
   else if(state.tab!=='launches') rows=rows.filter(discoveryCandidate);
   return sortRows(rows.filter(r => state.chain === 'all' || String(r.chainId) === state.chain)
     .map(r => rowViewModel(r, { quick: quickFor(r.chainId),window:state.window })), state.sort);
@@ -382,7 +390,7 @@ function renderRows() {
   if (initialLoading) skeleton();
   empty.hidden = !!rows.length || initialLoading;
   const missingWindow=['gainers','losers'].includes(state.tab)&&state.data?.rows?.length&&!state.data.rows.some(r=>Number.isFinite(r.change?.[state.window]));
-  const emptyText = !state.query&&missingWindow?'No '+(WINDOWS.find(([k])=>k===state.window)?.[1]||'selected-window')+' history is available for this received set yet.':activeFilters&&!state.query?'No tokens match these filters.':!state.query&&['bonding','migrated'].includes(state.tab)&&!state.error?'No confirmed '+(state.tab==='bonding'?'curves above 80% graduation':'migrations')+' in the received market set.':state.query ? (state.searching ? 'Searching tokens…' : 'No tokens match this search.') : state.error ? 'The token feed could not be loaded. Retry above.' : state.tab==='launches'?'No QHooks launches in this view yet.':'No tokens in this list yet. Try another chain or tab.';
+  const emptyText = !state.query&&state.tab==='trending'&&!state.error?'No tokens meet Trending’s liquidity and drawdown filters in this view. Try another chain or adjust filters.':!state.query&&missingWindow?'No '+(WINDOWS.find(([k])=>k===state.window)?.[1]||'selected-window')+' history is available for this received set yet.':activeFilters&&!state.query?'No tokens match these filters.':!state.query&&['bonding','migrated'].includes(state.tab)&&!state.error?'No confirmed '+(state.tab==='bonding'?'curves above 80% graduation':'migrations')+' in the received market set.':state.query ? (state.searching ? 'Searching tokens…' : 'No tokens match this search.') : state.error ? 'The token feed could not be loaded. Retry above.' : state.tab==='launches'?'No QHooks launches in this view yet.':'No tokens in this list yet. Try another chain or tab.';
   // Honest count (discofeed): the server's matched total when it cut the list at its top 100.
   const matched = state.tab !== 'launches' && !state.query && Number.isFinite(state.data?.total) && state.data.total > rows.length ? state.data.total : null;
   text(count, initialLoading ? 'Loading tokens…' : `${rows.length}${matched ? ' of ' + matched : ''} token${(matched || rows.length) === 1 ? '' : 's'} · ${rows.filter(r=>r.numeric.move!==null).length} with ${WINDOWS.find(([k])=>k===state.window)?.[1]} history`);
@@ -392,6 +400,7 @@ function renderRows() {
   if (!rows.length && activeFilters && !state.query && !initialLoading && !state.loading) { empty.hidden = false; empty.append(widen); }else widen.remove();
   nextSteps.update({count:rows.length,loading:initialLoading||state.searching,failed:!!(state.error||state.searchError),filtered:!!activeFilters||!!state.query,kind:state.tab==='launches'?'launches':'feed',compact:!rows.length});
   if(!nextSteps.element.hidden){if(rows.length){scroll.append(nextSteps.element);}else{empty.append(nextSteps.element);empty.hidden=false;scroll.hidden=true;}}
+  if(!rows.length&&!initialLoading&&!state.loading&&!state.query&&state.tab==='trending'&&!state.error)empty.append(marketsEmpty);else marketsEmpty.remove();
   text(source, state.tab === 'launches' ? '' : [state.data?.source,state.data?.coverage?.description].filter(Boolean).join(' · '));
   scroll.scrollTop = y;
   if (window.scrollY !== pageY) window.scrollTo({ top: pageY, behavior: 'instant' });
