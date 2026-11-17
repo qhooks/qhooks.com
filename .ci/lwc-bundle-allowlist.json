@@ -52,11 +52,13 @@
     "b/compact-onboarding-r2-current-20261117/terminal/qx-terminal.HWD2D2YG.mjs": "32e80e1b78c1d4d24b618417f524e24fc3d9548952b6205e4e2d38395c93755f",
     "b/compact-onboarding-r2-current-20261117/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
     "b/portfolio-recurrence-20261117/terminal/qx-terminal.NDK3FS3Q.mjs": "51861f0fd0dc56314fdc37fb665e8ed59ac997a0def7c0744ddff557151f8623",
-    "b/portfolio-recurrence-20261117/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1"
+    "b/portfolio-recurrence-20261117/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+    "b/discovery-d0-current-20261117/terminal/qx-terminal.PU5YED3A.mjs": "a5ff95be98816b282d48ee1b8d91ee827ea9b13d5d27cc7e8abdea6ad633b3e6"
   },
   "classificationSourceReleaseId": "df15e38a-fdcd-4fd2-af2c-5bed0051158b",
   "additionalReview": ".ci/lwc-f1-review.json",
   "additionalP0Review": ".ci/lwc-p0-review.json",
   "g4Review": ".ci/lwc-g4-9cd5b130-review.json",
-  "g3Review": ".ci/lwc-g3-review.json"
+  "g3Review": ".ci/lwc-g3-review.json",
+  "discoveryD0Review": ".ci/lwc-discovery-d0-review.json"
 }

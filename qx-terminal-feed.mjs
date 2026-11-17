@@ -1,10 +1,11 @@
 import{hasVisibleTerminalDialog}from'./qx-terminal-selection.mjs';
 import{feedRowPriceView}from'./qx-feed-row-price-view.mjs';
+import {createDiscoveryLivenessView} from './qx-discovery-liveness-view.mjs';
 import{defaultTrendingMode,projectTrendingContracts,discoveryContractKey}from'./qx-discovery-groups.mjs';
 import{publicReadFetch}from'./qx-public-read.mjs';
 import{quickBuyPlan}from'./qx-quick-buy-plan.mjs';
 import{FUND_TOKENS,fundRow}from'./qx-fund-catalog.mjs';
-import {isQhooksPriceAsset} from './qx-price-state.mjs';
+import {isQhooksPriceAsset,priceState} from './qx-price-state.mjs';
 import {mountDiscoveryNext} from './qx-discovery-next.mjs';
 import {discoveryBadges} from './qx-discovery-badges.mjs';
 import {evidenceMetrics,rowEvidence} from './qx-discovery-evidence.mjs';
@@ -19,7 +20,7 @@ import {discoveryCandidate,trendingCandidate} from './qx-discovery-rank.mjs';
 import {createDiscoveryUpdates} from './qx-discovery-updates.mjs';
 import {plainMarketError} from './qx-terminal-data.mjs';
 import {fetchDexPairs,pickPair,rowPatch,applyRowPatch,DEX_CHAINS} from './qx-dex-live.mjs';
-import {renderFeedFeedback} from './qx-terminal-feed-presentation.mjs';
+import {renderFeedFeedback,feedFeedbackStatus,feedFeedbackSource} from './qx-terminal-feed-presentation.mjs';
 import {browserFeed,browserSearch,readCachedFeed,writeCachedFeed} from './qx-browser-market.mjs';
 import {applyTokenQuery} from './qx-tg-prefill.mjs';
 import {classifyQuery, createWalletLookup, renderWalletPanel, knownWallet, lastWalletView} from './qx-wallet-lookup.mjs';
@@ -68,6 +69,7 @@ const columns = [
   ['holders','Holders'], ['txns', 'B / S · 24h'], ['makers', 'Wallet activity'], ['top10','Top 10'], ['dev','Dev'], ['riskgrid','Holder checks'], ['safety', 'Safety'], ['buy', 'Buy'],
 ];
 const nodes = new Map();
+const livenessView=createDiscoveryLivenessView();
 const expandedContracts=new Set();let contractProjection={active:false},contractContext='';
 const layoutControls=el('div',{class:'qxfd-layout-controls',role:'group','aria-label':'Token layout'});
 for(const [id,label]of[['list','List'],['pulse','Pulse']]){const b=button(label,{'data-layout':id,'aria-pressed':String(state.layout===id)});b.addEventListener('click',()=>{if(state.layout===id)return;loader.cancel();state.layout=id;state.loading=false;try{storage?.setItem('qhooks:discovery:layout:v1',id);}catch{}renderRows();refresh();});layoutControls.append(b);}
@@ -191,7 +193,7 @@ root.append(
 );
 main.prepend(root);
 const loaderOptions=changed=>({fetcher:publicReadFetch,timeout:25000,serverTimeout:12000,browserDelay:600,storage,browser:opts=>browserFeed(opts),cacheRead:readCachedFeed,cacheWrite:writeCachedFeed,priceCache:discoveryPrices,changed});
-pulse=mountPulseBoard({host:panel,el,storage,makeLoader:({changed})=>createFeedLoader(loaderOptions(changed)),makeRow,updateRow,
+pulse=mountPulseBoard({livenessView,host:panel,el,storage,makeLoader:({changed})=>createFeedLoader(loaderOptions(changed)),makeRow,updateRow,
  onTrending:()=>showTrending(),context:()=>({chain:state.chain,window:state.window,filters:state.filters,factsOf:discoveryFilterFacts}),visible:()=>!document.hidden&&!root.hidden&&pulseMode(),
  viewModels:rows=>sortRows(rows.filter(discoveryCandidate).map(r=>rowViewModel(r,{quick:api?.quickForChain?.(r.chainId)||api?.state.quick||{},window:state.window})),state.sort),
  onModels:models=>{if(!pulseMode())return;paintQuickPreset(models);text(count,models.length+' tokens in Pulse');text(source,'New · Near bond ≥80% · Migrated with a destination');}
@@ -331,7 +333,7 @@ function makeRow(vm) {
   return { tr, cells, avatar, letter, logo, symbol, boost, name, rowAge, chain, open, watch, groupToggle, contractAddress, contractName, contractDetail, priceValue, priceStatus, cap, capNumber, capUnit, capKind, buys, sells, safe, tip, riskFields, buy, buyValue, buyUnit, blocked, vm: null };
 }
 
-function updateRow(node, vm) {
+function updateRow(node, vm, {refreshing=!!(state.loading||state.data?.stale||state.error||state.searchError||vm.row.stale)}={}) {
   const old = node.vm;
   const group=vm.contractGroup;node.tr.classList.toggle('qxfd-contract-group',!!group?.isRepresentative);node.tr.classList.toggle('qxfd-contract-expanded',!!group?.expanded);node.tr.classList.toggle('qxfd-contract-member',!!group&&!group.isRepresentative);
   node.groupToggle.hidden=!group?.isRepresentative;if(group?.isRepresentative){text(node.groupToggle,'+'+(group.members.length-1));node.groupToggle.setAttribute('aria-expanded',String(group.expanded));node.groupToggle.setAttribute('aria-label','+'+(group.members.length-1)+' more contracts; same ticker '+vm.symbol+' on '+vm.chainName+'; '+group.members.length+' total; '+(group.expanded?'collapse':'expand'));node.groupToggle.title='Same ticker · '+group.members.length+' contracts. Separate token addresses, not a shared asset or issuer.';}
@@ -368,7 +370,7 @@ function updateRow(node, vm) {
   }
   if(JSON.stringify(old?.avatarSources)!==JSON.stringify(vm.avatarSources)){node.unbindAvatar?.();node.unbindAvatar=bindTokenAvatar(node.logo,{},vm.avatarSources);}
   for (const key of ['move', 'volume', 'liquidity', 'makers','holders']) text(node.cells[key], vm[key]);
-  const priceView=feedRowPriceView(vm,{refreshing:state.loading||state.data?.stale||vm.row.stale});
+  const priceView=feedRowPriceView(vm,{refreshing});
   text(node.priceValue,priceView.text);text(node.priceStatus,priceView.status);node.cells.price.title=priceView.title;node.cells.price.dataset.priceAt=priceView.at??'';node.cells.price.dataset.unit=priceView.unit||'';node.cells.price.dataset.refreshing=String(priceView.refreshing);
   node.cells.liquidity.dataset.known = String(vm.liquidity !== DASH);
   node.cells.holders.dataset.known=String(vm.numeric.holders!==null);
@@ -382,7 +384,13 @@ function updateRow(node, vm) {
   node.cells.move.setAttribute('data-label',(WINDOWS.find(([k])=>k===state.window)?.[1]||'24h')+' change');node.cells.move.setAttribute('data-window',WINDOWS.find(([k])=>k===state.window)?.[1]||'24h');
   const capUnit=priceView.capUnit&&priceView.capUnit!=='USD'?priceView.capUnit:null;const capNumber=capUnit&&priceView.cap.endsWith(' '+capUnit)?priceView.cap.slice(0,-capUnit.length-1):priceView.cap;text(node.capNumber,capNumber);text(node.capUnit,capUnit?' '+capUnit:'');text(node.capKind,priceView.cap===DASH?'syncing':priceView.capKind==='FDV'?'FDV':'');
   node.cells.mcap.setAttribute('data-label',priceView.capKind);node.cells.mcap.dataset.unit=priceView.capUnit||'';node.cells.mcap.removeAttribute('data-refreshing');node.cells.mcap.dataset.capState=priceView.cap===DASH?'syncing':'known';
-  node.cells.mcap.title=vm.capLabel;
+  // Bind only after insertion. The source getter never substitutes an arrival,
+  // cache or canonical-price clock for the original row/cap observation.
+  node.discoveryRefreshing=refreshing;node.discoveryPriceAvailable=priceView.available;node.discoveryPriceAt=priceView.at;node.discoveryCapAvailable=priceView.cap!==DASH;
+  const hidden=()=>root.hidden||!!node.tr.closest('[hidden]');
+  const stopPrice=livenessView.bind(node.priceStatus,{get:()=>({row:node.vm.row,failed:hidden()||node.discoveryRefreshing||!node.discoveryPriceAvailable||priceState(node.discoveryPriceAt).refreshing||node.discoveryPriceAt>Date.now()}),paint:(label,live)=>{text(label,node.discoveryPriceAvailable?live.label:'Price syncing');node.cells.price.dataset.refreshing=String(live.refreshing);}});
+  const stopCap=livenessView.bind(node.cells.mcap,{get:()=>{const row=node.vm.row;return {row:{observedAt:Object.hasOwn(row,'capAt')?row.capAt:row.observedAt,stale:row.stale},failed:hidden()||node.discoveryRefreshing||!node.discoveryCapAvailable||!!row.capsRefreshing};},paint:(cell,live)=>{cell.title=live.label;},fallback:(cell,live)=>{cell.title=live.label;}});
+  node.unbindLiveness=()=>{stopPrice();stopCap();};
   text(node.buys, vm.buys); text(node.sells, vm.sells);
   node.cells.txns.setAttribute('aria-label', `${vm.buys === DASH ? 'Unknown' : vm.buys} buys, ${vm.sells === DASH ? 'unknown' : vm.sells} sells in 24 hours`);
   node.cells.makers.title=vm.row.makersKind==='unique_wallets'?'Unique wallets in the received 24h swaps.':'Provider buyer and seller activity; a wallet may be counted on both sides.';
@@ -409,6 +417,7 @@ function updateRow(node, vm) {
 }
 
 function skeleton() {
+  for(const node of nodes.values())node.unbindLiveness?.();
   nodes.clear();
   tbody.replaceChildren(...Array.from({ length: 24 }, () => el('tr', { class: 'qxfd-skeleton', 'aria-hidden': 'true' },
     ...columns.map(([key]) => el('td', { class: 'qxfd-' + key }, el('span', { class: 'qxfd-placeholder' }))))));
@@ -458,12 +467,12 @@ function renderRows() {
   const y = scroll.scrollTop, pageY = window.scrollY;
   if (!nodes.size) tbody.replaceChildren();
   const keep = new Set(rows.map(vm => vm.key));
-  for (const [key, node] of nodes) if (!keep.has(key)) { node.tr.remove(); nodes.delete(key); }
+  for (const [key, node] of nodes) if (!keep.has(key)) { node.unbindLiveness?.();node.tr.remove(); nodes.delete(key); }
   rows.forEach((vm, index) => {
     let node = nodes.get(vm.key);
     if (!node) { node = makeRow(vm); nodes.set(vm.key, node); }
-    updateRow(node, vm);
     if (tbody.children[index] !== node.tr) tbody.insertBefore(node.tr, tbody.children[index] || null);
+    updateRow(node, vm);
   });
   pinFounding();
   if (!keep.has(focusedKey)) focusedKey = rows[Math.max(0, Math.min(rows.length - 1, previousIndex))]?.key || null;
@@ -480,6 +489,7 @@ function renderRows() {
   text(count, initialLoading ? 'Loading tokens…' : contractProjection.active?`${contractProjection.listingCount} listing${contractProjection.listingCount===1?'':'s'} · ${contractProjection.receivedContracts} received contracts`:`${rows.length}${matched ? ' of ' + matched : ''} token${(matched || rows.length) === 1 ? '' : 's'} · ${rows.filter(r=>r.numeric.move!==null).length} with ${WINDOWS.find(([k])=>k===state.window)?.[1]} history`);
   panel.setAttribute('aria-busy', String(state.loading || state.searching));
   renderFeedFeedback({state,heading,status,notice,noticeText,empty,emptyMessage:emptyCopy,retry,emptyText});
+  livenessView.bind(status,{get:()=>{const input=feedFeedbackSource(state);return {...input,row:state.wallet||pulseMode()||state.tab==='launches'||state.query||!state.data?.rows?.length?null:input.row};},paint:(label,live)=>{if(state.wallet||pulseMode())return;const view=feedFeedbackStatus(state,live);label.setAttribute('aria-live',live.live?'off':'polite');text(label,view.label);label.dataset.delayed=String(view.delayed);}});
   // Never a dead-empty filter result: offer to widen (clears the filters and reloads the whole list).
   if (!rows.length && activeFilters && !state.query && !initialLoading && !state.loading) { empty.hidden = false; empty.append(widen); }else widen.remove();
   nextSteps.update({count:rows.length,loading:initialLoading||state.searching,failed:!!(state.error||state.searchError),filtered:!!activeFilters||!!state.query,kind:state.tab==='launches'?'launches':'feed',compact:!rows.length});

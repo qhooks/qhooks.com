@@ -1,0 +1,19 @@
+{
+  "scope": "Exact Apache-2.0 Lightweight Charts derivatives only; no proprietary vendor input",
+  "sourceTree": "/Users/randallholt/.codex/.chatgpt-projects/g-p-6942a2559d94819197bc2c26ef325393/work/qhooks-discovery-d0-root-current-rel-20261117",
+  "sourceWorkerSha256": "38feaa6600e3a98887c023cd67b1e93252e2c6111c2ad2a896f48f8d9e5dc908",
+  "vendorSha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768",
+  "licenseSha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823",
+  "terminalOwnerManifestSha256": "56f8254f1b81b0a250fdedbbcbbebf8764ca31e444d6a142ad525ad06ab464fc",
+  "noProprietaryInputs": true,
+  "attributionCountPerBundle": 2,
+  "bundles": [
+    {
+      "path": "b/discovery-d0-current-20261117/terminal/qx-terminal.PU5YED3A.mjs",
+      "sha256": "a5ff95be98816b282d48ee1b8d91ee827ea9b13d5d27cc7e8abdea6ad633b3e6",
+      "bytes": 405584,
+      "owner": "terminal.manifest",
+      "attributionReferences": 2
+    }
+  ]
+}
