@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "9cd5b130-75ef-4678-b4a9-7686571c6c6e",
+  "releaseId": "20e87d90-40ca-4227-9fb1-e3c5f4ba584a",
   "sourceWorkerSha256": "2f4b5ce5319c105901cbd7585528e726a41cbc76e0c197a2dbd2916ada18ab21",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
@@ -72657,6 +72657,46 @@
       "sha256": "7de28ed8fdc02146a8afe953569e54b8e67fffe79529e79a66e0dc8f634b7f70",
       "bytes": 11863
     },
+    "safe-lock-action.mjs": {
+      "sha256": "ee686735277c99818a1bdb9da8dab353dfaa6a541d538f4f6fd74898bac75413",
+      "bytes": 2268
+    },
+    "safe-lock-core.mjs": {
+      "sha256": "f19afb92aec9c900666f07fbd98c4d4244d75bf67dd1380fa580098253371c07",
+      "bytes": 4395
+    },
+    "safe-lock-page.mjs": {
+      "sha256": "165c8daaece41ee7c47d91c30ceced7fb9d667d673a17e0b4115da3db4484b41",
+      "bytes": 11015
+    },
+    "safe-lock-pins.mjs": {
+      "sha256": "5e95c402f0fdc93e999ec5fc84be0744831a919caee936908e10feb6524bb373",
+      "bytes": 1396
+    },
+    "safe-lock-read.mjs": {
+      "sha256": "3a8f5e68b2368090d7753f7248cf50f9b5b64e197d595f754dde740bc3823fe3",
+      "bytes": 4194
+    },
+    "safe-lock-safe-reader.mjs": {
+      "sha256": "26963da9b7662bfd4044acf1647e901639922309c8b4bdffb25ddd41880569d7",
+      "bytes": 6860
+    },
+    "safe-lock-setup.mjs": {
+      "sha256": "bfb87d0879d8e0e30be31458b0abec943eb40a6dd760e0e5392fe8cadfa76f06",
+      "bytes": 935
+    },
+    "safe-lock.css": {
+      "sha256": "1fa53342a033bc6c514aa4209cdfa3e77c51a1a93a5f791b143f917ccb93a7c8",
+      "bytes": 3124
+    },
+    "safe-lock4-drops.html": {
+      "sha256": "00773a5d1a019ddcb4a83c4a71782d8b76f3b089b989df81a7f012e20a01346f",
+      "bytes": 16218
+    },
+    "safe-treasury-cliff.html": {
+      "sha256": "8ac965fdc6a46400d57022a1997ba72e35d316304cb4dd98019cba76813c3846",
+      "bytes": 16130
+    },
     "sale.html": {
       "sha256": "842d905456ba38abd772412ac5b3053b9a786f76b97d9003b270686aec947183",
       "bytes": 7468
@@ -73150,6 +73190,24 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "90a10bf7622cd4745c559fb53e6b6fba086c0650f08fae56208d39215f6bfc01",
-  "provenance": "Frozen accepted release public/ source; static bytes only. Worker-generated HTTP bodies require a separate root served-response receipt."
+  "contentDigest": "63da43a7cc3293c30162bef0fdd543699d822982d3944bb55e0115632d7247b1",
+  "provenance": "Accepted release public/ static source. Full G4 checksum map retained plus exact10new Safeutility hashes; Worker-generated HTTP bodies have separate root served-response acceptance.",
+  "incrementalComposition": {
+    "baseRelease": "9cd5b130-75ef-4678-b4a9-7686571c6c6e",
+    "baseContentDigest": "90a10bf7622cd4745c559fb53e6b6fba086c0650f08fae56208d39215f6bfc01",
+    "baseMirrorCommit": "cef3e561c58a1b5faf69dd033ce23f8662140af7",
+    "addedPaths": [
+      "safe-treasury-cliff.html",
+      "safe-lock4-drops.html",
+      "safe-lock-core.mjs",
+      "safe-lock-pins.mjs",
+      "safe-lock-safe-reader.mjs",
+      "safe-lock-read.mjs",
+      "safe-lock-action.mjs",
+      "safe-lock-page.mjs",
+      "safe-lock-setup.mjs",
+      "safe-lock.css"
+    ],
+    "unchangedBaseEntries": 18283
+  }
 }
