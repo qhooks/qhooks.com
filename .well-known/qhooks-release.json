@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "releaseId": "302e065f-53d4-48a7-ac95-404fd4af8c6c",
-  "sourceWorkerSha256": "8ff410a991996f020cda17db198c99f489101012e0d44d1ce88ca7dfd35deb79",
+  "releaseId": "e8c68614-78e8-43b7-837e-53594cecc0d3",
+  "sourceWorkerSha256": "c0335a86ddb9eb525fe582297634422aee3e8e4b0922e413c992e385ac4dd95d",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -76481,6 +76481,10 @@
       "sha256": "3b08bc0088540f5691eff3afe7e78fb25a67d504ffe72d68c771cbe33eb766a5",
       "bytes": 5559
     },
+    "qx-discovery-freshness.mjs": {
+      "sha256": "4d00fe0b98214e8817ebcf1bff067204e39606fdc6ee8807c4a485b42b63dc0c",
+      "bytes": 2938
+    },
     "qx-discovery-model.mjs": {
       "sha256": "173d94bc8d2ee1fed511a7f3c0b427dce76f3cf7adc67bfd3641775e17ae798b",
       "bytes": 6587
@@ -78898,7 +78902,7 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "eab1c86017179fb5877ffbeedd03c9e541a9cbfe9b5aed43feab5f56af4f7412",
+  "contentDigest": "e962ce630457a3774496040dfec0582e77e15eb29cab3fd641cd3e3dca325ac7",
   "provenance": "Accepted G3 LIVE release public/ static source. Incremental hash map composed from published20e8 plus exactly32changed/new public files; Worker-generated HTTP bodies have separate root served-response acceptance.",
   "incrementalComposition": {
     "baseRelease": "20e87d90-40ca-4227-9fb1-e3c5f4ba584a",
