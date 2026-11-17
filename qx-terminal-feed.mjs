@@ -1,3 +1,4 @@
+import{defaultTrendingMode,projectTrendingContracts,discoveryContractKey}from'./qx-discovery-groups.mjs';
 import{FUND_TOKENS,fundRow}from'./qx-fund-catalog.mjs';
 import {mountDiscoveryNext} from './qx-discovery-next.mjs';
 import {discoveryBadges} from './qx-discovery-badges.mjs';
@@ -50,13 +51,14 @@ let focusedKey = null, savedScroll = 0, savedWindowScroll = 0, opening = false, 
 let searchTimer, searchController, tokenLibraryUI, lastLibrarySearch = '';
 const main = document.getElementById('qxt-main');
 const search = document.getElementById('qxt-search');
-for(const href of ['/qx-pulse.css','/qx-discovery-badges.css'])if(!document.querySelector('link[href="'+href+'"]'))document.head.append(el('link',{rel:'stylesheet',href}));
+for(const href of ['/qx-pulse.css','/qx-discovery-badges.css','/qx-discovery-groups.css'])if(!document.querySelector('link[href="'+href+'"]'))document.head.append(el('link',{rel:'stylesheet',href}));
 const columns = [
   ['token', 'Token'], ['price', 'Price'], ['move', 'Change'],
   ['volume', 'Volume 24h'], ['liquidity', 'Liquidity'], ['mcap', 'MCap'],
   ['holders','Holders'], ['txns', 'Swaps 24h'], ['makers', 'Wallet activity'], ['safety', 'Safety'], ['buy', 'Buy'],
 ];
 const nodes = new Map();
+const expandedContracts=new Set();let contractProjection={active:false},contractContext='';
 const layoutControls=el('div',{class:'qxfd-layout-controls',role:'group','aria-label':'Token layout'});
 for(const [id,label]of[['list','List'],['pulse','Pulse']]){const b=button(label,{'data-layout':id,'aria-pressed':String(state.layout===id)});b.addEventListener('click',()=>{if(state.layout===id)return;loader.cancel();state.layout=id;state.loading=false;try{storage?.setItem('qhooks:discovery:layout:v1',id);}catch{}renderRows();refresh();});layoutControls.append(b);}
 const root = el('section', { class: 'qxfd', id: 'qxt-discover', 'aria-label': 'Tokens' });
@@ -238,10 +240,12 @@ function visibleRows() {
       seen.add(key); return true;
     });
   }
-  else if(state.tab==='trending')rows=rows.filter(r=>trendingCandidate(r,{window:state.window,filters:state.filters}));
+  else if(state.tab==='trending'&&!defaultTrendingMode(state))rows=rows.filter(r=>trendingCandidate(r,{window:state.window,filters:state.filters}));
   else if(state.tab!=='launches') rows=rows.filter(discoveryCandidate);
-  return sortRows(rows.filter(r => state.chain === 'all' || String(r.chainId) === state.chain)
-    .map(r => rowViewModel(r, { quick: quickFor(r.chainId),window:state.window })), state.sort);
+  const context=JSON.stringify([state.tab,state.chain,state.window,state.query,state.filters,state.sort]);if(context!==contractContext){expandedContracts.clear();contractContext=context;}
+  contractProjection=projectTrendingContracts(rows.filter(r=>state.chain==='all'||String(r.chainId)===state.chain),{...state,expanded:expandedContracts});
+  const models=contractProjection.rows.map(r=>{const vm=rowViewModel(r,{quick:quickFor(r.chainId),window:state.window});return{...vm,contractGroup:contractProjection.metadata.get(discoveryContractKey(r))};});
+  return contractProjection.active?models:sortRows(models,state.sort);
 }
 
 function makeRow(vm) {
@@ -262,7 +266,10 @@ function makeRow(vm) {
   const watch=button('☆',{class:'qxfd-watch','aria-pressed':'false','aria-label':'Add token to watchlist'});
   watch.addEventListener('click',async event=>{event.stopPropagation();if(!api?.library||!tr.isConnected)return;watch.disabled=true;watch.dataset.pending='true';try{const asset=libraryAsset(tr.__tokenVM);await api.library.watch(asset,!api.library.has(asset));}catch(error){notice.hidden=false;text(noticeText,error.message||'Could not save this token.');}finally{delete watch.dataset.pending;watch.disabled=false;}});
   watch.addEventListener('keydown',event=>{if(event.key!=='Tab')event.stopPropagation();});
-  cells.token.append(watch,open);
+  const groupToggle=button('',{class:'qxfd-group-toggle',hidden:''}),contractAddress=el('code',{class:'qxfd-contract-address'}),contractName=el('b'),contractDetail=el('td',{class:'qxfd-contract-detail',colspan:String(columns.length),hidden:''},contractName,contractAddress);tr.append(contractDetail);
+  groupToggle.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();const group=tr.__tokenVM?.contractGroup;if(!group?.isRepresentative)return;expandedContracts.has(group.id)?expandedContracts.delete(group.id):expandedContracts.add(group.id);renderRows();});
+  groupToggle.addEventListener('keydown',event=>{if(event.key!=='Tab')event.stopPropagation();});
+  cells.token.append(watch,open,groupToggle);
   const cap = el('span'), capKind = el('small', { class: 'qxfd-cap-kind' });
   cells.mcap.append(cap, capKind);
   const buys = el('span', { class: 'up' }), sells = el('span', { class: 'down' });
@@ -273,11 +280,14 @@ function makeRow(vm) {
   const buy = button('', { class: 'qxfd-buy' });
   const blocked = el('span', { class: 'qxfd-blocked', hidden: '' }, 'not tradable here');
   cells.buy.append(buy, blocked);
-  return { tr, cells, avatar, letter, logo, symbol, boost, name, rowAge, chain, open, watch, cap, capKind, buys, sells, safe, tip, buy, blocked, vm: null };
+  return { tr, cells, avatar, letter, logo, symbol, boost, name, rowAge, chain, open, watch, groupToggle, contractAddress, contractName, contractDetail, cap, capKind, buys, sells, safe, tip, buy, blocked, vm: null };
 }
 
 function updateRow(node, vm) {
   const old = node.vm;
+  const group=vm.contractGroup;node.tr.classList.toggle('qxfd-contract-group',!!group?.isRepresentative);node.tr.classList.toggle('qxfd-contract-expanded',!!group?.expanded);node.tr.classList.toggle('qxfd-contract-member',!!group&&!group.isRepresentative);
+  node.groupToggle.hidden=!group?.isRepresentative;if(group?.isRepresentative){text(node.groupToggle,'+'+(group.members.length-1));node.groupToggle.setAttribute('aria-expanded',String(group.expanded));node.groupToggle.setAttribute('aria-label','+'+(group.members.length-1)+' more contracts; same ticker '+vm.symbol+' on '+vm.chainName+'; '+group.members.length+' total; '+(group.expanded?'collapse':'expand'));node.groupToggle.title='Same ticker · '+group.members.length+' contracts. Separate token addresses, not a shared asset or issuer.';}
+  node.contractDetail.hidden=!group?.expanded;if(group?.expanded){text(node.contractName,(group.isRepresentative?'Same ticker · '+group.members.length+' contracts · ':'')+(vm.name||vm.symbol));text(node.contractAddress,vm.address);node.contractAddress.title=vm.address;}
   const evidence=discoveryBadges(vm.row,{h:el,compact:true}),evidenceKey=evidence.outerHTML;if(node.evidenceKey!==evidenceKey){node.evidenceKey=evidenceKey;const prior=node.cells.evidence.querySelector('details'),focused=prior?.contains(document.activeElement);if(prior?.open)evidence.querySelector('details').open=true;node.cells.evidence.replaceChildren(evidence);if(focused)evidence.querySelector('summary').focus({preventScroll:true});}
   node.tr.classList.toggle("qxfd-fund-row",!!vm.fund);
   node.vm = vm; node.tr.__tokenVM=vm;node.watch.disabled=!api?.library||node.watch.dataset.pending==='true';
@@ -369,6 +379,7 @@ function renderRows() {
   if(isPulse){root.querySelector('.qxfd-toolbar').hidden=true;if(quickChip.parentNode!==pulse.quickHost)pulse.quickHost.append(quickChip);scroll.hidden=true;empty.hidden=true;notice.hidden=true;text(heading,'Tokens');text(status,'');tabs.hidden=true;panel.removeAttribute('aria-labelledby');panel.setAttribute('aria-label','Pulse');panel.setAttribute('aria-busy','false');pulse?.render();return;}
   root.querySelector('.qxfd-toolbar').hidden=false;if(quickChip.parentNode!==listControls[0])listControls[0].append(quickChip);tabs.hidden=false;panel.removeAttribute('aria-label');panel.setAttribute('aria-labelledby','qxfd-tab-'+state.tab);
   const rows = visibleRows();
+  text(trendingNote,contractProjection.active?'Default Trending: $1K liquidity · $500 observed 24h volume · 20 observed swaps in 24h or a shorter received window · drops over 90% excluded. Same-ticker contracts can expand. Search, custom filters or a selected sort show the original matches.':'Trending: $1K minimum liquidity · drops over 90% excluded. A custom liquidity range replaces the default.');
   const previousFocus = document.activeElement;
   const previousIndex = [...nodes.keys()].indexOf(focusedKey);
   const y = scroll.scrollTop, pageY = window.scrollY;
@@ -390,10 +401,10 @@ function renderRows() {
   if (initialLoading) skeleton();
   empty.hidden = !!rows.length || initialLoading;
   const missingWindow=['gainers','losers'].includes(state.tab)&&state.data?.rows?.length&&!state.data.rows.some(r=>Number.isFinite(r.change?.[state.window]));
-  const emptyText = !state.query&&state.tab==='trending'&&!state.error?'No tokens meet Trending’s liquidity and drawdown filters in this view. Try another chain or adjust filters.':!state.query&&missingWindow?'No '+(WINDOWS.find(([k])=>k===state.window)?.[1]||'selected-window')+' history is available for this received set yet.':activeFilters&&!state.query?'No tokens match these filters.':!state.query&&['bonding','migrated'].includes(state.tab)&&!state.error?'No confirmed '+(state.tab==='bonding'?'curves above 80% graduation':'migrations')+' in the received market set.':state.query ? (state.searching ? 'Searching tokens…' : 'No tokens match this search.') : state.error ? 'The token feed could not be loaded. Retry above.' : state.tab==='launches'?'No QHooks launches in this view yet.':'No tokens in this list yet. Try another chain or tab.';
+  const emptyText = !state.query&&state.tab==='trending'&&!state.error?(contractProjection.active?'No tokens meet the default Trending activity and liquidity rules in this received set. Try another chain, New pairs or custom filters.':activeFilters?'No tokens match these filters.':'No tokens meet Trending’s liquidity and drawdown filters in this view. Try another chain or adjust filters.'):!state.query&&missingWindow?'No '+(WINDOWS.find(([k])=>k===state.window)?.[1]||'selected-window')+' history is available for this received set yet.':activeFilters&&!state.query?'No tokens match these filters.':!state.query&&['bonding','migrated'].includes(state.tab)&&!state.error?'No confirmed '+(state.tab==='bonding'?'curves above 80% graduation':'migrations')+' in the received market set.':state.query ? (state.searching ? 'Searching tokens…' : 'No tokens match this search.') : state.error ? 'The token feed could not be loaded. Retry above.' : state.tab==='launches'?'No QHooks launches in this view yet.':'No tokens in this list yet. Try another chain or tab.';
   // Honest count (discofeed): the server's matched total when it cut the list at its top 100.
   const matched = state.tab !== 'launches' && !state.query && Number.isFinite(state.data?.total) && state.data.total > rows.length ? state.data.total : null;
-  text(count, initialLoading ? 'Loading tokens…' : `${rows.length}${matched ? ' of ' + matched : ''} token${(matched || rows.length) === 1 ? '' : 's'} · ${rows.filter(r=>r.numeric.move!==null).length} with ${WINDOWS.find(([k])=>k===state.window)?.[1]} history`);
+  text(count, initialLoading ? 'Loading tokens…' : contractProjection.active?`${contractProjection.listingCount} listing${contractProjection.listingCount===1?'':'s'} · ${contractProjection.receivedContracts} received contracts`:`${rows.length}${matched ? ' of ' + matched : ''} token${(matched || rows.length) === 1 ? '' : 's'} · ${rows.filter(r=>r.numeric.move!==null).length} with ${WINDOWS.find(([k])=>k===state.window)?.[1]} history`);
   panel.setAttribute('aria-busy', String(state.loading || state.searching));
   renderFeedFeedback({state,heading,status,notice,noticeText,empty,emptyMessage:emptyCopy,retry,emptyText});
   // Never a dead-empty filter result: offer to widen (clears the filters and reloads the whole list).

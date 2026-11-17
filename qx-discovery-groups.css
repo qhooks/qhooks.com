@@ -1,0 +1,15 @@
+/* Same ticker is a display group, never shared identity, issuer or combined data. */
+#qxt-discover .qxfd-group-toggle{position:relative;z-index:5;float:right;margin-top:-32px;display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;padding:2px 4px;border:1px solid var(--qa-line,var(--qx-line-2));border-radius:4px;background:var(--qa-panel,var(--qx-panel,#151714));color:var(--qa-gold,var(--qx-brass,#d6bb7a));font:12px/1.2 var(--qa-mono,var(--qx-mono,monospace));white-space:nowrap;cursor:pointer}
+#qxt-discover .qxfd-group-toggle[hidden]{display:none!important}
+#qxt-discover tr.qxfd-contract-group .qxfd-symline{padding-right:28px}
+#qxt-discover .qxfd-group-toggle:focus-visible{outline:2px solid var(--qa-gold,var(--qx-brass));outline-offset:2px}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table tbody tr.qxfd-contract-expanded[data-key]{height:auto!important;min-height:0!important;grid-template-rows:auto auto auto!important;row-gap:0!important;padding-bottom:5px!important}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table tbody tr.qxfd-contract-expanded[data-key]>td.qxfd-contract-detail{display:block!important;grid-column:1/-1!important;grid-row:3!important;text-align:left!important;white-space:normal!important;padding:6px 4px 6px 34px!important;width:auto!important;box-sizing:border-box;font:12px/1.4 var(--qa-sans,var(--qx-sans,sans-serif))}
+#qxt-discover .qxfd-contract-detail b{display:block;font-size:12px;font-weight:550;overflow-wrap:anywhere;white-space:normal}
+#qxt-discover .qxfd-contract-address{display:block;margin-top:2px;color:var(--qa-tx-dim,var(--qx-muted));font:12px/1.4 var(--qa-mono,var(--qx-mono,monospace));overflow-wrap:anywhere;white-space:normal;user-select:text}
+#qxt-discover tr.qxfd-contract-member .qxfd-contract-detail{box-shadow:inset 2px 0 var(--qa-line,var(--qx-line-2))}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table tbody tr[data-key]>td.qxfd-contract-detail[hidden]{display:none!important}
+@media(max-width:760px){body.qa.qxt #qxt-discover .qxfd-group-toggle{margin-top:-40px}}
+@media(prefers-reduced-motion:reduce){#qxt-discover .qxfd-group-toggle{transition:none}}
+/* WebKit: closed filter content must not contribute off-screen layout. */
+#qxt-discover .qxfd-list-options:not([open])>.qxfd-list-options-body{display:none!important}
