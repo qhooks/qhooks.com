@@ -9,7 +9,7 @@ export function mountProofPopover({document:doc=globalThis.document,window:win=d
  const owner=installOverlayDismissal({document:doc,window:win}).registerCustom(pop,{isOpen:()=>shown,close:()=>{close();return true;},opener:()=>chip});
  function render(){
   const hadFocus=pop.contains(doc.activeElement),notesOpen=pop.querySelector('.ta-pcs-notes')?.open;
-  const {list,link}=readChecks(),scored=list.filter(c=>c.st!=='info'),notes=list.filter(c=>c.st==='info');
+  const {list,link,legend}=readChecks(),scored=list.filter(c=>c.st!=='info'),notes=list.filter(c=>c.st==='info');
   const passed=scored.filter(c=>c.st==='clear').length,look=scored.filter(c=>c.st==='danger'||c.st==='caution').length,unchecked=scored.filter(c=>c.st==='unknown').length;
   const x=h('button',{type:'button',class:'qa-btn qa-btn--icon ta-proofpop__x','aria-label':'Close checks'},h('span',{'aria-hidden':'true'},'×'));
   x.addEventListener('click',()=>owner.requestClose('close'));
@@ -18,6 +18,7 @@ export function mountProofPopover({document:doc=globalThis.document,window:win=d
   pop.replaceChildren(...[
    desktop.matches?null:h('span',{class:'qa-sheet__grip','aria-hidden':'true'}),
    h('header',{class:'ta-proofpop__head'},h('div',null,h('h2',{id:'ta-proofpop-h'},'Proof checks'),h('p',null,scored.length?passed+' of '+scored.length+' passed'+(look?' · '+look+' to look at':'')+(unchecked?' · '+unchecked+' not checked':''):'Refreshing…')),x),
+   legend?h('p',{class:'ta-proofpop__legend'},legend):null,
    scored.length?h('ul',{class:'ta-pcs'},scored.map(renderRow)):null,
    notes.length?h('details',{class:'ta-pcs-notes'},h('summary',null,notes.length+(notes.length===1?' note':' notes')),h('ul',{class:'ta-pcs'},notes.map(renderRow))):null,
    h('footer',{class:'ta-proofpop__foot'},h('a',{class:'ta-proofpop__how',href:'/qproof'},'How QProof works · Check any token'),full)

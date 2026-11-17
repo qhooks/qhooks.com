@@ -1,0 +1,29 @@
+{
+  "at": "2026-11-17T01:15:28.223070+00:00",
+  "status": "ROOT_CONDITIONAL_EXACT_HASH_APPROVAL_SATISFIED",
+  "sourceRelease": "9cd5b130-75ef-4678-b4a9-7686571c6c6e",
+  "sourceWorkerSha256": "2f4b5ce5319c105901cbd7585528e726a41cbc76e0c197a2dbd2916ada18ab21",
+  "actualTerminalManifestSha256": "9c3f1ed9a0e678ac61a6b30f0d49b287c6e6f5900e1141ea1d74786359cb756b",
+  "actualOnlyLwcVendor": {
+    "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+    "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+  },
+  "noProprietaryGraphInputs": true,
+  "existingApacheLicense": {
+    "path": "vendor/lightweight-charts/LICENSE",
+    "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+  },
+  "newExactEntries": [
+    {
+      "path": "b/terminal/qx-terminal.JOJS7YXE.mjs",
+      "sha256": "79e1d71757423baeacd7178554d08334cf5c8a7bb98dafb061b45fcbcb343448",
+      "bytes": 419805,
+      "actualTerminalGraphMember": true,
+      "references": 2,
+      "knownAttributionOnly": true
+    }
+  ],
+  "original28EntriesUnchanged": true,
+  "conditions": "Actualterminalgraph has onlyexistingApacheLWCvendor5e5922fb/license70c9, no proprietaryinput, exact2knownattributionrefs. Root approvedonlyeach resultingexactpath/hash; no broadallowance.",
+  "guardCodeUnchanged": true
+}

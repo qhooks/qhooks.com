@@ -17,3 +17,5 @@
 
 .qpr-privacy{font-size:10px;line-height:1.5;color:var(--qx-muted,#aaa);margin:7px 0 0}
 .qpr-how-link{display:inline-flex;align-items:center;min-height:44px;margin:0 0 6px;font-size:12px}
+.qpr-count-legend{font-size:11px;line-height:1.5;color:var(--qx-muted,#aaa);margin:6px 0 12px}.qpr-token-facts{padding:12px 0;border-block:1px solid var(--qx-line,#ffffff18)}.qpr-token-facts dt{font-size:11px}.qpr-token-facts dd{font-size:12px;line-height:1.5}.qpr-token-facts code{display:block;font-size:11px;overflow-wrap:anywhere}.qpr-token-facts small{display:block;font-size:11px;color:var(--qx-muted,#aaa)}
+.ta-proofpop__legend{margin:8px 16px;font-size:12px;line-height:1.5;color:var(--qa-tx-2,#aaa)}

@@ -1,11 +1,14 @@
+import {tokenTruth} from './qproof-token-truth.mjs';
+import {qproofCheckSummary,QPROOF_CHECK_COUNT_MEANING} from './qproof-check-meanings.mjs';
 // Read-only reports plus an explicit, bounded check request. No wallet/provider
 // access, signing or trading authority. RepoProof checks on its own schedule; while it
 // refreshes, this panel re-reads the stored report a few times (reads only, never a scan).
+import {tokenCreatorTruth,creatorCheckView} from './qx-token-creator.mjs';
 const EVM=/^0x[0-9a-f]{40}$/i,SOL=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-const CHAINS=new Set(['1','8453','42161','56','4663','99901','solana']),KINDS=new Set(['token','wallet','launch','contract']);
+const CHAINS=new Set(['1','8453','42161','56','4663','99901','143','solana']),KINDS=new Set(['token','wallet','launch','contract']);
 const STATES=new Set(['ready','refreshing','not_checked','unavailable','busy','rate_limited']);
 const REREAD_MS=20000,REREADS=9;
-const CHAIN_NAMES={'1':'Ethereum','8453':'Base','42161':'Arbitrum','56':'BNB Chain','4663':'Robinhood','99901':'Elysium','solana':'Solana'};
+const CHAIN_NAMES={'1':'Ethereum','8453':'Base','42161':'Arbitrum','56':'BNB Chain','4663':'Robinhood','99901':'Elysium','143':'Monad','solana':'Solana'};
 const scalar=v=>v==null?'Unknown':typeof v==='boolean'?(v?'Yes · reported':'No · reported'):typeof v==='number'&&!Number.isFinite(v)?'Unknown':String(v);
 const label=v=>String(v).replace(/([a-z0-9])([A-Z])/g,'$1 $2').replace(/[_-]+/g,' ').replace(/^./,c=>c.toUpperCase());
 const stamp=v=>typeof v==='string'&&Number.isFinite(Date.parse(v))?Date.parse(v):null;
@@ -29,7 +32,7 @@ export function repoProofSellEvidence(report){
 }
 // Reports open on qhooks.com/qproof/<id>; an older cached report may still carry the engine's own link to the same id.
 const reportURL=raw=>{try{const url=new URL(raw);const id=/^\/q?proof\/([0-9a-f-]{36})$/.exec(url.pathname)?.[1];return url.protocol==='https:'&&!url.port&&!url.username&&!url.password&&!url.search&&!url.hash&&id?'/qproof/'+id:null;}catch{return null;}};
-export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,onReport=()=>{},document:doc=container?.ownerDocument||globalThis.document,fetcher=(...args)=>globalThis.fetch(...args)}={}){
+export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,onReport=()=>{},getCreator=null,document:doc=container?.ownerDocument||globalThis.document,fetcher=(...args)=>globalThis.fetch(...args)}={}){
  const target=repoProofSubject(subject);if(!target||!container?.replaceChildren||!doc?.createElement)throw TypeError('Supply an exact supported QProof subject and report container.');
  const h=(tag,attrs={},...children)=>{const node=doc.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')node.className=v;else if(k.startsWith('on'))node.addEventListener(k.slice(2),v);else if(k in node)node[k]=v;else node.setAttribute(k,v);}node.append(...children.flat().filter(v=>v!==null&&v!==undefined&&v!==false));return node;};
  if(doc.head&&!doc.getElementById('qpr-styles'))doc.head.append(h('link',{id:'qpr-styles',rel:'stylesheet',href:'/qx-repoproof.css'}));
@@ -69,17 +72,25 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
  function paintReport(){
   const report=envelope?.report;if(!report||typeof report!=='object'){reportHost.replaceChildren();return;}
   const prior=new Map([...reportHost.querySelectorAll('details')].map(node=>[node.getAttribute('data-qpr-detail'),node.open]));
-  const counts=report.counts||{},coverage=report.coverage||{},checks=Array.isArray(report.checks)?report.checks:[],receipts=Array.isArray(report.receipts)?report.receipts:[];
+  const creator=typeof getCreator==='function'?getCreator(envelope):tokenCreatorTruth({chainId:target.chainId,token:target.kind==='token'?target.address:report.input?.launchToken,reports:[envelope]});
+  const coverage=report.coverage||{},checks=(Array.isArray(report.checks)?report.checks:[]).map(c=>['token','launch'].includes(target.kind)?creatorCheckView(c,creator,envelope):c),receipts=Array.isArray(report.receipts)?report.receipts:[];
+  const counts=qproofCheckSummary({checks});let truth=null;
+  if(['token','launch'].includes(target.kind))try{truth=tokenTruth({subject:{chainId:target.chainId,token:target.kind==='token'?target.address:report.launchToken||report.input?.launchToken||report.subject?.address},report,envelope,creatorIdentity:creator});}catch{}
+  const authorityLabel=v=>v?.label||'Unknown';
   const strongest=report.level==='danger'||checks.some(c=>c?.status==='danger')?'danger':report.level==='caution'||checks.some(c=>c?.status==='caution')?'caution':report.level;
   const link=reportURL(report.url),sell=repoProofSellEvidence(report),level={danger:'Danger signals reported',caution:'Caution signals reported',clear:'No flags in returned checks',unknown:'Unknown coverage'}[strongest]||'Unknown coverage';
   const source=h('div',{class:'qpr-report-overview'},h('p',{class:'qpr-cache-state'},envelope.cached?'Cached report':'Returned check report',envelope.stale||envelope.state==='refreshing'?' · Refreshing':''),h('p',{class:'qpr-level '+(strongest==='danger'?'danger':strongest==='caution'?'caution':'neutral')},level),
    report.headline?h('p',{class:'qpr-headline'},h('span',{},'QProof summary: '),String(report.headline)):null,
    h('p',{class:'qpr-counts'},'Reported checks · Danger '+knownCount(counts.danger)+' · Caution '+knownCount(counts.caution)+' · Clear '+knownCount(counts.clear)+' · Unknown '+knownCount(counts.unknown)),
+   h('p',{class:'qpr-count-legend'},QPROOF_CHECK_COUNT_MEANING),
    h('p',{class:'qpr-coverage'},coverage.complete===true?'Complete reported coverage for this snapshot':coverage.complete===false?'Partial reported coverage':'Coverage completeness not reported',
     ' · Checked '+knownCount(coverage.checked)+' · Unknown '+knownCount(coverage.unknown)),
    h('dl',{class:'qpr-meta'},h('div',{},h('dt',{},'Provider retrieval'),h('dd',{},time(report.retrievedAt))),h('div',{},h('dt',{},'Report completed'),h('dd',{},time(report.completedAt))),h('div',{},h('dt',{},'Evidence as of'),h('dd',{},time(envelope.checkedAt)))),
    report.snapshot?fields({snapshot:report.snapshot}):h('p',{class:'qpr-unknown'},'Snapshot chain/block/slot not reported.'),
    link?h('a',{class:'qpr-report-link',href:link},'Open full QProof report'):h('p',{class:'qpr-unknown'},'Report link not available.'),h('a',{class:'qpr-how-link',href:'/qproof'},'How QProof works · Check any token'));
+  const tokenFacts=['token','launch'].includes(target.kind)?h('dl',{class:'qpr-meta qpr-token-facts'},
+   h('div',{},h('dt',{},'Creator identity'),h('dd',{},creator.address?h('code',{},creator.address):'Unknown',h('small',{},creator.source||creator.reason))),
+   ...[['Mint authority',truth?.authorities.mint],['Freeze authority',truth?.authorities.freeze]].map(([name,v])=>h('div',{},h('dt',{},name),h('dd',{},authorityLabel(v),v?.address?h('code',{},v.address):null)))):null;
   const sellNode=target.kind==='token'||target.kind==='launch'||report.observations?.simulation?h('div',{class:'qpr-sell'},h('h4',{},'Sell evidence'),h('b',{},sell.headline),h('p',{},sell.detail)):null;
   const receiptIds=new Map(receipts.filter(r=>Number.isSafeInteger(r?.index)&&r.index>=0).map(r=>[r.index,id+'-receipt-'+r.index]));
   const rows=checks.map((c,i)=>{const status=['danger','caution','clear','unknown','info'].includes(c?.status)?c.status:'unknown',evidence=Array.isArray(c?.evidence)?c.evidence:[];
@@ -91,7 +102,7 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
   const observation=disclosure('observations','Authority, liquidity, creator & other observations',report.observations?fields(report.observations):h('p',{class:'qpr-unknown'},'No observations returned.'));
   const subjectNode=disclosure('subject','Report target & input',fields({...(report.subject?{reportedSubject:report.subject}:{}),...(report.input?{reportedInput:report.input}:{}),requested:{kind:target.kind,chainId:target.chainId,address:target.address}}));
   const receiptNode=disclosure('receipts','Source receipts · '+receipts.length,receipts.length?receipts.map((receipt,i)=>h('article',{class:'qpr-receipt',tabIndex:-1,id:receiptIds.get(receipt?.index)||id+'-receipt-row-'+i},h('h5',{},'Receipt '+(receipt.index??i)),fields(receipt))):h('p',{class:'qpr-unknown'},'No source receipts returned.'));
-  reportHost.replaceChildren(...[source,sellNode,checklist,observation,subjectNode,receiptNode].filter(Boolean));
+  reportHost.replaceChildren(...[source,tokenFacts,sellNode,checklist,observation,subjectNode,receiptNode].filter(Boolean));
   for(const node of reportHost.querySelectorAll('details'))if(prior.has(node.getAttribute('data-qpr-detail')))node.open=prior.get(node.getAttribute('data-qpr-detail'));
  }
  function retryAfter(response,body){
@@ -122,7 +133,7 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
   rereads++;rereadTimer=setTimeout(()=>{rereadTimer=null;if(!disposed&&current())void request('GET');},REREAD_MS);
  }
  check.addEventListener('click',()=>request('POST'));refresh.addEventListener('click',()=>request('GET'));
- const view=Object.freeze({element,refreshCache:()=>request('GET'),dispose(){if(disposed)return;disposed=true;revision++;controller?.abort();clearTimeout(requestTimer);clearTimeout(retryTimer);clearTimeout(rereadTimer);if(element.parentNode===container)element.remove();}});
+ const view=Object.freeze({element,repaint(){if(!disposed&&current())paintReport();},refreshCache:()=>request('GET'),dispose(){if(disposed)return;disposed=true;revision++;controller?.abort();clearTimeout(requestTimer);clearTimeout(retryTimer);clearTimeout(rereadTimer);if(element.parentNode===container)element.remove();}});
  void view.refreshCache();return view;
 }
 
@@ -138,6 +149,6 @@ export function mountSelectedRepoProof(container,{getSelection,...options}){
  const clear=()=>{view?.dispose();view=null;selected=null;container.hidden=true;};
  return Object.freeze({
   sync(){const next=terminalRepoProofSubject(getSelection());if(!next){clear();return false;}if(selected&&sameRepoProofSubject(selected,next))return true;clear();container.hidden=false;selected=next;view=mountRepoProofCheck(container,{...options,subject:next,getSubject:()=>terminalRepoProofSubject(getSelection())});return true;},
-  clear,dispose:clear,
+  repaint:()=>view?.repaint(),clear,dispose:clear,
  });
 }

@@ -1,3 +1,4 @@
+import{FUND_TOKENS,fundRow}from'./qx-fund-catalog.mjs';
 import {mountDiscoveryNext} from './qx-discovery-next.mjs';
 import {discoveryBadges} from './qx-discovery-badges.mjs';
 import {evidenceMetrics} from './qx-discovery-evidence.mjs';
@@ -43,7 +44,7 @@ const savedViews=createMarketViews(storage);
 try{state.layout=storage?.getItem('qhooks:discovery:layout:v1')==='pulse'?'pulse':'list';}catch{state.layout='list';}
 let pulse=null;const pulseMode=()=>state.layout==='pulse'&&!state.query&&!state.wallet;
 const discoveryPrices=createFeedPriceCache({storage});
-if(new URLSearchParams(location.search).get('discover')==='trending'){state.layout='list';state.tab='trending';state.chain='all';state.filters=validateDiscoveryFilters();}
+if(['trending','funds'].includes(new URLSearchParams(location.search).get('discover'))){state.layout='list';state.tab=new URLSearchParams(location.search).get('discover');state.chain='all';state.filters=validateDiscoveryFilters();}
 let wantedLaunch = prefs.tab === 'launches', api = null, quickRow = null, quickHome = null;
 let focusedKey = null, savedScroll = 0, savedWindowScroll = 0, opening = false, searchGeneration = 0;
 let searchTimer, searchController, tokenLibraryUI, lastLibrarySearch = '';
@@ -270,10 +271,11 @@ function makeRow(vm) {
 function updateRow(node, vm) {
   const old = node.vm;
   const evidence=discoveryBadges(vm.row,{h:el,compact:true}),evidenceKey=evidence.outerHTML;if(node.evidenceKey!==evidenceKey){node.evidenceKey=evidenceKey;const prior=node.cells.evidence.querySelector('details'),focused=prior?.contains(document.activeElement);if(prior?.open)evidence.querySelector('details').open=true;node.cells.evidence.replaceChildren(evidence);if(focused)evidence.querySelector('summary').focus({preventScroll:true});}
+  node.tr.classList.toggle("qxfd-fund-row",!!vm.fund);
   node.vm = vm; node.tr.__tokenVM=vm;node.watch.disabled=!api?.library||node.watch.dataset.pending==='true';
   const watching=!!api?.library?.has(libraryAsset(vm));
   text(node.watch,watching?'★':'☆');node.watch.setAttribute('aria-pressed',String(watching));node.watch.setAttribute('aria-label',(watching?'Remove ':'Add ')+vm.symbol+(watching?' from':' to')+' watchlist');
-  text(node.letter, vm.letter); text(node.symbol, vm.symbol); text(node.name, vm.name + (founding.slots.has(vm.chainId+':'+(vm.chainId==='solana'?String(vm.address):String(vm.address).toLowerCase())) ? ' · Founding #' + founding.slots.get(vm.chainId+':'+(vm.chainId==='solana'?String(vm.address):String(vm.address).toLowerCase())) : '')); text(node.rowAge, vm.lifecycle.stage==='bonding'?'Bond '+Math.round(vm.lifecycle.progress*100)+'%':vm.lifecycle.stage==='migrated'?'Migrated · '+vm.age:vm.age);node.rowAge.dataset.stage=vm.lifecycle.stage;
+  text(node.letter, vm.letter); text(node.symbol, vm.symbol); text(node.name, (vm.fund?'Index fund token · ':'')+vm.name + (founding.slots.has(vm.chainId+':'+(vm.chainId==='solana'?String(vm.address):String(vm.address).toLowerCase())) ? ' · Founding #' + founding.slots.get(vm.chainId+':'+(vm.chainId==='solana'?String(vm.address):String(vm.address).toLowerCase())) : '')); text(node.rowAge, vm.lifecycle.stage==='bonding'?'Bond '+Math.round(vm.lifecycle.progress*100)+'%':vm.lifecycle.stage==='migrated'?'Migrated · '+vm.age:vm.age);node.rowAge.dataset.stage=vm.lifecycle.stage;
   node.name.title = vm.name;
   node.boost.hidden = !vm.boosted;
   node.open.setAttribute('aria-label', `Open ${vm.symbol}, ${vm.name || vm.address}, on ${vm.chainName}`);
@@ -401,7 +403,7 @@ const launchKey = r => 'launch:' + r.chainId + ':' + String(r.token?.address || 
 const livePatches = new Map(), rowKey = r => r.chainId + ':' + (r.chainId === 'solana' ? r.pool : String(r.pool || '').toLowerCase());
 function withLive(rows) {
   if (!Array.isArray(rows)) return rows;
-  return rows.map(r => { const p = livePatches.get(rowKey(r)); return p && Date.now() - p.observedAt < 90000 ? applyRowPatch(r, p) : r; });
+  return rows.map(r => { const p = livePatches.get(rowKey(r)); return p && Date.now() - p.observedAt < (state.tab==='funds'?3600000:90000) ? applyRowPatch(r, p) : r; });
 }
 let liveRowsBusy = false;
 async function refreshLiveRows() {
@@ -414,7 +416,7 @@ async function refreshLiveRows() {
     let changed = false;
     for (const [chainId, rows] of byChain) {
       const pairs = await fetchDexPairs(chainId, rows.map(r => r.token.address)); if (!pairs) continue;
-      for (const r of rows) { const patch = rowPatch(pickPair(pairs, chainId, r.token.address, r.launch ? null : r.pool)); if (patch) { livePatches.set(r.launch ? launchKey(r) : rowKey(r), patch); changed = true; } }
+      for (const r of rows) { const patch = rowPatch(pickPair(state.tab==='funds'?pairs.filter(p=>p.chainId===DEX_CHAINS[chainId]&&p.quoteToken?.address?.toLowerCase()===r.quote?.address):pairs, chainId, r.token.address, r.launch ? null : r.pool)); if (patch) { livePatches.set(r.launch ? launchKey(r) : rowKey(r), patch); changed = true; } }
     }
     if (changed && state.data?.rows) state.data = { ...state.data, rows: withLive(state.data.rows) };
     if (changed) renderRows();
@@ -447,10 +449,15 @@ scroll.addEventListener('pointerleave',()=>{discoveryUpdates.hold('pointer',fals
 scroll.addEventListener('focusin',()=>discoveryUpdates.hold('focus',true));
 scroll.addEventListener('focusout',event=>{if(!scroll.contains(event.relatedTarget))discoveryUpdates.hold('focus',false);});
 const loader = createFeedLoader(loaderOptions(update=>discoveryUpdates.receive(update)));
+// CSS and fonts can settle after the first cached Funds paint. Keep its selected tab visible.
+function revealFundsTab(){if(root.hidden||state.tab!=='funds')return;const chosen=tabs.querySelector('[data-tab=funds]');if(chosen&&tabs.clientWidth){const r=chosen.getBoundingClientRect(),box=tabs.getBoundingClientRect();if(r.left<box.left||r.right>box.right)tabs.scrollLeft+=r.left-box.left;}}
+if(typeof ResizeObserver==='function')new ResizeObserver(revealFundsTab).observe(tabs);
+document.fonts?.addEventListener('loadingdone',revealFundsTab);
 function refresh() {
   // Only while the token list is on screen: a token page must not keep reading list providers in the background.
   if (document.hidden || root.hidden || state.wallet) return;
   if(pulseMode()){pulse.configure();void pulse.refreshNext();return;}
+  if(state.tab==='funds'){const first=!state.data;const rows=withLive(FUND_TOKENS.map(fundRow));state.data={version:1,rows,observedAt:rows.every(r=>r.observedAt)?Math.min(...rows.map(r=>r.observedAt)):null,source:'Goldstein Group · Index fund tokens'};state.loading=false;state.error=null;renderRows();revealFundsTab();requestAnimationFrame(revealFundsTab);if(first)void refreshLiveRows();return;}
   if (state.tab === 'launches') { state.loading = false; state.data = null; state.error = null; renderRows(); }
   else loader.load(state.tab, state.chain, state.window, state.filters);updateWindow();
 }

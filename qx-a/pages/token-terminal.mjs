@@ -1,3 +1,5 @@
+import{fundFor}from'/qx-fund-catalog.mjs';
+import {QPROOF_CHECK_COUNT_MEANING} from '../../qproof-check-meanings.mjs';
 import{mountSimpleTokenView}from'/qx-token-simple-view.mjs';
 // QHooks System A: the terminal and token page (token lane, 2026-11-11).
 // Presentation only. Every number here comes from what the terminal already loaded (window.qxTerminal.state /
@@ -119,6 +121,7 @@ function placeBack() { const back = doc.querySelector('.qxfd-back'); if (back &&
 /* art: profile banner, the launch banner, the feed's banner, the official banner; else the icon lights the page */
 const art = { key: '', profile: null, feed: null };
 function iconSrc(m) {
+  const fund=fundFor(m.chainId,m.token);if(fund)return fund.logo;
   const img = doc.querySelector('#qxt-av img.qxt-av-logo');
   if (img && img.getAttribute('data-avatar-state') === 'image' && (img.currentSrc || img.src)) return img.currentSrc || img.src;
   return art.profile?.image || art.feed?.profileImage || art.feed?.logo || art.feed?.logoURI || (isOfficial(m) ? '/qx-a/img/qhooks-icon.jpg' : '');
@@ -153,7 +156,7 @@ function paintSocials(m) {
 
 /* proof chip: from the selected RepoProof report the page already shows */
 function paintProof() {
-  const rp = $('qxt-repoproof'), text = rp && !rp.hidden ? rp.textContent : '';
+  const rp = $('qxt-repoproof'), text = rp && !rp.hidden ? rp.querySelector('.qpr-counts')?.textContent : '';
   const m = /Danger\s*(\d+)\D+Caution\s*(\d+)\D+Clear\s*(\d+)(?:\D+Unknown\s*(\d+))?/i.exec(text || '');
   if (!m) { proofChip.hidden = true; return; }
   const [danger, caution, clear, unknown] = [m[1], m[2], m[3], m[4] || 0].map(Number), total = danger + caution + clear + unknown;
@@ -161,6 +164,7 @@ function paintProof() {
   proofChip.classList.toggle('is-warn', !danger && caution > 0); proofChip.classList.toggle('is-danger', danger > 0);
   proofChip.children[1].textContent = danger ? 'Proof · high risk' : caution ? 'Proof · caution' : 'Proof clear';
   proofChip.children[2].textContent = danger ? danger + '/' + total : caution ? caution + '/' + total : clear + '/' + total;
+  proofChip.title=QPROOF_CHECK_COUNT_MEANING;
 }
 /* newcomerA (2026-11-12): the chip opens the checks themselves (a sheet on a phone, a popover on desktop), the ones
    that need a look first, each with a one-line reason, and a link to the full report. Read from the same RepoProof
@@ -175,7 +179,7 @@ function readProofChecks() {
     const det = d.querySelector(':scope > .qpr-disclosure-body .qpr-detail')?.textContent || '';
     return { st, title: d.querySelector(':scope > summary .qpr-check-title b')?.textContent.trim() || 'Check', why: /^No further detail/.test(det) ? '' : oneLine(det) };
   }).sort((a, b) => PROOF_RANK[a.st] - PROOF_RANK[b.st]);
-  return { list, link: rp?.querySelector('.qpr-report-link')?.href || '' };
+  return { list, link: rp?.querySelector('.qpr-report-link')?.href || '',legend:rp?.querySelector('.qpr-count-legend')?.textContent||'' };
 }
 const proofRow = (c) => h('li', { class: 'ta-pc is-' + c.st }, h('span', { class: 'ta-pc__dot', 'aria-hidden': 'true' }),
   h('div', { class: 'ta-pc__txt' }, h('b', null, c.title), c.why ? h('span', null, c.why) : null), h('span', { class: 'ta-pc__st' }, PROOF_WORD[c.st]));
@@ -560,7 +564,7 @@ function paint() {
   chainMeta.lastChild.textContent = CHAIN[chainId] || chainId; chainMeta.firstChild.style.setProperty('background', CHAIN_DOT[chainId] || 'var(--qa-gold)'); chainMeta.firstChild.style.setProperty('box-shadow', '0 0 9px ' + (CHAIN_DOT[chainId] || 'var(--qa-gold)'));
   nameMeta.hidden = !m.name || m.name.toLowerCase() === (m.symbol || '').toLowerCase();
   coinLetter.textContent = (m.symbol || '?').replace(/^\$/, '').slice(0, 1).toUpperCase();
-  for (const id of ['qxt-official', 'qxt-trust']) { const n = $(id); if (n && n.parentElement !== markSlot) markSlot.append(n); }
+  for (const id of ['qxt-official', 'qxt-trust','qxt-fund-label']) { const n = $(id); if (n && n.parentElement !== markSlot) markSlot.append(n); }
   paintArt(m); paintSocials(m); paintProof(); placeTools(); placeBack(); placeBurnParts(); placeLimit(); placeChartParts();
   // price: dollars when known; the quote price otherwise
   const usd = Number(s.priceUsd ?? (d.ext ? s.price : NaN)), q = Number(s.price);

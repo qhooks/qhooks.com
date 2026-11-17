@@ -1,3 +1,4 @@
+import{fundFor}from'./qx-fund-catalog.mjs';
 import{createFeedPriceCache}from'./qx-feed-price-cache.mjs';
 import {assetPriceFields,priceState,priceObservation} from './qx-price-state.mjs';
 import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
@@ -18,7 +19,7 @@ export const CHAINS = [
   ['99901', 'Elysium', 'elysium'], ['1', 'Ethereum', 'ethereum'], ['8453', 'Base', 'base'], ['42161', 'Arbitrum', 'arbitrum'],
   ['143', 'Monad', 'monad'],
 ];
-export const TABS = DISCOVERY_TABS;
+export const TABS = [...DISCOVERY_TABS,['funds','Funds']];
 export function feedSourceLabel(source){
  if(typeof source!=='string')return '';
  if(/^dex\s*screener (boosted(?:\/promoted)? tokens|boosts|promoted tokens)$/i.test(source))return 'Boosted tokens · DexScreener';
@@ -142,7 +143,7 @@ export function rowKey(row) {
 export function knownHolderCount(row){const candidates=[row.holdersCount,row.holderCount,typeof row.holders==='number'?row.holders:null,row.launch?.summary?.holders];return candidates.find(n=>Number.isSafeInteger(n)&&n>=0)??null;}
 
 export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24' } = {}) {
-  const chainId = String(row.chainId), token = row.token || {};
+  const chainId = String(row.chainId), rawToken=row.token||{}, fund=fundFor(chainId,rawToken.address), token=fund?{...rawToken,...fund}:rawToken;
   row=assetPriceFields(row,{chainId,token:token.address,at:row.observedAt,now});
   if(!priceState(row.priceAt,now).usable&&row.quoteAmounts)row={...row,quoteAmounts:{...row.quoteAmounts,price:null,mcap:null}};
   const chain = CHAINS.find(([id]) => id === chainId);
@@ -161,7 +162,7 @@ export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24'
   const symbol = typeof token.symbol === 'string' && token.symbol.trim() ? token.symbol : '?';
   const address = typeof token.address === 'string' ? token.address : '';
   return {
-    key: rowKey(row), row, priceRefreshing:!!row.pricesRefreshing, chainId, chainName: chain?.[1] || chainId, chainIcon: chain?.[2], address,
+    key: rowKey(row), row, fund, priceRefreshing:!!row.pricesRefreshing, chainId, chainName: chain?.[1] || chainId, chainIcon: chain?.[2], address,
     lifecycle:lifecycle(row),move:percent(numeric.move),symbol, name: typeof token.name === 'string' ? token.name : '', logo: safeLogo(token.logo) || safeLogo(officialLogo(chainId, address)),
     avatarSources:tokenAvatarSources({...row.launch,...row,...token},[officialLogo(chainId,address)]),
     letter: symbol.replace(/^\$/, '').slice(0, 1).toUpperCase() || '?', age: age(row.createdAt, now),

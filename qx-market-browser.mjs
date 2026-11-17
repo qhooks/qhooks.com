@@ -1,3 +1,4 @@
+import{mountFundMarkets}from'./qx-fund-markets.mjs';
 import {mountDiscoveryNext} from './qx-discovery-next.mjs';
 // Owned UX-C entry, derived from l131-market-browser.mjs; its directory and pool validation are retained.
 import {mountMarketFallback} from './qx-market-fallback.mjs';
@@ -399,6 +400,7 @@ export function createMarketBrowserClient({ fetchImpl = globalThis.fetch, origin
 // apps/marketplace-preview/l131-market-page.mjs
 export function bindMarketBrowser({ document: d = document, target = window, client = createMarketBrowserClient({ origin: target.location.origin }), fallback = mountMarketFallback(d.getElementById("qm-outside"), {document:d}) } = {}) {
   const nextSteps=mountDiscoveryNext({document:d});
+  const funds=mountFundMarkets({document:d});d.getElementById("qm-results").before(funds.element);
   const ids = ["form", "chain", "search", "results", "status", "count", "previous", "next", "retry"];
   const $ = (id) => d.getElementById("qm-" + id);
   for (const id of ids) if (!$(id)) throw Error("Missing market control " + id);
@@ -448,6 +450,7 @@ export function bindMarketBrowser({ document: d = document, target = window, cli
     }
   }
   async function load(options) {
+    funds.update(options);
     if (dead) return;
     let next;
     try {
@@ -513,7 +516,7 @@ export function bindMarketBrowser({ document: d = document, target = window, cli
   function dispose() {
     if (dead) return;
     dead = true;
-    fallback.dispose();
+    fallback.dispose();funds.dispose();
     revision++;
     pending?.abort();
     pending = null;

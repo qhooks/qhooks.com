@@ -94,3 +94,20 @@ body.qa.qxt .qaq-sheet .qaq-save{color:var(--qa-tx-on-gold,#211505);background:v
 /* Keep the new settings sheet close target visible and finger-sized. */
 .qaq-sheet>header{position:sticky;top:0;z-index:2;background:var(--qa-slab,#141812)}
 .qaq-sheet>header>button{width:44px;height:44px;min-width:44px}
+
+/* Funds retain Price and compact controls on phones. */
+@media(max-width:759px){
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-scroll .qxfd-table tbody tr[data-key].qxfd-fund-row{grid-template-rows:30px 30px!important;gap:2px 4px!important;padding:4px var(--qa-pad,18px)!important;min-height:72px}
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row td.qxfd-token{grid-area:1/1/2/4!important}
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row td.qxfd-evidence{grid-area:1/4/2/5!important;justify-self:end}
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row .qxfd-open{min-height:30px;height:30px}
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row .qxfd-name{display:block;font-size:11px;line-height:13px}
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row .qxfd-age{display:none}
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row td.qxfd-price{display:block!important;grid-area:2/1/3/3!important}
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row td.qxfd-price::before{content:'Price';display:block!important;font:500 11px/1 var(--qa-sans);color:var(--qa-tx-3);margin:0 0 3px}
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row td.qxfd-mcap,body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row td.qxfd-holders{display:none!important}
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row td.qxfd-volume{grid-area:2/3/3/4!important}
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row td.qxfd-buy{grid-area:1/5/3/6!important;align-self:center}
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row .qxfd-price-refreshing{display:inline;margin-left:4px}
+body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row:has(.qxd-checks[open]){grid-template-rows:auto auto!important}
+}

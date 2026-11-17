@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "reason": "Existing Apache-2.0 Lightweight Charts allowance applies only to28exact reviewed public bundle hashes. Advanced Charts remains excluded; each TradingView reference is existing LWC attribution.",
-  "releaseId": "c1a6837d-2be3-4e99-98fa-f163c00b315c",
+  "reason": "Only exact release-owner-reviewed Apache-2.0 Lightweight Charts bundle hashes are allowed; unconditional Advanced Charts bans and unknown/changed bundle refusal remain.",
+  "releaseId": "9cd5b130-75ef-4678-b4a9-7686571c6c6e",
   "license": {
     "path": "vendor/lightweight-charts/LICENSE",
     "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
@@ -34,9 +34,11 @@
     "b/ux-token-root-20261116/terminal/qx-terminal.VN2RJGMC.mjs": "3b84d0c47b3b384044728ad9be077114bb112b337b0acf24897d1355cc3887e8",
     "b/webkit-image-root-20261116/terminal/qx-terminal.7PPL4M54.mjs": "14d73c7281f8d8731bf53d949b393b4d758990d1d2e536a629cbc16ac750cc20",
     "b/terminal/qx-terminal.7OBMQYRS.mjs": "3aa066e96f8d55e31e8232f1402da092bc95c2bb6ccc8b4daea9ae60d7898dca",
-    "b/terminal/qx-terminal.IHHK7G2D.mjs": "f8d46823b2ba13227e3e25400d16f0a8a691393cfd8bf18d77ad96072fd05dba"
+    "b/terminal/qx-terminal.IHHK7G2D.mjs": "f8d46823b2ba13227e3e25400d16f0a8a691393cfd8bf18d77ad96072fd05dba",
+    "b/terminal/qx-terminal.JOJS7YXE.mjs": "79e1d71757423baeacd7178554d08334cf5c8a7bb98dafb061b45fcbcb343448"
   },
   "classificationSourceReleaseId": "df15e38a-fdcd-4fd2-af2c-5bed0051158b",
   "additionalReview": ".ci/lwc-f1-review.json",
-  "additionalP0Review": ".ci/lwc-p0-review.json"
+  "additionalP0Review": ".ci/lwc-p0-review.json",
+  "g4Review": ".ci/lwc-g4-9cd5b130-review.json"
 }
