@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "eb1bfd4c-3027-4237-8fbc-f1396d6d5c92",
+  "releaseId": "4d81204d-c959-46a5-ab6f-128e12ad0bfc",
   "sourceWorkerSha256": "bd8a9998ca3093be8f60a821265ad07ad2c0d595ed1ac0682cb09d0ba4327aeb",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
@@ -118,8 +118,8 @@
       "bytes": 4460
     },
     "agents-hub.html": {
-      "sha256": "7c1c60b49205153e714a325358779e35770f3689d7e5eac36889f2199497177b",
-      "bytes": 9244
+      "sha256": "fe9c68c5fd646ecc85954aa93aecca3b3a36d70afc5dd879b2ff1e3d7166b193",
+      "bytes": 9844
     },
     "agents-leaderboard.css": {
       "sha256": "107b3ce91108a7866f98e3957df473cd9c8789c03e86d7ae063360709b8022a6",
@@ -61954,8 +61954,8 @@
       "bytes": 17316
     },
     "index.html": {
-      "sha256": "26b9d887fb0e8c47022609766b4c58348e14c915c5eae4e6b62a40fe2af79ce9",
-      "bytes": 23080
+      "sha256": "a62fa53dfa459c30b6707d5306a02f7f69cc27a4c987bee05c36c7d14ce53a6c",
+      "bytes": 23197
     },
     "inspect.html": {
       "sha256": "6eb09dd97533ef7ea6a76c040120940d69f0ff64dfd9e7c65a89f1b1e547ba64",
@@ -73250,7 +73250,7 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "bef34262b2873d92b907052850c8c475f8d301b56714644c3d77b7aaa39bd30d",
+  "contentDigest": "8ce823e2e7e4ac50fb7d32ede5312a6f8658b5d080c7cdb7f2d59e386b2e0948",
   "provenance": "Accepted G3 LIVE release public/ static source. Incremental hash map composed from published20e8 plus exactly32changed/new public files; Worker-generated HTTP bodies have separate root served-response acceptance.",
   "incrementalComposition": {
     "baseRelease": "20e87d90-40ca-4227-9fb1-e3c5f4ba584a",
