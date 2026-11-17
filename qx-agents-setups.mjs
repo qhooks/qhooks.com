@@ -1,5 +1,78 @@
 import {tagAgentUrl} from "./agent-source.mjs";
-// Setup URLs checked against official client docs; SDKs are QHooks-hosted adapters.
+// Setup URLs checked against official client docs; source-only submissions are labelled separately.
+// Submitted integrations are source for review, not upstream-installed plugins.
+// Status comes from the recorded PR metadata; no runtime GitHub request is made.
+export const SUBMITTED_INTEGRATIONS = [
+  {
+    "id": "oak",
+    "name": "Oak",
+    "mark": "O",
+    "url": "https://github.com/OakAgentKit/oak/pull/24",
+    "draft": false,
+    "merged": false,
+    "headSha": "bfa0100fd02c93c64b86afe6bfc9bb028b14a584",
+    "source": "https://github.com/qhooks/oak/tree/bfa0100fd02c93c64b86afe6bfc9bb028b14a584",
+    "summary": "Read and unsigned prepare adapter submitted upstream. Native wallet registration still needs Oak maintainer integration; this source does not enable native Oak trading."
+  },
+  {
+    "id": "game",
+    "name": "Virtuals GAME",
+    "mark": "GM",
+    "url": "https://github.com/game-by-virtuals/game-node/pull/160",
+    "draft": true,
+    "merged": false,
+    "headSha": "f7a1766ead4944d71efdee0b5063ec7fd95a28a1",
+    "source": "https://github.com/qhooks/game-node/tree/f7a1766ead4944d71efdee0b5063ec7fd95a28a1",
+    "summary": "Read and unsigned prepare plugin submitted upstream. Review the tested QHooks source; upstream release and host setup remain pending."
+  },
+  {
+    "id": "goat",
+    "name": "GOAT",
+    "mark": "G",
+    "url": "https://github.com/goat-sdk/goat/pull/616",
+    "draft": true,
+    "merged": false,
+    "headSha": "9ad536c67bc970743b103fa74a08da507ef776de",
+    "source": "https://github.com/qhooks/goat/tree/9ad536c67bc970743b103fa74a08da507ef776de",
+    "summary": "Read and unsigned prepare adapter submitted upstream. Review the tested QHooks source; it is not included in the upstream GOAT package."
+  },
+  {
+    "id": "agentkit",
+    "name": "AgentKit",
+    "mark": "AK",
+    "url": "https://github.com/coinbase/agentkit/pull/1651",
+    "draft": true,
+    "merged": false,
+    "headSha": "75690c443de91a2e7f7631a1f1599978ba7270fc",
+    "source": "https://github.com/qhooks/agentkit/tree/75690c443de91a2e7f7631a1f1599978ba7270fc",
+    "summary": "Read and unsigned prepare provider submitted upstream. Review the tested QHooks source; it is not included in the upstream AgentKit package."
+  },
+  {
+    "id": "base-wallet",
+    "name": "Base Wallet MCP",
+    "mark": "BW",
+    "url": "https://github.com/coinbase/agents/pull/24",
+    "draft": true,
+    "merged": false,
+    "headSha": "e91aecfc9b4c637fce620b474a7417fbe0fcdedf",
+    "source": "https://github.com/qhooks/agents/tree/e91aecfc9b4c637fce620b474a7417fbe0fcdedf",
+    "summary": "Read and unsigned EVM plan specification submitted upstream. Wallet MCP approval is required. Launch and perps plans are not executed by this adapter."
+  }
+];
+function submittedSetup(id) {
+  const pr = SUBMITTED_INTEGRATIONS.find(entry => entry.id === id);
+  if (!pr) throw Error("Unknown submitted integration");
+  return {
+    id: pr.id, name: pr.name, mark: pr.mark,
+    kind: pr.draft ? "Submitted · draft PR" : "Submitted · open PR",
+    title: "Review the " + pr.name + " integration",
+    instruction: pr.summary + " Plans are unsigned; the signing wallet may be an agent's own wallet or yours. No custody. We never hold keys.",
+    snippet: pr.source, label: "QHooks source · tested head",
+    action: "View QHooks source", url: pr.source, docs: pr.source,
+    submission: {url: pr.url, draft: pr.draft, merged: false, headSha: pr.headSha}
+  };
+}
+
 export const AGENT_SETUPS = [
   {
     id: "claude-desktop",
@@ -88,48 +161,20 @@ export const AGENT_SETUPS = [
     id: "eliza",
     name: "Eliza",
     mark: "E",
-    kind: "QHooks SDK · Node 24+",
-    title: "Register the ElizaOS plugin",
+    kind: "Package under review",
+    title: "ElizaOS setup update",
     instruction:
-      "Install the QHooks-hosted package in your existing ElizaOS 2.0.5 application. The adapter adds 25 pinned read/prepare actions. It does not start a model, wallet or messaging callback. Board/profile preparations are available through MCP or REST.",
-    snippet:
-      'import { createQHooksPlugin } from "@qhooks/plugin-elizaos";\nawait runtime.registerPlugin(createQHooksPlugin());',
-    label: "Register in your existing app",
+      "The hosted adapter is being updated. Installation instructions are withheld here until the reviewed replacement is released. Use a compatible MCP client or the public REST read/prepare API in the meantime.",
+    snippet: "https://qhooks.com/mcp",
+    label: "Public MCP endpoint",
     docs: "https://qhooks.com/api#agents",
-    download: "qhooks-plugin-elizaos-0.2.1.tgz",
-    command: "npm install https://qhooks.com/download/agents/qhooks-plugin-elizaos-0.2.1.tgz",
+    reviewOnly: true,
   },
-  {
-    id: "goat",
-    name: "GOAT",
-    mark: "G",
-    kind: "QHooks SDK · Node 22+",
-    title: "Add the native GOAT plugin",
-    instruction:
-      "Use the QHooks-hosted adapter with @goat-sdk/core 0.5.0. This registers 25 pinned read/prepare tools without a wallet client. Board/profile preparations are available through MCP or REST. The separate upstream PR is under review.",
-    snippet:
-      'import { qhooks } from "@qhooks/goat-plugin";\nconst plugin = qhooks();\nconst tools = plugin.getTools();',
-    label: "Register in your existing app",
-    docs: "https://github.com/goat-sdk/goat/pull/616",
-    download: "qhooks-goat-plugin-0.2.1.tgz",
-    command: "npm install https://qhooks.com/download/agents/qhooks-goat-plugin-0.2.1.tgz",
-  },
-  {
-    id: "agentkit",
-    name: "AgentKit",
-    mark: "AK",
-    kind: "QHooks SDK · Node 22+",
-    title: "Add the AgentKit action provider",
-    instruction:
-      "Use the QHooks-hosted adapter with @coinbase/agentkit 0.10.4. It adds 25 pinned actions. Optional attribution uses an explicit referrer, then the configured option, then the existing wallet’s public address. Board/profile preparations use MCP or REST. The upstream provider PR is under review.",
-    snippet:
-      'import { qhooksActionProvider } from "@qhooks/agentkit-action-provider";\nconst provider = qhooksActionProvider();\nconst actions = provider.getActions();',
-    label: "Register in your existing app",
-    docs: "https://github.com/coinbase/agentkit/pull/1651",
-    download: "qhooks-agentkit-action-provider-0.2.1.tgz",
-    command:
-      "npm install https://qhooks.com/download/agents/qhooks-agentkit-action-provider-0.2.1.tgz",
-  },
+  submittedSetup("goat"),
+  submittedSetup("agentkit"),
+  submittedSetup("oak"),
+  submittedSetup("game"),
+  submittedSetup("base-wallet"),
   {
     id: "rest",
     name: "REST / curl",
@@ -137,7 +182,7 @@ export const AGENT_SETUPS = [
     kind: "Any language",
     title: "One public request. No key.",
     instruction:
-      "Read indexed launches with plain HTTP. Use POST for preparations and GET for public reads. Amounts are exact strings in raw units. A prepared plan still needs the signing wallet’s signature (agent-owned or user-owned).",
+      "Read indexed launches with plain HTTP. Use POST for preparations and GET for public reads. Spot amounts use raw-unit strings; OTC and agreement amounts use human decimal strings. A prepared plan still needs the signing wallet’s signature (agent-owned or user-owned).",
     snippet:
       "curl --fail-with-body --get 'https://qhooks.com/api/v1/agent/launches' \\\n  --data-urlencode 'chain=4663' \\\n  --data-urlencode 'limit=3'",
     label: "Public REST read",

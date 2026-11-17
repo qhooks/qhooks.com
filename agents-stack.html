@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Your agent stack | QHooks</title>
+  <meta name="description" content="Connect an agent to QHooks, read token evidence, prepare a plan and review it in the signing wallet. Keep your setup portable with NOMAD.">
+  <link rel="canonical" href="https://qhooks.com/agents/stack"><link rel="icon" href="/favicon.svg">
+  <link rel="preload" href="/qx-a/fonts/mona-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/qx-agents.css"><link rel="stylesheet" href="/agent-stack.css">
+  <script src="/agent-theme.js"></script><script type="module" src="/agent-stack.mjs"></script>
+</head>
+<body data-a-shell="agents">
+  <a class="ag-skip" href="#main">Skip to content</a>
+  <header class="ag-header">
+    <a class="ag-brand" href="/?ref=guide-4" aria-label="QHooks home"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 64 64"><rect width="64" height="64" rx="10" fill="#151814"/><circle cx="30" cy="30" r="18" fill="none" stroke="#b7ff3c" stroke-width="7"/><path d="M40 42 55 57" stroke="#b7ff3c" stroke-width="7"/></svg>QHooks<span> / agent stack</span></a>
+    <nav aria-label="Main"><a href="/agents?ref=guide-4">Connect</a><a href="/agents/board?ref=guide-4">Board</a><button class="ag-theme" type="button" data-theme-toggle aria-label="Switch color theme">◐</button></nav>
+  </header>
+  <main id="main" class="ag-main stack-main">
+    <section class="stack-intro">
+      <div><p class="ag-eyebrow"><span class="ag-dot"></span> FROM QUESTION TO WALLET REVIEW</p><h1>Build your<br><span>agent stack.</span></h1><p class="stack-lead">Your client. QHooks tools.<br>A wallet you choose.</p><p class="stack-note">Read markets and token evidence, then prepare the next step. Prepared for the signing wallet: the agent's own wallet or yours. No custody; we never hold keys.</p><a class="ag-button ag-primary" href="#connect">Connect QHooks <span>↘</span></a></div>
+      <ol class="stack-flow" aria-label="How the stack works">
+        <li><span class="stack-num">01</span><div><strong>Your agent</strong><p>Claude, ChatGPT, Cursor, Codex or a framework you run.</p></div></li>
+        <li><span class="stack-num">02</span><div><strong>QHooks · MCP</strong><p>Markets, stored QProof reports and unsigned plans through one HTTPS endpoint.</p></div></li>
+        <li><span class="stack-num">03</span><div><strong>The signing wallet</strong><p>Review the chain, amounts, approvals, minimum received, fees and expiry.</p></div></li>
+        <li><span class="stack-num">04</span><div><strong>Confirm on chain</strong><p>Wallet approval and a confirmed receipt establish what happened. A prepared plan does not.</p></div></li>
+      </ol>
+    </section>
+    <section id="connect" class="stack-section stack-connect" aria-labelledby="connect-title">
+      <div class="stack-section-heading"><p class="ag-eyebrow">PLUG IN</p><h2 id="connect-title">Start with the endpoint.</h2><p>QHooks public tools require no QHooks API key. Your client may have its own account or subscription requirements.</p></div>
+      <div class="stack-config"><div class="stack-config-bar"><span>REMOTE HTTP · MCP</span><button type="button" data-copy-id="endpoint">Copy endpoint</button></div><code id="endpoint">https://qhooks.com/mcp?ref=guide-4</code><p>Use your client's remote HTTP connector. <a href="/agents?ref=guide-4#connect">Exact setup for each client ↗</a></p></div>
+      <details class="stack-details"><summary>Claude Code · two commands</summary><pre><code id="claude-commands">/plugin marketplace add qhooks/qhooks-mcp
+/plugin install qhooks@qhooks</code></pre><button type="button" data-copy-id="claude-commands">Copy commands</button><p>The plugin connects QHooks tools. Wallet review remains a separate step.</p></details>
+      <details class="stack-details"><summary>Plain MCP configuration</summary><pre><code id="http-config">{
+  "mcpServers": {
+    "qhooks": {
+      "type": "http",
+      "url": "https://qhooks.com/mcp?ref=guide-4"
+    }
+  }
+}</code></pre><button type="button" data-copy-id="http-config">Copy JSON</button><p>This is the Claude Code HTTP form. <a href="/agents?ref=guide-4#connect">Use the matching form for your client.</a></p></details>
+    </section>
+    <section class="stack-section" aria-labelledby="try-title">
+      <div class="stack-section-heading"><p class="ag-eyebrow">TRY THE MECHANISM</p><h2 id="try-title">Read. Check. Prepare.</h2><p>Start with data before asking for a transaction.</p></div>
+      <div class="stack-prompts"><article><span>READ ONLY</span><h3>Find an exact token</h3><p id="read-prompt">List one Robinhood Chain launch. Show its exact token address and latest stored QProof report, including the report time and any unknown or stale checks.</p><button type="button" data-copy-id="read-prompt">Copy prompt</button></article><article><span>UNSIGNED PREPARATION</span><h3>Review a plan</h3><p>Ask for a quote using the exact chain, token, side and raw input amount. Then request a plan for your public signing-wallet address.</p><p class="stack-small">Review every approval and transaction in the wallet. Perps use their own signing flow. A launch result may be a website review link.</p></article></div>
+      <p class="stack-note">Stored QProof can be missing, partial or out of date. <code>request:true</code> queues a report under the existing budgets; it does not run a fresh paid scan. <a href="/agents/guides/token-safety-mcp?ref=guide-4">Read the token-safety guide ↗</a></p>
+    </section>
+    <section class="stack-section stack-portable" aria-labelledby="portable-title">
+      <div class="stack-section-heading"><p class="ag-eyebrow">KEEP YOUR SETUP PORTABLE</p><h2 id="portable-title">Moving clients with NOMAD?</h2><p>Keep an existing QHooks HTTP entry when you move a setup. NOMAD is an independent portability tool; this recipe adds no automatic starter preset.</p></div>
+      <div><ol class="stack-checklist"><li>Choose the QHooks entry you already use and review NOMAD's destination preview.</li><li>Preserve <code>https://qhooks.com/mcp?ref=nomad</code> and the entry's enabled or paused state.</li><li>Check destination tool permissions. Some adapters cannot carry source tool filters; a warning does not enforce a restriction.</li><li>Reconnect your signing wallet separately. Keys, balances, wallet permissions and transaction consent do not move with an MCP URL.</li></ol><div class="stack-inline-links"><a href="https://www.thenomad.website/docs/adapters?ref=qhooks-stack" target="_blank" rel="noopener noreferrer">NOMAD adapter docs ↗</a><a href="/support?ref=guide-4">QHooks setup support ↗</a></div></div>
+    </section>
+    <section class="stack-section stack-last" aria-labelledby="ref-title"><div><p class="ag-eyebrow">ATTRIBUTION, WITHOUT CONFUSION</p><h2 id="ref-title">A source tag isn't a fee referrer.</h2><p><code>?ref=nomad</code> labels aggregate setup traffic. For eligible QHooks spot trades, pass the agent's public EVM wallet explicitly as <code>referrer</code> in the preparation arguments. Bring traders, get 20% of their fee.</p><p>The preparation must return that same referrer. Self-referral and linked-wallet exclusions apply. Referral eligibility follows the live QHooks rules; this does not promise fees from partner protocols.</p></div><aside><h3>See the evidence</h3><p>Public counters show recorded calls and prepared plans. They include tests and do not prove completed trades or outside adoption.</p><a class="ag-text-link" href="/agents?ref=guide-4#ag-today">View recorded activity ↗</a><a class="ag-text-link" href="/api/agents/usage">Inspect aggregate JSON ↗</a></aside></section>
+    <p id="stack-copy-status" class="stack-copy-status" role="status" aria-live="polite"></p>
+  </main>
+  <footer class="ag-footer"><a href="/?ref=guide-4">QHooks</a><span>Tools for the signing wallet.</span><nav aria-label="Footer"><a href="/skill.md?ref=guide-4">Skill &amp; fees</a><a href="/support?ref=guide-4">Support</a><a href="/privacy?ref=guide-4">Privacy</a><a href="/trust?ref=guide-4">Trust</a></nav></footer>
+</body>
+</html>

@@ -23,6 +23,7 @@ export const NAV = [
 ];
 // Quick links shown first in the menu and in the footer.
 export const MORE = [
+  { label: 'Trust Hub', href: '/trust' },
   { label: 'News wire', href: '/news' },
   { label: 'Perps', href: '/perps' }, { label: 'Markets', href: '/markets' }, { label: 'Lab', href: '/lab' },
   { label: 'Hook discovery', href: '/discover' }, { label: 'My QHooks', href: '/me' }, { label: 'QProof', href: '/qproof' }, { label: 'Apps', href: '/android' },

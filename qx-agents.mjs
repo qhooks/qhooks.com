@@ -29,6 +29,7 @@ function trackedSetup(setup) {
       ? tagAgentConnections(setup.command, source)
       : setup.command,
   };
+  if (setup.reviewOnly) return next;
   if (setup.id === "rest")
     next.snippet += [
       "",
@@ -36,7 +37,7 @@ function trackedSetup(setup) {
       `  -H 'X-QHooks-Client-Id: ${sourceClientId}'`,
       "  -H 'X-QHooks-Client-Name: rest-client'",
     ].join(String.fromCharCode(32, 92, 10));
-  if (["eliza", "goat", "agentkit"].includes(setup.id)) {
+  if (!setup.submission && ["eliza", "goat", "agentkit"].includes(setup.id)) {
     const helper = `const clientId = crypto.randomUUID();
 const fetchImpl = (url, init = {}) => {
   const u = new URL(url);
@@ -198,7 +199,8 @@ async function capture() {
 
 if (page === "hub") {
   let selected = null,
-    limits = null;
+    limits = null,
+    writeLimits = null;
   function selectSetup(id, { focus = false } = {}) {
     const setup = trackedSetup(
       AGENT_SETUPS.find((s) => s.id === id) || AGENT_SETUPS[0],
@@ -233,18 +235,22 @@ if (page === "hub") {
         action.removeAttribute("rel");
       }
     }
-    $("ag-client-docs").href = setup.docs;
+    $("ag-client-docs").href = setup.submission ? setup.submission.url : setup.docs;
+    $("ag-client-docs").textContent = setup.submission ? "Submitted PR ↗" : "Setup docs ↗";
     paintRates();
   }
   function paintRates() {
     if (!limits) return;
+    if (limits.hour !== null || limits.day !== null ||
+        ![limits.burstPerMinute, limits.upstreamPerMinute, limits.portfolioPerMinute].every(Number.isSafeInteger))
+      return $("ag-rates").textContent = "Current read limits are refreshing. Respect HTTP 429 and Retry-After.";
     $("ag-rates").textContent =
-      limits.hour +
-      "/hour · " +
-      limits.day +
-      "/day per IP and session; " +
-      limits.sitePerMinute +
-      "/minute site-wide. Applies to cached safety, portfolio, discovery, contract and community tools. Market routes keep their existing limits. Respect HTTP 429 and Retry-After.";
+      "Cached/D1 reads: no hourly or daily quota; " + limits.burstPerMinute +
+      "/min/IP burst. Fresh upstream reads: " + limits.upstreamPerMinute +
+      "/min/IP; public-only portfolio fills: " + limits.portfolioPerMinute +
+      "/min/IP. Cache hits skip upstream guards. Respect HTTP 429 and Retry-After." +
+      (writeLimits ? " Feedback, signed writes and paid attempts keep " + writeLimits.hour +
+        "/hour, " + writeLimits.day + "/day. Board-specific posting limits also apply." : "");
   }
   for (const setup of AGENT_SETUPS) {
     const b = node(
@@ -293,6 +299,7 @@ if (page === "hub") {
   api("/api/agents/config")
     .then((value) => {
       limits = value.limits;
+      writeLimits = value.writeLimits;
       paintRates();
     })
     .catch(() => {

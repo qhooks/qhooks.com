@@ -210,7 +210,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   card.replaceChildren(
     h('div', { class: 'qxt-side-toggle', role: 'group', ariaLabel: 'Trade side' }, ...sideBtns, sellToCash),
     payRow,
-    risk, ...avail.elements, h('div', { class: 'qxt-amount qxt-amount-fit' }, amount, amountDisplay, usdInput, usdDisplay, unit), h('div', {class: 'qxt-usd-row'}, usdEcho, unitToggle), addFunds, funding.element, presets, out, go, signIn, tradingSettings.element, status, followup, settings);
+    risk, ...avail.elements, h('div', { class: 'qxt-amount qxt-amount-fit' }, amount, amountDisplay, usdInput, usdDisplay, unit), h('div', {class: 'qxt-usd-row'}, usdEcho, unitToggle), addFunds, funding.element, presets, out, go, signIn, tradingSettings.element, status, followup, settings, h('a', {href:'/trust',class:'qxt-muted',style:'display:block;font-size:11px;padding:12px 0;text-underline-offset:3px'}, 'Trust Hub · checks, fees & contracts'));
   if(!rowMode)import('/qx-oneclick.mjs').then(m => m.mountOneClickToggle(settings)).catch(() => {}); // One-click trading toggle (hidden unless an email/Google wallet is connected)
 
   const calloutContext=()=>st?{chainId:String(st.chainId),token:String(st.token).toLowerCase(),owner:connectedAddress()?.toLowerCase()}:null;

@@ -3,7 +3,7 @@
 <!-- qhooks-discovery-summary -->
 Launch, trade & QProof token safety on Robinhood Chain + more; perps, OTC escrow and agreements.
 
-Explore token markets on Robinhood Chain, Base, Arbitrum, BNB, Ethereum, Monad, Elysium and Solana. Launch, trade, read perps and check stored QProof safety records. Prepare OTC escrow on Robinhood Chain. Prepare pay-when-done agreements on Robinhood Chain. Prepared for the signing wallet: the agent's own wallet or yours. No custody. We never hold keys. MCP launches and Solana signing use site flows; spot plans require a listed EVM route.
+Read supported token/perps markets and stored QProof evidence. Spot plans require a listed route on Base, Robinhood Chain, Ethereum, Arbitrum, BNB or Elysium. Monad MCP launch, spot planning and QProof are unavailable. Prepare OTC escrow on Robinhood Chain. Prepare pay-when-done agreements on Robinhood Chain. Prepared for the signing wallet: the agent's own wallet or yours. No custody. We never hold keys. MCP launches and Solana signing use site flows; spot plans require a listed EVM route.
 <!-- /qhooks-discovery-summary -->
 
 - [Agent discovery](https://qhooks.com/.well-known/qhooks-agent.json): Public tools exposed by the current MCP release.
