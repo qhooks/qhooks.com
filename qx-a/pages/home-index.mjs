@@ -244,7 +244,7 @@ function drawLaunches(fresh = new Set()) {
   if (!launchBox) return;
   const live = S.markets.filter((m) => m.live);
   if (!live.length) { launchBox.replaceChildren(state('loading', { title: 'Refreshing launches' })); return; }
-  const rows = [...live].sort((a, b) => (b.listedAt || 0) - (a.listedAt || 0)).slice(0, 3);
+  const rows = [...live].sort((a, b) => (b.listedAt || 0) - (a.listedAt || 0)).slice(0, 10);
   if (!launchBox.dataset.drawn || fresh.size) {
     launchRows.clear();
     launchBox.replaceChildren(h('div', { class: 'qa-list hm-launches' }, rows.map((m) => { const r = launchRow(m, fresh.has(key(m))); launchRows.set(key(m), r); return r.el; })));

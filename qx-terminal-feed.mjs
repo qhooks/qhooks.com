@@ -1,3 +1,4 @@
+import{hasVisibleTerminalDialog}from'./qx-terminal-selection.mjs';
 import{feedRowPriceView}from'./qx-feed-row-price-view.mjs';
 import{defaultTrendingMode,projectTrendingContracts,discoveryContractKey}from'./qx-discovery-groups.mjs';
 import{publicReadFetch}from'./qx-public-read.mjs';
@@ -6,7 +7,8 @@ import{FUND_TOKENS,fundRow}from'./qx-fund-catalog.mjs';
 import {isQhooksPriceAsset} from './qx-price-state.mjs';
 import {mountDiscoveryNext} from './qx-discovery-next.mjs';
 import {discoveryBadges} from './qx-discovery-badges.mjs';
-import {evidenceMetrics} from './qx-discovery-evidence.mjs';
+import {evidenceMetrics,rowEvidence} from './qx-discovery-evidence.mjs';
+import {SAFE_START,safeStartSelection,SAFE_START_LABELS,safeStartFacts,filterOwner,readDiscoveryFilters,writeDiscoveryFilters} from './qx-safe-start.mjs';
 import {mountPulseBoard} from './qx-pulse-board.mjs';
 import {createFeedPriceCache} from './qx-feed-price-cache.mjs';
 import{openQuickAmountSettings}from'./qx-quick-amount-settings.mjs';
@@ -43,13 +45,17 @@ const prefs = preferences(storage);
 const state = { ...prefs, tab: prefs.tab === 'launches' ? 'trending' : prefs.tab, markets: [], data: null,
   loading: false, error: null, query: '', hits: [], searching: false, searchError: null, wallet: null };
 const lookupWallet = createWalletLookup({costs: outsideCosts()}); // walletpnl: outside-token P&L from the wallet's own chain history
-let savedWindow;try{savedWindow=storage?.getItem('qxt:discover:window');}catch{}state.window=WINDOWS.some(([k])=>k===savedWindow)?savedWindow:'h6'; /* first open: 6h (Randall, 2026-11-09) */state.filters=validateDiscoveryFilters();
+let filterWallet=null;
+function savedFilters(){try{return validateDiscoveryFilters(readDiscoveryFilters(storage,filterWallet)||{});}catch{return validateDiscoveryFilters();}}
+function persistFilters(){return writeDiscoveryFilters(storage,filterWallet,state.filters);}
+const discoveryFilterFacts=row=>({...evidenceMetrics(row),...safeStartFacts(row,rowEvidence(row))});
+let savedWindow;try{savedWindow=storage?.getItem('qxt:discover:window');}catch{}state.window=WINDOWS.some(([k])=>k===savedWindow)?savedWindow:'h6'; /* first open: 6h (Randall, 2026-11-09) */state.filters=savedFilters();
 if(WINDOWS.some(([key])=>key===state.sort.key)){state.window=state.sort.key;state.sort={...state.sort,key:'move'};savePreference(storage,'window',state.window);savePreference(storage,'sort',state.sort);}
 const savedViews=createMarketViews(storage);
 try{state.layout=storage?.getItem('qhooks:discovery:layout:v1')==='pulse'?'pulse':'list';}catch{state.layout='list';}
 let pulse=null;const pulseMode=()=>state.layout==='pulse'&&!state.query&&!state.wallet;
 const discoveryPrices=createFeedPriceCache({storage});
-if(['trending','funds'].includes(new URLSearchParams(location.search).get('discover'))){state.layout='list';state.tab=new URLSearchParams(location.search).get('discover');state.chain='all';state.filters=validateDiscoveryFilters();}
+if(['trending','funds'].includes(new URLSearchParams(location.search).get('discover'))){state.layout='list';state.tab=new URLSearchParams(location.search).get('discover');state.chain='all';}
 let wantedLaunch = prefs.tab === 'launches', api = null, quickRow = null, quickHome = null;
 let focusedKey = null, savedScroll = 0, savedWindowScroll = 0, opening = false, searchGeneration = 0;
 let searchTimer, searchController, tokenLibraryUI, lastLibrarySearch = '';
@@ -88,27 +94,31 @@ for(const [key,label] of [['liquidityMin','Min liquidity, $'],['liquidityMax','M
  const input=el('input',{type:'text',inputmode:key==='venue'?'text':'decimal','aria-label':label,placeholder:key==='venue'?'Any venue':'Any'});filterFields[key]=input;filterGrid.append(el('label',{},el('span',{},label),input));
 }
 for(const [key,label]of [['hasSocials','Has social links'],['sameBlock','Snipers · entry signal'],['sharedFunding','Insiders · funding signal']]){const input=el('select',{'aria-label':label},el('option',{value:''},'Any'),el('option',{value:'yes'},key==='hasSocials'?'Has links':'Signal observed'));filterFields[key]=input;filterGrid.append(el('label',{},el('span',{},label),input));}
+for(const [key,label]of Object.entries(SAFE_START_LABELS)){const input=el('select',{'aria-label':label},el('option',{value:''},'Off'),el('option',{value:'yes'},'On'));filterFields[key]=input;filterGrid.append(el('label',{},el('span',{},label),input));}
+filterGrid.append(el('p',{class:'qxfd-filter-coverage'},'Verified LP uses recent checks for this exact pool. Unknown liquidity checks are hidden when that filter is on. QProof checks remain separate.'));
 filterGrid.append(el('p',{class:'qxfd-filter-coverage'},'Holder filters use recent Holder X-ray reads on this device. Unknown values are excluded. Entry and funding signals do not prove sniper or insider activity.'));
 const applyFilters=button('Apply filters'),resetFilters=button('Reset'),viewName=el('input',{type:'text',maxlength:32,'aria-label':'Saved view name',placeholder:'Name this view'}),saveView=button('Save view'),removeView=button('Delete view');
 const viewSelect=el('select',{'aria-label':'Saved market views'}),filterMessage=el('p',{role:'status','aria-live':'polite',class:'qxfd-filter-message'});
 const renderViews=()=>{viewSelect.replaceChildren(el('option',{value:''},'Saved views'),...savedViews.list().map(v=>el('option',{value:v.name},v.name)));};renderViews();
-filterDetails.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();filterDetails.open=false;listOptions.open=false;listOptions.querySelector('summary').focus();}});
+filterDetails.addEventListener('keydown',event=>{if(event.key==='Escape'&&!event.isComposing&&event.keyCode!==229){event.preventDefault();event.stopPropagation();filterDetails.open=false;listOptions.open=false;listOptions.querySelector('summary').focus();}});
 filterDetails.append(el('div',{class:'qxfd-saved-views'},viewSelect,viewName,saveView,removeView),filterGrid,el('div',{class:'qxfd-filter-actions'},applyFilters,resetFilters),filterMessage);
 const presetBar=el('div',{class:'qxfd-filter-actions','aria-label':'Market filter presets'});
 const presetChips=[];
 for(const [label,filters] of [['Active',{liquidityMin:'10000',volumeMin:'10000',transactionsMin:'20'}],['Today',{liquidityMin:'1000',volumeMin:'1000',transactionsMin:'10',ageMaxHours:'24'}]]){
- const preset=button(label,{'aria-pressed':'false'});presetChips.push({button:preset,filters:validateDiscoveryFilters(filters)});preset.addEventListener('click',()=>{const same=JSON.stringify(state.filters)===JSON.stringify(validateDiscoveryFilters(filters));state.filters=validateDiscoveryFilters(same?{}:filters);for(const [k,input]of Object.entries(filterFields))input.value=state.filters[k]||'';filterDetails.open=false;filterDetails.querySelector('summary').focus({preventScroll:true});filterMessage.textContent=same?'Filters cleared.':label+' filters applied.';renderRows();refresh();});presetBar.append(preset);
+ const preset=button(label,{'aria-pressed':'false'});presetChips.push({button:preset,filters:validateDiscoveryFilters(filters)});preset.addEventListener('click',()=>{const same=JSON.stringify(state.filters)===JSON.stringify(validateDiscoveryFilters(filters));state.filters=validateDiscoveryFilters(same?{}:filters);persistFilters();for(const [k,input]of Object.entries(filterFields))input.value=state.filters[k]||'';filterDetails.open=false;filterDetails.querySelector('summary').focus({preventScroll:true});filterMessage.textContent=same?'Filters cleared.':label+' filters applied.';renderRows();refresh();});presetBar.append(preset);
 }
 // Common presets live in the instant chip row.
 function captureFilters(){return validateDiscoveryFilters(Object.fromEntries(Object.entries(filterFields).map(([k,v])=>[k,v.value])));}
+function paintFilterFields(){for(const [key,input]of Object.entries(filterFields))input.value=state.filters[key]||'';}
+paintFilterFields();
 function updateWindow(){if(typeof windowChip!=='undefined')windowChip.value=state.window;for(const b of windows.children)b.setAttribute('aria-pressed',String(b.dataset.window===state.window));const label=WINDOWS.find(([k])=>k===state.window)?.[1]||'24h';const headButton=headers.get('move')?.querySelector('button');if(headButton){headButton.setAttribute('aria-label',label+' change');headButton.replaceChildren(el('span',{class:'qxfd-head-full'},label+' change'),el('span',{class:'qxfd-head-short','aria-hidden':'true'},label));}}
 windows.addEventListener('click',event=>{const key=event.target.closest('[data-window]')?.dataset.window;if(!WINDOWS.some(([k])=>k===key)||key===state.window)return;state.window=key;savePreference(storage,'window',key);updateWindow();refresh();});
-applyFilters.addEventListener('click',()=>{try{state.filters=captureFilters();filterDetails.open=false;filterDetails.querySelector('summary').focus({preventScroll:true});filterMessage.textContent='Filters applied to this list.';renderRows();refresh();}catch(error){filterMessage.textContent=error.message;}});
+applyFilters.addEventListener('click',()=>{try{state.filters=captureFilters();const saved=persistFilters();filterDetails.open=false;filterDetails.querySelector('summary').focus({preventScroll:true});filterMessage.textContent=saved?'Filters saved for this wallet.':'Filters applied for this session. This device could not save them.';renderRows();refresh();}catch(error){filterMessage.textContent=error.message;}});
 const widen=button('Widen filters',{class:'qxfd-widen'});widen.addEventListener('click',()=>resetFilters.click());
-resetFilters.addEventListener('click',()=>{state.filters=validateDiscoveryFilters();for(const input of Object.values(filterFields))input.value='';filterMessage.textContent='Filters cleared.';renderRows();refresh();});
-saveView.addEventListener('click',()=>{try{state.filters=captureFilters();savedViews.save({name:viewName.value,chain:state.chain,tab:state.tab,window:state.window,filters:state.filters,layout:state.layout,stage:pulse.stage()});renderViews();viewSelect.value=viewName.value.trim();filterMessage.textContent='View saved on this device.';renderRows();refresh();}catch(error){filterMessage.textContent=error.message;}});
+resetFilters.addEventListener('click',()=>{state.filters=validateDiscoveryFilters();persistFilters();paintFilterFields();filterMessage.textContent='Filters cleared.';renderRows();refresh();});
+saveView.addEventListener('click',()=>{try{state.filters=captureFilters();persistFilters();savedViews.save({name:viewName.value,chain:state.chain,tab:state.tab,window:state.window,filters:state.filters,layout:state.layout,stage:pulse.stage()});renderViews();viewSelect.value=viewName.value.trim();filterMessage.textContent='View saved on this device.';renderRows();refresh();}catch(error){filterMessage.textContent=error.message;}});
 removeView.addEventListener('click',()=>{try{if(!viewSelect.value)return;savedViews.remove(viewSelect.value);renderViews();filterMessage.textContent='View deleted.';}catch(error){filterMessage.textContent=error.message;}});
-viewSelect.addEventListener('change',()=>{const v=savedViews.list().find(v=>v.name===viewSelect.value);if(!v)return;if(state.wallet)clearSearch();loader.cancel();state.layout=v.layout==='pulse'?'pulse':'list';try{storage?.setItem('qhooks:discovery:layout:v1',state.layout);}catch{}state.tab=v.tab;state.window=v.window;state.chain=CHAINS.some(([k])=>k===v.chain)?v.chain:'all';state.filters=v.filters;state.data=null;for(const [k,input]of Object.entries(filterFields))input.value=v.filters[k]||'';for(const b of chainGroup.children)b.setAttribute('aria-pressed',String(b.dataset.chain===state.chain));viewName.value=v.name;pulse.select(v.stage||'new');renderTabs();updateWindow();renderRows();refresh();});
+viewSelect.addEventListener('change',()=>{const v=savedViews.list().find(v=>v.name===viewSelect.value);if(!v)return;if(state.wallet)clearSearch();loader.cancel();state.layout=v.layout==='pulse'?'pulse':'list';try{storage?.setItem('qhooks:discovery:layout:v1',state.layout);}catch{}state.tab=v.tab;state.window=v.window;state.chain=CHAINS.some(([k])=>k===v.chain)?v.chain:'all';state.filters=v.filters;persistFilters();state.data=null;for(const [k,input]of Object.entries(filterFields))input.value=v.filters[k]||'';for(const b of chainGroup.children)b.setAttribute('aria-pressed',String(b.dataset.chain===state.chain));viewName.value=v.name;pulse.select(v.stage||'new');renderTabs();updateWindow();renderRows();refresh();});
 const panel = el('div', { role: 'tabpanel', id: 'qxfd-panel', class: 'qxfd-panel' });
 const noticeText = el('span');
 const retry = button('Retry', { class: 'qxfd-retry' });
@@ -145,7 +155,7 @@ listOptions.append(el('div',{class:'qxfd-list-options-body'},quickSlot,
  el('div',{class:'qxfd-filterbar'},chainGroup,el('div',{class:'qxfd-sort-tools'},sortHint,sortSelect)),
  trendingNote,presetBar,el('div',{class:'qxfd-viewbar'},windows,pauseUpdates,arrivals),filterDetails));
 listOptions.addEventListener('toggle',()=>{if(listOptions.open)filterDetails.open=true;});
-listOptions.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.defaultPrevented){e.preventDefault();listOptions.open=false;listOptions.querySelector('summary').focus();}});
+listOptions.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.defaultPrevented&&!e.isComposing&&e.keyCode!==229){e.preventDefault();listOptions.open=false;listOptions.querySelector('summary').focus();}});
 const chainChip=el('select',{'aria-label':'Filter chain',class:'qxfd-chain-chip'},...CHAINS.map(([id,name])=>el('option',{value:id,title:name},({all:'All',solana:'SOL','4663':'RH','56':'BNB','99901':'Ely','1':'ETH','8453':'Base','42161':'ARB','143':'MON'})[id]||name)));
 chainChip.value=state.chain;chainChip.addEventListener('change',()=>chainGroup.querySelector('[data-chain="'+chainChip.value+'"]')?.click());
 const windowChip=el('select',{'aria-label':'Change window',class:'qxfd-window-chip'},...WINDOWS.map(([id,label])=>el('option',{value:id},label)));windowChip.value=state.window;windowChip.addEventListener('change',()=>windows.querySelector('[data-window="'+windowChip.value+'"]')?.click());
@@ -182,7 +192,7 @@ root.append(
 main.prepend(root);
 const loaderOptions=changed=>({fetcher:publicReadFetch,timeout:25000,serverTimeout:12000,browserDelay:600,storage,browser:opts=>browserFeed(opts),cacheRead:readCachedFeed,cacheWrite:writeCachedFeed,priceCache:discoveryPrices,changed});
 pulse=mountPulseBoard({host:panel,el,storage,makeLoader:({changed})=>createFeedLoader(loaderOptions(changed)),makeRow,updateRow,
- onTrending:()=>showTrending(),context:()=>({chain:state.chain,window:state.window,filters:state.filters,factsOf:evidenceMetrics}),visible:()=>!document.hidden&&!root.hidden&&pulseMode(),
+ onTrending:()=>showTrending(),context:()=>({chain:state.chain,window:state.window,filters:state.filters,factsOf:discoveryFilterFacts}),visible:()=>!document.hidden&&!root.hidden&&pulseMode(),
  viewModels:rows=>sortRows(rows.filter(discoveryCandidate).map(r=>rowViewModel(r,{quick:api?.quickForChain?.(r.chainId)||api?.state.quick||{},window:state.window})),state.sort),
  onModels:models=>{if(!pulseMode())return;paintQuickPreset(models);text(count,models.length+' tokens in Pulse');text(source,'New · Near bond ≥80% · Migrated with a destination');}
 });
@@ -253,7 +263,7 @@ function visibleRows() {
   const q = state.query.toLowerCase();
   // The tab's own filter (Gainers needs a positive move in the chosen window, etc.) applies to the list, never to search
   // hits: a hit carries only a 24 h change, so on Gainers 6h every pasted contract read "No tokens match" (2026-11-10).
-  rows = filterDiscovery(rows,{tab:state.tab,window:state.window,filters:state.filters,factsOf:evidenceMetrics});
+  rows = filterDiscovery(rows,{tab:state.tab,window:state.window,filters:state.filters,factsOf:discoveryFilterFacts});
   if (q) {
     rows = [...rows, ...launches].filter(r => [r.token?.symbol, r.token?.name, r.token?.address, r.launch?.controller]
       .some(value => typeof value === 'string' && value.toLowerCase().includes(q)));
@@ -267,6 +277,7 @@ function visibleRows() {
   }
   else if(state.tab==='trending'&&!defaultTrendingMode(state))rows=rows.filter(r=>trendingCandidate(r,{window:state.window,filters:state.filters}));
   else if(state.tab!=='launches') rows=rows.filter(discoveryCandidate);
+  if(state.filters.hideQproofDanger||state.filters.verifiedLiquidityOnly)rows=filterDiscovery(rows,{tab:'trending',window:state.window,filters:{hideQproofDanger:state.filters.hideQproofDanger,verifiedLiquidityOnly:state.filters.verifiedLiquidityOnly},factsOf:discoveryFilterFacts});
   const context=JSON.stringify([state.tab,state.chain,state.window,state.query,state.filters,state.sort]);if(context!==contractContext){expandedContracts.clear();contractContext=context;}
   contractProjection=projectTrendingContracts(rows.filter(r=>state.chain==='all'||String(r.chainId)===state.chain),{...state,expanded:expandedContracts});
   const models=contractProjection.rows.map(r=>{const vm=rowViewModel(r,{quick:quickFor(r.chainId),window:state.window});return{...vm,contractGroup:contractProjection.metadata.get(discoveryContractKey(r))};});
@@ -543,7 +554,7 @@ function refresh() {
   if (state.tab === 'launches') { state.loading = false; state.data = null; state.error = null; renderRows(); }
   else loader.load(state.tab, state.chain, state.window, state.filters);updateWindow();
 }
-function showTrending(){loader.cancel();clearTimeout(searchTimer);searchController?.abort();searchGeneration++;search.value='';state.query='';state.hits=[];state.searchError=null;state.searching=false;state.wallet=null;lastLibrarySearch='';walletPanel.replaceChildren();state.layout='list';state.tab='trending';state.chain='all';state.filters=validateDiscoveryFilters();state.data=null;state.error=null;state.loading=true;filterDetails.open=false;listOptions.open=false;for(const input of Object.values(filterFields))input.value='';for(const b of chainGroup.children)b.setAttribute('aria-pressed',String(b.dataset.chain==='all'));renderTabs();renderRows();tabs.querySelector('[data-tab=trending]')?.focus({preventScroll:true});refresh();}
+function showTrending(){loader.cancel();clearTimeout(searchTimer);searchController?.abort();searchGeneration++;search.value='';state.query='';state.hits=[];state.searchError=null;state.searching=false;state.wallet=null;lastLibrarySearch='';walletPanel.replaceChildren();state.layout='list';state.tab='trending';state.chain='all';state.filters=savedFilters();state.data=null;state.error=null;state.loading=true;filterDetails.open=false;listOptions.open=false;paintFilterFields();for(const b of chainGroup.children)b.setAttribute('aria-pressed',String(b.dataset.chain==='all'));renderTabs();renderRows();tabs.querySelector('[data-tab=trending]')?.focus({preventScroll:true});refresh();}
 function setTab(tab) {
   if (!availableTabs().some(([id]) => id === tab)) return;
   wantedLaunch = false;
@@ -777,7 +788,7 @@ function focusRow(delta) {
   node.tr.scrollIntoView({ block: 'nearest' });
 }
 document.addEventListener('keydown', event => {
-  if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || document.querySelector('dialog[open]')) return;
+  if (event.defaultPrevented || event.isComposing || event.keyCode === 229 || event.ctrlKey || event.metaKey || event.altKey || hasVisibleTerminalDialog(document)) return;
   if (event.key === 'Escape') {
     event.preventDefault();
     if (root.hidden) showTokens();
@@ -804,6 +815,22 @@ function rememberSearchResults(){
  const rows=visibleRows().slice(0,8).map(libraryAsset);if(rows.length){api.library.rememberSearch(rows);lastLibrarySearch=key;}
 }
 document.addEventListener('qxt:discovery-evidence',()=>{if(!root.hidden)renderRows();});
+document.addEventListener('qhooks:first-run-owner',event=>{
+ const owner=event.detail?.owner||null;
+ if(filterOwner(owner)===filterOwner(filterWallet))return;
+ const prior=JSON.stringify(state.filters);filterWallet=owner;state.filters=savedFilters();paintFilterFields();renderRows();if(JSON.stringify(state.filters)!==prior)refresh();
+});
+document.addEventListener('qhooks:discovery-apply-safe-start',event=>{
+ const request=event.detail;
+ if(!request||filterOwner(request.owner)!==filterOwner(filterWallet)||filterOwner(filterWallet)==='guest')return;
+ try{
+  const next=validateDiscoveryFilters(safeStartSelection(state.filters));
+  if(!writeDiscoveryFilters(storage,filterWallet,next))throw Error('This device could not save these filters. You can still skip.');
+  state.filters=next;paintFilterFields();filterMessage.textContent='Safe-start filters saved for this wallet.';
+  renderRows();refresh();request.result={applied:true,filters:{...next},owner:filterWallet};
+ }catch(error){request.error=error.message;}
+});
+window.dispatchEvent(new Event('qhooks:first-run-context-request'));
 document.addEventListener('qxt:library',()=>{if(pulseMode())pulse.render();for(const node of nodes.values())if(node.vm){const watched=!!api?.library?.has(libraryAsset(node.vm));text(node.watch,watched?'★':'☆');node.watch.setAttribute('aria-pressed',String(watched));node.watch.setAttribute('aria-label',(watched?'Remove ':'Add ')+node.vm.symbol+(watched?' from':' to')+' watchlist');}});
 function connectTerminal() {
   if (api || !window.qxTerminal) return;

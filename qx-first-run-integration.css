@@ -1,0 +1,17 @@
+.qfr-visual:has(.qfr-preview-grid){padding:16px;text-align:left;background:#121611;display:grid;gap:10px;align-content:center}
+.qfr-preview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.qfr-preview-grid label{display:grid;gap:6px;font-size:12px;color:#aaa99f}.qfr-preview-grid input{min-width:0;width:100%;height:36px;box-sizing:border-box;background:#080b08;border:1px solid #36392f;color:#ead3a0;padding:7px;font:inherit;border-radius:2px}
+.qfr-visual>p{font-size:12px;line-height:1.4;color:#aaa99f;margin:0}.qfr .qmp-editor{font-size:13px}.qfr .qmp-editor-body{padding:8px 0}.qfr .qmp-editor summary{font-size:13px}
+.qfr .qmp-preview{width:64px;height:64px;border-radius:2px}.qfr .qmp-editor input,.qfr .qmp-editor textarea,.qfr .qmp-editor select{font-size:14px;min-height:36px}.qfr .qmp-help,.qfr .qmp-privacy-state{font-size:12px;line-height:1.45}
+@media(max-width:599px){.qfr-preview-grid{grid-template-columns:1fr 1fr}.qfr-preview-grid label:first-child{grid-column:1/-1}.qfr-visual:has(.qfr-preview-grid){min-height:190px}.qfr-preview-grid label{font-size:12px}}
+/* House form skins must not turn this read-only noir preview dark-on-dark. */
+[data-theme="light"] body dialog.qfr .qfr-preview-grid input{background:#080b08!important;color:#ead3a0!important;border-color:#36392f!important}
+/* Reuse the real profile editor without its standalone page card/chrome. */
+.qfr .qmp-editor{margin:0;border:0;border-radius:2px;background:transparent;scroll-margin-top:0}
+.qfr .qmp-editor>summary{display:none}
+.qfr .qmp-editor .qmp-editor-body{padding:0;max-width:none}
+.qfr .qmp-editor fieldset{min-width:0;gap:12px}
+.qfr .qmp-editor fieldset>label{font-size:12px;line-height:1.4}
+.qfr .qmp-editor input:not([type=checkbox]),.qfr .qmp-editor textarea{width:100%;min-width:0;border-radius:2px;padding:10px;font-size:14px}
+.qfr .qmp-editor fieldset.qmp-plain-links,.qfr .qmp-editor label.qmp-sharing{padding:12px;border-radius:2px}
+.qfr .qmp-editor .qmp-help{margin:0;font-size:12px}

@@ -1,4 +1,5 @@
 // Provider-independent market views. Missing history never becomes a zero return.
+import {safeStartMatches} from './qx-safe-start.mjs';
 export const WINDOWS=[['m5','5m',300],['m15','15m',900],['h1','1h',3600],['h6','6h',21600],['h12','12h',43200],['h24','24h',86400],['d7','1w',604800]];
 export const DISCOVERY_TABS=[['trending','Trending'],['new','New pairs'],['bonding','Near bond'],['migrated','Migrated'],['gainers','Gainers'],['losers','Losers'],['volume','Volume']];
 export const finite=value=>typeof value==='number'&&Number.isFinite(value)?value:null;
@@ -24,7 +25,7 @@ export function validateDiscoveryFilters(raw={}){
  if(out.capMin&&out.capMax&&Number(out.capMin)>Number(out.capMax))throw Error('Minimum market cap exceeds maximum.');
  for(const [a,b,label] of [['liquidityMin','liquidityMax','liquidity'],['ageMinHours','ageMaxHours','age']])if(out[a]&&out[b]&&Number(out[a])>Number(out[b]))throw Error('Minimum '+label+' exceeds maximum.');
  for(const k of ['devMaxPct','top10MaxPct'])if(out[k]&&Number(out[k])>100)throw Error('Holder percentages must be between 0 and 100.');
- for(const k of ['sameBlock','sharedFunding','hasSocials']){const value=String(raw[k]||'');if(!['','yes'].includes(value))throw Error('Choose a supported signal filter.');out[k]=value;}
+ for(const k of ['sameBlock','sharedFunding','hasSocials','hideQproofDanger','verifiedLiquidityOnly']){const value=String(raw[k]||'');if(!['','yes'].includes(value))throw Error('Choose a supported signal filter.');out[k]=value;}
  out.venue=String(raw.venue||'').trim().slice(0,60);return out;
 }
 export function filterDiscovery(rows,{tab='trending',window='h24',filters={},now=Date.now(),factsOf=row=>row.discoveryFacts||{}}={}){
@@ -36,7 +37,7 @@ export function filterDiscovery(rows,{tab='trending',window='h24',filters={},now
   const cap=finite(row.marketCapUsd)>0?row.marketCapUsd:row.fdvUsd;
   const tx=row.txns?.h24,transactions=finite(tx?.buys)!==null&&finite(tx?.sells)!==null?tx.buys+tx.sells:null;
   if(!lower(row.liquidityUsd,'liquidityMin')||!lower(cap,'capMin')||!lower(row.volumeUsd?.h24,'volumeMin')||!lower(transactions,'transactionsMin'))return false;
-  const facts={hasSocials:typeof row.hasSocials==='boolean'?row.hasSocials:null,...(factsOf(row)||{})};for(const [filter,key] of [['devMaxPct','devPct'],['top10MaxPct','top10Pct']])if(f[filter]&&(finite(facts[key])===null||facts[key]>Number(f[filter])))return false;
+  const facts={hasSocials:typeof row.hasSocials==='boolean'?row.hasSocials:null,...(factsOf(row)||{})};if(!safeStartMatches(row,f,facts,now))return false;for(const [filter,key] of [['devMaxPct','devPct'],['top10MaxPct','top10Pct']])if(f[filter]&&(finite(facts[key])===null||facts[key]>Number(f[filter])))return false;
   for(const key of ['sameBlock','sharedFunding','hasSocials'])if(f[key]&&facts[key]!==true)return false;
   if(f.liquidityMax&&(finite(row.liquidityUsd)===null||row.liquidityUsd>Number(f.liquidityMax)))return false;
   if(f.ageMinHours){const at=typeof row.createdAt==='number'?(row.createdAt<1e12?row.createdAt*1000:row.createdAt):Date.parse(row.createdAt);if(!Number.isFinite(at)||at>now||now-at<Number(f.ageMinHours)*3600000)return false;}

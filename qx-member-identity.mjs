@@ -14,7 +14,7 @@ function styles(doc){
 }
 function publicIdentity(value,wallet){
   if(value?.version!==1||value.wallet!==wallet||!value.profile||value.updatedAt!==null&&(!Number.isSafeInteger(value.updatedAt)||value.updatedAt<=0))return null;
-  const profile=normalizeMemberProfile({...value.profile,image:''});
+  const profile=normalizeMemberProfile({...value.profile,image:'',banner:''});
   const image=Number.isSafeInteger(value.updatedAt)&&value.updatedAt>0&&value.profile.image===memberProfilePath(wallet)+'/image?v='+value.updatedAt?value.profile.image:'';
   return{name:profile.name,handle:value.handle||null,image,accounts:normalizeMemberAccounts(value.accounts)};
 }

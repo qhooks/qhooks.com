@@ -223,3 +223,46 @@ main.pf6 .pf6-who{display:flex;align-items:center;justify-content:space-between;
 @media(max-width:1099px){main.pf6 .pf6-hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}main.pf6 .pf6-total{font-size:30px}main.pf6 .pf6-pnl{margin-top:0}main.pf6 .pf6-pnl__v{font-size:20px}main.pf6 .pf6-pnl__n{white-space:normal;font-size:11px}main.pf6 .pf6-stats{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:8px}main.pf6 .pf6-stats div{padding:6px 0}main.pf6 .pf6-stats div+div{padding-left:7px}main.pf6 .pf6-stats dd{font-size:14px}main.pf6 .pf6-stats dt{font-size:11px;white-space:normal}main.pf6 .pf6-status{flex-wrap:wrap;white-space:normal;font-size:11px;gap:4px}main.pf6 .pf6-status .qa-btn--quiet{font-size:11px}main.pf6 .pf6-tabs-wrap{margin-top:12px}}
 /* Override the older desktop auto-placement for the shared compact row. */
 main.pf6 .pf-holding>.pf-holding__name{grid-area:identity}main.pf6 .pf-holding>.pf-holding__value{grid-area:value}main.pf6 .pf-holding>.pf-holding__basis{grid-area:basis}main.pf6 .pf-holding>.pf-holding__actions{grid-area:actions}main.pf6 .pf-holding>.pf-row-sale{grid-column:1/-1;grid-row:3}
+
+/* Track 1: existing values stay in one scrollable summary, with reading/coverage directly beneath. */
+main.pf6.pf6-dense-overview #qp-overview{display:flex;align-items:center;gap:0;height:64px;min-height:64px;max-width:100%;overflow-x:auto;overflow-y:hidden;padding:0;margin:0;box-sizing:border-box;scrollbar-width:thin;overscroll-behavior-x:contain;box-shadow:0 1px 0 var(--qa-rule)}
+main.pf6.pf6-dense-overview :is(.pf6-hero__main,.pf6-hero__side,.pf6-stats){display:contents}
+main.pf6.pf6-dense-overview :is(.pf6-summary-primary,.pf6-summary-pnl,.pf6-stats>div){flex:1 0 150px;box-sizing:border-box;min-width:150px;height:56px;padding:4px 14px;border-right:1px solid var(--qa-rule);box-shadow:none}
+main.pf6.pf6-dense-overview #qp-overview .pf6-summary-primary{flex-basis:200px;min-width:200px;padding-left:0}
+main.pf6.pf6-dense-overview .pf6-hero__top{min-height:14px;display:block;margin:0}
+main.pf6.pf6-dense-overview .mn-pf-label{margin:0;line-height:14px;font-size:12px}
+main.pf6.pf6-dense-overview .pf6-viewing{height:14px;font-size:12px;line-height:14px;margin:0 0 0 5px;padding:0 3px;letter-spacing:0;text-transform:none;vertical-align:0}
+main.pf6.pf6-dense-overview .pf6-summary-primary:has(.pf6-viewing:not([hidden])) .pf6-viewing{display:block;width:max-content;margin:0}
+main.pf6.pf6-dense-overview .pf6-total{font-size:26px;line-height:28px;margin:0;letter-spacing:-.03em}
+main.pf6.pf6-dense-overview :is(.pf6-pnl,.pf6-stats){margin:0;gap:0}
+main.pf6.pf6-dense-overview :is(.pf6-pnl__l,.pf6-stats dt){font-size:12px;line-height:14px;min-height:0;margin:0;white-space:nowrap}
+main.pf6.pf6-dense-overview :is(.pf6-pnl__v,.pf6-stats dd){font-size:22px;line-height:28px;margin:0;font-variant-numeric:tabular-nums}
+main.pf6.pf6-dense-overview .pf6-reading-row{display:flex;flex-wrap:wrap;gap:0 12px;align-items:center;padding:4px 0;min-height:24px;font-size:12px;color:var(--qa-tx-3)}
+main.pf6.pf6-dense-overview .pf6-reading-row :is(.mn-pf-reading,.pf6-split,.pf6-pnl__n){margin:0}
+main.pf6.pf6-dense-overview .pf6-reading-row :is(.pf6-status,.pf6-status .qa-btn--quiet,.pf-chain-split>summary,.pf6-pnl__n){font-size:12px;line-height:16px}
+main.pf6.pf6-dense-overview .pf6-reading-row .pf6-pnl__n{flex-basis:100%;white-space:normal;overflow:visible;text-overflow:clip}
+main.pf6.pf6-dense-overview .pf6-reading-row #qp-notes{flex-basis:100%;margin:0}
+main.pf6.pf6-dense-overview .pf6-reading-row #qp-allocation:has(.pf-chain-split[open]){flex-basis:100%}
+main.pf6.pf6-dense-overview .pf6-tabs-wrap{margin-top:4px}
+main.pf6.pf6-dense-overview .pf6-tabs .qa-tab{height:36px;min-height:36px;font-size:13px;padding-inline:8px}
+main.pf6.pf6-dense-overview .pf6-filters{padding-block:4px;gap:6px;flex-wrap:nowrap;overflow-x:auto}
+main.pf6.pf6-dense-overview .pf6-chip{height:28px;font-size:12px;border-radius:3px}
+main.pf6 .pf6-row.pf-holding,main.pf6 .pf-eth-summary{min-height:56px;grid-template-rows:28px 24px;row-gap:0;padding-block:2px}
+main.pf6 .pf-holding__name,main.pf6 .pf-holding__basis,main.pf6 .pf-holding__details summary,main.pf6 .pf-holding__value small,main.pf6 .pf-holding__refreshing{font-size:12px}
+main.pf6 .pf-holding__name b{font-size:14px}
+main.pf6 .pf-holding__value{font-size:14px;line-height:14px}
+main.pf6 .pf-holding__value small{line-height:13px}
+main.pf6 .pf-holding__actions .pf-holding__sell{height:24px;min-height:24px;border-radius:2px;font-size:12px}
+main.pf6 .pf-holding__trade{padding:4px;min-height:24px;box-sizing:border-box;font-size:12px}
+main.pf6 :is(.qp-art,.qp-art>img:not(.qp-art__chain)){border-radius:2px}
+main.pf6 .pf6-row:has(.pf-row-sale:not([hidden])){height:auto;grid-template-rows:28px 24px auto}
+@media(min-width:1100px){
+ main.pf6 .pf6-row.pf-holding,main.pf6 .pf-eth-summary{grid-template-columns:28px minmax(180px,1.6fr) minmax(180px,1.3fr) minmax(130px,1fr) 114px;grid-template-rows:40px;min-height:44px;padding:2px 8px;column-gap:12px}
+ main.pf6 .pf-holding>.qp-art{grid-area:1/1/2/2}
+ main.pf6 .pf-holding>.pf-holding__name{grid-area:1/2/2/3}
+ main.pf6 .pf-holding>.pf-holding__basis{grid-area:1/3/2/4}
+ main.pf6 .pf-holding>.pf-holding__value{grid-area:1/4/2/5}
+ main.pf6 .pf-holding>.pf-holding__actions{grid-area:1/5/2/6}
+ main.pf6 .pf-holding>.pf-row-sale{grid-column:1/-1;grid-row:2}
+ main.pf6 .pf6-row:has(.pf-row-sale:not([hidden])){grid-template-rows:40px auto}
+}

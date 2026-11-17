@@ -1,13 +1,13 @@
 /* Scoped feedback, never a geometry/density layer or a trading event source. */
 .qx-slick{--qx-motion-fast:120ms;--qx-motion:140ms;--qx-motion-sheet:180ms;--qx-motion-ease:cubic-bezier(.2,0,0,1)}
 .qx-slick :is(button,[role=tab],a){transition:background-color var(--qx-motion) var(--qx-motion-ease),color var(--qx-motion) var(--qx-motion-ease),border-color var(--qx-motion) var(--qx-motion-ease)}
-.qx-slick .qxfd-table tr[data-key]{transition:background-color var(--qx-motion) var(--qx-motion-ease)}
+body.qa.qxt .qx-slick .qxfd-table tr[data-key]{transition:background-color var(--qx-motion) var(--qx-motion-ease)}
 body.qa.qxt .qx-slick .qxfd-table .qxfd-flash-up,body.qa.qxt .qx-slick .qxfd-table .qxfd-flash-down,body.qa.qxt .qx-slick .qxfd-table tr.qxfd-tick-up::after,body.qa.qxt .qx-slick .qxfd-table tr.qxfd-tick-down::after{animation-duration:160ms;animation-timing-function:var(--qx-motion-ease)}
 body.qa.qxt dialog.qaq-sheet[open],body.qa.qxt dialog.qts-sheet[open]{animation:qx-sheet-in 180ms cubic-bezier(.2,0,0,1)}
 .qx-api-latency{display:inline-block;width:35px;max-width:35px;text-align:end;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:12px;color:var(--qa-tx-3,#9a9a92)}
 body.qa.qxt .qx-slick .qx-api-latency[hidden]{display:inline-block!important;visibility:hidden}
 @keyframes qx-sheet-in{from{opacity:.5;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){
- .qx-slick :is(button,[role=tab],a),.qx-slick .qxfd-table tr[data-key]{transition:none}
+ .qx-slick :is(button,[role=tab],a),body.qa.qxt .qx-slick .qxfd-table tr[data-key]{transition:none}
  body.qa.qxt .qx-slick .qxfd-table .qxfd-flash-up,body.qa.qxt .qx-slick .qxfd-table .qxfd-flash-down,body.qa.qxt .qx-slick .qxfd-table tr.qxfd-tick-up::after,body.qa.qxt .qx-slick .qxfd-table tr.qxfd-tick-down::after,body.qa.qxt dialog.qaq-sheet[open],body.qa.qxt dialog.qts-sheet[open]{animation:none}
 }

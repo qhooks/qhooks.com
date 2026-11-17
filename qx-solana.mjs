@@ -2,13 +2,15 @@
 // themselves; no wallet library needed). Only what trading needs: list, connect (silently when remembered), the address,
 // and signing a Jupiter transaction.
 import {base58Encode} from './qx-solana-identity.mjs';
+import {publishSolanaFirstRun} from './qx-first-run-boot.mjs';
 const wallets = new Set(), listeners = new Set();
 let current = null; // { wallet, account }
 let restoring = false;
 let selection = 0;
 const KEY = 'qhooks:sol-wallet';
 const usable = w => w.chains?.some(c => c.startsWith('solana:')) && w.features?.['standard:connect'] && (w.features?.['solana:signTransaction'] || w.features?.['solana:signAndSendTransaction']);
-const notify = () => listeners.forEach(f => { try { f(); } catch {} });
+const firstRunSource={};
+const notify = () => {listeners.forEach(f => { try { f(); } catch {} });if(typeof window!=='undefined')publishSolanaFirstRun(firstRunSource,current?.account?.address||null,window);};
 function register(...ws) { for (const w of ws) if (usable(w)) wallets.add(w); notify(); restore(); return () => { ws.forEach(w => wallets.delete(w)); notify(); }; }
 if (typeof window !== 'undefined') {
   window.addEventListener('wallet-standard:register-wallet', e => { try { e.detail?.({ register }); } catch {} });

@@ -379,11 +379,15 @@ async function paintMe(box) {
   if (!doc.getElementById('qhc-dialog')) { box.replaceChildren(connect()); return; }
   try {
     const [{ getWalletHub }, { profileUrl }] = await Promise.all([import('/wallet-hub.mjs'), import('/qx-profile-address.mjs')]);
-    const cur = getWalletHub(window).snapshot().current;
-    if (!cur) { box.replaceChildren(connect()); return; }
+    const [{firstRunContext,firstRunRuntime,bindFirstRunWallet,openFirstRun,firstRunReturnFocus}]=await Promise.all([import('/qx-first-run-boot.mjs')]);
+    const hub=getWalletHub(window),cur = hub.snapshot().current;
+    if(cur)bindFirstRunWallet(hub);
+    const identity=firstRunContext(window),owner=cur?.owner||identity?.owner;
+    if (!owner) { box.replaceChildren(connect()); return; }
+    const tourButton=(mode,label)=>h('button',{class:'qa-btn qa-btn--quiet',type:'button','data-first-run':mode,onclick:()=>{doc.getElementById('qa-menu')?.close();void openFirstRun(mode,{returnFocus:firstRunReturnFocus(window,[...doc.querySelectorAll('[aria-controls="qa-menu"]')].find(n=>n.getClientRects().length))},window,owner);}},label);
     box.replaceChildren(
-      h('div', { class: 'qa-menu__who' }, avatar(cur.owner, 'md'), h('b', null, fmt.short(cur.owner))),
-      h('div', { class: 'qa-menu__mine' }, [['Edit profile', profileUrl({ wallet: cur.owner, edit: true })], ['My QHooks', '/me'], ['Portfolio', '/portfolio'], ['Rewards', '/me#qa-rewards']].map(([t, u]) => h('a', { href: u }, t))));
+      h('div', { class: 'qa-menu__who' }, avatar(owner, 'md'), h('b', null, fmt.short(owner.replace(/^solana:/,'')))),
+      h('div', { class: 'qa-menu__mine' }, [['Edit profile', profileUrl({ wallet: owner, edit: true })], ['My QHooks', '/me'], ['Portfolio', '/portfolio'], ['Rewards', '/me#qa-rewards']].map(([t, u]) => h('a', { href: u }, t)),tourButton('tour','Tour'),tourButton('whats-new',firstRunRuntime(window)?.identity?.owner===(cur?.owner?.toLowerCase()||identity?.owner)&&firstRunRuntime(window)?.status?.unseenReleaseIds?.length?"What's new · New":"What's new")));
   } catch { box.replaceChildren(connect()); }
 }
 

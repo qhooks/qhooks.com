@@ -1,4 +1,5 @@
 import {profileUrl} from './qx-profile-address.mjs';
+import {bindFirstRunWallet,openFirstRun,firstRunReturnFocus} from './qx-first-run-boot.mjs';
 import {homePicker} from './qx-home-currency.mjs';
 import {loadLocalHome, homeToken} from './qx-home-core.mjs';
 // The shared wallet dialog does one job per state (Randall, 2026-11-04: "this should just be a static connect page").
@@ -17,6 +18,7 @@ import { walletActions } from '/qx-wallet-actions.mjs';
 
 const homeStyle = document.createElement('link'); homeStyle.rel = 'stylesheet'; homeStyle.href = '/qx-home-currency.css'; document.head.append(homeStyle);
 const hub = getWalletHub(window);
+bindFirstRunWallet(hub);
 const $ = id => document.getElementById(id);
 const dialog = $('qhc-dialog');
 const chainName = id => chainById(String(id))?.name || 'chain ' + id;
@@ -26,6 +28,7 @@ const TYPE = { 'io.qhooks.privy': 'QHooks email wallet', 'io.qhooks.walletconnec
 const short = a => a.slice(0, 6) + '…' + a.slice(-4);
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 let cur = null, portfolio = '/me', render = () => {};
+let firstRunStatus={owner:null,newCount:0};
 const ONE_CLICK_LIVE = true; // the Trades setting; ships together with the Privy bridge and the ticket's one-click
 // Cash total + "Move to another chain" come from the terminal's Relay module once it ships (lab-public-deploys):
 // openMoveFunds({ from, to }) and cashTotal(owner) → { usd, byChain }. Until then the row stays hidden.
@@ -230,11 +233,13 @@ if (dialog) {
     card.querySelector('.qwm-wtype').textContent = TYPE[cur.entry?.rdns] || cur.entry?.name || 'Browser wallet';
     renderSwitcher();
     links.replaceChildren(...[['Edit profile', profileUrl({wallet:cur.owner,edit:true})], ['My QHooks', '/me'], ['Portfolio', portfolio], ['Rewards', '/me#qa-rewards'], ['My launches', '/me#qa-launches'], ['Wallets', '/wallets']].map(([t, h]) => { const a = el('a', null, t); a.href = h; a.addEventListener('click', () => dialog.close()); return a; }));
+    for(const [mode,label]of [['tour','Tour'],['whats-new',"What's new"]]){const b=el('button','qhc-secondary',mode==='whats-new'&&firstRunStatus.owner===cur?.owner?.toLowerCase()&&firstRunStatus.newCount?label+' · New':label);b.type='button';b.dataset.firstRun=mode;b.addEventListener('click',()=>{dialog.close();void openFirstRun(mode,{returnFocus:firstRunReturnFocus(window)},window,cur?.owner);});links.append(b);}
     renderTrades(); loadBalances(); renderCash(); home.refresh();
   };
   // The fund button arrives later (email-login script); keep the footer complete whenever the dialog changes.
   new MutationObserver(() => { if (cur && $('qhc-fund') && $('qhc-fund').parentElement !== foot) foot.prepend($('qhc-fund')); }).observe(dialog, { childList: true, subtree: true });
   window.addEventListener('qhooks:trade-prefs', renderTrades);
+  document.addEventListener('qhooks:first-run-status',event=>{firstRunStatus=event.detail||{owner:null,newCount:0};const b=links.querySelector('[data-first-run="whats-new"]');if(b)b.textContent=firstRunStatus.owner===cur?.owner?.toLowerCase()&&firstRunStatus.newCount?"What's new · New":"What's new";});
   new MutationObserver(() => { if (dialog.open && cur) { if (!switching) balStatus.textContent = ''; probe(); loadBalances(); home.refresh(); } }).observe(dialog, { attributes: true, attributeFilter: ['open'] });
   hub.subscribe(s => {
     const c = s.current, owner = String(c?.owner || '').toLowerCase(), provider = c?.entry?.provider;

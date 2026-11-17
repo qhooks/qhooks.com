@@ -79,12 +79,22 @@ function interactiveTarget(node){
  }
  return false;
 }
+// Closed native dialogs keep role="dialog". Only a visible, active dialog owns keys.
+export function hasVisibleTerminalDialog(document=globalThis.document){
+ const nodes=document?.querySelectorAll?.('dialog[open], [role="dialog"]:not(dialog)')||[];
+ for(const node of nodes){
+  if(node.hidden||node.closest?.('[hidden], [aria-hidden="true"]')||!node.getClientRects?.().length)continue;
+  const visibility=document.defaultView?.getComputedStyle?.(node)?.visibility;
+  if(visibility!=='hidden'&&visibility!=='collapse')return true;
+ }
+ return false;
+}
 // Native control activation and an open dialog own their keys. The amount
 // input retains its ticket-local Enter handler; body shortcuts stay deliberate.
 export function createTerminalShortcutHandler({document=globalThis.document,isDisabled=()=>false,onShortcut}){
  if(typeof onShortcut!=='function')throw TypeError('A terminal shortcut action is required.');
  return event=>{
-  if(event.defaultPrevented||event.metaKey||event.ctrlKey||event.altKey||isDisabled()||document.querySelector('dialog[open], [role="dialog"]:not([hidden])'))return;
+  if(event.defaultPrevented||event.isComposing||event.keyCode===229||event.metaKey||event.ctrlKey||event.altKey||isDisabled()||hasVisibleTerminalDialog(document))return;
   const active=document.activeElement;
   if(/^(?:INPUT|TEXTAREA|SELECT)$/.test(active?.tagName||'')&&event.key==='Escape'){active.blur?.();return;}
   const path=event.composedPath?.()||[event.target];
@@ -96,9 +106,9 @@ export function createTerminalShortcutHandler({document=globalThis.document,isDi
 // A disclosure editor owns Escape before the terminal's capture-phase Back
 // guard. Closing it must retain the selected asset and funded recovery.
 export function closeTerminalOverlayOnEscape(event,document=globalThis.document){
- if(event.key!=='Escape'||event.defaultPrevented)return false;
+ if(event.key!=='Escape'||event.defaultPrevented||event.isComposing||event.keyCode===229)return false;
  if(document.fullscreenElement){event.preventDefault();event.stopImmediatePropagation();void document.exitFullscreen().catch(()=>{});return true;}
- if(document.querySelector('dialog[open]'))return false;
+ if(hasVisibleTerminalDialog(document))return false;
  const activity=document.querySelector('.qxt-layer-list:not([hidden])');
  if(activity){event.preventDefault();event.stopImmediatePropagation();activity.querySelector('button')?.click();return true;}
  let details=null;

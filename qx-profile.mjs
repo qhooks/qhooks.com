@@ -1,3 +1,4 @@
+import {bindFirstRunWallet} from './qx-first-run-boot.mjs';
 import {xAttachment} from './qx-x-attachment.mjs';
 import {publishedPost} from './qx-a/pages/community-common.mjs';
 import {memberWallet,memberWalletKey} from './qx-member-wallet.mjs';
@@ -53,6 +54,7 @@ function showMemberHeader(value){
   document.title=name+' | QHooks';
   replaceProfileAddress(location,history,value);
   const target=$('qp-member-identity'),details=h('div',{class:'qmp-profile-details'});
+  if(value.profile.banner)details.append(h('img',{class:'qmp-profile-banner',src:value.profile.banner,alt:'',width:'960',height:'320',decoding:'async',loading:'lazy'}));
   if(value.profile.bio)details.append(h('p',{class:'qmp-bio'},value.profile.bio));
   appendMemberAccountChips(details,value.accounts?.filter(row=>row.kind!=='x'),{document});
   appendUnverifiedMemberLinks(details,value.profile.links,{document});
@@ -63,6 +65,7 @@ function showMemberHeader(value){
 function linkedAccountsPublished(value){if(value?.wallet!==viewedProfileKey)return;linkedRevision++;showMemberHeader({...shownMember,wallet:value.wallet,profile:shownMember?.profile||{name:'',bio:'',image:'',links:[]},accounts:value.accounts});}
 const memberEditor=mountMemberProfileEditor($('qp-member-editor'),{hub,sessions:profileSessions,client:memberClient,onPublished:value=>{showMemberHeader(value);window.dispatchEvent(new CustomEvent('qhooks:profile-saved',{detail:{wallet:value.wallet}}));void load(value);},onAccountsPublished:linkedAccountsPublished});
 const solHub=$('qp-solana-editor')?createSolanaProfileWallet(window):null;
+if(solHub)bindFirstRunWallet(solHub,{family:'solana'});
 const solSessions=solHub?solanaProfileSessions(solHub,{includeTradingPrivacy:true}):null;
 const solEditor=solHub?mountMemberProfileEditor($('qp-solana-editor'),{hub:solHub,sessions:solSessions,client:memberClient,idPrefix:'qmps',onPublished:value=>{showMemberHeader(value);window.dispatchEvent(new CustomEvent('qhooks:profile-saved',{detail:{wallet:value.wallet}}));void load(value);},onAccountsPublished:linkedAccountsPublished}):null;
 async function prepareSolProfileEditor(wallet,revision){
@@ -164,7 +167,7 @@ function showLookup(message) {
 }
 
 async function load(published) {
-  const mine=++seq;clearProfileControls();
+  const mine=++seq;clearProfileControls();$('qp-member-identity').querySelector('.qmp-profile-banner')?.remove();
   if(!location.hash&&/^\/profile(?:\.html)?\/?$/.test(location.pathname))return showLookup();
   let resolved;try{resolved=published?.wallet===viewedProfileKey?{wallet:published.wallet,handle:published.handle||null}:await resolveProfileAddress(location);}catch(error){if(mine===seq)showLookup(error.message);return;}
   if(mine!==seq)return;

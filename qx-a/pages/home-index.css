@@ -321,3 +321,35 @@ a.cx-face { min-width: 44px; min-height: 44px; display: grid; place-items: start
 /* Keep both actions and the Lab link distinct at the final invitation. */
 .hm-close .hm-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
 .hm-close > .qa-link { display: inline-flex; margin-top: 18px; }
+
+/* Track 1: live markets lead the home page as rows, retaining the existing art and actions. */
+body.qa.ux-home-simple .l3-ch--hero{min-height:0!important}
+body.qa.ux-home-simple .l3-ch--hero .l3-ch__in{padding:18px 16px!important}
+body.qa.ux-home-simple .l3-brand{font-size:32px;line-height:1.05;max-width:none}
+body.qa.ux-home-simple .l3-ch--hero .l3-ch__foot{margin-top:10px}
+body.qa.ux-home-simple .l3-ch--hero::before{background-size:auto 140px;background-position:right 8% center}
+body.qa.ux-home-simple .hm-actions{margin:0;gap:8px}
+body.qa.ux-home-simple .hm-actions .qa-btn{min-height:36px;padding:7px 12px;font-size:13px;border-radius:3px}
+body.qa.ux-home-simple .hm-live-strip{padding:0 16px 12px}
+body.qa.ux-home-simple .hm-live-strip .l3-slab{padding:0!important;border-radius:3px;overflow:hidden}
+body.qa.ux-home-simple .hm-live-h{margin:0;padding:8px 12px;min-height:32px;box-sizing:border-box}
+body.qa.ux-home-simple .hm-live-strip .hm-launches{display:block;overflow:visible;padding:0;margin:0;gap:0}
+body.qa.ux-home-simple .hm-launch-card{display:grid;grid-template-columns:minmax(0,1fr) 100px;align-items:center;gap:10px;padding:0 12px;border:0;border-top:1px solid var(--qa-rule-row);border-radius:0;min-height:44px}
+body.qa.ux-home-simple .hm-live-strip .hm-launch-row{display:grid!important;grid-template-columns:24px minmax(0,1fr) auto!important;gap:8px;align-items:center;min-height:44px;padding:0!important;border:0!important}
+body.qa.ux-home-simple .hm-launch-row .hm-icon{width:24px;height:24px;border-radius:2px;box-shadow:none;font-size:12px}
+body.qa.ux-home-simple .hm-launch-row .qa-row__t{font-size:13px;line-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.qa.ux-home-simple .hm-launch-row .qa-row__s{font-size:12px;line-height:14px}
+body.qa.ux-home-simple .hm-launch-row .qa-row__v{grid-column:auto!important;display:flex;flex-direction:column;align-items:flex-end;gap:0;margin:0;padding:0!important;font-size:13px;line-height:15px}
+body.qa.ux-home-simple .hm-launch-row .qa-row__v small{font-size:12px;line-height:14px}
+body.qa.ux-home-simple .hm-live-strip .hm-home-buy{min-height:28px;height:28px;padding:0 8px;font-size:12px;border-radius:2px}
+@media(max-width:759px){
+ body.qa.ux-home-simple .l3-brand{font-size:28px;max-width:12em}
+ body.qa.ux-home-simple .l3-ch--hero .l3-ch__in{padding:16px 18px!important}
+ body.qa.ux-home-simple .hm-live-strip{padding:0 12px 12px}
+ body.qa.ux-home-simple .hm-launch-card{grid-template-columns:minmax(0,1fr) 90px;padding:0 8px;gap:8px;min-height:56px}
+ body.qa.ux-home-simple .hm-live-strip .hm-launch-row{min-height:56px}
+ body.qa.ux-home-simple .hm-launch-row .qa-row__v{font-size:12px}
+ body.qa.ux-home-simple .hm-launch-card:nth-child(n+6){display:none}
+}
+body.qa.ux-home-simple .hm-live-strip .hm-home-buy{white-space:nowrap;line-height:16px}
+@media(max-width:759px){body.qa.ux-home-simple .hm-launch-card{grid-template-columns:minmax(0,1fr) 106px}}

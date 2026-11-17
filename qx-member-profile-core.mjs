@@ -1,7 +1,7 @@
 // Public, wallet-owned identity. Wallet addresses remain the stable identity.
 import {memberWallet} from './qx-member-wallet.mjs';
 import {memberPicture} from './qx-member-picture.mjs';
-export const MEMBER_PROFILE_LIMITS=Object.freeze({name:32,bio:280,image:220000,body:225000});
+export const MEMBER_PROFILE_LIMITS=Object.freeze({name:32,bio:280,image:220000,banner:220000,media:220000,body:225000});
 const fail=message=>{throw new TypeError(message);};
 export function normalizeMemberLinks(value=[]){
  if(!Array.isArray(value)||value.length>4)return fail('Add up to four profile links.');
@@ -21,7 +21,10 @@ function text(value,label,max){
 export function normalizeMemberProfile(value={}){
  if(!value||typeof value!=='object'||Array.isArray(value))return fail('The profile could not be read.');
  if(value.shareHoldings!=null&&typeof value.shareHoldings!=='boolean')return fail('Choose whether to share your holdings.');
- return{version:1,name:text(value.name,'display name',MEMBER_PROFILE_LIMITS.name),bio:text(value.bio,'bio',MEMBER_PROFILE_LIMITS.bio),image:memberPicture(value.image),shareHoldings:value.shareHoldings===true,links:normalizeMemberLinks(value.links)};
+ if(value.banner!==undefined&&typeof value.banner!=='string')return fail('Choose a valid profile banner.');
+ const image=memberPicture(value.image),banner=memberPicture(value.banner);
+ if(image.length+banner.length>MEMBER_PROFILE_LIMITS.media)return fail('Picture and banner together are too large. Choose smaller images.');
+ return{version:1,name:text(value.name,'display name',MEMBER_PROFILE_LIMITS.name),bio:text(value.bio,'bio',MEMBER_PROFILE_LIMITS.bio),image,banner,shareHoldings:value.shareHoldings===true,links:normalizeMemberLinks(value.links)};
 }
 export const memberProfilePath=wallet=>{const identity=memberWallet(wallet);if(!identity)return fail('Use a full EVM wallet address or a Solana profile identity.');return identity.path;};
 export const CALLER_METHOD=Object.freeze({version:2,minimum:5,hitHours:24,qualityHours:[24,168],notes:[

@@ -79,6 +79,12 @@ const STABLE = { '8453': ['0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', 'USDC', 
   '42161': ['0xaf88d065e77c8cc2239327c5edb3a432268e5831', 'USDC', 6], '56': ['0x55d398326f99059ff775485246999027b3197955', 'USDT', 18],
   '4663': ['0x5fc5360d0400a0fd4f2af552add042d716f1d168', 'USDG', 6] };
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem('qhooks:terminal:' + k); localStorage.setItem('qhooks:terminal:' + k, v); } catch {} return null; };
+// A hub teardown publishes during navigation; it must not start a Home read.
+let pageLeaving = false;
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => { pageLeaving = true; }, {capture: true});
+  window.addEventListener('pageshow', () => { pageLeaving = false; }, {capture: true});
+}
 export const validTradeTolerance = value => /^\d{1,5}$/.test(String(value ?? '')) && Number(value) > 0 && Number(value) <= 10000;
 
 export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode=false,readProof=null, copyReview=createCopyTicketReview({now,...(rowMode?{search:''}:{})}) } = {}) {
@@ -141,6 +147,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   if (!document.getElementById('qhome-style')) { const style = document.createElement('link'); style.id = 'qhome-style'; style.rel = 'stylesheet'; style.href = '/qx-home-currency.css'; document.head.append(style); }
   const homeMarketPay = () => st?.multi ? (st.pools.some(p => nativeRoute(st.chainId, p.quote)) ? 'native' : st.pools[0].quote) : [...paySel.options].some(o => o.value === 'native') ? 'native' : 'quote';
   async function syncHome(defaultSelection = false) {
+    if (pageLeaving || document.visibilityState === 'hidden' || !st) return;
     if(rowMode){homeSelected=false;homeEnabled=false;return;}
     const intent = selection, state = st, owner = connectedAddress();
     const config = await homeConfig().catch(() => ({enabled: false}));
@@ -964,7 +971,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   amountDisplay.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) submit(); } });
   balance.addEventListener('click', async () => { if(busy||recovery||!st)return;const intent=selection,activeState=st,mine=++qseq;clearTimeout(timer);current=null;go.disabled=true;sellPrefillOwner=null;clearArmed();quoteLoading=false;renderQuoteFreshness(); const b = await balances(); if(!isSelection(intent)||st!==activeState||mine!==qseq)return;if (b) { setAmount( formatUnits(spendable(b), payDecimals(), payDecimals()).replace(/,/g, '')); refresh(); } });
   go.addEventListener('click', submit);
-  onWalletChange(() => { clearCosts();clearArmed(); if (!busy && recovery?.pendingBuy && recovery.pendingBuy.owner.toLowerCase() !== connectedAddress()?.toLowerCase()) {recovery = null; current = null; followup.replaceChildren(); lock(false);} if (!busy&&!recovery&&!st?.sol) {paintCachedHolding();if (!rowMode&&restorePendingBuy()) return; if(sellPrefillOwner&&sellPrefillOwner.toLowerCase()!==connectedAddress()?.toLowerCase()){setAmount('');sellPrefillOwner=null;}void syncHome(true).then(() => {refresh();layout();});} });
+  onWalletChange(() => { clearCosts();clearArmed(); if (pageLeaving) return; if (!busy && recovery?.pendingBuy && recovery.pendingBuy.owner.toLowerCase() !== connectedAddress()?.toLowerCase()) {recovery = null; current = null; followup.replaceChildren(); lock(false);} if (!busy&&!recovery&&!st?.sol) {paintCachedHolding();if (!rowMode&&restorePendingBuy()) return; if(sellPrefillOwner&&sellPrefillOwner.toLowerCase()!==connectedAddress()?.toLowerCase()){setAmount('');sellPrefillOwner=null;}void syncHome(true).then(() => {refresh();layout();});} });
 
   sellToCash.addEventListener('click', async () => {
     if (!st || busy||recovery) return;

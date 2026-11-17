@@ -9,7 +9,7 @@ const reason=error=>/^[a-z][a-z0-9_]{0,60}$/.test(error?.linkedCode||error?.code
 const failure=error=>/last.*(?:account|method)|at least one/i.test(error?.message||'')?'Keep at least one sign-in method on your account.':error?.message||'Linked accounts could not be updated. Try again.';
 
 // Independent of profile drafts: these actions never replace name, bio or picture fields.
-export function mountMemberLinkedAccounts(target,{hub,auth,client,document:doc=globalThis.document,getBridge=()=>globalThis.qhooksPrivySignerControls,getLoader=()=>globalThis.qhooksEnsurePrivyControls,readAppConfig=()=>readPrivyAppConfig(),eventTarget=globalThis.window,storage=()=>globalThis.sessionStorage,onPublished=()=>{},stageVisibility=false,beforeLink=()=>{},telegramReady,wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),logger=globalThis.console}={}){
+export function mountMemberLinkedAccounts(target,{hub,auth,client,document:doc=globalThis.document,getBridge=()=>globalThis.qhooksPrivySignerControls,getLoader=()=>globalThis.qhooksEnsurePrivyControls,readAppConfig=()=>readPrivyAppConfig(),eventTarget=globalThis.window,storage=()=>globalThis.sessionStorage,onPublished=()=>{},stageVisibility=false,beforeLink=()=>{},telegramReady,wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),logger=globalThis.console,runNativeAction=task=>task()}={}){
  const h=(tag,attrs={},...children)=>{const node=doc.createElement(tag);for(const[key,value]of Object.entries(attrs))if(key==='class')node.className=value;else node.setAttribute(key,value);node.append(...children);return node;};
  const syncButton=h('button',{type:'button',class:'qa-btn','data-account-action':'sync'},'Sync from your sign-in');
  syncButton.addEventListener('click',()=>run(async ctx=>{await ensurePrivy(ctx);status.textContent='Syncing from your sign-in…';const expected=bridge.state?.linked?.some(item=>item.kind==='x')?'x':undefined;await sync(ctx,'POST',expected);status.textContent='Linked accounts are up to date.';},{continueAfterSignIn:true}));
@@ -30,8 +30,8 @@ export function mountMemberLinkedAccounts(target,{hub,auth,client,document:doc=g
    if(!available(kind))controls.append(h('span',{class:'qmp-linked-soon'},'Opens soon'));
    else if(found.length)for(const account of found){const item=h('div',{class:'qmp-linked-item'}),handle=h('span',{class:'qmp-linked-handle'},(kind==='discord'?'':'@')+account.handle);item.append(handle,
     button(kind,'visibility',account.visible?'Hide':'Show',async context=>{if(stageVisibility){account.visible=!account.visible;visibilityDraft.set(kind+':'+account.id,{kind,id:account.id,visible:account.visible});render();status.textContent='Visibility changed in this draft. Save public profile to apply it.';return;}const result=await client.accountVisibility(context.who,{kind,id:account.id,visible:!account.visible},context.options);context.check();install(result);status.textContent=account.visible?'Account hidden from your profile.':'Account shown on your profile.';}),
-    button(kind,'unlink','Unlink',async context=>{await ensurePrivy(context);const linked=bridge.state?.linked;if(!Array.isArray(linked)||linked.some(item=>item.kind===kind&&item.id===account.id))await bridge.unlinkAccount(kind,account.id);context.check();await sync(context,'DELETE');status.textContent=label+' unlinked.';}));controls.append(item);}
-   else controls.append(h('span',{class:'qmp-linked-optional'},'Optional'),button(kind,'link','Link',async context=>{if(accounts.some(account=>account.kind===kind)){status.textContent='This account is already linked. Choose Show, Hide or Unlink.';return;}await ensurePrivy(context);beforeLink(context.who);context.check();pending({wallet:context.who,kind,at:Date.now()});if(!bridge.state?.linked?.some(item=>item.kind===kind)){status.textContent='Continue with '+label+' to link your account.';await bridge.linkAccount(kind);context.check();}await sync(context,'POST',kind);status.textContent=label+' linked.';}));
+    button(kind,'unlink','Unlink',async context=>{await ensurePrivy(context);const linked=bridge.state?.linked;if(!Array.isArray(linked)||linked.some(item=>item.kind===kind&&item.id===account.id))await runNativeAction(()=>bridge.unlinkAccount(kind,account.id));context.check();await sync(context,'DELETE');status.textContent=label+' unlinked.';}));controls.append(item);}
+   else controls.append(h('span',{class:'qmp-linked-optional'},'Optional'),button(kind,'link','Link',async context=>{if(accounts.some(account=>account.kind===kind)){status.textContent='This account is already linked. Choose Show, Hide or Unlink.';return;}await ensurePrivy(context);beforeLink(context.who);context.check();pending({wallet:context.who,kind,at:Date.now()});if(!bridge.state?.linked?.some(item=>item.kind===kind)){status.textContent='Continue with '+label+' to link your account.';await runNativeAction(()=>bridge.linkAccount(kind));context.check();}await sync(context,'POST',kind);status.textContent=label+' linked.';}));
    return h('div',{class:'qmp-linked-row','data-account-row':kind},h('strong',{},label),controls);
   }));
  }
@@ -44,7 +44,7 @@ export function mountMemberLinkedAccounts(target,{hub,auth,client,document:doc=g
   if(!onUser()){
    const identity=memberWallet(ctx.who);if(identity?.family!=='evm'||typeof bridge.loginWithWallet!=='function')throw Object.assign(Error('This wallet is not on the same QHooks sign-in as your X account.'),{linkedCode:'wallet_not_on_privy_user'});
    status.textContent='Sign once to connect this wallet to your QHooks account. Free, no transaction.';
-   await bridge.loginWithWallet({address:identity.address,signMessage:async text=>{ctx.check();const signature=await ctx.connection.sign(text);ctx.check();return signature;}});ctx.check();
+   await runNativeAction(()=>bridge.loginWithWallet({address:identity.address,signMessage:async text=>{ctx.check();const signature=await ctx.connection.sign(text);ctx.check();return signature;}}));ctx.check();
    if(!onUser())throw Object.assign(Error('This wallet is not on the same QHooks sign-in as your X account.'),{linkedCode:'wallet_not_on_privy_user'});
   }
  }
@@ -73,7 +73,7 @@ export function mountMemberLinkedAccounts(target,{hub,auth,client,document:doc=g
   if(disposed||busy||!wallet||owner()!==wallet||!available(kind))return;const mine=generation;busy=true;render();
   try{const ctx=context(kind);await ctx.connection.check();ctx.check();
    if(!auth.boardSession()){
-    if(resume)return;status.textContent='Sign in with a free message. This links no account and moves no funds.';await auth.signIn(ctx.connection);ctx.check();ctx.options.auth=auth.authHeaders();await read(ctx);status.textContent='Signed in. Choose an account action when you are ready.';if(!continueAfterSignIn)return;
+    if(resume)return;status.textContent='Sign in with a free message. This links no account and moves no funds.';await runNativeAction(()=>auth.signIn(ctx.connection));ctx.check();ctx.options.auth=auth.authHeaders();await read(ctx);status.textContent='Signed in. Choose an account action when you are ready.';if(!continueAfterSignIn)return;
    }
    ctx.options.auth=auth.authHeaders();if(!loaded)await read(ctx);ctx.check();await action(ctx);
   }catch(error){if(!disposed&&generation===mine){status.replaceChildren(failure(error),' ',h('code',{class:'qmp-linked-code'},reason(error)));logger?.warn?.('[QHooks linked accounts] '+reason(error));}}finally{if(generation===mine){busy=false;render();maybeResume();}}

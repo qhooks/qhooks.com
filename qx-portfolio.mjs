@@ -27,19 +27,37 @@ const COST_NOTE = {pending: 'Reading this wallet’s buys and sells of this toke
  limited: 'This chain’s free endpoint doesn’t serve history this old, so the cost basis isn’t available here.',
  none: 'No buy of this token found in this wallet’s history (received by transfer, or bought with another token).'};
 export const cashRow = r => !!r && (r.native === true || (!!r.address && String(r.address).toLowerCase() === String(wrapped[r.chainId] || '').toLowerCase()));
-// walletchains: a basis still being read from the chain says so ("refreshing"); one that can't be known says "—" with
-// the reason in its title, never "unknown".
+// An unavailable financial value stays neutral; acquisition age is shown by
+// the shared status, never substituted for a cost basis or PnL.
 export function pnlText(cost, row = null) {
  if (cashRow(row)) return '—';
- if (!cost || !known(cost.pnlQuote)) return row?.costState === 'pending' ? 'refreshing' : '—';
+ if (!cost || !known(cost.pnlQuote)) return '—';
  return (cost.pnlQuote > 0 ? '+' : '') + quantity(cost.pnlQuote) + ' ' + (cost.quoteSymbol || 'unknown') + (known(cost.pnlUsd) ? ' (≈ ' + money(cost.pnlUsd) + ')' : ' (≈ —)');
 }
 // Personal trade PnL and the token's daily move are independent readings.
 export function holdingRowView(row) {
  const pnl=cashRow(row)?null:row.cost?.pnlUsd;
- return {pnl:known(pnl)?(row.cost?.approximate?'≈ ':'')+signedMoney(pnl):row.costState==='pending'&&!cashRow(row)?'Refreshing':'—',
+ return {pnl:known(pnl)?(row.cost?.approximate?'≈ ':'')+signedMoney(pnl):'—',
   pnlDirection:known(pnl)?Math.sign(pnl):0,day:percent(row.change24),dayDirection:known(row.change24)?Math.sign(row.change24):0,
   value:money(row.valueUsd),cash:cashRow(row)};
+}
+export function portfolioReadLabel(at,now=Date.now()) {
+ if(!known(at)||at<=0||at>now+5000)return 'Time unavailable';
+ const seconds=Math.max(0,Math.round((now-at)/1000)),age=seconds<60?seconds+'s':seconds<3600?Math.floor(seconds/60)+'m':Math.floor(seconds/3600)+'h';
+ return 'Live · '+age+' ago';
+}
+export function savedPortfolioSnapshot({reader,owner,now=Date.now()}={}) {
+ if(!/^0x[\da-f]{40}$/.test(owner||''))return null;
+ const report=reader.cached('evm',owner)?.report;if(!report||report.address!==owner)return null;
+ const at=portfolioBalanceAt(report);if(!known(at)||at<=0||at>now+5000)return null;
+ // An empty, unfinished native-only frame is not evidence of an empty wallet.
+ const held=report.chains.some(c=>[c.native,...c.tokens].some(a=>Number(a?.units)>0||Number(a?.balance)>0));
+ if(!held&&(report.partial||!report.chains.length||report.chains.some(c=>{const s=chainReadState(c);return s.balances||s.positions;})))return null;
+ // Normal verified reads reapply the existing history cache. This display-only
+ // preview must not reuse an outside token's old mark-to-market PnL after its
+ // price expires; acquisition history itself remains intact.
+ for(const chain of report.chains)for(const asset of [chain.native,...chain.tokens])if(asset.cost&&!priceState(asset.priceAt,now).usable)asset.cost={...asset.cost,pnlUsd:null,pnlQuote:null,unrealizedQuote:null,quoteUsd:null};
+ return report;
 }
 export function mergePortfolios(reports) {
  reports=reports.map(r=>allocatePortfolioBasis(structuredClone(r)));
@@ -186,14 +204,14 @@ export function renderHoldingRows(rows,options={}) {
   details.append(summary,h('div',{class:'pf-eth-children'},...item.rows.map(row=>renderHoldingRow(row,options))));return details;
  });
 }
-export function renderHoldingRow(r,{h,natives={},owner=null,mine=false,chain='all',onSell}={}) {
- const v=holdingRowView(r),split=T.rowCost(r,natives[r.chainId]||null),canSell=mine&&!v.cash&&rowCanSell(r,owner),pnlCls=v.pnlDirection>0?' qp-positive':v.pnlDirection<0?' qp-negative':'';
+export function renderHoldingRow(r,{h,natives={},owner=null,mine=false,readonly=false,chain='all',onSell}={}) {
+ const v=holdingRowView(r),split=T.rowCost(r,natives[r.chainId]||null),canSell=!readonly&&mine&&!v.cash&&rowCanSell(r,owner),pnlCls=v.pnlDirection>0?' qp-positive':v.pnlDirection<0?' qp-negative':'';
  const metadata=h('details',{class:'pf-holding__details'},h('summary',{},r.priceLabel==='on curve'?'on curve':r.chainName||names[r.chainId]||r.chainId),h('p',{},priceText(r.priceUsd)+' · '+percent(r.change24)+' 24h · '+(r.chainName||r.chainId)+(r.pricesRefreshing?' · Refreshing':'')));
  return h('article',{class:'pf6-row pf-holding'+(v.cash?' is-cash':'')+(r.spam?' is-spam':''),role:'listitem','data-key':marketKey(r.chainId,r.address)},holdingArt(h,r),
   h('div',{class:'pf-holding__name'},h('a',{href:tradeHref(r),'aria-label':'Open '+(r.symbol||'token')},h('b',{},r.symbol||'unknown')),h('span',{title:quantity(r.units)},units(r.units))),
   h('div',{class:'pf-holding__value'},known(r.valueUsd)?v.value:h('span',{class:'pf-holding__refreshing'},'Price refreshing'),h('small',{class:pnlCls,title:pnlText(r.cost,r)},v.cash?'':rowPnl(r,v)+(known(split.pnlPct)?' · '+rowPct(split.pnlPct):''))),
   h('div',{class:'pf-holding__basis'},known(split.avgEntryUsd)?h('span',{title:'Approximate average entry; quote valued at its current USD price'},'avg ≈ '+T.smallPrice(split.avgEntryUsd)):null,metadata),
-  h('div',{class:'pf-holding__actions'},...(canSell?[25,50,100].map(percent=>h('button',{type:'button',class:'pf-holding__sell','aria-label':'Sell '+percent+'% '+r.symbol,onclick:event=>onSell?.(r,percent,event.currentTarget)},String(percent))):v.cash||mine?[h('a',{href:tradeHref(r),class:'pf-holding__trade'},'Trade')]:[])));
+  h('div',{class:'pf-holding__actions'},...(canSell?[25,50,100].map(percent=>h('button',{type:'button',class:'pf-holding__sell','aria-label':'Sell '+percent+'% '+r.symbol,onclick:event=>onSell?.(r,percent,event.currentTarget)},String(percent))):!readonly&&(v.cash||mine)?[h('a',{href:tradeHref(r),class:'pf-holding__trade'},'Trade')]:[])));
 }
 
 export async function startPortfolio({document = globalThis.document, fetchImpl = globalThis.fetch,
@@ -221,8 +239,9 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
  // Paint a working connect prompt before loading the heavier earnings and wallet code.
  const [chain, sol] = await Promise.all([loadChain(), loadSol()]);
  if (!view) void walletTools().catch(() => {}); // Connect wiring must not delay cached/read-only holdings.
- const {h, connectedAddress, onWalletChange} = chain;
- let sequence = 0, earningsSequence = 0, current = null, aborter = null, walletKey = '';
+ const {h, connectedAddress, onWalletChange, savedPortfolioAddress=portfolioContext.savedPortfolioAddress} = chain;
+ let sequence = 0, earningsSequence = 0, current = null, aborter = null, walletKey = '',savedPreview=null;
+ const viewingLabel=$('qp-viewing')?.textContent;
  const prefs = {...readPreferences(storage), search: '', chain: 'all', hideTest: readHideTest(storage), period: readPeriod(storage)};
  let tab = TABS.some(([k]) => k === initialTab) ? initialTab : 'holding';
  // Extras per wallet: Closed (wallet card), Created (launches + income), Staked (module stakes + timed locks). Last good kept.
@@ -241,10 +260,10 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
  }, {'aria-label': 'Copy wallet address'});
  const short = a => a.length > 14 ? a.slice(0, 6) + '…' + a.slice(-4) : a;
  const walletOptions=h('details',{class:'pf-wallet-options'},h('summary',{},'Wallets'));if($('qp-wallets'))walletOptions.append($('qp-wallets'));
- function addresses(evm, solana) {
+ function addresses(evm, solana,{saved=false}={}) {
   $('qp-addresses')?.replaceChildren(...[evm, solana].filter(Boolean).map(a => h('div', {class: 'qp-address'}, art({symbol: a === solana ? 'S' : '', address: a, wallet: true}), h('span', {class: 'qp-addr', title: a}, short(a)), copyButton(a),
-   view ? null : h('a', {class: 'qa-btn', href: profileUrl({wallet:a===solana?'solana:'+a:a,edit:true})}, 'Edit profile'))),...(view?[]:[walletOptions]));
-  const chip = $('qp-viewing'); if (chip) chip.hidden = !view;
+   view||saved ? null : h('a', {class: 'qa-btn', href: profileUrl({wallet:a===solana?'solana:'+a:a,edit:true})}, 'Edit profile'))),...(saved?[button('Connect wallet',null,{'data-qa-connect':''})]:view?[]:[walletOptions]));
+  const chip = $('qp-viewing'); if (chip) {chip.hidden = !view&&!saved;chip.textContent=saved?'Saved wallet · read only':viewingLabel;}
  }
  // Token art: the token's own art when it has one, else a lettered tile tinted from its address, with its chain as a badge.
  const art=(r,size='')=>holdingArt(h,r,size);
@@ -307,13 +326,13 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   const fig = s?.unrealized ?? null;
   set('qp-pnl-label', 'textContent', 'Unrealized PnL');if($('qp-period'))$('qp-period').hidden=true;
   v.className = 'pf6-pnl__v' + (known(fig) ? fig > 0 ? ' qp-positive' : fig < 0 ? ' qp-negative' : '' : ' is-wait');
-  v.textContent = known(fig) ? '≈ '+signedMoney(fig) : 'Refreshing';
-  if (note) note.textContent = !s || !known(fig) ? '' : 'Cost known for '+s.allCovered+' of '+s.allCounted+' positions';
+  v.textContent = known(fig) ? '≈ '+signedMoney(fig) : '—';
+  if (note) note.textContent = !s ? '' : !known(fig) ? 'Cost basis is not available for this reading.' : 'Cost known for '+s.allCovered+' of '+s.allCounted+' positions';
   for (const b of $('qp-period')?.children || []) b.setAttribute?.('aria-pressed', String(b.dataset?.p === prefs.period));
   if (!stats) return;
   const fees = T.creatorFeesUsd([...extra.incomes.values()], natives());
   const cell = (label, value, wait) => known(value) ? h('div', {}, h('dt', {}, label), h('dd', {}, (label.startsWith('Creator fees') ? money(value) : (label==='Realized · all'?'≈ ':'')+signedMoney(value))))
-   : wait ? h('div', {}, h('dt', {}, label), h('dd', {class: 'is-wait'}, 'Refreshing')) : null;
+   : wait ? h('div', {}, h('dt', {}, label), h('dd', {class: 'is-wait',title:'Value is not available for this reading.'}, '—')) : null;
   stats.replaceChildren(...[h('div',{title:'Realized PnL for today is unavailable.'},h('dt',{},'Realized today'),h('dd',{},'—')),cell('Realized · all', s?.realized ?? null, loading),
    cell('Creator fees · pool total',fees,extra.createdState==='loading'||extra.createdState==='idle')].filter(Boolean));
  }
@@ -363,8 +382,8 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   if (!current) return;
   const rows = T.filterRows(current.rows, prefs), nat = natives(), owner = me(), mine = own();
   $('qp-count').textContent = tab === 'holding' ? rows.length + (rows.length === 1 ? ' holding shown' : ' holdings shown') : '';
-  $('qp-holdings').replaceChildren(...(rows.length ? renderHoldingRows(rows,{h,natives:nat,owner,mine,chain:prefs.chain,onSell:(row,p,trigger)=>seller.begin(row,p,trigger)}) : [h('p', {class: 'qa-empty'}, current.rows.length ? 'No holdings match these filters.' : 'No holdings found in this reading.')]));
-  seller.attach($('qp-holdings'));
+  $('qp-holdings').replaceChildren(...(rows.length ? renderHoldingRows(rows,{h,natives:nat,owner,mine,readonly:!!savedPreview,chain:prefs.chain,onSell:(row,p,trigger)=>seller.begin(row,p,trigger)}) : [h('p', {class: 'qa-empty'}, current.rows.length ? 'No holdings match these filters.' : 'No holdings found in this reading.')]));
+  if(!savedPreview)seller.attach($('qp-holdings'));
  }
  function paintClosed() {
   const box = $('qp-closed'); if (!box) return;
@@ -376,7 +395,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
     h('div', {class: 'pf6-name'}, h('a', {class: 'qp-open-token', href, 'aria-label': 'Open ' + (p.symbol || 'token')}, h('b', {}, p.symbol || 'unknown')), chainBadge(p.chainId), p.test ? h('span', {class: 'pf6-tag'}, 'Test') : null),
     h('div', {class: 'pf6-sub'}, p.trades + (p.trades === 1 ? ' trade' : ' trades')),
     h('div', {class: 'pf6-meta'}, T.ago(p.lastAt) ? 'Last trade ' + T.ago(p.lastAt) : ''),
-    h('div', {class: 'pf6-val' + (p.realizedUsd > 0 ? ' qp-positive' : p.realizedUsd < 0 ? ' qp-negative' : '')}, known(p.realizedUsd) ? signedMoney(p.realizedUsd) : 'Refreshing'),
+    h('div', {class: 'pf6-val' + (p.realizedUsd > 0 ? ' qp-positive' : p.realizedUsd < 0 ? ' qp-negative' : '')}, known(p.realizedUsd) ? signedMoney(p.realizedUsd) : '—'),
     h('div', {class: 'pf6-pl pf6-dim'}, 'Realized'),
     h('div', {class: 'pf6-act'}, h('a', {class: 'qa-btn pf6-quiet', href}, 'Trade')));
   }) : [h('p', {class: 'qa-empty'}, 'No closed positions on QHooks markets yet.')]));
@@ -515,12 +534,8 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   } else if (logos) paintList();
   paintAge();
  }
- function paintReadAge() {
-  const at=current?.at;if(!known(at)){$('qp-at').textContent='Refreshing';return;}
-  const seconds=Math.max(0,Math.round((Date.now()-at)/1000)),age=seconds<60?seconds+'s':seconds<3600?Math.floor(seconds/60)+'m':Math.floor(seconds/3600)+'h';
-  const refreshing=current.partial||current.chains.some(c=>c.balancesRefreshing||c.pricesRefreshing);
-  $('qp-at').textContent=(refreshing?'Read':'Live')+' · '+age+' ago'+(refreshing?' · Refreshing':'');
- }
+ function paintReadAge() { $('qp-at').textContent=portfolioReadLabel(current?.at); }
+
  function paintAge() {
   if(current?.rows.some(r=>priceState(r.priceAt).refreshing&&!r.pricesRefreshing||!priceState(r.priceAt).usable&&known(r.priceUsd))){
    const reports=[kept('evm',me()),view?null:kept('solana',sol.solAddress())].filter(Boolean);
@@ -542,6 +557,18 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
  }
  function kept(family,address){const item=reader.cached(family,address);return item?{...item.report,refreshing:!item.fresh||!!item.report.refreshing}:null;}
  const paintAll = (failed = []) => { paintOverview(failed); paintChips(); paintTabs(); paintList(); };
+ function clearSavedDisplay(){savedPreview=null;delete root.dataset.readonlySnapshot;current=null;for(const id of ['qp-addresses','qp-holdings','qp-top','qp-chains','qp-allocation','qp-notes','qp-stats'])$(id)?.replaceChildren();$('qp-total').textContent='—';$('qp-at').textContent='Time unavailable';$('qp-count').textContent='';paintPnl();paintTabs();}
+ function paintSavedSnapshot(){
+  const owner=savedPortfolioAddress({storage}),report=owner?savedPortfolioSnapshot({reader,owner}):null;if(!report)return false;
+  stopLive();savedPreview=owner;root.dataset.readonlySnapshot='true';root.hidden=false;$('qp-connect').hidden=true;
+  addresses(owner,null,{saved:true});current=mergePortfolios([report]);paintAll();$('qp-refresh').disabled=true;
+  $('qp-status').textContent='Saved wallet snapshot · connect to update.';
+  ageTimer=setInterval(()=>{if(!savedPreview||disposed)return;
+   if(current?.rows.some(r=>known(r.priceUsd)&&!priceState(r.priceAt).usable)){const next=savedPortfolioSnapshot({reader,owner:savedPreview});if(next){current=mergePortfolios([next]);paintAll();}else{stopLive();clearSavedDisplay();$('qp-connect').hidden=false;root.hidden=true;return;}}
+   paintReadAge();
+  },1000);
+  return true;
+ }
  let follow = 0, followTimer = 0;
  let activeLoad=null,activeWallet=null;
  function load(quiet=false){const key=[me(),view?null:sol.solAddress()].join(':');if(activeLoad&&activeWallet===key)return activeLoad;activeWallet=key;const task=runLoad(quiet);activeLoad=task;void task.finally(()=>{if(activeLoad===task)activeLoad=null;}).catch(()=>{});return task;}
@@ -551,7 +578,8 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   const changed = walletKey !== [owner, solana].join(':'); walletKey = [owner, solana].join(':');
   aborter?.abort(); const controller = new AbortController(); aborter = controller;
   $('qp-connect').hidden = Boolean(owner || solana); root.hidden = !owner && !solana;
-  if (!owner && !solana) { current = null; stopLive(); earningsSequence++; return; }
+  if (!owner && !solana) { stopLive();earningsSequence++;if(paintSavedSnapshot())return;clearSavedDisplay();$('qp-connect').hidden=false;root.hidden=true;return; }
+  if(savedPreview){stopLive();clearSavedDisplay();$('qp-status').textContent='Updating holdings…';}
   addresses(owner, solana);
   if (changed) { current = null; stopLive(); $('qp-chains')?.replaceChildren(); }
   const jobs = [...(owner ? [['evm', owner, 'EVM chains']] : []), ...(solana ? [['solana', solana, 'Solana']] : [])];
@@ -614,11 +642,11 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
  $('qp-search')?.addEventListener('input', e => { prefs.search = e.target.value; paintHoldings(); });
  for (const [id, key] of [['qp-small', 'hideSmall'], ['qp-spam', 'showSpam'], ['qp-test', 'hideTest']]) $(id)?.addEventListener('change', e => { prefs[key] = e.target.checked; savePreferences(storage, prefs); saveHideTest(storage, prefs.hideTest); paintTabs(); paintList(); paintPnl(); });
  for (const b of $('qp-period')?.children || []) b.addEventListener?.('click', () => { prefs.period = b.dataset.p === 'today' ? 'today' : 'all'; savePeriod(storage, prefs.period); paintPnl(); });
- const walletChanged = () => { seller.changed();if (extra.owner !== me()) resetExtras(); void load(); void loadClosed(); void earnings(me()); if (tab === 'staked') void loadStaked(); };
+ const walletChanged = () => { seller.changed();if (extra.owner !== me()) resetExtras(); void load();if(savedPreview)return; void loadClosed(); void earnings(me()); if (tab === 'staked') void loadStaked(); };
  const refreshBalances = () => { if (!disposed && current && document.visibilityState === 'visible' && !$('qp-refresh').disabled) return load(true); };
  document.addEventListener?.('qhooks:traded', refreshBalances);
  document.addEventListener?.('visibilitychange', refreshBalances);
- const stopWallet=onWalletChange(!view?walletChanged:() => { paintList(); }); // viewing: a wallet change only toggles the own-wallet buttons
+ const stopWallet=onWalletChange(!view?walletChanged:() => { paintList(); },{storage}); // viewing: a wallet change only toggles the own-wallet buttons
  const stopSol = view ? null : sol.onSolChange(() => { solPicker(); if (walletKey !== [me(), sol.solAddress()].join(':')) walletChanged(); });
  const stopReports=reader.subscribe(({family,owner:who})=>{if(disposed||activeLoad||!current||who!==(family==='evm'?me():sol.solAddress()))return;const reports=[kept('evm',me()),view?null:kept('solana',sol.solAddress())].filter(Boolean);if(!reports.length)return;current=mergePortfolios(reports);if(feed)applyLive(current,feed);paintAll();});
  solPicker(); paintTabs(); walletChanged();
