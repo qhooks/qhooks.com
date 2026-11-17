@@ -14,6 +14,8 @@ export function priceDigits(value) {
   // round before counting zeros, so a value rounding across a power of ten stays correct
   const [mantissa, exponent] = n.toExponential(3).split('e');
   const zeros = -Number(exponent) - 1, digits = mantissa.replace('.', '').replace(/0+$/, '') || '0';
+  // A sub-dollar value can round to 1.000e+0 (for example USDG at 0.99999885).
+  if (zeros < 0) return '1';
   if (zeros >= SUBSCRIPT_FROM) return '0.0' + String(zeros).replace(/\d/g, (d) => SUB[d]) + digits;
   return '0.' + '0'.repeat(zeros) + digits;
 }
