@@ -1,0 +1,23 @@
+{
+  "scope": "Exact Apache Lightweight Charts derivatives only; no proprietary vendor input",
+  "sourceTree": "/Users/randallholt/.codex/.chatgpt-projects/g-p-6942a2559d94819197bc2c26ef325393/work/qhooks-portfolio-recurrence-root-current-rel-20261117",
+  "vendorSha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768",
+  "licenseSha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823",
+  "attributionCountPerBundle": 2,
+  "bundles": [
+    {
+      "path": "b/portfolio-recurrence-20261117/terminal/qx-terminal.NDK3FS3Q.mjs",
+      "sha256": "51861f0fd0dc56314fdc37fb665e8ed59ac997a0def7c0744ddff557151f8623",
+      "owners": [
+        "terminal.manifest"
+      ]
+    },
+    {
+      "path": "b/portfolio-recurrence-20261117/x-tracker/c.3JSX6SCP.mjs",
+      "sha256": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+      "owners": [
+        "x-tracker.manifest"
+      ]
+    }
+  ]
+}
