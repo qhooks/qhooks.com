@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "releaseId": "4754a3c6-a6dc-4fae-848a-f3f4b6366435",
-  "sourceWorkerSha256": "5310e0a55074feaa032fdabe76d68cfee731f95d7437a723210cb61f448ab098",
+  "releaseId": "16928458-5cfb-4be4-a3f7-c5c90ac9a625",
+  "sourceWorkerSha256": "9be9c635459e2bd6484702330eb2d3fb9ebe80f3ead1dd5c9ef94c7d4dcff66a",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -128797,6 +128797,14 @@
       "sha256": "d513b913dc1db15772921d2d893c5a7eb53f0198608a16c6eea13a00b94698c1",
       "bytes": 13911
     },
+    "proof-service.css": {
+      "sha256": "199feb566a2dec3d0761af8f72e8f72515a4a49fcf92cd16980e76359ca703f8",
+      "bytes": 10652
+    },
+    "proof-service.mjs": {
+      "sha256": "9499975911ebc74aa208dddcc982ddfd8bc22a6e10d0efeb3d8ffae2bb0625af",
+      "bytes": 1938
+    },
     "public-config-input.mjs": {
       "sha256": "73637ace4aab514e795f10d7b5229882ca1d3e5379f16a7a7c9f345b2b58dbb0",
       "bytes": 1337
@@ -133502,6 +133510,6 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "f26fcdf4e6449e965fb7b4df7236da803fc0628a9fc1f08370ddc657c202a989",
-  "provenance": "Frozen accepted 4754a3c6-a6dc-4fae-848a-f3f4b6366435 release public/ source; static bytes only. Worker-generated HTTP bodies require a separate Root served-response receipt."
+  "contentDigest": "6bced29e946595d684e5015e31bdd5dade738f26f0224b2e740b3fb1932213c2",
+  "provenance": "Frozen deployed 16928458-5cfb-4be4-a3f7-c5c90ac9a625 public/ source; static bytes only. Worker-generated HTTP bodies require separate Root served-response evidence. New paid products remain OFF in this release."
 }
