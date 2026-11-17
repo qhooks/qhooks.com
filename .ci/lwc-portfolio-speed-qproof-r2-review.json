@@ -1,0 +1,28 @@
+{
+  "sourceRelease": "ad03ae84-d6d0-48e1-a634-871c61e7256a",
+  "sourceWorkerSha256": "6ceaf9c9e10b712095b31809477b014e83997fa417fb661eb7a4db467dce9be3",
+  "rootApproval": "Root explicitly approved sole41st exact row in task message2026-11-17; no broader license exception",
+  "path": "b/portfolio-speed-after-qproof-20261117/terminal/qx-terminal.MYIKD4OR.mjs",
+  "sha256": "3b8756209c1ca2313d56ec9538da5afb17a1cc9f56189ce8ab87433148e5e520",
+  "bytes": 408916,
+  "terminalManifest": {
+    "path": "work/qhooks-qproof-newest-r2-after-portfolio-current-codex-candidate-20261117/lead/perf/terminal.manifest.json",
+    "sha256": "9a504a78324e5b54ac1fc6dfde89a5ef9b1522586517b7e016594277b2380472",
+    "inputs": 341
+  },
+  "vendor": {
+    "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+    "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+  },
+  "license": {
+    "path": "vendor/lightweight-charts/LICENSE",
+    "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+  },
+  "attributionReferencesExactly": 2,
+  "attributions": [
+    "https://www.tradingview.com/?utm_medium=lwc-link&utm_campaign=lwc-chart",
+    "Charting by TradingView"
+  ],
+  "proprietaryInputs": 0,
+  "prior40PinsAndAllOtherFieldsExact": true
+}

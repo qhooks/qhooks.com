@@ -5,6 +5,14 @@ const KEY='qhooks:portfolio:last:v1:',MAX_AGE=7*86400000,FRESH=60000;
 const registry=Symbol.for('qhooks.portfolio.read.v1'),copy=x=>structuredClone(x);
 const known=n=>typeof n==='number'&&Number.isFinite(n),address=(family,w)=>family==='solana'?String(w||''):String(w||'').toLowerCase();
 const validOwner=(family,w)=>family==='solana'?/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(w):/^0x[0-9a-f]{40}$/.test(w);
+export function portfolioBalanceAt(report){
+ const assets=(report?.chains||[]).flatMap(c=>[c.native,...(c.tokens||[])]).filter(a=>Number(a?.units)>0||Number(a?.balance)>0);
+ const clocks=assets.map(a=>Object.hasOwn(a,'balanceAt')?a.balanceAt:report.at);
+ // Explicitly unknown is not an absent legacy clock. A new envelope cannot
+ // turn an unknown acquisition into a fresh balance.
+ if(clocks.some(at=>!known(at)))return null;
+ return clocks.length?Math.min(...clocks):known(report?.at)?report.at:null;
+}
 export function chainReadState(c){
  const assets=[c.native,...(c.tokens||[])],missing=assets.some(a=>!a||a.balance==null&&a.units==null||a.balanceRefreshing);
  return {balances:missing||c.error==='balances_unavailable'||!!c.balancesRefreshing,positions:!!c.positionsRefreshing||c.source==='index-only',prices:assets.some(a=>(Number(a.units)>0||Number(a.balance)>0)&&!known(a.valueUsd))||!!c.pricesRefreshing};
@@ -19,6 +27,11 @@ function balanceClock(asset,at){return {...asset,balanceAt:Object.hasOwn(asset,'
 function assetMerge(input,old,now,at,oldAt,chainId){
  const next=balanceClock(priced(input,at,now,chainId),at),prior=old?balanceClock(priced(old,oldAt,now,chainId),oldAt):null;
  if(!prior)return next;
+ // A balance-stage frame has not read cost/launch identity yet. Keep dated
+ // evidence only for exactly the same inventory; explicit null clears it.
+ if(next.balance===prior.balance&&next.units===prior.units){
+  for(const field of ['cost','costState','qhooks','symbol','name','logo'])if(!Object.hasOwn(input,field)&&Object.hasOwn(prior,field))next[field]=copy(prior[field]);
+ }
  if(next.balance==null&&next.units==null)return {...prior,...next,balance:prior.balance,units:prior.units,
   priceUsd:known(next.priceUsd)?next.priceUsd:prior.priceUsd,priceAt:known(next.priceUsd)?next.priceAt:prior.priceAt,
   valueUsd:known(next.priceUsd)&&known(prior.units)?next.priceUsd*prior.units:prior.valueUsd,balanceRefreshing:true,balanceAt:prior.balanceAt,
@@ -85,14 +98,27 @@ export function createPortfolioReader({fetchImpl=globalThis.fetch,storage,now=Da
  }
  function read(family,owner,{purpose='portfolio',force=false,signal}={}){
   const w=address(family,owner),k=key(family,w);if(!validOwner(family,w))return Promise.reject(Error('Wallet required'));
-  const prior=cached(family,w);if(prior?.fresh&&!force)return Promise.resolve(copy(prior.report));
+  const prior=cached(family,w);if(prior?.fresh&&!force&&!prior.report.refreshing)return Promise.resolve(copy(prior.report));
   const purposeKey=k+':'+purpose,normal=flights.get(k+':portfolio'),existing=normal||flights.get(purposeKey);
   // A header may share a normal portfolio request. A normal request never inherits a capped header admission.
   let promise=existing;
   if(!promise){promise=(async()=>{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.max(10000,timeoutMs));
-   try{const r=await fetchImpl('/api/portfolio/'+family+'/'+encodeURIComponent(w),{cache:'no-store',signal:controller.signal,...(purpose==='header-total'?{headers:{'x-qhooks-read-purpose':'header-total'}}:{})});
+   try{const r=await fetchImpl('/api/portfolio/'+family+'/'+encodeURIComponent(w),{cache:'no-store',signal:controller.signal,headers:{accept:purpose==='header-total'?'application/json':'application/x-ndjson, application/json',...(purpose==='header-total'?{'x-qhooks-read-purpose':'header-total'}:{})}});
     if(!r.ok){let error;try{error=(await r.json())?.error;}catch{}const e=Error(error||'Portfolio unavailable');e.capped=error==='header_total_cap'||r.headers?.get?.('x-qhooks-header-cap')==='1';throw e;}
-    return accept(family,w,await r.json(),{refreshing:r.headers?.get?.('x-qhooks-cache')==='refreshing'});
+    const refreshing=r.headers?.get?.('x-qhooks-cache')==='refreshing';
+    if(!r.headers?.get?.('content-type')?.includes('application/x-ndjson'))return accept(family,w,await r.json(),{refreshing});
+    // One request, bounded progressive reports. Prices and a slow chain cannot
+    // hold back balances already read. EOF is not evidence of complete coverage.
+    const stream=r.body?.getReader();if(!stream)throw Error('Portfolio stream unavailable');
+    const decoder=new TextDecoder();let buffer='',bytes=0,count=0,last=null,complete=false;
+    const receive=line=>{if(!line.trim())return;if(++count>40||line.length>2*1024*1024)throw Error('Portfolio stream limit');
+     const item=JSON.parse(line);if(item?.type!=='report'||typeof item.complete!=='boolean')throw Error('Invalid portfolio stream');
+     if(complete)throw Error('Portfolio stream already settled');
+     last=accept(family,w,item.report,{refreshing:!item.complete||refreshing||!!item.report?.refreshing||!!item.report?.progress?.transportTimedOut||!!item.report?.progress?.valuationPending});complete=item.complete;
+    };
+    try{for(;;){const part=await stream.read();if(part.done)break;bytes+=part.value.byteLength;if(bytes>8*1024*1024)throw Error('Portfolio stream limit');buffer+=decoder.decode(part.value,{stream:true});let cut;while((cut=buffer.indexOf('\n'))>=0){receive(buffer.slice(0,cut));buffer=buffer.slice(cut+1);}if(buffer.length>2*1024*1024)throw Error('Portfolio stream limit');}
+     buffer+=decoder.decode();receive(buffer);if(!last||!complete)throw Error('Portfolio refresh interrupted');return last;
+    }catch(e){await stream.cancel().catch(()=>{});throw e;}finally{stream.releaseLock();}
    }finally{clearTimeout(timer);}
   })().finally(()=>flights.delete(purposeKey));flights.set(purposeKey,promise);}
   // A superseded view stops listening without aborting the shared request needed by the header/menu.

@@ -1,8 +1,10 @@
+import * as portfolioContext from './qx-portfolio-context.mjs';
+import * as portfolioSol from './qx-solana.mjs';
 import {mountPortfolioSelling,rowCanSell} from './qx-portfolio-row-trade.mjs';
 import {assetPriceFields,priceState} from './qx-price-state.mjs';
 import {allocatePortfolioBasis} from './qx-holding-basis.mjs';
 import {bindTokenAvatar,tokenAvatar} from './qx-token-avatar.mjs';
-import {portfolioReader,chainReadState,portfolioNeedsRefresh} from './qx-portfolio-read.mjs';
+import {portfolioReader,chainReadState,portfolioNeedsRefresh,portfolioBalanceAt} from './qx-portfolio-read.mjs';
 import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
 import {profileUrl} from './qx-profile-address.mjs';
 import {LIVE} from './chains.mjs';
@@ -55,8 +57,10 @@ export function mergePortfolios(reports) {
  const prior = known(coveredUsd) && known(change24Usd) ? coveredUsd - change24Usd : null;
  const allocation = chains.map(c => ({chainId: c.chainId, name: chainName(c), valueUsd: reports.find(p => p.chains.includes(c))?.totals.byChain[c.chainId] ?? null}))
   .sort((a, b) => (b.valueUsd ?? -1) - (a.valueUsd ?? -1));
+ const heldReports=reports.filter(p=>(p.chains||[]).some(c=>[c.native,...(c.tokens||[])].some(a=>Number(a?.units)>0||Number(a?.balance)>0)));
+ const balanceClocks=(heldReports.length?heldReports:reports).map(portfolioBalanceAt);
  return {chains, rows, valueUsd, change24Usd, coveredUsd, change24: prior > 0 ? change24Usd / prior : null, allocation,
-  top: rows.filter(r => !r.spam && r.valueUsd > 0).slice(0, 5), at: reports.length ? Math.min(...reports.map(p => p.at)) : null,
+  top: rows.filter(r => !r.spam && r.valueUsd > 0).slice(0, 5), at: balanceClocks.length&&balanceClocks.every(known) ? Math.min(...balanceClocks) : null,
   partial: reports.some(p => p.partial)};
 }
 export function filterHoldings(rows, {search = '', chain = 'all', hideSmall = true, showSpam = false} = {}) {
@@ -193,8 +197,8 @@ export function renderHoldingRow(r,{h,natives={},owner=null,mine=false,chain='al
 }
 
 export async function startPortfolio({document = globalThis.document, fetchImpl = globalThis.fetch,
- loadChain = () => import('/qx-chain.mjs'), loadWallet = () => import('/qx-account-wallet.mjs'),
- loadSol = () => import('/qx-solana.mjs'), loadEarningsModule = () => import('/qx-earnings.mjs'),
+ loadChain = () => Promise.resolve(portfolioContext), loadWallet = () => import('/qx-account-wallet.mjs'),
+ loadSol = () => Promise.resolve(portfolioSol), loadEarningsModule = () => import('/qx-earnings.mjs'),
  storage = (() => { try { return globalThis.localStorage; } catch { return null; } })(), clipboard = globalThis.navigator?.clipboard,
  loadFeed = () => fetchImpl('/api/terminal/feed?chain=all', {cache: 'no-store'}).then(r => r.ok ? r.json() : null), liveMs = 15000,
  costs = outsideCosts(), view = T.viewWallet(globalThis.location?.search),
@@ -202,11 +206,23 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
  const $ = id => document.getElementById(id);
  const reader=portfolioReader({fetchImpl,storage});
  const root = $('qp-content'); if (!root) return;
+ let disposed=false,walletReady=false,walletFlight=null,connectIntent=null;
+ const walletTools=()=>walletFlight??=Promise.resolve().then(loadWallet).then(module=>{walletReady=true;return module;},error=>{walletFlight=null;throw error;});
+ // Preserve a tap made while the Connect wiring is still loading. Reuse that
+ // import, and open the standard chooser exactly once after it is ready.
+ const earlyConnect=event=>{const target=event.target?.closest?.('[data-qa-connect]');if(walletReady||!target)return;
+  event.preventDefault();event.stopImmediatePropagation();if(connectIntent)return;
+  const label=target.textContent;target.textContent='Opening wallet…';target.setAttribute('aria-busy','true');$('qp-status').textContent='Opening wallet…';
+  connectIntent=walletTools().then(module=>{if(disposed)return;if(typeof module.openWallet!=='function')throw Error('Wallet chooser unavailable');target.textContent=label;$('qp-status').textContent='';module.openWallet();})
+   .catch(()=>{if(disposed)return;target.textContent='Retry Connect';target.title='Wallet tools could not load. Tap to retry.';$('qp-status').textContent='Wallet tools could not load. Tap Connect to retry.';})
+   .finally(()=>{target.removeAttribute('aria-busy');connectIntent=null;});
+ };
+ document.addEventListener('click',earlyConnect,true);
  // Paint a working connect prompt before loading the heavier earnings and wallet code.
  const [chain, sol] = await Promise.all([loadChain(), loadSol()]);
- if (!view) await loadWallet();
+ if (!view) void walletTools().catch(() => {}); // Connect wiring must not delay cached/read-only holdings.
  const {h, connectedAddress, onWalletChange} = chain;
- let sequence = 0, earningsSequence = 0, current = null, aborter = null, walletKey = '', disposed = false;
+ let sequence = 0, earningsSequence = 0, current = null, aborter = null, walletKey = '';
  const prefs = {...readPreferences(storage), search: '', chain: 'all', hideTest: readHideTest(storage), period: readPeriod(storage)};
  let tab = TABS.some(([k]) => k === initialTab) ? initialTab : 'holding';
  // Extras per wallet: Closed (wallet card), Created (launches + income), Staked (module stakes + timed locks). Last good kept.
@@ -323,7 +339,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
  }
  function paintOverview(failed = []) {
   $('qp-total').classList.remove('qp-skeleton'); paintHeroValue(0, failed);
-  $('qp-at').textContent = current.at ? 'Read ' + new Date(current.at).toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit', second: '2-digit'}) : 'Refreshing';
+  paintReadAge();
   $('qp-overview')?.setAttribute('aria-busy', 'false');
   paintAllocation(); paintPnl(); paintNotes(failed);
  }
@@ -499,15 +515,18 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   } else if (logos) paintList();
   paintAge();
  }
+ function paintReadAge() {
+  const at=current?.at;if(!known(at)){$('qp-at').textContent='Refreshing';return;}
+  const seconds=Math.max(0,Math.round((Date.now()-at)/1000)),age=seconds<60?seconds+'s':seconds<3600?Math.floor(seconds/60)+'m':Math.floor(seconds/3600)+'h';
+  const refreshing=current.partial||current.chains.some(c=>c.balancesRefreshing||c.pricesRefreshing);
+  $('qp-at').textContent=(refreshing?'Read':'Live')+' · '+age+' ago'+(refreshing?' · Refreshing':'');
+ }
  function paintAge() {
   if(current?.rows.some(r=>priceState(r.priceAt).refreshing&&!r.pricesRefreshing||!priceState(r.priceAt).usable&&known(r.priceUsd))){
    const reports=[kept('evm',me()),view?null:kept('solana',sol.solAddress())].filter(Boolean);
    if(reports.length){current=mergePortfolios(reports);if(feed)applyLive(current,feed);paintAll();}
   }
-  if(current?.rows.some(r=>r.pricesRefreshing)){$('qp-at').textContent='Refreshing';return;}
-  if (!liveAt) return;
-  const s = Math.max(0, Math.round((Date.now() - liveAt) / 1000));
-  $('qp-at').textContent = 'Live · ' + (s < 60 ? s + 's' : Math.floor(s / 60) + 'm') + ' ago';
+  paintReadAge();
  }
  function startLive() {
   if (canLive && !balanceTimer) balanceTimer = setInterval(() => { if (current && document.visibilityState === 'visible' && !$('qp-refresh').disabled) void load(true); }, 60000);
@@ -543,16 +562,26 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   if (shownKept) {
    for (const r of last) if (r.address === owner) costs?.apply(r);
    current = mergePortfolios(last); if (feed) applyLive(current, feed);
-   paintAll(); if(last.some(r=>r.refreshing))$('qp-at').textContent = 'Refreshing';
+   paintAll();
   } else if (changed || !quiet || !current) skeleton();
   $('qp-refresh').disabled = true;
   const timer = setTimeout(() => controller.abort(), 45000);
+  // Accept each chain as it arrives on the same request, including a single EVM
+  // family. Keep other families/chains until their own replacement is available.
+  const stopProgress=reader.subscribe(({family,owner:who,report})=>{
+   if(mine!==sequence||disposed||!jobs.some(([f,w])=>f===family&&w===who))return;
+   const local=structuredClone(report);if(family==='evm')costs?.apply(local);
+   liveReports.set(who,local);current=mergePortfolios([...liveReports.values()]);
+   const waiting=jobs.filter(([,w])=>!liveReports.has(w)).map(([, ,label])=>label+': Refreshing balances');
+   if(waiting.length)current.partial=true;if(feed)applyLive(current,feed);paintAll(waiting);
+   $('qp-status').textContent='Updating holdings…';startLive();
+  });
   try {
    const results=await Promise.allSettled(jobs.map(async([family,address])=>{
     const report=await read(family,address,controller.signal);if(mine!==sequence||disposed)return report;
     liveReports.set(address,report);current=mergePortfolios([...liveReports.values()]);
     const waiting=jobs.filter(([,w])=>!liveReports.has(w)).map(([, ,label])=>label+': Refreshing balances');
-    if(waiting.length)current.partial=true;if(jobs.length>1){if(feed)applyLive(current,feed);paintAll(waiting);startLive();}return report;
+    if(waiting.length)current.partial=true;if(feed)applyLive(current,feed);paintAll(waiting);startLive();return report;
    }));
    if (mine !== sequence || disposed) return;
    const reports=[...liveReports.values()], failed = results.flatMap((r, i) => r.status === 'rejected' ? [jobs[i][2] + ': Refreshing balances'] : []);
@@ -562,8 +591,9 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
    if (feed) applyLive(current, feed);
    paintAll(failed);
    const refreshing = reports.some(r => portfolioNeedsRefresh(r));
-   if (refreshing) $('qp-at').textContent = 'Refreshing';
-   $('qp-status').textContent = reports.length ? 'Portfolio updated.' : 'Refreshing portfolio. Refresh to try again.';
+   paintReadAge();
+   const balancePartial=current.chains.some(c=>{const s=chainReadState(c);return s.balances||s.positions;});
+   $('qp-status').textContent = !reports.length?'Holdings could not be read. Refresh to try again.':balancePartial||failed.length?'Some chains are still refreshing.':refreshing?'Holdings loaded · some prices refreshing.':'Portfolio updated.';
    if (reports.length) startLive();
    clearTimeout(followTimer);
    if (refreshing && follow < 2) followTimer = setTimeout(() => { follow++; void load(true); }, follow ? 7000 : 3500);
@@ -574,9 +604,9 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
     const accepted=reader.accept('evm',owner,evm,{derived:true,refreshing:!!evm.refreshing});
     current = mergePortfolios(reports.map(r=>r===evm?accepted:r)); if (failed.length) { current.partial = true; current.change24 = null; current.change24Usd = null; }
     if (feed) applyLive(current, feed);
-    paintAll(failed); if (refreshing) $('qp-at').textContent = 'Refreshing';
+    paintAll(failed);
    }, () => {});
-  } finally { clearTimeout(timer); if (mine === sequence) $('qp-refresh').disabled = false; }
+  } finally { stopProgress();clearTimeout(timer); if (mine === sequence) $('qp-refresh').disabled = false; }
  }
  const resetExtras = () => { extraSequence++; Object.assign(extra, {owner: me(), closed: null, closedState: 'idle', launches: null, incomes: new Map(), createdState: 'idle', stakes: null, locks: null, stakedState: 'idle', earnState: 'idle'}); };
  $('qp-refresh').addEventListener('click', () => { void load(true); void earnings(me(), true); void loadClosed(true); if (extra.stakedState !== 'idle') void loadStaked(true); });
@@ -588,11 +618,11 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
  const refreshBalances = () => { if (!disposed && current && document.visibilityState === 'visible' && !$('qp-refresh').disabled) return load(true); };
  document.addEventListener?.('qhooks:traded', refreshBalances);
  document.addEventListener?.('visibilitychange', refreshBalances);
- if (!view) onWalletChange(walletChanged); else onWalletChange(() => { paintList(); }); // viewing: a wallet change only toggles the own-wallet buttons
+ const stopWallet=onWalletChange(!view?walletChanged:() => { paintList(); }); // viewing: a wallet change only toggles the own-wallet buttons
  const stopSol = view ? null : sol.onSolChange(() => { solPicker(); if (walletKey !== [me(), sol.solAddress()].join(':')) walletChanged(); });
  const stopReports=reader.subscribe(({family,owner:who})=>{if(disposed||activeLoad||!current||who!==(family==='evm'?me():sol.solAddress()))return;const reports=[kept('evm',me()),view?null:kept('solana',sol.solAddress())].filter(Boolean);if(!reports.length)return;current=mergePortfolios(reports);if(feed)applyLive(current,feed);paintAll();});
  solPicker(); paintTabs(); walletChanged();
- return {refresh: () => load(true), dispose() { seller.dispose();disposed = true; stopReports(); sequence++; earningsSequence++; aborter?.abort(); stopSol?.(); stopLive(); clearTimeout(followTimer); document.removeEventListener?.('qhooks:traded', refreshBalances); document.removeEventListener?.('visibilitychange', refreshBalances); }};
+ return {refresh: () => load(true), dispose() { seller.dispose();disposed = true;document.removeEventListener('click',earlyConnect,true);stopWallet?.(); stopReports(); sequence++; earningsSequence++; aborter?.abort(); stopSol?.(); stopLive(); clearTimeout(followTimer); document.removeEventListener?.('qhooks:traded', refreshBalances); document.removeEventListener?.('visibilitychange', refreshBalances); }};
 }
 const QHOOKS_TOKEN = '0x20429af7ca3b0ce4d99edbaa0693f26c5df05195';
 function readHideTest(storage) { try { return JSON.parse(storage?.getItem('qhooks:portfolio:v6') || '{}').hideTest !== false; } catch { return true; } }
