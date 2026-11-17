@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "a22a3c42-9c08-44f0-88f0-7ad879af7e63",
+  "releaseId": "4148ac48-64e7-4118-82f0-6a461c184cbb",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -141414,6 +141414,6 @@
     }
   },
   "contentDigest": "36fc1bdad995165f8b48f9617c5f8eadde6cc1fbcdb8e195b2b655295790034f",
-  "sourceWorkerSha256": "adb5aa7eae974dbbe5fc9190359b834a868ed51d72ac2f0f54bab0b5c902646f",
-  "provenance": "Exact deployed a22a3c42-9c08-44f0-88f0-7ad879af7e63 public source; static assets only. TradingView proprietary sources excluded; Apache Lightweight Charts derivatives retain verified license and attribution. Worker-generated bodies require separate live acceptance."
+  "sourceWorkerSha256": "a9104bcb40c8c892b6daec38e9549598c6aa2de267951446d319ae36ab560900",
+  "provenance": "Exact deployed 4148ac48-64e7-4118-82f0-6a461c184cbb public/ source, byte-identical to a22a3c42; static assets only. Server-side stored pricing and report projection changes and Worker-generated HTTP bodies require separate Root source/live receipts. New paid offers remain OFF. TradingView proprietary exclusions and exact Apache Lightweight Charts license/attribution pins are unchanged."
 }
