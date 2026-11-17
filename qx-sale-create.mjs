@@ -18,7 +18,7 @@ let image = '', banner='', bannerData='', imageRevision=0,bannerRevision=0, busy
 
 async function rpc(c, method, params) {
   if (request) return request(method, params, c.id);
-  const r = await fetch(c.rpc, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({jsonrpc: '2.0', id: 1, method, params})});
+  const r = await fetch(String(c.id)==='4663'?'/api/rpc/4663':c.rpc, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({jsonrpc: '2.0', id: 1, method, params})});
   const j = await r.json(); if (j.error) throw Error(j.error.message); return j.result;
 }
 async function check(id) {

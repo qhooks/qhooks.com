@@ -266,6 +266,11 @@ export const CHAIN_REGISTRY = deepFreeze(rows);
 /// Every chain that is built (live, hidden or testnet), in display order.
 export const BUILT = Object.freeze(CHAIN_REGISTRY.filter(c => c.id && c.status !== 'planned'));
 export const LIVE = Object.freeze(BUILT.filter(c => c.status === 'live'));
+// Public coverage includes Solana without adding it to EVM contract/index loops.
+// Capability-specific tools still use LIVE/BUILT and their existing code probes.
+export const SOLANA_NETWORK = Object.freeze({id:'solana',key:'solana',name:'Solana',short:'Solana',native:'SOL',family:'solana',status:'live'});
+export const PUBLIC_NETWORKS = Object.freeze([...LIVE.filter(c=>c.id!=='solana'), LIVE.find(c=>c.id==='solana') || SOLANA_NETWORK]);
+export const CHAIN_COUNTS = Object.freeze({total:PUBLIC_NETWORKS.length,evm:LIVE.filter(c=>c.id!=='solana').length});
 export const chainById = id => BUILT.find(c => c.id === String(id)) || null;
 export const isArcFamily = id => chainById(id)?.family === 'arc';
 

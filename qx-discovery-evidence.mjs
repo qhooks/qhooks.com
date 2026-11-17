@@ -8,7 +8,7 @@ const fresh=(v,now)=>Number.isSafeInteger(v?.at)&&v.at<=now+5000&&now-v.at<=EVID
 const pct=n=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=100?n:null;
 function tidy(type,v){if(!v||typeof v.source!=='string'||!v.source||v.source.length>120)return null;const base={at:evidenceTime(v.at),source:v.source};if(!base.at)return null;
  if(type==='holders')return {...base,devPct:pct(v.devPct),top10Pct:pct(v.top10Pct),sameBlock:v.sameBlock===true?true:null,sharedFunding:v.sharedFunding===true?true:null,scope:String(v.scope||'Returned holders').slice(0,180)};
- if(type==='qproof')return ['clear','caution','danger','unknown'].includes(v.level)?{...base,level:v.level}:null;
+ if(type==='qproof')return v.presentationVersion===2&&['clear','watch','danger','incomplete'].includes(v.level)&&typeof v.label==='string'&&v.label.length>0&&v.label.length<=80&&typeof v.reason==='string'&&v.reason.length<=500?{...base,presentationVersion:2,level:v.level,label:v.label,reason:v.reason}:null;
  if(type==='lp')return v.noRemove===true&&/^0x[\da-f]{64}$/.test(v.poolId||'')?{...base,noRemove:true,poolId:v.poolId}:null;
  if(type==='guard')return typeof v.active==='boolean'&&(!v.active||Number.isSafeInteger(v.until)&&v.until>base.at)?{...base,active:v.active,until:v.active?v.until:null}:null;
  // Only an explicit route-capability observation may set this; chain support is insufficient.

@@ -1,20 +1,7 @@
 // apps/marketplace-preview/chain-catalog.mjs
-import {BUILT,hiddenChainsOn} from './chains.mjs';
-var launchChains = Object.freeze([
-  Object.freeze({ id: "8453", slug: "base", name: "Base", gas: "ETH", feeModel: "op-stack", coreHref: "deploy.html", status: "QPool core setup available" }),
-  Object.freeze({ id: "4663", slug: "robinhood", name: "Robinhood Chain", gas: "ETH", feeModel: "nitro", coreHref: null, status: "Integration in progress" }),
-  Object.freeze({ id: "1", slug: "ethereum", name: "Ethereum", gas: "ETH", feeModel: "ethereum", coreHref: null, status: "Integration in progress" }),
-  Object.freeze({ id: "42161", slug: "arbitrum", name: "Arbitrum One", gas: "ETH", feeModel: "nitro", coreHref: null, status: "Integration in progress" }),
-  Object.freeze({ id: "56", slug: "bnb", name: "BNB Chain", gas: "BNB", feeModel: "bsc", coreHref: null, status: "Integration in progress" }),
-  Object.freeze({ id: "5042", slug: "arc", name: "Arc", gas: "USDC", feeModel: "arc-stablecoin", coreHref: null, status: "Integration in progress" }),
-  Object.freeze({ id: "99801", slug: "elysium", name: "Elysium Testnet", gas: "HYPE", feeModel: "nitro", coreHref: null, status: "Integration in progress" })
-]);
-function launchChain(id) {
-  if (typeof id !== "string") throw new TypeError("Choose a chain ID");
-  const chain = launchChains.find((c) => c.id === id);
-  if (!chain) throw new TypeError("Chain is not in this rollout");
-  return chain;
-}
+import {BUILT} from './chains.mjs';
+import {launchChains} from './chain-catalog.mjs';
+import {DIRECTORY_CHAINS,directoryChainFor} from './market-directory-chains.mjs';
 
 // apps/marketplace-preview/l131-market-cards.mjs
 function renderMarketCards({ document: d, container, rows, chainFor, onOpen }) {
@@ -26,14 +13,14 @@ function renderMarketCards({ document: d, container, rows, chainFor, onOpen }) {
     const chainPara = d.createElement("p");
     chainPara.className = "market-chain";
     const img = d.createElement("img");
-    img.src = "/chain-symbol-icons/" + chain.slug + ".svg";
+    if (chain.slug) img.src = "/chain-symbol-icons/" + chain.slug + ".svg";
     img.width = 20;
     img.height = 20;
     img.alt = "";
     img.setAttribute("aria-hidden", "true");
     const span = d.createElement("span");
     span.textContent = chain.name;
-    chainPara.append(img, span);
+    chainPara.append(...(chain.slug ? [img, span] : [span]));
     const h2 = d.createElement("h2");
     h2.textContent = row.tokenName;
     const symbolP = d.createElement("p");
@@ -60,7 +47,7 @@ function selectMarkets(rows, { chainId = "all", query = "", offset = 0, limit = 
   const ensure3 = (ok, message) => {
     if (!ok) throw new TypeError(message);
   };
-  const chains2 = ["1", "56", "8453", "42161", "4663", "5042", "99801"];
+  const chains2 = DIRECTORY_CHAINS;
   const address = (value) => typeof value === "string" && value.length === 42 && /^0x[0-9a-f]{40}$/.test(value) && BigInt(value) > 0n;
   ensure3(Array.isArray(rows) && rows.length <= 1e3, "Bounded market rows required");
   ensure3(chainId === "all" || chains2.includes(chainId), "Invalid directory chain");
@@ -412,7 +399,7 @@ function bindMarketBrowser({ document: d = document, target = window, client = c
       if (!current(ticket)) return;
       query = next;
       page = found;
-      renderMarketCards({ document: d, container: $("results"), rows: page.rows, chainFor: launchChain, onOpen: open });
+      renderMarketCards({ document: d, container: $("results"), rows: page.rows, chainFor: directoryChainFor, onOpen: open });
       $("count").textContent = page.total === 1 ? "1 market" : page.total + " markets";
       note(page.rows.length ? "Showing " + (query.offset + 1) + "\u2013" + (query.offset + page.rows.length) + " of " + page.total + "." : "No markets match yet. Try another chain or search.");
     } catch (error) {
@@ -428,7 +415,7 @@ function bindMarketBrowser({ document: d = document, target = window, client = c
     }
   }
   $("chain").replaceChildren();
-  for (const chain of [{ id: "all", name: "All chains" }, ...launchChains.filter(c => c.id !== "99801" || hiddenChainsOn())]) {
+  for (const chain of [{ id: "all", name: "All chains" }, ...launchChains.filter(c => DIRECTORY_CHAINS.includes(c.id))]) {
     const option = d.createElement("option");
     option.value = chain.id;
     option.textContent = chain.name;

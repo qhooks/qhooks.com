@@ -44,7 +44,9 @@
     "b/slick-reads-c2-20261117/terminal/qx-terminal.HAIPEZSV.mjs": "30e506e7469b01f931e769038e1ab2f45fa425aa7cdb45fc8049a4060ded8b3e",
     "b/polish-batch-20261117/terminal/qx-terminal.LOX4FTMR.mjs": "e09beebc3f3767e98745b794636171cb1ce79e26ab8affeffe1da25715e1f027",
     "b/trending-mc-p0-20261117/terminal/qx-terminal.KVFV7ITJ.mjs": "8f9824e55635751876d25c02912cb7fde80e8e71c506103f4772e7d203c26515",
-    "b/polish-curve-20261117/terminal/qx-terminal.6QI4TQEF.mjs": "c47a1b11192f1cc4baa4bd5db0c25ef0dee12c5b6e08ba8459f3fe4b7769b96f"
+    "b/polish-curve-20261117/terminal/qx-terminal.6QI4TQEF.mjs": "c47a1b11192f1cc4baa4bd5db0c25ef0dee12c5b6e08ba8459f3fe4b7769b96f",
+    "b/qproof-g18-p0-after-polish-20261117/terminal/qx-terminal.RN7ZUWMV.mjs": "e871c63ace8d4ce05a1edb5c7f0f216d999b06358ac9066a9757eaabcf6ddcdd",
+    "b/qproof-phase1-after-polish-20261117/terminal/qx-terminal.GPFB5TLB.mjs": "9edc98de81e72687c4f2f0292bb26a21e2d6b5c9ce0c78e4943cbbad8a9fb100"
   },
   "classificationSourceReleaseId": "df15e38a-fdcd-4fd2-af2c-5bed0051158b",
   "additionalReview": ".ci/lwc-f1-review.json",

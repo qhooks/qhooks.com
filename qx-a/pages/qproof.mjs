@@ -4,6 +4,8 @@
 // except the holder step of "Run it".
 import '/qx-a/pages/hooks-lane.mjs';
 import { connectedAddress, onWalletChange, signMessage } from '/qx-chain.mjs';
+import {readQProofPresentation,renderQProofSummary,safeQProofUrl,ensureQProofStyles,qproofReadParams,qproofReportLocation} from '/qproof-view.mjs';
+ensureQProofStyles();
 
 const $ = (id) => document.getElementById(id);
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -18,9 +20,8 @@ function h(tag, attrs, ...kids) {
 }
 const CHAIN = { solana: 'Solana', base: 'Base', ethereum: 'Ethereum', arbitrum: 'Arbitrum', bnb: 'BNB Chain', robinhood: 'Robinhood Chain', elysium: 'Elysium', github: 'GitHub' };
 const EXPLORER = { base: 'https://basescan.org', ethereum: 'https://etherscan.io', arbitrum: 'https://arbiscan.io', bnb: 'https://bscscan.com', robinhood: 'https://robinhoodchain.blockscout.com', elysium: 'https://elysium.kinetiq.xyz', solana: 'https://solscan.io' };
-const WORD = { danger: 'Failed', caution: 'Caution', clear: 'Passed', unknown: 'Not checked', info: 'Note' };
-const VERDICT = { danger: 'Red flags', caution: 'Look first', clear: 'No red flags', unknown: 'Not fully checked' };
-const RANK = { danger: 0, caution: 1, unknown: 2, clear: 3, info: 4 };
+const WORD = { danger: 'Danger', caution: 'Watch', clear: 'Passed', unknown: 'Not checked', info: 'Note' };
+const RANK = { danger: 0, caution: 1, clear: 2, unknown: 3, info: 4 };
 const QHOOKS = '4663:0x20429af7ca3b0ce4d99edbaa0693f26c5df05195';
 // What each check means, in plain words (the engine's own line follows it).
 const MEANS = {
@@ -61,6 +62,8 @@ function explorer(chain, addr, kind = 'address') {
 const addrLink = (chain, addr, label) => { const u = explorer(chain, addr); return u ? h('a', { class: 'qp-addr', href: u, target: '_blank', rel: 'noopener noreferrer' }, label || short(addr)) : h('code', { class: 'qp-addr' }, label || short(addr)); };
 
 async function api(path, body) {
+  const readParams=qproofReadParams();if(!body&&path.startsWith('latest?')&&readParams.cached_only)path+='&'+new URLSearchParams(readParams);
+  if(body&&path==='check'&&readParams.cached_only)throw Error('This view reads stored reports only.');
   const r = await fetch('/api/qproof/' + path, { method: body ? 'POST' : 'GET', headers: body ? { 'content-type': 'application/json' } : { accept: 'application/json' }, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin', cache: 'no-store' });
   let data = null; try { data = await r.json(); } catch {}
   if (!r.ok) throw Object.assign(Error(data?.message || (data?.error && !/^[a-z_]+$/.test(data.error) ? data.error : 'QProof could not finish that. Try again shortly.')), { status: r.status, code: data?.error, retryAt: data?.retryAt || (data?.retryAfterSeconds ? new Date(Date.now() + data.retryAfterSeconds * 1000).toISOString() : undefined) });
@@ -77,6 +80,7 @@ for (const [label, query, chain] of [['QHOOKS', '0x20429af7ca3b0ce4d99edbaa0693f
 form.addEventListener('submit', (e) => { e.preventDefault(); run(); });
 
 function checking(label) {
+  focusReportLayout();
   out.hidden = false;
   out.replaceChildren(h('div', { class: 'qp-verdict is-wait' }, h('p', { class: 'qp-k' }, 'Checking…'), h('p', { class: 'qp-headline' }, label), h('span', { class: 'qa-skel' })),
     ...['Checks', 'Buy-and-sell test', 'Supply map', 'Holders', 'Market'].map((t) => h('section', { class: 'qp-sec is-wait' }, h('h3', { class: 'qp-sec__h' }, t), h('p', { class: 'qp-wait' }, 'Checking…'), h('span', { class: 'qa-skel' }))));
@@ -92,11 +96,11 @@ async function run({ fresh = false } = {}) {
     // 1. Stored report first, for an exact address on a known chain.
     if (!fresh && chain && (isEvm(query) || (chain === 'solana' && isSol(query)))) {
       const got = await api('latest?' + new URLSearchParams({ chain, address: query })).catch(() => null);
-      if (got?.report) { show(got.report, { stored: true }); return; }
+      if (got?.report) { show(got.report, { stored: true,envelope:got }); return; }
     }
     // 2. A fresh check.
     const got = await api('check', { query, ...(chain ? { chain } : {}) });
-    show(got.report, { stored: false });
+    show(got.report, { stored: false,envelope:got });
   } catch (e) {
     msg.textContent = e.message + (e.retryAt ? ' Try again after ' + new Date(e.retryAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '.' : '');
     if (shown) render(shown.report, shown.opts); else { out.hidden = true; out.replaceChildren(); }
@@ -104,39 +108,49 @@ async function run({ fresh = false } = {}) {
 }
 function show(report, opts) {
   shown = { report, opts };
-  if (report.id && location.pathname !== '/qproof/' + report.id) history.replaceState(null, '', '/qproof/' + report.id);
+  const path=report.subject?.type==='token'&&report.subject?.chain&&report.subject?.address?'/proof/'+encodeURIComponent(report.subject.chain)+'/'+encodeURIComponent(report.subject.address):report.id?'/qproof/'+report.id:null;
+  if(path){const next=qproofReportLocation(path);if(location.pathname+location.search!==next)history.replaceState(null,'',next);}
   render(report, opts);
   if (isRepo(q.value) && !$('qp-repo').value) $('qp-repo').value = q.value.trim().replace(/^(?!https?:\/\/)/, 'https://');
 }
 
 /* ---------- report ---------- */
-function level(r) {
-  const checks = r.checks || [], c = { danger: 0, caution: 0, clear: 0, unknown: 0, info: 0 };
-  for (const x of checks) c[x.status] = (c[x.status] || 0) + 1;
-  let lv = r.verdict?.level || 'unknown';
-  if (c.danger) lv = 'danger'; else if (c.caution && lv === 'clear') lv = 'caution';
-  const gaps = checks.some((x) => x.status === 'unknown' && x.required !== false);
-  if (lv === 'clear' && (gaps || r.status !== 'observed')) lv = 'unknown';
-  return { lv, c, partial: lv === 'unknown' && r.verdict?.level === 'clear' };
+function focusReportLayout(){
+ document.body.classList.add('qp-has-report');
+ const hero=document.querySelector('.qp-hero');if(hero&&out.nextElementSibling!==hero)out.after(hero);
+ const old=hero?.querySelector('h1');if(old){const heading=document.createElement('h2');heading.className='qp-h2';heading.textContent='Check another token';old.replaceWith(heading);}
 }
-function reveal(nodes) { nodes.forEach((n, i) => { n.classList.add('qp-in'); if (!RM) n.style.animationDelay = i * 90 + 'ms'; }); }
-function render(r, { stored } = {}) {
-  const s = r.subject || {}, o = r.observations || {}, { lv, c, partial } = level(r), chain = s.chain || r.input?.chain;
-  const where = r.snapshot?.slot ? 'slot ' + r.snapshot.slot.toLocaleString() : r.snapshot?.block ? 'block ' + r.snapshot.block.toLocaleString() : '';
-  const link = r.id ? location.origin + '/qproof/' + r.id : null;
-  const copy = link ? h('button', { type: 'button', class: 'qa-btn qa-btn--secondary qa-btn--sm qp-copy', onclick: async (e) => { try { await navigator.clipboard.writeText(link); e.currentTarget.textContent = 'Link copied'; } catch { e.currentTarget.textContent = '/qproof/' + r.id.slice(0, 8) + '…'; } } }, 'Copy link') : null;
-  const again = h('button', { type: 'button', class: 'qa-btn qa-btn--quiet qa-btn--sm', onclick: () => { if (!q.value.trim()) { q.value = s.address || ''; if (chain && chain !== 'github') chainSel.value = chain; } run({ fresh: true }); } }, 'Run a fresh check');
-  document.title = `${s.label || 'Report'} · ${partial ? 'Partial evidence' : r.verdict?.headline || VERDICT[lv]} · QProof | QHooks`;
-  const verdict = h('div', { class: 'qp-verdict is-' + lv },
-    h('p', { class: 'qp-k' }, VERDICT[lv]),
-    h('p', { class: 'qp-headline' }, partial ? 'Partial evidence: some checks could not be read' : r.verdict?.headline || ''),
-    h('p', { class: 'qp-subject' }, h('b', null, [s.label, s.name && s.name !== String(s.label || '').replace(/^\$/, '') ? s.name : null].filter(Boolean).join(' · ') || short(s.address)), ' · ', CHAIN[chain] || chain || '', ' ', s.type || '', s.address && s.type !== 'repository' ? [' · ', addrLink(chain, s.address)] : null),
-    h('p', { class: 'qp-counts' }, ...['danger', 'caution', 'clear', 'unknown'].map((k) => h('span', { class: 'qp-count is-' + k }, h('i', { class: 'qp-dot is-' + k, 'aria-hidden': 'true' }), (c[k] || 0) + ' ' + WORD[k].toLowerCase()))),
-    h('p', { class: 'qp-when' }, (stored ? 'Stored report · checked ' : 'Checked ') + (r.retrievedAt ? ago(r.retrievedAt) : '') + (where ? ' · ' + where : '') + (r.selection?.count > 1 ? ' · first of ' + r.selection.count + ' addresses in your paste' : '')),
-    h('div', { class: 'qp-actions' }, copy, again));
-  if (r.status && r.status !== 'observed' && r.reason) verdict.append(h('p', { class: 'qp-note' }, r.reason));
-  const sections = [checksSection(r, chain), sellSection(o, chain, r), supplySection(o, s), holdersSection(o, chain), creatorSection(r, o, s, chain), marketSection(o, r), repoSection(s), readsSection(r)].filter(Boolean);
-  out.hidden = false; out.replaceChildren(verdict, ...sections); reveal([verdict, ...sections]);
+function reveal(nodes){nodes.forEach(n=>n.classList.add('qp-in'));}
+async function refreshReport(){
+ const r=shown?.report,s=r?.subject;if(!s?.chain||!s?.address)return;
+ const button=out.querySelector('[data-proof-action="refresh"]');if(button){button.disabled=true;button.textContent='Reading…';}
+ try{const got=await api('latest?'+new URLSearchParams({chain:s.chain,address:s.address}));if(got?.report){show(got.report,{stored:true,envelope:got});}else{const note=out.querySelector('.qp-refresh-note');if(note)note.textContent=got?.freshness?.refreshQueued?'A check is queued.':'No stored report is available yet.';}}
+ catch(e){const note=out.querySelector('.qp-refresh-note');if(note)note.textContent=e.message;}
+ finally{if(button?.isConnected){button.disabled=false;button.textContent='Refresh';}}
+}
+function render(r,opts={}){
+ focusReportLayout();
+ const s=r.subject||{},o=r.observations||{},p=readQProofPresentation(opts.envelope||r),chain=s.chain||r.input?.chain,summary=renderQProofSummary(h,p,{onRefresh:refreshReport});
+ const stable=s.type==='token'&&s.address&&chain?'/proof/'+encodeURIComponent(chain)+'/'+encodeURIComponent(s.address):r.id?'/qproof/'+r.id:'/qproof';
+ const link=safeQProofUrl(p.links.report)||location.origin+stable;
+ const copy=h('button',{type:'button',class:'qa-btn qa-btn--secondary qa-btn--sm qp-copy',onclick:async e=>{try{await navigator.clipboard.writeText(link);e.currentTarget.textContent='Link copied';}catch{e.currentTarget.textContent=stable;}}},'Copy link');
+ const name=s.name||o.market?.listedName||s.label||short(s.address),symbol=o.market?.listedSymbol||String(s.label||'').replace(/^\$/,'');
+ const image=o.profile?.image,avatar=h('span',{class:'qp-token-avatar','aria-hidden':'true'},String(symbol||name||'?').slice(0,1).toUpperCase());
+ if(typeof image==='string'&&/^data:image\/(?:png|webp|jpeg);base64,[A-Za-z0-9+/=]+$/.test(image)&&image.length<262144){const img=h('img',{src:image,alt:'',onerror:()=>img.remove()});avatar.append(img);}
+ const price=typeof o.market?.priceUsd==='string'&&/^\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(o.market.priceUsd)?Number(o.market.priceUsd):typeof o.market?.priceUsd==='number'?o.market.priceUsd:null;
+ const chainIds={robinhood:'4663',base:'8453',ethereum:'1',arbitrum:'42161',bnb:'56',elysium:'99901',solana:'solana'},trade=s.type==='token'&&chainIds[chain]&&s.address?'/terminal#t='+chainIds[chain]+':'+s.address:null;
+ const tokenHeader=h('header',{class:'qp-token-header'},h('div',{class:'qp-token-title'},avatar,h('div',null,h('p',{class:'qp-token-chain'},CHAIN[chain]||chain||'QProof'),h('h1',null,name),symbol&&symbol!==name?h('p',{class:'qp-token-symbol'},symbol):null)),
+  s.address?h('p',{class:'qp-token-address'},addrLink(chain,s.address),h('button',{type:'button',class:'qp-address-copy',onclick:async e=>{try{await navigator.clipboard.writeText(s.address);e.currentTarget.textContent='Copied';}catch{e.currentTarget.textContent=s.address;}}},'Copy')):null,
+  price!==null||o.market?.marketCap!=null?h('dl',{class:'qp-token-market'},price!==null?h('div',null,h('dt',null,'Price'),h('dd',null,money(price))):null,o.market?.marketCap!=null?h('div',null,h('dt',null,'Market cap'),h('dd',null,money(o.market.marketCap))):null):null);
+ document.title=name+' · '+p.verdict.label+' · QProof | QHooks';
+ const aside=h('aside',{class:'qp-report-summary'},tokenHeader,summary.bar,summary.strip,summary.fee,
+  h('p',{class:'qp-refresh-note',role:'status'},p.freshness.refreshQueued?'A refresh is queued. Showing the last report.':p.freshness.nextRefreshAt?'Next scheduled refresh window after '+new Date(p.freshness.nextRefreshAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'.':''),
+  h('div',{class:'qp-actions'},copy,trade?h('a',{class:'qa-btn qa-btn--primary',href:trade},'Trade on QHooks'):null),
+  p.links.reportVersion?h('a',{class:'qp-version-link',href:p.links.reportVersion},'This report version'):null);
+ const sections=[sellSection(o,chain,r),supplySection(o,s),holdersSection(o,chain),creatorSection(r,o,s,chain),marketSection(o,r),repoSection(s),readsSection(r)].filter(Boolean);
+ const details=sections.map(section=>{const title=section.querySelector('h3')?.textContent||'Evidence',first=section.querySelector('p')?.textContent||'',node=h('details',{class:'qp-report-section'},h('summary',null,h('b',null,title),first?h('span',null,first.length>120?first.slice(0,117)+'…':first):null),section);if(title==='Audit trail')node.id='qp-audit-trail';return node;});
+ const main=h('div',{class:'qp-report-sections'},checksSection(r,chain),...details);
+ out.hidden=false;out.replaceChildren(h('div',{class:'qp-report-layout'},aside,main));reveal([aside,main]);
 }
 function sec(title, ...body) { return h('section', { class: 'qp-sec' }, h('h3', { class: 'qp-sec__h' }, title), ...body); }
 function checksSection(r, chain) {
@@ -148,17 +162,18 @@ function checksSection(r, chain) {
       means ? h('p', { class: 'qp-means' }, means) : null,
       x.detail ? h('p', { class: 'qp-detail' }, x.detail) : null,
       x.address ? h('p', { class: 'qp-detail' }, 'Contract: ', addrLink(chain, x.address)) : null,
-      reads.length ? h('details', { class: 'qp-reads' }, h('summary', null, reads.length + (reads.length === 1 ? ' read' : ' reads') + ' behind this'), h('ul', null, reads.map((x2) => h('li', null, h('b', null, x2.provider), ' · ', x2.request || '', x2.httpStatus ? ' · HTTP ' + x2.httpStatus : '')))) : null);
+      (x.evidenceLinks||[]).length?h('div',{class:'qp-evidence-links'},x.evidenceLinks.filter(e=>safeQProofUrl(e.url)).map(e=>h('a',{href:safeQProofUrl(e.url),target:'_blank',rel:'noopener noreferrer'},e.label||e.value||'Open evidence'))):null,
+      reads.length?h('a',{class:'qp-audit-link',href:'#qp-audit-trail',onclick:()=>{const audit=$('qp-audit-trail');if(audit)audit.open=true;}},'Audit trail'):null);
   };
-  return sec('Checks · ' + scored.length, h('ul', { class: 'qp-checklist' }, scored.map(row)),
-    notes.length ? h('details', { class: 'qp-notes' }, h('summary', null, notes.length + (notes.length === 1 ? ' note' : ' notes')), h('ul', { class: 'qp-checklist' }, notes.map(row))) : null);
+  const group=(title,items,collapsed=false)=>!items.length?null:collapsed?h('details',{class:'qp-finding-group'},h('summary',null,title+' ('+items.length+')'),h('ul',{class:'qp-checklist'},items.map(row))):h('section',{class:'qp-finding-group'},h('h2',null,title+' ('+items.length+')'),h('ul',{class:'qp-checklist'},items.map(row)));
+  return sec('Findings',group('Red flags',scored.filter(x=>x.status==='danger')),group('Watch',scored.filter(x=>x.status==='caution')),group('Passed',scored.filter(x=>x.status==='clear'),true),group('Not checked',scored.filter(x=>x.status==='unknown'),true),group('Notes',notes,true));
 }
 function sellSection(o, chain, r) {
   const sim = o.simulation; if (!sim) { const sr = (r.checks || []).find((x) => x.id === 'sell-route'); return sr ? sec('Sell test', h('p', { class: 'qp-p' }, sr.title + '. ' + (sr.detail || ''))) : null; }
   const q2 = sim.quote || 'WETH', inn = units(sim.ethIn), back = units(sim.ethBack);
   const outcome = { sold: 'Bought, then sold straight back', 'buy-failed': 'The buy failed', 'sell-failed': 'The sell failed', honeypot: 'The sell failed' }[sim.outcome] || sim.outcome || 'Unknown outcome';
   const kv = [['Result', outcome], ['Spent', inn != null ? num(inn) + ' ' + q2 : '—'], ['Got back', back != null ? num(back) + ' ' + q2 : '—'], ['Returned', sim.returned != null ? pct(sim.returned) : '—'],
-    ['Buy tax · sell tax', pct(sim.buyTax ?? 0) + ' · ' + pct(sim.sellTax ?? 0)], ...(sim.buyCharge != null ? [['Launch charges', 'buy ' + pct(sim.buyCharge) + ' · sell ' + pct(sim.sellCharge)]] : []),
+    ['Token buy tax · sell tax', pct(sim.buyTax ?? null) + ' · ' + pct(sim.sellTax ?? null)], ...(sim.buyCharge != null ? [['Launch charges', 'buy ' + pct(sim.buyCharge) + ' · sell ' + pct(sim.sellCharge)]] : []),
     ...(sim.lpFee != null ? [['Pool fee', pct(sim.lpFee)]] : []), ['Venue', sim.venue || '—'], ['At block', sim.block ? Number(sim.block).toLocaleString() : '—']];
   return sec('Buy-and-sell test', h('p', { class: 'qp-p' }, 'Simulated in one call at one block: nothing was sent or signed. What you get back is shaped by the pool fee, any launch charges and any token tax.'),
     h('dl', { class: 'qa-kv qp-kv' }, kv.map(([k, v]) => h('div', null, h('dt', null, k), h('dd', null, v)))),
@@ -202,16 +217,26 @@ function repoSection(s) {
 function readsSection(r) {
   const rec = r.receipts || []; if (!rec.length) return null;
   const providers = [...new Set(rec.map((x) => x.provider))];
-  return sec('Evidence', h('p', { class: 'qp-detail' }, rec.length + ' public reads from ' + providers.join(', ') + (r.elapsedMs ? ' in ' + (r.elapsedMs / 1000).toFixed(1) + ' s' : '') + '. Each response is fingerprinted (SHA-256).'),
+  return sec('Audit trail', h('p', { class: 'qp-detail' }, rec.length + ' public reads from ' + providers.join(', ') + (r.elapsedMs ? ' in ' + (r.elapsedMs / 1000).toFixed(1) + ' s' : '') + '. Each response is fingerprinted (SHA-256).'),
     h('details', { class: 'qp-reads' }, h('summary', null, 'Show every read'), h('ul', null, rec.map((x) => h('li', null, h('b', null, x.provider), ' · ', x.request || '', ' · HTTP ' + (x.httpStatus ?? '—'), x.responseSha256 ? h('code', { class: 'qp-sha' }, ' ' + x.responseSha256.slice(0, 16) + '…') : null)))));
 }
 
 /* ---------- opening a shared report, or a check link ---------- */
-const params = new URLSearchParams(location.search), idFromPath = /^\/qproof\/([0-9a-f-]{36})\/?$/.exec(location.pathname)?.[1], id = idFromPath || (/^[0-9a-f-]{36}$/.test(params.get('id') || '') ? params.get('id') : null);
+const params=new URLSearchParams(location.search),chainAliases={'4663':'robinhood','8453':'base','1':'ethereum','42161':'arbitrum','56':'bnb','99901':'elysium',solana:'solana'};
+function stableTarget(){try{const m=/^\/proof\/([^/]+)\/([^/]+)(?:\/([0-9a-f-]{36}))?\/?$/.exec(location.pathname);if(!m)return null;const chain=chainAliases[decodeURIComponent(m[1])]||decodeURIComponent(m[1]),address=decodeURIComponent(m[2]);return CHAIN[chain]&&(chain==='solana'?isSol(address):isEvm(address))?{chain,address:chain==='solana'?address:address.toLowerCase(),id:m[3]||null}:null;}catch{return null;}}
+const targetFromPath=stableTarget(),idFromPath=/^\/qproof\/([0-9a-f-]{36})\/?$/.exec(location.pathname)?.[1],id=targetFromPath?.id||idFromPath||(/^[0-9a-f-]{36}$/.test(params.get('id')||'')?params.get('id'):null);
+function matchesPath(report){if(!targetFromPath)return true;const s=report?.subject;return s?.chain===targetFromPath.chain&&(s.chain==='solana'?s.address===targetFromPath.address:String(s.address||'').toLowerCase()===targetFromPath.address);}
+async function readStableTarget(){
+ const t=targetFromPath;if(!t)return;const d=await api('latest?'+new URLSearchParams({chain:t.chain,address:t.address}));
+ if(d.report){if(!matchesPath(d.report))throw Error('This report does not match the address in this link.');shown={report:d.report,opts:{stored:true,envelope:d}};q.value=t.address;chainSel.value=t.chain;sync();render(d.report,shown.opts);return;}
+ focusReportLayout();const summary=renderQProofSummary(h,d,{onRefresh:()=>readStableTarget().catch(e=>{msg.textContent=e.message;})});
+ out.hidden=false;out.replaceChildren(h('section',{class:'qp-empty-report'},h('h1',null,short(t.address)),h('p',{class:'qp-token-chain'},CHAIN[t.chain]),summary.bar,summary.strip,h('p',{class:'qp-refresh-note'},d.freshness?.refreshQueued?'The first check is queued.':'No stored report is available yet.')));
+}
 if (id) {
   checking('Opening the stored report');
-  api('report/' + id).then((d) => { shown = { report: d.report, opts: { stored: true } }; const s = d.report.subject || {}; q.value = s.type === 'repository' ? s.address || '' : s.address || ''; if (s.chain && CHAIN[s.chain] && s.chain !== 'github') chainSel.value = s.chain; sync(); render(d.report, { stored: true }); })
+  api('report/' + id).then((d) => {if(!matchesPath(d.report))throw Error('This report does not match the address in this link.');shown = { report: d.report, opts: { stored: true,envelope:d } }; const s = d.report.subject || {}; q.value = s.address || ''; if (s.chain && CHAIN[s.chain] && s.chain !== 'github') chainSel.value = s.chain; sync(); render(d.report, shown.opts); })
     .catch((e) => { out.hidden = true; msg.textContent = e.message; });
+} else if(targetFromPath){checking('Reading the latest stored report');readStableTarget().catch(e=>{out.hidden=true;msg.textContent=e.message;});
 } else if (params.get('q')) {
   q.value = params.get('q').slice(0, 2048); const c = params.get('chain'); if (c && CHAIN[c]) chainSel.value = c; sync(); run();
 }

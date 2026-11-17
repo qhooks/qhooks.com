@@ -4,6 +4,7 @@ import {createTicketCostReader,ticketCostEnvelope} from './qx-ticket-cost-read.m
 import {mountTicketCosts} from './qx-ticket-cost-view.mjs';
 import {waitTransactionReceipt} from './qx-transaction-receipt.mjs';
 import {walletTradingStorage} from './qx-trade-settings-context.mjs';
+import {readQProofPresentation,qproofAgeLabel} from './qproof-view.mjs';
 import {COPY_RISK} from '/qx-copy-review-core.mjs';
 import {createCopyTicketReview} from './qx-copy-ticket-review.mjs';
 import {EXIT_CHAINS} from './qx-profile-exit.mjs';
@@ -80,7 +81,7 @@ const STABLE = { '8453': ['0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', 'USDC', 
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem('qhooks:terminal:' + k); localStorage.setItem('qhooks:terminal:' + k, v); } catch {} return null; };
 export const validTradeTolerance = value => /^\d{1,5}$/.test(String(value ?? '')) && Number(value) > 0 && Number(value) <= 10000;
 
-export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode=false, copyReview=createCopyTicketReview({now,...(rowMode?{search:''}:{})}) } = {}) {
+export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode=false,readProof=null, copyReview=createCopyTicketReview({now,...(rowMode?{search:''}:{})}) } = {}) {
   if(copyReview.active&&!document.querySelector('link[href="/qx-copy-review.css"]'))document.head.append(h('link',{rel:'stylesheet',href:'/qx-copy-review.css'}));
   const savedTolerance = store('tol');
   let copyPrepared=null,copyPreparing=false;
@@ -241,6 +242,8 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
 
   const cash = h('div', { class: 'qxt-cash' });
   const risk = h('div', { class: 'qxt-risk', hidden: true });
+  const proofBanner=h('section',{class:'qxt-qproof-summary',hidden:true,'aria-label':'QProof verdict'});
+  function repaintProof(){const snapshot=typeof readProof==='function'?readProof():null;if(!snapshot){proofBanner.hidden=true;proofBanner.replaceChildren();return;}const p=readQProofPresentation(snapshot);proofBanner.hidden=false;proofBanner.className='qxt-qproof-summary is-'+p.verdict.level;proofBanner.replaceChildren(h('b',{},p.verdict.label),h('p',{},p.verdict.reason),h('small',{},qproofAgeLabel(p.freshness)));}
   const followup = h('div', {class: 'qxt-followup'});
   const funding = createFundingRow({ h, getPlan: q => tradePlan(current, q), onChange: ({ quote, ready }) => {
     changedCostPath();clearArmed(); if (current) current.funding = quote;
@@ -258,7 +261,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   card.replaceChildren(
     h('div', { class: 'qxt-side-toggle', role: 'group', ariaLabel: 'Trade side' }, ...sideBtns, sellToCash),
     payRow,
-    risk, ...avail.elements, h('div', { class: 'qxt-amount qxt-amount-fit' }, amount, amountDisplay, usdInput, usdDisplay, unit), h('div', {class: 'qxt-usd-row'}, usdEcho, unitToggle), addFunds, funding.element, presets, out, costs.element, quoteTools, go, signIn, tradingSettings.element, status, followup, settings, h('a', {href:'/trust',class:'qxt-muted',style:'display:block;font-size:11px;padding:12px 0;text-underline-offset:3px'}, 'Trust Hub · checks, fees & contracts'));
+    proofBanner,risk, ...avail.elements, h('div', { class: 'qxt-amount qxt-amount-fit' }, amount, amountDisplay, usdInput, usdDisplay, unit), h('div', {class: 'qxt-usd-row'}, usdEcho, unitToggle), addFunds, funding.element, presets, out, costs.element, quoteTools, go, signIn, tradingSettings.element, status, followup, settings, h('a', {href:'/trust',class:'qxt-muted',style:'display:block;font-size:11px;padding:12px 0;text-underline-offset:3px'}, 'Trust Hub · checks, fees & contracts'));
   if(!rowMode)import('/qx-oneclick.mjs').then(m => m.mountOneClickToggle(settings)).catch(() => {}); // One-click trading toggle (hidden unless an email/Google wallet is connected)
 
   const calloutContext=()=>st?{chainId:String(st.chainId),token:String(st.token).toLowerCase(),owner:connectedAddress()?.toLowerCase()}:null;
@@ -604,6 +607,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   onSolChange(() => { clearCosts();buyCallout.refresh(); if (st?.sol&&!busy&&!recovery) { if(sellPrefillOwner&&sellPrefillOwner!==solAddress()){setAmount('');sellPrefillOwner=null;} refresh(); layout(); } });
 
   function renderRisk() {
+    repaintProof();
     const v = st?.ext || st?.direct ? st.safety : null;
     // Elysium direct-route tokens whose launchpad hook has an owner (qx-elysium-direct.mjs REVIEWED_HOOKS).
     const note = st?.hookOwner ? h('p', { class: 'qxt-risk-note' }, 'This token’s launchpad can change its tax.') : null;
@@ -612,14 +616,14 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
     risk.hidden = false;
     const flags = (v.flags || []).slice(0, 4);
     risk.className = 'qxt-risk ' + (v.verdict === 'ok' ? 'unknown' : v.verdict);
-    const title = { ok: 'No flags returned by available checks', caution: 'Trade with care', danger: 'High risk: this token may not be sellable', unknown: 'No safety scan for this token' }[v.verdict] || (v.unsupported ? 'No automated checks on this chain yet' : 'Safety unknown');
+    const title = 'Additional trade checks';
     const report=[...(note ? [note] : []), h('b', {}, title), ...(flags.length ? [h('ul', {}, ...flags.map(f => h('li', {}, f)))] : []),
       h('p', { class: 'qxt-muted' }, 'Source: ' + (typeof v.source === 'string' ? v.source.slice(0, 48) : 'not reported') + '.'),
       ...(v.verdict === 'danger' ? [h('label', {}, h('input', { type: 'checkbox', onchange: () => { if (current) go.disabled = busy || !risk.querySelector('input').checked || (funding.required && !funding.quote); } }), ' I understand and still want to trade')] : []),
       h('a', { href: '/qproof?q=' + encodeURIComponent(st.token) }, 'Full check on QProof')];
     if(!flags.length&&(v.verdict==='ok'||v.verdict==='unknown')){
       risk.classList.add('qxt-risk-compact');
-      risk.replaceChildren(...(note ? [note] : []), h('details',{},h('summary',{},v.verdict==='ok'?'Limited checks · no flags returned':'No safety scan returned'),h('div',{class:'qxt-risk-report'},...report.filter(x => x !== note))));
+      risk.replaceChildren(...(note ? [note] : []), h('details',{},h('summary',{},v.verdict==='ok'?'Additional trade checks · no flags returned':'Additional trade checks unavailable'),h('div',{class:'qxt-risk-report'},...report.filter(x => x !== note))));
     }else risk.replaceChildren(...report);
   }
 
@@ -976,7 +980,7 @@ if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} setAmount( '');s
 
   if(!rowMode)restorePendingBuy();
   return {
-    prepareCopyReview,beginSelection,isSelection,failSelection,canSelect:()=>!busy&&!recovery,
+    prepareCopyReview,beginSelection,isSelection,failSelection,repaintProof,canSelect:()=>!busy&&!recovery,
     async setPool(pool, meta, intent) {
       if(busy||recovery)return false;
       intent??=beginSelection({kind:'launch',chainId:pool.chainId,controller:pool.controller});

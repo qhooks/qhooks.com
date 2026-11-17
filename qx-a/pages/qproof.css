@@ -1,3 +1,4 @@
+@import url('/qproof-report.css');
 /* QProof page (/qproof). Noir + gold, System A tokens only. No italics, no circles or rings: status marks are squares,
    the supply map is one horizontal bar. Phone first (390 px), 44 px targets. */
 .qp { max-width: 860px; margin: 0 auto; padding: 0 var(--qa-pad, 16px) 96px; overflow-wrap: anywhere; }

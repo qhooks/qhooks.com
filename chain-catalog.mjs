@@ -1,11 +1,9 @@
-// Public route availability, not permission to transact. Explicit chain IDs only.
-export const launchChains=Object.freeze([
- Object.freeze({id:'8453',slug:'base',name:'Base',gas:'ETH',feeModel:'op-stack',coreHref:'/deploy',status:'QPool core setup available'}),
- Object.freeze({id:'4663',slug:'robinhood',name:'Robinhood Chain',gas:'ETH',feeModel:'nitro',coreHref:null,status:'Integration in progress'}),
- Object.freeze({id:'1',slug:'ethereum',name:'Ethereum',gas:'ETH',feeModel:'ethereum',coreHref:null,status:'Integration in progress'}),
- Object.freeze({id:'42161',slug:'arbitrum',name:'Arbitrum One',gas:'ETH',feeModel:'nitro',coreHref:null,status:'Integration in progress'}),
- Object.freeze({id:'56',slug:'bnb',name:'BNB Chain',gas:'BNB',feeModel:'bsc',coreHref:null,status:'Integration in progress'}),
- Object.freeze({id:'5042',slug:'arc',name:'Arc',gas:'USDC',feeModel:'arc-stablecoin',coreHref:null,status:'Integration in progress'}),
- Object.freeze({id:'99801',slug:'elysium',name:'Elysium Testnet',gas:'HYPE',feeModel:'nitro',coreHref:null,status:'Integration in progress'})
-]);
+// Public route metadata, derived from the same public registry as chain copy.
+// Listing a network never enables an EVM deployment or wallet action.
+import {PUBLIC_NETWORKS} from './chains.mjs';
+export const launchChains=Object.freeze(PUBLIC_NETWORKS.map(chain=>Object.freeze({
+ id:chain.id,slug:chain.key,name:chain.name,gas:chain.native,feeModel:chain.feeModel||chain.family,
+ coreHref:chain.id==='8453'?'/deploy':null,
+ status:chain.id==='8453'?'QPool core setup available':'Launch options on '+chain.name
+})));
 export function launchChain(id){if(typeof id!=='string')throw new TypeError('Choose a chain ID');const chain=launchChains.find(c=>c.id===id);if(!chain)throw new TypeError('Chain is not in this rollout');return chain;}

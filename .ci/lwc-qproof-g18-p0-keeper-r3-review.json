@@ -1,0 +1,57 @@
+{
+  "status": "EXACT_LICENSED_STATIC_UNION_DERIVATIVES_BOUND_TO_ROOT_LIVE_RELEASE",
+  "sourceRelease": "13a218ff-c64e-4fb9-9b07-ac8c3b3b0be6",
+  "sourceWorkerSha256": "186157a49ee252ac30ee28204696a6ec12f87b2c2a7a33a0e718e76a517e2530",
+  "prior38AllowancesAndAllOtherPolicyExact": true,
+  "newExactRows": 2,
+  "totalRows": 40,
+  "publicStaticUnionIncludesOriginalPhase1Namespace": true,
+  "WorkerGeneratedHttpBodyClaim": false,
+  "evidence": [
+    {
+      "path": "b/qproof-g18-p0-after-polish-20261117/terminal/qx-terminal.RN7ZUWMV.mjs",
+      "sha256": "e871c63ace8d4ce05a1edb5c7f0f216d999b06358ac9066a9757eaabcf6ddcdd",
+      "bytes": 408891,
+      "refs": 2,
+      "origin": {
+        "tree": "work/qhooks-qproof-g18-p0-keeper-r3-after-polish-current-codex-candidate-20261117",
+        "manifest": "work/qhooks-qproof-g18-p0-keeper-r3-after-polish-current-codex-candidate-20261117/lead/perf/terminal.manifest.json",
+        "manifestSha256": "25003ca31f800313d8323f9d10092f3f5a6666bced0acf3443adb9590e969297",
+        "inputCount": 340
+      },
+      "ApacheVendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      },
+      "attributionReferencesExactly": 2,
+      "proprietaryInputs": 0
+    },
+    {
+      "path": "b/qproof-phase1-after-polish-20261117/terminal/qx-terminal.GPFB5TLB.mjs",
+      "sha256": "9edc98de81e72687c4f2f0292bb26a21e2d6b5c9ce0c78e4943cbbad8a9fb100",
+      "bytes": 408891,
+      "refs": 2,
+      "origin": {
+        "tree": "work/qhooks-qproof-phase1-after-polish-current-codex-candidate-20261117",
+        "manifest": "work/qhooks-qproof-phase1-after-polish-current-codex-candidate-20261117/lead/perf/terminal.manifest.json",
+        "manifestSha256": "bfa4a64b82f6a316237d226dc6b73fd38ab07a23a80eb59ecbb9c5a799032b33",
+        "inputCount": 340
+      },
+      "ApacheVendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      },
+      "attributionReferencesExactly": 2,
+      "proprietaryInputs": 0
+    }
+  ],
+  "actualNetworkCalls": 0
+}

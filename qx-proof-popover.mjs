@@ -1,41 +1,35 @@
 import {installOverlayDismissal} from './qx-overlays.mjs';
+import {renderQProofSummary,readQProofPresentation,ensureQProofStyles} from './qproof-view.mjs';
 
-// The terminal owns the checks and links. This adapter owns only their existing view.
-export function mountProofPopover({document:doc=globalThis.document,window:win=doc.defaultView,chip,desktop,h,readChecks,renderRow,report,reduceMotion=false}){
+// Display only. The server supplies every verdict and its reason.
+export function mountProofPopover({document:doc=globalThis.document,window:win=doc.defaultView,chip,desktop,h,readChecks,renderRow,report,refresh,reduceMotion=false}){
+ ensureQProofStyles(doc);
  const scrim=h('div',{class:'qa-scrim ta-proofscrim',hidden:true});
  const pop=h('div',{class:'ta-proofpop',id:'ta-proofpop',role:'dialog','aria-modal':'true','aria-labelledby':'ta-proofpop-h',hidden:true});
  chip.setAttribute('aria-haspopup','dialog');chip.setAttribute('aria-controls',pop.id);chip.setAttribute('aria-expanded','false');doc.body.append(scrim,pop);
  let shown=false;
  const owner=installOverlayDismissal({document:doc,window:win}).registerCustom(pop,{isOpen:()=>shown,close:()=>{close();return true;},opener:()=>chip});
+ function section(id,title,rows,collapsed=false){
+  if(!rows.length)return null;const list=h('ul',{class:'ta-pcs'},rows.map(renderRow));
+  return collapsed?h('details',{class:'ta-proof-section','data-proof-section':id},h('summary',null,title+' ('+rows.length+')'),list):h('section',{class:'ta-proof-section','aria-label':title},h('h3',null,title+' ('+rows.length+')'),list);
+ }
  function render(){
-  const hadFocus=pop.contains(doc.activeElement),notesOpen=pop.querySelector('.ta-pcs-notes')?.open;
-  const {list,link,legend}=readChecks(),scored=list.filter(c=>c.st!=='info'),notes=list.filter(c=>c.st==='info');
-  const passed=scored.filter(c=>c.st==='clear').length,look=scored.filter(c=>c.st==='danger'||c.st==='caution').length,unchecked=scored.filter(c=>c.st==='unknown').length;
-  const x=h('button',{type:'button',class:'qa-btn qa-btn--icon ta-proofpop__x','aria-label':'Close checks'},h('span',{'aria-hidden':'true'},'×'));
-  x.addEventListener('click',()=>owner.requestClose('close'));
+  const hadFocus=pop.contains(doc.activeElement),action=doc.activeElement?.dataset?.proofAction,opened=new Set([...pop.querySelectorAll('[data-proof-section][open]')].map(n=>n.dataset.proofSection));
+  const {list=[],link='',legend='',snapshot=null}=readChecks(),p=readQProofPresentation(snapshot),summary=renderQProofSummary(h,p,{onRefresh:refresh?()=>refresh():null});
+  const x=h('button',{type:'button',class:'qa-btn ta-proofpop__x','aria-label':'Close checks'},h('span',{'aria-hidden':'true'},'×'));x.addEventListener('click',()=>owner.requestClose('close'));
   const full=link?h('a',{class:'qa-btn qa-btn--secondary qa-btn--sm ta-proofpop__full',href:link},'Full report'):h('button',{type:'button',class:'qa-btn qa-btn--secondary qa-btn--sm ta-proofpop__full'},'Full report');
   if(!link)full.addEventListener('click',()=>{close();report?.scrollIntoView({block:'start',behavior:reduceMotion?'auto':'smooth'});});
-  pop.replaceChildren(...[
-   desktop.matches?null:h('span',{class:'qa-sheet__grip','aria-hidden':'true'}),
-   h('header',{class:'ta-proofpop__head'},h('div',null,h('h2',{id:'ta-proofpop-h'},'Proof checks'),h('p',null,scored.length?passed+' of '+scored.length+' passed'+(look?' · '+look+' to look at':'')+(unchecked?' · '+unchecked+' not checked':''):'Refreshing…')),x),
-   legend?h('p',{class:'ta-proofpop__legend'},legend):null,
-   scored.length?h('ul',{class:'ta-pcs'},scored.map(renderRow)):null,
-   notes.length?h('details',{class:'ta-pcs-notes'},h('summary',null,notes.length+(notes.length===1?' note':' notes')),h('ul',{class:'ta-pcs'},notes.map(renderRow))):null,
-   h('footer',{class:'ta-proofpop__foot'},h('a',{class:'ta-proofpop__how',href:'/qproof'},'How QProof works · Check any token'),full)
-  ].filter(Boolean));
-  if(notesOpen&&pop.querySelector('.ta-pcs-notes'))pop.querySelector('.ta-pcs-notes').open=true;
-  if(shown&&hadFocus)x.focus({preventScroll:true});
+  pop.replaceChildren(...[h('header',{class:'ta-proofpop__head'},h('h2',{id:'ta-proofpop-h'},'QProof'),x),summary.bar,summary.strip,summary.fee,
+   section('danger','Red flags',list.filter(c=>c.st==='danger')),section('watch','Watch',list.filter(c=>c.st==='caution'||c.st==='watch')),
+   section('passed','Passed',list.filter(c=>c.st==='clear'),true),section('not-checked','Not checked',list.filter(c=>c.st==='unknown'||c.st==='incomplete'),true),section('notes','Notes',list.filter(c=>c.st==='info'),true),
+   legend?h('details',{class:'ta-proof-method','data-proof-section':'method'},h('summary',null,'How QProof works'),h('p',null,legend)):null,
+   h('footer',{class:'ta-proofpop__foot'},h('a',{class:'ta-proofpop__how',href:'/qproof'},'How QProof works'),full)].filter(Boolean));
+  for(const n of pop.querySelectorAll('[data-proof-section]'))if(opened.has(n.dataset.proofSection))n.open=true;
+  if(shown&&hadFocus)(action==='refresh'?pop.querySelector('[data-proof-action="refresh"]'):x)?.focus({preventScroll:true});
  }
- function place(){
-  if(!desktop.matches){pop.style.removeProperty('top');pop.style.removeProperty('left');return;}
-  const rect=chip.getBoundingClientRect(),width=pop.offsetWidth||400;
-  pop.style.top=Math.round(rect.bottom+win.scrollY+10)+'px';
-  pop.style.left=Math.round(Math.max(16,Math.min(rect.left+win.scrollX,win.scrollX+doc.documentElement.clientWidth-width-16)))+'px';
- }
- function resize(){if(!shown)return;pop.classList.toggle('qa-sheet',!desktop.matches);pop.classList.toggle('is-pop',desktop.matches);scrim.hidden=desktop.matches;place();}
+ function resize(){if(!shown)return;pop.classList.toggle('qa-sheet',!desktop.matches);pop.classList.toggle('is-pop',desktop.matches);scrim.hidden=false;pop.style.removeProperty('left');pop.style.removeProperty('top');}
  function open(){if(shown)return;render();shown=true;pop.hidden=false;resize();chip.setAttribute('aria-expanded','true');owner.sync();}
  function close(){if(!shown)return;shown=false;pop.hidden=true;scrim.hidden=true;chip.setAttribute('aria-expanded','false');owner.sync();}
- const toggle=event=>{event.stopPropagation();shown?close():open();};chip.addEventListener('click',toggle);
- win.addEventListener('resize',resize);win.addEventListener('hashchange',close);
- return {open,close,render,element:pop,dispose(){close();owner.dispose();chip.removeEventListener('click',toggle);win.removeEventListener('resize',resize);win.removeEventListener('hashchange',close);pop.remove();scrim.remove();}};
+ const toggle=event=>{event.stopPropagation();shown?close():open();};chip.addEventListener('click',toggle);win.addEventListener('resize',resize);win.addEventListener('hashchange',close);
+ return{open,close,render,element:pop,dispose(){close();owner.dispose();chip.removeEventListener('click',toggle);win.removeEventListener('resize',resize);win.removeEventListener('hashchange',close);pop.remove();scrim.remove();}};
 }

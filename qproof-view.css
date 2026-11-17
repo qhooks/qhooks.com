@@ -1,0 +1,35 @@
+.qp-verdict-bar{--qp-status:var(--qa-tx-2,#adb0b0);border:1px solid var(--qp-status);border-left-width:4px;padding:16px;background:var(--qa-slab,#111513);color:var(--qa-tx,#f5f3e9)}
+.qp-verdict-bar.is-danger{--qp-status:var(--qa-sell,#ed837a)}.qp-verdict-bar.is-watch{--qp-status:var(--qa-gold,#e6c987)}.qp-verdict-bar.is-clear{--qp-status:var(--qa-buy,#7ed9a1)}
+.qp-verdict-bar__top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.qp-verdict-word{font-size:clamp(18px,3.6vw,24px);font-weight:750;line-height:1.2;color:var(--qp-status);letter-spacing:-.02em}
+.qp-verdict-reason{font-size:15px;line-height:1.5;margin:12px 0 8px;overflow-wrap:anywhere}
+.qp-verdict-age{font-size:12px;line-height:1.5;color:var(--qa-tx-2,#b2b5b1);font-variant-numeric:tabular-nums;margin:0}
+.qp-summary__refresh{flex:none;border:1px solid var(--qa-rule,#373a32);border-radius:0;background:transparent;color:var(--qa-tx,#f5f3e9);font:inherit;font-size:12px;min-height:36px;padding:6px 10px;cursor:pointer}
+.qp-summary__refresh:focus-visible{outline:2px solid var(--qa-gold,#e6c987);outline-offset:3px}
+.qp-key-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:16px 0;border-top:1px solid var(--qa-rule,#373a32);border-left:1px solid var(--qa-rule,#373a32);font-variant-numeric:tabular-nums}
+.qp-key-cell{min-width:0;border-right:1px solid var(--qa-rule,#373a32);border-bottom:1px solid var(--qa-rule,#373a32);padding:13px 9px;background:var(--qa-slab,#111513)}
+.qp-key-cell dt{font-size:11px;font-weight:500;color:var(--qa-tx-2,#b2b5b1);margin:0 0 7px}
+.qp-key-cell dd{font-size:17px;font-weight:680;line-height:1.2;margin:0;overflow-wrap:anywhere;letter-spacing:-.02em;color:var(--qa-tx,#f5f3e9)}
+.qp-key-cell small{display:block;font-size:10px;line-height:1.4;margin-top:6px;color:var(--qa-tx-2,#b2b5b1)}
+.qp-fee-note{font-size:11px;line-height:1.5;color:var(--qa-tx-2,#b2b5b1);margin:0 0 14px}
+.ta-proofpop.is-pop{position:fixed;inset:0 0 0 auto;width:420px;max-width:calc(100vw - 24px);height:100dvh;max-height:100dvh;overflow:auto;border-radius:0;border:0;border-left:1px solid var(--qa-gold,#e6c987);padding:0 18px 20px;background:var(--qa-slab,#111513);box-shadow:-20px 0 60px #0005}
+.ta-proofpop.qa-sheet{max-height:94dvh;border-radius:0;border-top:1px solid var(--qa-gold,#e6c987)}
+.ta-proofpop__head{background:var(--qa-slab,#111513);padding:14px 0 12px;margin-bottom:0}.ta-proofpop__head h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase}.ta-proofpop__x{border-radius:0;width:40px;min-width:40px;height:40px}
+.ta-proof-section{border-top:1px solid var(--qa-rule,#373a32);padding:14px 0}
+.ta-proof-section h3,.ta-proof-section>summary,.ta-proof-method>summary{font-size:13px;font-weight:650;margin:0;min-height:28px}
+.ta-proof-section>summary,.ta-proof-method>summary{cursor:pointer;padding:4px 0}.ta-proof-section .ta-pcs{margin:0;padding:0;list-style:none}
+.ta-proof-section .ta-pc{display:block;padding:14px 0;border-bottom:1px solid var(--qa-rule,#373a32)}.ta-proof-section .ta-pc:last-child{border-bottom:0;padding-bottom:0}
+.ta-proof-section .ta-pc__txt b{font-size:14px;line-height:1.45}.ta-proof-section .ta-pc__txt>span{font-size:13px;line-height:1.5;display:block;margin:5px 0;color:var(--qa-tx-2,#b2b5b1)}
+.ta-proof-status{display:inline-block;border:1px solid currentColor;padding:3px 5px;margin:0 0 7px;font-size:10px;line-height:1.1;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border-radius:0}
+.ta-proof-status.is-danger{color:var(--qa-sell,#ed837a)}.ta-proof-status.is-caution,.ta-proof-status.is-watch{color:var(--qa-gold,#e6c987)}
+.ta-proof-evidence{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;font-size:12px}.ta-proof-evidence a{color:var(--qa-gold,#e6c987);text-underline-offset:3px;overflow-wrap:anywhere}
+.ta-proof-more summary{font-size:12px;cursor:pointer;min-height:32px;padding-top:6px;color:var(--qa-tx-2,#b2b5b1)}.ta-proof-more p{font-size:13px;line-height:1.6;overflow-wrap:anywhere;margin:4px 0}
+.ta-proof-method{padding:12px 0;border-top:1px solid var(--qa-rule,#373a32);font-size:12px;line-height:1.6;color:var(--qa-tx-2,#b2b5b1)}
+.ta-proofpop__foot{position:relative;background:var(--qa-slab,#111513);padding-top:14px}
+.ta-proof:not(.is-danger):not(.is-warn).is-incomplete{color:var(--qa-tx-2,#b2b5b1)}
+.qxt-qproof-summary{border-left:3px solid var(--qa-tx-2,#adb0b0);padding:10px 12px;margin:8px 0;background:var(--qa-slab,#111513)}
+.qxt-qproof-summary.is-danger{border-color:var(--qa-sell,#ed837a)}.qxt-qproof-summary.is-watch{border-color:var(--qa-gold,#e6c987)}.qxt-qproof-summary.is-clear{border-color:var(--qa-buy,#7ed9a1)}
+.qxt-qproof-summary b{font-size:13px}.qxt-qproof-summary p{font-size:12px;line-height:1.5;margin:5px 0}.qxt-qproof-summary small{font-size:10px;color:var(--qa-tx-2,#b2b5b1);font-variant-numeric:tabular-nums}
+@media(max-width:480px){.qp-key-cell dd{font-size:16px}.qp-verdict-bar{padding:13px}.qp-verdict-word{font-size:19px}}
+@media(prefers-reduced-motion:reduce){.ta-proofpop,.qp-verdict-bar{animation:none!important;transition:none!important}}
+

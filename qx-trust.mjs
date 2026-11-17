@@ -1,4 +1,5 @@
 import {checksSummary} from './qx-checks-copy.mjs';
+import {readQProofPresentation,qproofGuardLevel,qproofAgeLabel,qproofReadParams} from './qproof-view.mjs';
 // Trust layer on token pages: who made this launch (a creator verified on X), whether it copies an earlier verified
 // launch, RepoProof's pre-buy verdict, and the launch's own facts read from its contracts just now.
 // Used by the Launch terms card (qx-terms.mjs), the terminal's header, list and risk banner, and verify.html.
@@ -29,11 +30,11 @@ const keyOf = (chainId, controller) => chainId + ':' + String(controller).toLowe
 // ---- Server data ----
 export const trustOf = (chainId, controller) => once('t:' + keyOf(chainId, controller), 20000, () => getJson(`/api/trust/market/${chainId}/${String(controller).toLowerCase()}`)).catch(() => null);
 export const verdictOf = (chainId, controller) => once('v:' + keyOf(chainId, controller), 20000, async () => {
-  const address=String(controller).toLowerCase(),response=await fetch('/api/qproof/subject?'+new URLSearchParams({kind:'launch',chainId:String(chainId),address}),{cache:'no-store'}),value=await response.json();
+  const address=String(controller).toLowerCase(),response=await fetch('/api/qproof/subject?'+new URLSearchParams({kind:'launch',chainId:String(chainId),address,...qproofReadParams()}),{cache:'no-store'}),value=await response.json();
   if(value?.version!==1||value.subject?.kind!=='launch'||String(value.subject?.chainId)!==String(chainId)||value.subject?.address?.toLowerCase()!==address)return null;
-  const report=value.report;
-  if(!report||!['danger','caution','clear','unknown'].includes(report.level)||!Array.isArray(report.checks))return {level:null,unavailable:true,state:value.state,source:'QProof via QHooks',checkedAt:value.checkedAt||null,cached:!!value.cached,stale:!!value.stale,retryAt:value.retryAt||null};
-  return {...report,state:value.state,source:'QProof via QHooks',checkedAt:value.checkedAt||report.completedAt||report.retrievedAt||null,cached:!!value.cached,stale:!!value.stale||value.state!=='ready'||!response.ok,retryAt:value.retryAt||null};
+  const report=value.report,level=qproofGuardLevel(value);
+  if(!report||!level||!Array.isArray(report.checks))return {level:null,unavailable:true,state:value.state,source:'QProof via QHooks',checkedAt:value.checkedAt||null,cached:!!value.cached,stale:!!value.stale,retryAt:value.retryAt||null,qproofPresentation:value};
+  return {...report,level,qproofPresentation:value,state:value.state,source:'QProof via QHooks',checkedAt:value.checkedAt||report.retrievedAt||null,cached:!!value.cached,stale:!!value.stale||value.state!=='ready'||!response.ok,retryAt:value.retryAt||null};
 }).catch(() => null);
 export const trustList = () => once('list', 20000, () => getJson('/api/trust/list')).then(j => j.markets || {}).catch(() => ({}));
 export const forget = (chainId, controller) => { cache.delete('t:' + keyOf(chainId, controller)); cache.delete('v:' + keyOf(chainId, controller)); cache.delete('list'); };
@@ -57,14 +58,10 @@ const checkTime=v=>timeOf(v?.checkedAt||v?.completedAt||v?.retrievedAt);
 const completeCoverage=v=>v?.coverage?.complete===true&&v?.coverage?.unknown===0;
 function verdictMeta(v){
  const at=checkTime(v),coverage=v?.coverage,checked=Number.isSafeInteger(coverage?.checked)?coverage.checked:null,unknown=Number.isSafeInteger(coverage?.unknown)?coverage.unknown:null;
- const snapshot=v?.snapshot,point=snapshot?(snapshot.chain?' · snapshot '+String(snapshot.chain).slice(0,40):'')+(snapshot.block!=null?' · block '+String(snapshot.block).slice(0,80):snapshot.slot!=null?' · slot '+String(snapshot.slot).slice(0,80):''):'';
- return (v?.source||'QProof via QHooks')+' · '+(v?.stale?'refreshing · ':'')+(v?.cached?'cached · ':'')+(at?new Date(at).toISOString()+' ('+ageOf(at)+')':'check time unknown')+' · source coverage: '+(checked!==null?checked+' checked'+(unknown!==null?', '+unknown+' unknown':''):Array.isArray(v?.checks)?v.checks.length+' returned checks; completeness unknown':'no checks returned yet')+(point||'');
+ const p=readQProofPresentation(v?.qproofPresentation||v);return qproofAgeLabel(p.freshness)+(p.freshness.refreshQueued?' · Refresh queued':'');
 }
 export function verdictChip(v) {
-  if (!v || !v.level) return h('span', { class: 'qtr-chip' }, v?.unsupported ? 'Not covered' : 'Refreshing…');
-  if(v.level==='clear'&&(v.stale||!checkTime(v)||!completeCoverage(v)))return h('span',{class:'qtr-chip unknown'},v.stale?'Refreshing…':!checkTime(v)?'Check time unknown':'Limited coverage');
-  const [t, c] = LEVEL[v.level] || ['Unknown', 'unknown'];
-  return h('span', { class: 'qtr-chip ' + c }, t);
+  const p=readQProofPresentation(v?.qproofPresentation||v);return h('span',{class:'qtr-chip '+({danger:'danger',watch:'caution',clear:'clear',incomplete:'unknown'})[p.verdict.level],title:p.verdict.reason+' · '+qproofAgeLabel(p.freshness)},p.verdict.label);
 }
 
 // ---- The launch's own facts, read from chain ----
@@ -130,7 +127,7 @@ function verdictBlock(v) {
     h('p',{class:'qtr-evidence'},verdictMeta(v)),
     v?.url ? h('a', { class: 'qtr-link', href: v.url, target: '_blank', rel: 'noopener' }, 'Run the check on QProof ↗') : null);
   return h('div', { class: 'qtr-verdict ' + (v.level==='clear'?'unknown':v.level) }, head,
-    h('p', { class: 'qtr-headline' }, 'QProof: ' + v.headline + (v.counts ? ' · ' + (v.counts.danger??'?') + ' red, ' + (v.counts.caution??'?') + ' watch, ' + (v.counts.clear??'?') + ' clear' : '') + (v.stale ? ' (from an earlier check)' : '')),
+    h('p', { class: 'qtr-headline' }, readQProofPresentation(v.qproofPresentation||v).verdict.reason),
     h('p',{class:'qtr-evidence'},verdictMeta(v)),
     v.checks?.length ? h('ul', { class: 'qtr-checks' }, ...v.checks.slice(0, 4).map(c => h('li', { class: c.status==='clear'&&(v.stale||!checkTime(v)||!completeCoverage(v))?'unknown':c.status }, c.title))) : null,
     v.url ? h('a', { class: 'qtr-link', href: v.url, target: '_blank', rel: 'noopener' }, 'Evidence on QProof ↗') : null);
@@ -176,17 +173,16 @@ export async function renderRisk(el, pool, { quiet = false, tries = 0, timers = 
   const f = fRaw || null, again = opts => { if (active() && el.isConnected !== false) void renderRisk(el, pool, { quiet: true, timers, ...opts }); };
   // Facts still reading: paint now, add them when they land (factsOf caches, so the re-render reads nothing twice).
   if (fRaw === undefined) factsP.then(x => { if (x && active()) again({ tries }); });
-  const pending = pendingVerdict(v), exhausted = pending && tries >= RECHECKS;
+  const presentation=readQProofPresentation(v?.qproofPresentation||v),pending=presentation.ready?presentation.freshness.refreshQueued===true:pendingVerdict(v), exhausted = pending && tries >= RECHECKS;
   if (pending && !exhausted) timers.setTimeout(() => { if (!active()) return; cache.delete('v:' + key); again({ tries: tries + 1 }); }, recheckDelay(v));
   const warningChecks=(v?.checks||[]).filter(c=>c.status==='danger'||c.status==='caution');
   const warningFacts=(f?.facts||[]).filter(fact=>fact.tone==='warn');
   const level = t?.copyOf || v?.level === 'danger' || warningChecks.some(c=>c.status==='danger') ? 'danger'
     : v?.level === 'caution' || warningChecks.length || warningFacts.length || f?.recovery ? 'caution' : '';
-  const title = t?.copyOf ? 'Copy warning: same ' + t.copyOf.same + ' as $' + t.copyOf.symbol + ' by @' + t.copyOf.handle
-    : v?.level === 'danger' ? 'QProof: ' + v.headline : v?.level === 'caution' ? 'Trade with care: ' + v.headline : v?.level === 'clear' ? checksSummary(v) : 'Refreshing market checks…';
+  const title = t?.copyOf ? 'Copy warning: same ' + t.copyOf.same + ' as $' + t.copyOf.symbol + ' by @' + t.copyOf.handle : presentation.verdict.label+': '+presentation.verdict.reason;
   const partialReads=!f||f.coverage.unavailable>0||f.facts.some(fact=>/unavailable|not read yet|could not be (?:read|checked|determined|worked out)/i.test(fact.v));
   // checks-rel 2026-11-10 (walkthrough item 3): final states instead of an endless "Refreshing" — this one line only.
-  const summary=checksSummary(exhausted&&v?.level?{...v,state:'ready',stale:false}:v,{flags:warningChecks.length+warningFacts.length});
+  const summary='QProof · '+presentation.verdict.label;
   const creator=h('li',{},...(t?.verified?['Creator verified on X: ',badge(t.verified,{compact:true})]:[t?'Creator not verified on X':'Creator not verified on X']));
   const factLine=fact=>h('li',{},h('b',{},fact.k+': '),fact.v);
   const body=h('div',{class:'qtr-risk-detail-body'},

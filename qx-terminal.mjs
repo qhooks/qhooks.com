@@ -50,7 +50,8 @@ import {syncBuilder} from '/qx-hey-builder.mjs';
 import {createPositionsPanel} from '/qx-terminal-positions.mjs';
 import {solAddress,onSolChange} from '/qx-solana.mjs';
 import {mountTokenConversation} from '/qx-community-activity.mjs';
-import {mountSelectedRepoProof} from '/qx-repoproof.mjs';
+import {mountSelectedRepoProof,readRepoProofSnapshot} from '/qx-repoproof.mjs';
+import {readQProofPresentation,qproofGuardLevel,qproofReadParams} from '/qproof-view.mjs';
 import { createTerminalSelection, prepareNativeTicket, withTerminalTradeReady, createTerminalShortcutHandler, closeTerminalOverlayOnEscape, tradeAddressLabel } from '/qx-terminal-selection.mjs';
 import { afterBuy, onReached } from '/qx-terminal-tpsl.mjs';
 import { getWalletHub } from '/wallet-hub.mjs';
@@ -215,11 +216,11 @@ const SAFETY_SKIP=new Set(['99901']); // /api/terminal/x/safety has no Elysium (
 async function repoproofTokenChecks(selected,signal){
  if(!REPOPROOF_TOKEN_CHAINS.has(String(selected.chainId)))return {unsupported:true,chainId:selected.chainId,address:selected.token};
  const none={unsupported:true,chainId:selected.chainId,address:selected.token};
- try{const r=await fetch('/api/qproof/subject?'+new URLSearchParams({kind:'token',chainId:String(selected.chainId),address:selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase()}),{cache:'no-store',signal});if(!r.ok)return none;
+ try{const r=await fetch('/api/qproof/subject?'+new URLSearchParams({kind:'token',chainId:String(selected.chainId),address:selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase(),...qproofReadParams()}),{cache:'no-store',signal});if(!r.ok)return none;
   const v=await r.json();if(v?.version!==1||v.subject?.kind!=='token'||String(v.subject?.chainId)!==String(selected.chainId)||(selected.chainId==='solana'?String(v.subject?.address):String(v.subject?.address).toLowerCase())!==(selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase()))return none;
-  const rep=v.report&&['danger','caution','clear','unknown'].includes(v.report.level)&&Array.isArray(v.report.checks)?v.report:null;
-  if(rep&&!v.stale&&v.state==='ready')discoveryEvidence().record(selected.chainId,selected.token,'qproof',{at:evidenceTime(v.checkedAt||rep.completedAt),source:'QProof subject report',level:rep.level});
-  return {...(rep||{}),level:rep?.level??null,verdict:rep?(rep.level==='clear'?'ok':rep.level):undefined,unavailable:!rep,state:v.state,retryAt:v.retryAt??null,source:'QProof via QHooks',checkedAt:v.checkedAt||rep?.completedAt||null,chainId:String(selected.chainId),address:selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase()};
+  const level=qproofGuardLevel(v),rep=v.report&&level&&Array.isArray(v.report.checks)?{...v.report,level,qproofPresentation:v}:null;
+  if(rep&&!v.stale&&v.state==='ready'){const p=readQProofPresentation(v);discoveryEvidence().record(selected.chainId,selected.token,'qproof',{at:evidenceTime(p.freshness.checkedAt),source:'QProof subject report',presentationVersion:2,level:p.verdict.level,label:p.verdict.label,reason:p.verdict.reason});}
+  return {...(rep||{}),level:rep?.level??null,verdict:rep?(rep.level==='clear'?'ok':rep.level):undefined,qproofPresentation:v,unavailable:!rep,state:v.state,retryAt:v.retryAt??null,source:'QProof via QHooks',checkedAt:v.checkedAt||rep?.completedAt||null,chainId:String(selected.chainId),address:selected.chainId==='solana'?String(selected.token):String(selected.token).toLowerCase()};
  }catch(e){if(signal?.aborted)throw e;return none;}
 }
 // 2026-11-10 (release lead: BRETT showed "No flags" while RepoProof rated it danger; QHOOKS showed "Not checked yet"):
@@ -251,7 +252,7 @@ async function autoRepoProof(kind,chainId,address,signal){
  try{seen=JSON.parse(sessionStorage.getItem(AUTO_KEY)||'[]');}catch{}
  if(seen.includes(key))return false;
  try{sessionStorage.setItem(AUTO_KEY,JSON.stringify([...seen,key].slice(-40)));}catch{}
- try{const r=await fetch('/api/qproof/subject',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,chainId:String(chainId),address:(String(chainId)==='solana'?String(address):String(address).toLowerCase())}),signal});return r.ok;}
+ try{const r=await fetch('/api/qproof/subject?'+new URLSearchParams({kind,chainId:String(chainId),address:(String(chainId)==='solana'?String(address):String(address).toLowerCase()),...qproofReadParams()}),{method:'GET',cache:'no-store',signal});return r.ok;}
  catch(e){if(signal?.aborted)throw e;return false;}
 }
 async function tokenRepoProof(selected,signal){
@@ -275,7 +276,7 @@ async function refreshSelectedChecks() {
    else if(response.status>=500&&rpChain){checks=await tokenRepoProof(selected,signal);if(checks?.unsupported)throw Error('Checks paused. Refresh data to retry.');}
    else{if(!response.ok)throw Error('Checks paused. Refresh data to retry.');const scan=await response.json();checks=rpChain?mergeRisk(scan,await tokenRepoProof(selected,signal)):scan;forTicket=ticketRisk(checks,scan);}
   }
-  if(!run.active())return;if(selected.kind==='launch'&&checks&&!checks.stale&&!checks.unavailable)discoveryEvidence().record(selected.chainId,selected.token,'qproof',{at:evidenceTime(checks.checkedAt),source:'QProof launch report',level:checks.level});if(!checks)throw Error('Check provider returned no coverage.');
+  if(!run.active())return;if(selected.kind==='launch'&&checks&&!checks.stale&&!checks.unavailable){const p=readQProofPresentation(checks.qproofPresentation||checks);discoveryEvidence().record(selected.chainId,selected.token,'qproof',{at:evidenceTime(p.freshness.checkedAt),source:'QProof launch report',presentationVersion:2,level:p.verdict.level,label:p.verdict.label,reason:p.verdict.reason});}if(!checks)throw Error('Check provider returned no coverage.');
   creatorRiskReport=checks.creatorReport||checks;creatorRawRisk=checks;creatorRawTicketRisk=selected.kind==='external'?forTicket||ticketRisk(checks):null;
   reprojectCreatorRisk();renderHead();if(state.pane==='holders')renderPane();
  }catch(error){if(run.active()){marketWorkspace.failRisk(selected,error);if(state.data)renderHead();}}
@@ -672,7 +673,6 @@ function renderHead() {
   const q = m.quoteSymbol, cell = (k, v, cls) => [h('div', {}, h('dt', {}, k), h('dd', { class: cls || '' }, v))];
   if (d.ext) {
     headTrust();
-    const checks=marketWorkspace?.snapshot().checks,verdict={limited:['Limited checks',''],caution:['Caution','warn'],danger:['High risk','down'],unknown:['Refreshing…',''],unavailable:['Refreshing…',''],stale:['Refreshing…',''],pending:['Pending','']}[checks?.status]||['Pending',''];
     // curves: a launchpad token's numbers come from its curve (d.curveStats once the curve's trades are read), with the
     // bonding-progress cell after the price; "In the curve" is what the curve holds, not a pool's liquidity.
     const cv=d.token?.curve||null,cs=cv&&d.curveStats?{...s,...Object.fromEntries(Object.entries(d.curveStats).filter(([,v])=>v!=null))}:s;
@@ -680,7 +680,7 @@ function renderHead() {
       ...cell('Price', cs.price!=null?'$'+price(cs.price):'—'), ...cell('24h', pct(cs.change24), cs.change24 > 0 ? 'up' : cs.change24 < 0 ? 'down' : ''),
       ...curveStatCells(h,cv),
       ...cell('MCap', money(cs.mcap, 'USD')), ...cell(cv?.phase==='curve'?'In the curve':'Liquidity', money(cs.liquidity, 'USD')), ...cell('Vol 24h', money(cs.volume24, 'USD')),
-      ...cell('Buys / sells · 24h', Number.isFinite(cs.buys24)&&Number.isFinite(cs.sells24)?cs.buys24+' / '+cs.sells24:'—'), ...cell('Checks', verdict[0], verdict[1]));
+      ...cell('Buys / sells · 24h', Number.isFinite(cs.buys24)&&Number.isFinite(cs.sells24)?cs.buys24+' / '+cs.sells24:'—'));
     $('qxt-sync').textContent = s.pricesRefreshing?'Refreshing':cv ? curveSyncLine(cv) : 'Chart pool '+short(d.token?.pools?.[0]?.address)+' · execution via '+(m.chainId==='solana'?'Jupiter':hasDirectRoute(m.chainId)?'the pool · QHooks router':'0x');
     return;
   }
@@ -1274,7 +1274,7 @@ document.addEventListener('keydown',createTerminalShortcutHandler({document,isDi
 }}));
 
 // ---- Start ----
-ticket = mountTicket($('qxt-ticket'), { onTraded: async ({ side, moved, status,ext,chainId,token,owner,copyExit }) => {
+ticket = mountTicket($('qxt-ticket'), {readProof:()=>readRepoProofSnapshot($('qxt-repoproof')),onTraded: async ({ side, moved, status,ext,chainId,token,owner,copyExit }) => {
   setTimeout(loadMarket, 1500); setTimeout(loadPositions, 3000);
   // walletpos: the receipt is in: the held amount, entry and markers re-read from the chain now and once more as the
   // public RPC catches up (two reads, no loop)
@@ -1292,7 +1292,7 @@ positionsPanel=createPositionsPanel({h,pane:$('qxt-pane'),getOwner:()=>state.me,
 onSolChange(()=>{positionsPanel.refresh();void marketPosition.refresh({force:true});});positionsPanel.refresh();
 onReached(text => toast(text, ['Open TP/SL', () => document.querySelector('#qxt-tool-tabs [data-tool="qts"]')?.click()]));
 selectedProof=mountSelectedRepoProof($('qxt-repoproof'),{getSelection:selectedContext,getCreator:currentCreatorTruth,onReport:envelope=>{
- creatorReportEnvelope=envelope;creatorPresentationKey='';if(state.data){renderHead();if(state.pane==='holders')renderPane();}
+ creatorReportEnvelope=envelope;creatorPresentationKey='';ticket.repaintProof?.();if(state.data){renderHead();if(state.pane==='holders')renderPane();}
 }});
 selectionFlow=createTerminalSelection({ticket,
  onBegin(target){

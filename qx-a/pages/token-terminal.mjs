@@ -12,6 +12,8 @@ import { shown, shownKids } from '/qx-shown.mjs';
 import { activityQuery } from '/qx-community-activity.mjs';
 import { profileUrl } from '/qx-profile-address.mjs';
 import {mountProofPopover} from '/qx-proof-popover.mjs';
+import {readRepoProofSnapshot,refreshRepoProofSnapshot} from '/qx-repoproof.mjs';
+import {readQProofPresentation,qproofAgeLabel,safeQProofUrl} from '/qproof-view.mjs';
 
 const doc = document, root = doc.documentElement, body = doc.body;
 const $ = (id) => doc.getElementById(id);
@@ -174,15 +176,13 @@ function paintSocials(m) {
 
 /* proof chip: from the selected RepoProof report the page already shows */
 function paintProof() {
-  const rp = $('qxt-repoproof'), text = rp && !rp.hidden ? rp.querySelector('.qpr-counts')?.textContent : '';
-  const m = /Danger\s*(\d+)\D+Caution\s*(\d+)\D+Clear\s*(\d+)(?:\D+Unknown\s*(\d+))?/i.exec(text || '');
-  if (!m) { proofChip.hidden = true; return; }
-  const [danger, caution, clear, unknown] = [m[1], m[2], m[3], m[4] || 0].map(Number), total = danger + caution + clear + unknown;
+  const rp=$('qxt-repoproof'),snapshot=rp&&!rp.hidden?readRepoProofSnapshot(rp):null;
+  if(!snapshot){proofChip.hidden=true;return;}
+  const p=readQProofPresentation(snapshot),v=p.verdict;
   proofChip.hidden = false;
-  proofChip.classList.toggle('is-warn', !danger && caution > 0); proofChip.classList.toggle('is-danger', danger > 0);
-  proofChip.children[1].textContent = danger ? 'Proof · high risk' : caution ? 'Proof · caution' : 'Proof clear';
-  proofChip.children[2].textContent = danger ? danger + '/' + total : caution ? caution + '/' + total : clear + '/' + total;
-  proofChip.title=QPROOF_CHECK_COUNT_MEANING;
+  proofChip.classList.toggle('is-warn',v.level==='watch');proofChip.classList.toggle('is-danger',v.level==='danger');proofChip.classList.toggle('is-incomplete',v.level==='incomplete');
+  proofChip.children[1].textContent=v.label;proofChip.children[2].textContent='';proofChip.children[2].hidden=true;proofChip.dataset.verdict=v.level;
+  proofChip.title=v.reason+' · '+qproofAgeLabel(p.freshness);proofChip.setAttribute('aria-label','QProof: '+v.label+'. '+v.reason+'. '+qproofAgeLabel(p.freshness));
 }
 /* newcomerA (2026-11-12): the chip opens the checks themselves (a sheet on a phone, a popover on desktop), the ones
    that need a look first, each with a one-line reason, and a link to the full report. Read from the same RepoProof
@@ -191,17 +191,15 @@ const PROOF_RANK = { danger: 0, caution: 1, unknown: 2, clear: 3, info: 4 };
 const PROOF_WORD = { danger: 'Failed', caution: 'Warning', unknown: 'Not checked', clear: 'Passed', info: 'Note' };
 const oneLine = (t) => { const s = String(t || '').replace(/\s+/g, ' ').trim(), first = (s.match(/^.+?[.!?](?=\s|$)/) || [s])[0].replace(/[.]$/, ''); return first.length > 96 ? first.slice(0, first.lastIndexOf(' ', 92)) + '…' : first; };
 function readProofChecks() {
-  const rp = $('qxt-repoproof');
-  const list = [...(rp?.querySelectorAll('.qpr-checks > details') || [])].map((d) => {
-    const st = (d.querySelector(':scope > summary .qpr-check-status')?.className.match(/\b(danger|caution|clear|unknown|info)\b/) || [])[1] || 'unknown';
-    const det = d.querySelector(':scope > .qpr-disclosure-body .qpr-detail')?.textContent || '';
-    return { st, title: d.querySelector(':scope > summary .qpr-check-title b')?.textContent.trim() || 'Check', why: /^No further detail/.test(det) ? '' : oneLine(det) };
-  }).sort((a, b) => PROOF_RANK[a.st] - PROOF_RANK[b.st]);
-  return { list, link: rp?.querySelector('.qpr-report-link')?.href || '',legend:rp?.querySelector('.qpr-count-legend')?.textContent||'' };
+  const rp=$('qxt-repoproof'),snapshot=readRepoProofSnapshot(rp),p=readQProofPresentation(snapshot);
+  const list=(p.checks||[]).map(c=>({id:c.id,st:c.status||'unknown',title:c.title||'Check',why:oneLine(c.why||c.detail),detail:c.detail||'',evidenceLinks:Array.isArray(c.evidenceLinks)?c.evidenceLinks:[]})).sort((a,b)=>(PROOF_RANK[a.st]??2)-(PROOF_RANK[b.st]??2));
+  return{snapshot,list,link:safeQProofUrl(p.links.report)||rp?.querySelector('.qpr-report-link')?.href||'',legend:QPROOF_CHECK_COUNT_MEANING};
 }
-const proofRow = (c) => h('li', { class: 'ta-pc is-' + c.st }, h('span', { class: 'ta-pc__dot', 'aria-hidden': 'true' }),
-  h('div', { class: 'ta-pc__txt' }, h('b', null, c.title), c.why ? h('span', null, c.why) : null), h('span', { class: 'ta-pc__st' }, PROOF_WORD[c.st]));
-const proofView=mountProofPopover({document:doc,window,chip:proofChip,desktop:desk,h,readChecks:readProofChecks,renderRow:proofRow,report:$('qxt-repoproof'),reduceMotion:RM});
+const proofRow=c=>h('li',{class:'ta-pc is-'+c.st},h('span',{class:'ta-proof-status is-'+c.st},({danger:'Danger',caution:'Watch',clear:'Passed',unknown:'Not checked',info:'Note'})[c.st]||'Not checked'),
+ h('div',{class:'ta-pc__txt'},h('b',null,c.title),c.why?h('span',null,c.why):null),
+ c.evidenceLinks.length?h('div',{class:'ta-proof-evidence'},c.evidenceLinks.filter(e=>safeQProofUrl(e.url)).map(e=>h('a',{href:safeQProofUrl(e.url),target:'_blank',rel:'noopener noreferrer'},e.label||e.value||'Evidence'))):null,
+ c.detail&&c.detail!==c.why?h('details',{class:'ta-proof-more','data-proof-section':'row-'+c.id},h('summary',null,'More'),h('p',null,c.detail)):null);
+const proofView=mountProofPopover({document:doc,window,chip:proofChip,desktop:desk,h,readChecks:readProofChecks,renderRow:proofRow,report:$('qxt-repoproof'),refresh:()=>refreshRepoProofSnapshot($('qxt-repoproof')),reduceMotion:RM});
 new MutationObserver(() => { paintProof(); if (!proofView.element.hidden) proofView.render(); }).observe($('qxt-repoproof'), { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['hidden'] });
 
 /* ================= stats: the terminal's own strip, ruled, with ticks ================= */

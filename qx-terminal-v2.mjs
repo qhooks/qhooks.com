@@ -62,9 +62,10 @@ if (main && ticket) {
     if (!sheetOpen()) return;
     root.classList.remove('qv2-sheet');
     for (const a of ['role', 'aria-modal', 'aria-label', 'tabindex']) ticket.removeAttribute(a);
+    // Reveal the dock before the overlay owner restores focus to its opener.
+    dispatchEvent(new CustomEvent('qx:sheet', { detail: { open: false } }));
     sheetOwner.sync();
     opener = null;
-    dispatchEvent(new CustomEvent('qx:sheet', { detail: { open: false } }));
   }
   window.qxSheet = { open: openSheet, close: closeSheet, isOpen: sheetOpen };
   closeX.addEventListener('click', () => sheetOwner.requestClose('close'));

@@ -386,7 +386,7 @@ function renderQuick(){
  renderAdv();const adv=$('adv');if(!pqBlocked())advAuto=false;else if(adv&&!adv.hidden&&conn&&conn.chainId===chainId&&!advAuto){advAuto=true;adv.open=true;const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;}
 }
 
-async function rpc(method,params){const c=chainById(chainId);const r=await fetch(c.rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});const j=await r.json();if(j.error||typeof j.result!=='string')throw Error(j.error?.message||'RPC error');return j.result;}
+async function rpc(method,params){const c=chainById(chainId);const r=await fetch(String(chainId)==='4663'?'/api/rpc/4663':c.rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});const j=await r.json();if(j.error||typeof j.result!=='string')throw Error(j.error?.message||'RPC error');return j.result;}
 async function readFee(){
  const key=chainId+':'+launchFactory();if(!feeRead.has(key))feeRead.set(key,rpc('eth_call',[{to:launchFactory(),data:'0xc763e5a1'},'latest']).then(r=>launchFeeWei(r,chainId)).catch(()=>{feeRead.delete(key);return launchFeeWei(null,chainId);}));
  return feeRead.get(key);
@@ -396,7 +396,7 @@ async function readFee(){
 // and that quoted transaction is what gets sent after a recheck. Otherwise: planning gas x the public gas price.
 const walletRequest=conn=>(method,params)=>conn.entry.provider.request({method,params});
 // Checks whether this chain's clean-token launch contract has code (cached; see qx-quick-launch-core primeCleanFactory).
-const getCodeOn=id=>a=>fetch(chainById(id).rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_getCode',params:[a,'latest']})}).then(r=>r.json()).then(j=>j.result);
+const getCodeOn=id=>a=>fetch(String(id)==='4663'?'/api/rpc/4663':chainById(id).rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_getCode',params:[a,'latest']})}).then(r=>r.json()).then(j=>j.result);
 const primeClean=(id,o)=>primeCleanFactory(id,getCodeOn(id),o),primePairs=(id,o)=>primePairsFactory(id,getCodeOn(id),o),primeMulti=(id,o)=>primeMultiFactory(id,getCodeOn(id),o);
 // Multi-only chains have no cards until code exists, so probe them before they can enter the picker.
 async function probeQuickChains(){

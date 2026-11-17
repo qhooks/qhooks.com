@@ -1,5 +1,9 @@
 import {tokenTruth} from './qproof-token-truth.mjs';
 import {qproofCheckSummary,QPROOF_CHECK_COUNT_MEANING} from './qproof-check-meanings.mjs';
+import {readQProofPresentation,renderQProofSummary,safeQProofUrl,ensureQProofStyles,qproofReadParams} from './qproof-view.mjs';
+const proofViews=new WeakMap();
+export function readRepoProofSnapshot(container){const item=proofViews.get(container);return item?.envelope?structuredClone(item.envelope):null;}
+export function refreshRepoProofSnapshot(container){return proofViews.get(container)?.refresh?.()??Promise.resolve(false);}
 // Read-only reports plus an explicit, bounded check request. No wallet/provider
 // access, signing or trading authority. RepoProof checks on its own schedule; while it
 // refreshes, this panel re-reads the stored report a few times (reads only, never a scan).
@@ -34,7 +38,8 @@ export function repoProofSellEvidence(report){
 const reportURL=raw=>{try{const url=new URL(raw);const id=/^\/q?proof\/([0-9a-f-]{36})$/.exec(url.pathname)?.[1];return url.protocol==='https:'&&!url.port&&!url.username&&!url.password&&!url.search&&!url.hash&&id?'/qproof/'+id:null;}catch{return null;}};
 export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,onReport=()=>{},getCreator=null,document:doc=container?.ownerDocument||globalThis.document,fetcher=(...args)=>globalThis.fetch(...args)}={}){
  const target=repoProofSubject(subject);if(!target||!container?.replaceChildren||!doc?.createElement)throw TypeError('Supply an exact supported QProof subject and report container.');
- const h=(tag,attrs={},...children)=>{const node=doc.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')node.className=v;else if(k.startsWith('on'))node.addEventListener(k.slice(2),v);else if(k in node)node[k]=v;else node.setAttribute(k,v);}node.append(...children.flat().filter(v=>v!==null&&v!==undefined&&v!==false));return node;};
+ ensureQProofStyles(doc);
+ const h=(tag,attrs={},...children)=>{const node=doc.createElement(tag);for(const[k,v]of Object.entries(attrs||{})){if(k==='class')node.className=v;else if(k.startsWith('on'))node.addEventListener(k.slice(2),v);else if(k in node)node[k]=v;else node.setAttribute(k,v);}node.append(...children.flat().filter(v=>v!==null&&v!==undefined&&v!==false));return node;};
  if(doc.head&&!doc.getElementById('qpr-styles'))doc.head.append(h('link',{id:'qpr-styles',rel:'stylesheet',href:'/qx-repoproof.css'}));
  const id='qpr-'+(++widgetId),status=h('p',{class:'qpr-status',role:'status','aria-live':'polite'}),reportHost=h('div',{class:'qpr-report'}),badge=h('span',{class:'qpr-state'},'Reading cache');
  const check=h('button',{type:'button',class:'qpr-check'},'Check with QProof'),refresh=h('button',{type:'button',class:'qpr-refresh'},'Refresh cached report');
@@ -49,16 +54,17 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
  let disposed=false,revision=0,controller=null,pending=false,envelope=null,issue=null,retryTime=null,retryTimer=null,requestTimer=null,rereadTimer=null,rereads=0;
  const active=()=>!disposed&&sameRepoProofSubject(target,getSubject());
  const current=()=>{try{return active();}catch{return false;}};
- function loseContext(){revision++;controller?.abort();clearTimeout(requestTimer);requestTimer=null;pending=false;envelope=null;issue='Selection changed. Reopen this report for the current asset.';reportHost.replaceChildren();paintStatus();}
+ function loseContext(){revision++;controller?.abort();clearTimeout(requestTimer);requestTimer=null;pending=false;envelope=null;proofViews.delete(container);issue='Selection changed. Reopen this report for the current asset.';reportHost.replaceChildren();paintStatus();}
  function paintStatus(){
   clearTimeout(retryTimer);retryTimer=null;
   const alive=current(),blocked=envelope?.state==='busy'||envelope?.state==='rate_limited',waiting=retryTime!==null&&Date.now()<retryTime||blocked&&retryTime===null;
-  check.disabled=!alive||pending||waiting;refresh.disabled=!alive||pending;
+  check.disabled=!alive||pending||waiting||!!qproofReadParams(doc.location?.search).cached_only;refresh.disabled=!alive||pending;
   check.textContent=pending?'Reading…':envelope?.report?'Run another check':'Check with QProof';
   const texts={ready:'Report available',refreshing:'Refreshing…',not_checked:'Refreshing…',unavailable:'Refreshing…',busy:'Check in progress',rate_limited:'Check limit reached'};
-  badge.textContent=issue?'Refreshing…':pending?'Reading…':envelope?.stale&&envelope?.state==='ready'?'Refreshing…':texts[envelope?.state]||'Reading cache';
+  const queued=envelope?.freshness?.refreshQueued===true||envelope?.queued===true;
+  badge.textContent=issue?'Report unavailable':pending?'Reading…':queued?'Refresh queued':envelope?.report?'Stored report':envelope?.state==='not_checked'?'Not checked':texts[envelope?.state]||'Reading cache';
   badge.className='qpr-state'+(envelope?.stale?' qpr-stale':'');
-  status.textContent=!alive?'Selection changed. Reopen this report for the current asset.':issue?issue:pending?'Reading the selected asset only…':['not_checked','refreshing'].includes(envelope?.state)?(envelope.report?'Refreshing… QProof is rechecking this. The report below is from its last check.':'Refreshing… QProof is checking this now. This panel updates by itself.'):envelope?.state==='busy'?'A check is already in progress. Refresh the cached report to read its result.':envelope?.state==='rate_limited'?'The check limit was reached. Refreshing the cache does not request a scan.':envelope?.state==='unavailable'?'Refreshing… QProof is checking this. This panel updates by itself.':envelope?.stale?'Refreshing… The report below is from QProof’s last check.':'Observations are scoped to this report and its snapshot.';
+  status.textContent=!alive?'Selection changed. Reopen this report for the current asset.':issue?issue:pending?'Reading the selected asset only…':queued?(envelope?.report?'A refresh is queued. Showing the last report while it waits.':'The first check is queued. This panel will read its result.'):envelope?.state==='not_checked'?'No stored report yet.':envelope?.state==='busy'?'A check is already in progress. Refresh to read its result.':envelope?.state==='rate_limited'?'The scheduled check allowance is in use. Stored evidence remains available.':envelope?.state==='unavailable'?'The report is unavailable. Try Refresh again.':envelope?.freshness?.stale?'This stored report is older than 15 minutes. Refresh reads its latest status.':'Observations are scoped to this report and its snapshot.';
   if(retryTime!==null&&Date.now()<retryTime){status.textContent+=' Retry after '+time(new Date(retryTime).toISOString())+'.';retryTimer=setTimeout(paintStatus,Math.min(2147483647,retryTime-Date.now()+20));}
  }
  function fields(value,depth=0){
@@ -70,6 +76,7 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
  }
  function disclosure(name,title,body,open=false){return h('details',{'data-qpr-detail':name,open},h('summary',{},title),h('div',{class:'qpr-disclosure-body'},body));}
  function paintReport(){
+  proofViews.set(container,{envelope,refresh:()=>request('GET')});
   const report=envelope?.report;if(!report||typeof report!=='object'){reportHost.replaceChildren();return;}
   const prior=new Map([...reportHost.querySelectorAll('details')].map(node=>[node.getAttribute('data-qpr-detail'),node.open]));
   const creator=typeof getCreator==='function'?getCreator(envelope):tokenCreatorTruth({chainId:target.chainId,token:target.kind==='token'?target.address:report.input?.launchToken,reports:[envelope]});
@@ -77,17 +84,11 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
   const counts=qproofCheckSummary({checks});let truth=null;
   if(['token','launch'].includes(target.kind))try{truth=tokenTruth({subject:{chainId:target.chainId,token:target.kind==='token'?target.address:report.launchToken||report.input?.launchToken||report.subject?.address},report,envelope,creatorIdentity:creator});}catch{}
   const authorityLabel=v=>v?.label||'Unknown';
-  const strongest=report.level==='danger'||checks.some(c=>c?.status==='danger')?'danger':report.level==='caution'||checks.some(c=>c?.status==='caution')?'caution':report.level;
-  const link=reportURL(report.url),sell=repoProofSellEvidence(report),level={danger:'Danger signals reported',caution:'Caution signals reported',clear:'No flags in returned checks',unknown:'Unknown coverage'}[strongest]||'Unknown coverage';
-  const source=h('div',{class:'qpr-report-overview'},h('p',{class:'qpr-cache-state'},envelope.cached?'Cached report':'Returned check report',envelope.stale||envelope.state==='refreshing'?' · Refreshing':''),h('p',{class:'qpr-level '+(strongest==='danger'?'danger':strongest==='caution'?'caution':'neutral')},level),
-   report.headline?h('p',{class:'qpr-headline'},h('span',{},'QProof summary: '),String(report.headline)):null,
-   h('p',{class:'qpr-counts'},'Reported checks · Danger '+knownCount(counts.danger)+' · Caution '+knownCount(counts.caution)+' · Clear '+knownCount(counts.clear)+' · Unknown '+knownCount(counts.unknown)),
-   h('p',{class:'qpr-count-legend'},QPROOF_CHECK_COUNT_MEANING),
-   h('p',{class:'qpr-coverage'},coverage.complete===true?'Complete reported coverage for this snapshot':coverage.complete===false?'Partial reported coverage':'Coverage completeness not reported',
-    ' · Checked '+knownCount(coverage.checked)+' · Unknown '+knownCount(coverage.unknown)),
-   h('dl',{class:'qpr-meta'},h('div',{},h('dt',{},'Provider retrieval'),h('dd',{},time(report.retrievedAt))),h('div',{},h('dt',{},'Report completed'),h('dd',{},time(report.completedAt))),h('div',{},h('dt',{},'Evidence as of'),h('dd',{},time(envelope.checkedAt)))),
-   report.snapshot?fields({snapshot:report.snapshot}):h('p',{class:'qpr-unknown'},'Snapshot chain/block/slot not reported.'),
-   link?h('a',{class:'qpr-report-link',href:link},'Open full QProof report'):h('p',{class:'qpr-unknown'},'Report link not available.'),h('a',{class:'qpr-how-link',href:'/qproof'},'How QProof works · Check any token'));
+  const presentation=readQProofPresentation(envelope),summary=renderQProofSummary(h,presentation,{onRefresh:()=>request('GET'),refreshing:pending});
+  const link=safeQProofUrl(presentation.links.report)||reportURL(report.url),sell=repoProofSellEvidence(report);
+  const source=h('div',{class:'qpr-report-overview'},summary.bar,summary.strip,summary.fee,
+   link?h('a',{class:'qpr-report-link',href:link},'Open full QProof report'):h('p',{class:'qpr-unknown'},'Report link not available.'),
+   disclosure('methodology','How QProof works',h('div',{},h('p',{class:'qpr-counts'},'Reported checks · Danger '+knownCount(counts.danger)+' · Watch '+knownCount(counts.caution)+' · Passed '+knownCount(counts.clear)+' · Not checked '+knownCount(counts.unknown)),h('p',{class:'qpr-count-legend'},QPROOF_CHECK_COUNT_MEANING),h('p',{class:'qpr-coverage'},coverage.complete===true?'All returned checks completed at this snapshot.':'Some checks are not available in this report.'),h('a',{class:'qpr-how-link',href:'/qproof'},'How QProof works'))));
   const tokenFacts=['token','launch'].includes(target.kind)?h('dl',{class:'qpr-meta qpr-token-facts'},
    h('div',{},h('dt',{},'Creator identity'),h('dd',{},creator.address?h('code',{},creator.address):'Unknown',h('small',{},creator.source||creator.reason))),
    ...[['Mint authority',truth?.authorities.mint],['Freeze authority',truth?.authorities.freeze]].map(([name,v])=>h('div',{},h('dt',{},name),h('dd',{},authorityLabel(v),v?.address?h('code',{},v.address):null)))):null;
@@ -97,7 +98,7 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
    return disclosure('check-'+i,h('span',{class:'qpr-check-title'},h('span',{class:'qpr-check-status '+status},label(status)),h('b',{},String(c?.title||'Untitled check'))),h('div',{},
     c?.category?h('p',{class:'qpr-category'},'Category: '+String(c.category)):null,h('p',{class:'qpr-detail'},typeof c?.detail==='string'&&c.detail?c.detail:'No further detail returned.'),
     c?.data&&typeof c.data==='object'&&!Array.isArray(c.data)&&Object.keys(c.data).length?disclosure('check-fields-'+i,'Returned check fields',fields(c.data)):null,
-    h('div',{class:'qpr-evidence'},'Evidence: ',evidence.length?evidence.map(index=>receiptIds.has(index)?h('button',{type:'button',class:'qpr-source-link',onclick:()=>{receiptNode.open=true;const receipt=doc.getElementById(receiptIds.get(index));receipt?.scrollIntoView({block:'nearest'});receipt?.focus({preventScroll:true});}},'Receipt '+index):h('span',{},'Receipt '+scalar(index)+' not returned')):h('span',{},'No receipt pointer returned.'))),status==='danger'||status==='caution');});
+    h('div',{class:'qpr-evidence'},'Evidence: ',...(Array.isArray(c.evidenceLinks)?c.evidenceLinks:[]).filter(e=>safeQProofUrl(e.url)).map(e=>h('a',{href:safeQProofUrl(e.url),target:'_blank',rel:'noopener noreferrer'},e.label||e.value||'Open evidence')),evidence.length?evidence.map(index=>receiptIds.has(index)?h('button',{type:'button',class:'qpr-source-link',onclick:()=>{receiptNode.open=true;const receipt=doc.getElementById(receiptIds.get(index));receipt?.scrollIntoView({block:'nearest'});receipt?.focus({preventScroll:true});}},'Receipt '+index):h('span',{},'Receipt '+scalar(index)+' not returned')):h('span',{},'No receipt pointer returned.'))),status==='danger'||status==='caution');});
   const checklist=h('div',{class:'qpr-checks'},h('h4',{},'All returned checks · '+checks.length),rows.length?rows:h('p',{class:'qpr-unknown'},'No check details returned.'));
   const observation=disclosure('observations','Authority, liquidity, creator & other observations',report.observations?fields(report.observations):h('p',{class:'qpr-unknown'},'No observations returned.'));
   const subjectNode=disclosure('subject','Report target & input',fields({...(report.subject?{reportedSubject:report.subject}:{}),...(report.input?{reportedInput:report.input}:{}),requested:{kind:target.kind,chainId:target.chainId,address:target.address}}));
@@ -110,10 +111,11 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
   const times=[header,reported].filter(v=>Number.isFinite(v)&&Number.isFinite(new Date(v).getTime())&&v>Date.now());return times.length?Math.max(...times):null;
  }
  async function request(method){
+  if(method==='POST'&&qproofReadParams(doc.location?.search).cached_only)return false;
   if(disposed||pending)return false;if(!current()){loseContext();return false;}
   if(method==='POST'&&(retryTime!==null&&Date.now()<retryTime||retryTime===null&&(envelope?.state==='busy'||envelope?.state==='rate_limited'))){paintStatus();return false;}
   const mine=++revision;controller?.abort();clearTimeout(requestTimer);controller=new AbortController();pending=true;issue=null;paintStatus();
-  const requestController=controller,signal=requestController.signal,timer=setTimeout(()=>requestController.abort(),method==='POST'?60000:10000),data={kind:target.kind,chainId:target.chainId,address:target.address};
+  const requestController=controller,signal=requestController.signal,timer=setTimeout(()=>requestController.abort(),method==='POST'?60000:10000),data={kind:target.kind,chainId:target.chainId,address:target.address,...(method==='GET'?qproofReadParams(doc.location?.search):{})};
   requestTimer=timer;
   try{
    const response=await fetcher('/api/qproof/subject'+(method==='GET'?'?'+new URLSearchParams(data):''),{method,cache:'no-store',signal,...(method==='POST'?{headers:{'content-type':'application/json'},body:JSON.stringify(data)}:{})});
@@ -122,18 +124,19 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
    if(body?.version!==1||!sameRepoProofSubject(target,body.subject,{revision:false})||!STATES.has(body.state))throw Error('The report response did not match this asset. Refresh the cached report to retry.');
    if(!response.ok&&!['busy','rate_limited','unavailable'].includes(body.state))throw Error('The report request could not complete. Refresh the cached report to retry.');
    envelope=structuredClone(body);scheduleReread();const nextRetry=retryAfter(response,body),remaining=retryTime!==null&&retryTime>Date.now()?retryTime:null;retryTime=nextRetry===null?remaining:remaining===null?nextRetry:Math.max(remaining,nextRetry);paintReport();try{onReport(structuredClone(envelope));}catch{}return true;
-  }catch(error){if(disposed||mine!==revision)return false;if(!current()){loseContext();return false;}if(envelope?.report)envelope={...envelope,stale:true};scheduleReread(true);issue=method==='GET'?'Refreshing… QProof is checking this. This panel updates by itself.':error?.name==='AbortError'?'The report response took too long. Refresh the cached report before requesting another check.':error?.message||'The report could not be read. Refresh the cache to retry.';return false;}
+  }catch(error){if(disposed||mine!==revision)return false;if(!current()){loseContext();return false;}if(envelope?.report)envelope={...envelope,stale:true};scheduleReread(true);issue=method==='GET'?(envelope?.report?'The stored report could not be refreshed. Showing the last saved evidence.':'The stored report is unavailable. Try Refresh again.'):error?.name==='AbortError'?'The report response took too long. Refresh the cached report before requesting another check.':error?.message||'The report could not be read. Refresh the cache to retry.';return false;}
   finally{clearTimeout(timer);if(requestTimer===timer)requestTimer=null;if(!disposed&&mine===revision){pending=false;paintStatus();}}
  }
  // While RepoProof refreshes (or a read failed), re-read the stored report a bounded number of times.
  function scheduleReread(failed=false){
   clearTimeout(rereadTimer);rereadTimer=null;
-  const waiting=failed||['refreshing','not_checked','unavailable'].includes(envelope?.state)||envelope?.stale;
+  const canonical=envelope?.presentationVersion===2||envelope?.report?.presentationVersion===2,queued=envelope?.freshness?.refreshQueued===true||envelope?.queued===true;
+  const waiting=canonical?(queued||failed&&!envelope?.report):(failed||['refreshing','not_checked','unavailable'].includes(envelope?.state)||envelope?.stale);
   if(!waiting){rereads=0;return;}if(rereads>=REREADS||disposed)return;
   rereads++;rereadTimer=setTimeout(()=>{rereadTimer=null;if(!disposed&&current())void request('GET');},REREAD_MS);
  }
  check.addEventListener('click',()=>request('POST'));refresh.addEventListener('click',()=>request('GET'));
- const view=Object.freeze({element,repaint(){if(!disposed&&current())paintReport();},refreshCache:()=>request('GET'),dispose(){if(disposed)return;disposed=true;revision++;controller?.abort();clearTimeout(requestTimer);clearTimeout(retryTimer);clearTimeout(rereadTimer);if(element.parentNode===container)element.remove();}});
+ const view=Object.freeze({element,repaint(){if(!disposed&&current())paintReport();},refreshCache:()=>request('GET'),dispose(){if(disposed)return;disposed=true;proofViews.delete(container);revision++;controller?.abort();clearTimeout(requestTimer);clearTimeout(retryTimer);clearTimeout(rereadTimer);if(element.parentNode===container)element.remove();}});
  void view.refreshCache();return view;
 }
 
