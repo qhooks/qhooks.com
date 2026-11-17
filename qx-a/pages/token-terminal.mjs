@@ -544,6 +544,7 @@ function setMode(token) {
   if (token) startOverlay();
 }
 function paint() {
+  if(body.dataset.tokenResolution)return;
   const A = api(), d = A?.display?.(); if (!d?.meta) {ticketMeta=null;ticketIdentity.remove();return;}
   const sel = A.state.sel, m = d.meta, s = d.summary || {};
   const key = sel ? (sel.ext ? 't:' + sel.chainId + ':' + sel.ext : 'm:' + sel.chainId + ':' + sel.controller) : '';
@@ -623,6 +624,7 @@ function pushSlab(t, d, enter) {
 setInterval(() => { const now = Date.now() / 1000; for (const n of slabTape.querySelectorAll('[data-ts]')) n.textContent = fmt.age(now - +n.dataset.ts); }, 1000);
 function clear() { ticketMeta=null;ticketIdentity.remove();setMode(false); if (shell) shell.setTitle('Trade'); clearInterval(CL.timer); T.key = ''; root.style.removeProperty('--qa-banner-blur'); paintedArt = ''; }
 
+doc.addEventListener('qxt:resolution',()=>clear());
 doc.addEventListener('qxt:paint', paint);
 doc.addEventListener('qxt:clear', () => { if (!api()?.state?.sel) clear(); });
 doc.addEventListener('qxt:discover', clear);

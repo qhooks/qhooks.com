@@ -1,3 +1,5 @@
+import{createResolvedTokenLoader,validTokenTarget,hasTokenLinkIntent,resolutionError}from'./qx-token-resolution.mjs';
+import{createTerminalResolutionView}from'./qx-terminal-resolution-view.mjs';
 import{fundFor}from'./qx-fund-catalog.mjs';
 import {discoveryEvidence,evidenceTime} from './qx-discovery-evidence.mjs';
 import {discoveryBadges} from './qx-discovery-badges.mjs';
@@ -864,6 +866,8 @@ function renderPositions(){positionsPanel?.render();}
 
 // ---- Selecting a market ----
 let ticket, selectionFlow, poll = null, mseq = 0;
+const resolvedTokenHeader=createResolvedTokenLoader({loadHeader:loadExternalHeader});
+const resolutionView=createTerminalResolutionView({main:$('qxt-main'),onBrowse:()=>document.dispatchEvent(new CustomEvent('qxt:discover'))});
 const canonicalHash=()=>state.sel?(state.sel.ext?'#t='+state.sel.chainId+':'+state.sel.ext:'#m='+state.sel.chainId+':'+state.sel.controller):'';
 function restoreSelectionURL(){history.replaceState(null,'',location.pathname+location.search+canonicalHash());}
 function clearMarketView(message='Choose a token') {
@@ -888,6 +892,8 @@ function clearMarketView(message='Choose a token') {
   document.dispatchEvent(new CustomEvent('qxt:clear'));
 }
 function paintMarket() {
+  if(!state.data||state.data.resolution?.state==='unpriced')return;
+  resolutionView.clear();
   void marketPosition.refresh();
   const selected=selectedContext();marketWorkspace?.receiveMarket(selected,state.data,state.data.marketCoverage||{});
   workspaceMemory.remember({...selected,receivedAt:Date.now(),observedAt:state.data.token?.observedAt??state.data.synced?.at??null,stale:!!state.data.token?.stale,openedAt:state.openedAt});renderFeed();syncConversation();positionsPanel?.render();
@@ -999,6 +1005,7 @@ async function saleState(chainId,token){
 async function select(chainId,controller,{quiet=false,recheck=true}={}) {
   if(String(chainId)==='solana')return selectExternal('solana',String(controller),{quiet});
   chainId=String(chainId);controller=String(controller).toLowerCase();
+  if(!validTokenTarget(chainId,controller))return rejectTokenLink({kind:'launch',chainId,controller});
   let outside=false;
   const opened=await selectionFlow.open({kind:'launch',chainId,controller,quiet},async run=>{
     // On chains with sale-first launches, a token still in its sale answers here at once (it has no market yet).
@@ -1032,16 +1039,25 @@ async function recheckLaunch(chainId,address,quiet){
 // Outside-token metadata, chart and trades are owned by the admitted selection.
 let externalRead=0;
 async function loadExternal({signal,strict=false}={}) {
-  if(!state.sel?.ext)return false;
+  if(!state.sel?.ext||state.data?.resolution?.state==='unpriced')return false;
+  const run=selectionFlow.current();if(!run?.active()||run.controller.signal.aborted)return false;
   const mine=mseq,read=++externalRead,{chainId,ext}=state.sel;
+  const currentRead=()=>mine===mseq&&read===externalRead&&selectionFlow.current()===run&&run.active()&&!run.controller.signal.aborted&&state.data?.resolution?.state!=='unpriced';
   try {
     if(state.tf<60){state.tf=60;store('tf',60);for(const b of $('qxt-tf').querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.tf==='60'));}
-    let tf=state.tf;const data=await loadExternalHeader({chainId,address:ext,tf,signal});
+    let tf=state.tf;const data=await resolvedTokenHeader({chainId,address:ext,tf,signal});if(!currentRead())return false;
     // Quiet tokens open on 5m (Randall, 2026-11-10: "looks good to me - go ahead"): under one trade per 5 minutes in 24 h,
     // 1m candles are mostly empty. Only when the visitor hasn't picked a timeframe in this visit.
     const trades24=(Number(data?.summary?.buys24)||0)+(Number(data?.summary?.sells24)||0);
     if(!tfPicked&&tf===60&&data?.summary&&trades24<288){tf=300;state.tf=300;data.tf=300;pressGroup($('qxt-tf'),'tf',300);}
-    if(mine!==mseq||read!==externalRead)return false;
+    if(data.resolution?.state==='unpriced'){
+      clearInterval(poll);poll=null;externalRead++;
+      liveHeader=null;state.data=data;state.loading=false;state.loadError=null;
+      const run=selectionFlow.current();if(run)ticket.failSelection(run.intent,'No price or trading route is available for this token.');
+      resolutionView.show({state:'unpriced',target:{chainId,address:ext},proof:data.resolution.proof,retry:()=>selectExternal(chainId,ext)});
+      return true;
+    }
+    resolutionView.clear();
     const prior=state.data,pool=data.token.pools?.[0]?.address;
     if(prior?.ext&&prior.meta.token===ext&&prior.meta.chainId===chainId){
       data.safety=prior.safety;
@@ -1069,7 +1085,7 @@ async function loadExternal({signal,strict=false}={}) {
     };
     void loadExternalHistory({chainId,pool,tf,signal,token:ext,quote:selection.quote,curve:data.token.curve||null,onData:applyHistory}).then(applyHistory).catch(()=>{});
     return true;
-  }catch(error){if(mine!==mseq||read!==externalRead)return false;if(strict)throw error;marketWorkspace?.failMarket(selectedContext(),error);$('qxt-sync').textContent=error.message||'Refreshing market data…';return false;}
+  }catch(error){if(!currentRead())return false;if(strict)throw error;marketWorkspace?.failMarket(selectedContext(),error);$('qxt-sync').textContent=error.message||'Refreshing market data…';return false;}
 }
 // Live header for outside tokens: the browser reads DexScreener itself every 20 s while the page is visible.
 // While the browser's own read is under a minute old it is the only source for these numbers (no flip-backs from a
@@ -1081,26 +1097,30 @@ function applyLiveHeader(data,patch){
 }
 async function refreshLiveHeader(){
  // curves: a launchpad token on its curve has no DexScreener pool of its own (only third-party ones), so its numbers stay the curve's.
- if(liveBusy||document.hidden||!state.sel?.ext||!state.data?.ext||(state.data.token?.curve&&state.data.token.curve.phase!=='pool'))return;
- const {chainId,ext}=state.sel,key=chainId+':'+ext,pool=state.data.token?.pools?.[0]?.address;liveBusy=true;
+ if(liveBusy||document.hidden||!state.sel?.ext||!state.data?.ext||state.data.resolution?.state==='unpriced'||(state.data.token?.curve&&state.data.token.curve.phase!=='pool'))return;
+ const run=selectionFlow.current(),mine=mseq,selection=state.sel,data=state.data;
+ if(!run?.active()||run.controller.signal.aborted)return;
+ const {chainId,ext}=selection,key=chainId+':'+ext,pool=data.token?.pools?.[0]?.address;liveBusy=true;
  try{
-  const pairs=await fetchDexPairs(chainId,[ext]);if(!pairs||state.sel?.ext!==ext||state.sel?.chainId!==chainId||!state.data?.ext)return;
+  const pairs=await fetchDexPairs(chainId,[ext]);if(!pairs||selectionFlow.current()!==run||!run.active()||run.controller.signal.aborted||mine!==mseq||state.sel!==selection||state.data!==data||data.resolution?.state==='unpriced')return;
   const patch=headerPatch(pickPair(pairs,chainId,ext,pool));if(!patch)return;
-  liveHeader={key,patch};applyLiveHeader(state.data,patch);
-  ticket.setPriceUsd(state.data.summary.price,selectionFlow.current()?.intent);paintMarket();
+  liveHeader={key,patch};applyLiveHeader(data,patch);
+  ticket.setPriceUsd(data.summary.price,run.intent);paintMarket();
  }finally{liveBusy=false;}
 }
 setInterval(()=>{void refreshLiveHeader();},20000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshLiveHeader();});
 async function selectExternal(chainId,address,{quiet=false}={}) {
   chainId=String(chainId);address=chainId==='solana'?String(address):String(address).toLowerCase();
+  if(!validTokenTarget(chainId,address))return rejectTokenLink({kind:'external',chainId,address});
   return selectionFlow.open({kind:'external',chainId,address,quiet},async run=>{
     await loadExternal({signal:run.controller.signal,strict:true});if(!run.active()||!state.data)return false;
+    if(state.data.resolution?.state==='unpriced')return true;
     const t=state.data.token;
     if(!await ticket.setExternal({chainId,address,symbol:t.symbol,decimals:t.decimals,pools:t.pools||[],curve:t.curve||null},run.intent)||!run.active())return false;
     ticket.setPriceUsd(state.data.summary.price,run.intent);
     refreshSelectedChecks();
-    poll=setInterval(()=>{if(!document.hidden)loadExternal();},15000);liveHeader=null;void refreshLiveHeader();
+    poll=setInterval(()=>{if(run.active()&&!document.hidden)loadExternal();},15000);liveHeader=null;void refreshLiveHeader();
     if(!quiet)$('qxt-main').classList.add('has-market');return true;
   });
 }
@@ -1270,6 +1290,7 @@ selectedProof=mountSelectedRepoProof($('qxt-repoproof'),{getSelection:selectedCo
 }});
 selectionFlow=createTerminalSelection({ticket,
  onBegin(target){
+  liveHeader=null;resolutionView.show({state:'loading',target});
   resetCreatorState();mseq++;onchainEvm.clear();clearInterval(poll);poll=null;clearConversation();state.openedAt=Date.now();state.data=null;state.pool=null;window.__qhooksPool=null;document.dispatchEvent(new CustomEvent('qhooks:pool',{detail:null}));state.loading=true;state.loadError=null;lastChartKey='';chosen=false;renderLaunchActions();
   state.sel=target.kind==='launch'?{chainId:target.chainId,controller:target.controller}:{chainId:target.chainId,controller:null,ext:target.address};selectedProof.sync();
   if(target.kind==='external'&&!['watch','wallets'].includes(state.feed)){state.feed='recent';store('feed',state.feed);pressGroup($('qxt-feed-tabs'),'feed','recent');}
@@ -1277,8 +1298,10 @@ selectionFlow=createTerminalSelection({ticket,
   document.dispatchEvent(new CustomEvent('qxt:token'));
   if(!target.quiet&&matchMedia('(max-width:760px)').matches)$('qxt-head').scrollIntoView({block:'start'});
  },
- onClear(){resetCreatorState();if(matchMedia('(max-width:760px)').matches)requestAnimationFrame(()=>scrollTo({top:0,behavior:'auto'}));mseq++;onchainEvm.clear();clearInterval(poll);poll=null;selectedProof.clear();clearConversation();marketWorkspace.clear();state.sel=null;state.data=null;state.pool=null;window.__qhooksPool=null;document.dispatchEvent(new CustomEvent('qhooks:pool',{detail:null}));state.loading=false;state.loadError=null;clearMarketView();$('qxt-sync').textContent='';restoreSelectionURL();},
- onFailure(error){mseq++;onchainEvm.clear();clearInterval(poll);poll=null;state.pool=null;window.__qhooksPool=null;document.dispatchEvent(new CustomEvent('qhooks:pool',{detail:null}));state.loading=false;state.loadError=error.message||'Could not load this token. Choose it again to retry.';state.data=null;marketWorkspace.failMarket(selectedContext(),error);marketWorkspace.failRisk(selectedContext(),Error('Market metadata is unavailable; checks were not loaded.'));clearMarketView(error.view||'Token unavailable');$('qxt-sync').textContent=state.loadError;void marketPosition?.refresh({force:true}); /* walletchains: a token with no market still shows what the wallet holds */
+ onClear(){resolutionView.clear();resetCreatorState();if(matchMedia('(max-width:760px)').matches)requestAnimationFrame(()=>scrollTo({top:0,behavior:'auto'}));mseq++;onchainEvm.clear();clearInterval(poll);poll=null;selectedProof.clear();clearConversation();marketWorkspace.clear();state.sel=null;state.data=null;state.pool=null;window.__qhooksPool=null;document.dispatchEvent(new CustomEvent('qhooks:pool',{detail:null}));state.loading=false;state.loadError=null;clearMarketView();$('qxt-sync').textContent='';restoreSelectionURL();},
+ onFailure(error,next){mseq++;onchainEvm.clear();clearInterval(poll);poll=null;state.pool=null;window.__qhooksPool=null;document.dispatchEvent(new CustomEvent('qhooks:pool',{detail:null}));state.loading=false;state.loadError=error.message||'Could not load this token. Choose it again to retry.';state.data=null;marketWorkspace.failMarket(selectedContext(),error);marketWorkspace.failRisk(selectedContext(),Error('Market metadata is unavailable; checks were not loaded.'));clearMarketView(error.view||'Token unavailable');$('qxt-sync').textContent=state.loadError;void marketPosition?.refresh({force:true}); /* walletchains: a token with no market still shows what the wallet holds */
+  if(error.resolution||!error.venue&&!/ is in its sale \(/.test(error.message||'')){state.sel=null;document.dispatchEvent(new CustomEvent('qxt:clear'));resolutionView.show({state:error.code==='not_found'?'not_found':'unavailable',target:next.target,retry:()=>next.target.kind==='launch'?select(next.target.chainId,next.target.controller):selectExternal(next.target.chainId,next.target.address)});}
+  else resolutionView.clear();
   // mktsearch: a venue line (a launchpad curve, no pool yet) carries its link, painted after the failure settles.
   if(error.link?.href){const msg=state.loadError,link=error.link;setTimeout(()=>{const el=$('qxt-sync');if(!el||el.textContent!==msg)return;const a=document.createElement('a');a.href=link.href;a.target='_blank';a.rel='noopener';a.textContent=link.text||'Open';el.replaceChildren(msg+' ',a);},0);}},
  onBlocked(){restoreSelectionURL();$('qxt-sync').textContent='Finish the current trade or resolve its funded recovery before changing tokens.';},
@@ -1307,9 +1330,14 @@ export async function qhooksMarketFor(chain,token,fetcher=fetch){
    const j=await r.json();const row=(j.rows||[]).find(x=>String(x.chainId)===String(chain)&&String(x.token||'').toLowerCase()===token&&/^0x[0-9a-f]{40}$/.test(String(x.controller||'').toLowerCase()));
    return row?String(row.controller).toLowerCase():null;}catch{return null;}
 }
+function rejectTokenLink(target={}){
+ const hash=location.hash;if(!selectionFlow.clear())return false;
+ if(hasTokenLinkIntent(hash))history.replaceState(history.state,'',location.pathname+location.search+hash);
+ resolutionView.show({state:'not_found',target});return false;
+}
 async function openTerminalHash(hash) {
   const route = parseTerminalHash(hash), revision = ++linkRevision;
-  if (!route) return false;
+  if(!route){if(hasTokenLinkIntent(hash)){rejectTokenLink();return true;}return false;}
   let { kind, chain, address, trade } = route;
   if (kind === 't') {
     // mktsearch: the directory search for a pasted address can be a cold read (up to its 4 s cap). Past 1.5 s the outside
@@ -1333,7 +1361,7 @@ async function openTerminalHash(hash) {
     }
   }
   const opened=await(kind==='m'?select(chain,address):selectExternal(chain,address));
-  if(!opened)return true;
+  if(!opened||state.data?.resolution?.state==='unpriced')return true;
   const active = () => revision === linkRevision && state.sel?.chainId === chain && (kind === 'm' ? state.sel.controller === address : state.sel.ext === address);
   if (active() && state.data && trade) {
     if(kind==='m'){const run=selectionFlow.current();if(!await run?.ticketReady||!run.active())return true;}
@@ -1346,7 +1374,7 @@ async function openTerminalHash(hash) {
 // A link opened while the terminal is already open switches the token and fills its ticket.
 addEventListener('hashchange', event => {
  if(!ticket.canSelect()){selectionFlow.clear();event.stopImmediatePropagation();return;}
- if(!parseTerminalHash(location.hash)){backToTokens();return;}
+ if(!parseTerminalHash(location.hash)){if(hasTokenLinkIntent(location.hash))rejectTokenLink();else backToTokens();return;}
  linkTool = toolFromLink(location.hash);
  openTerminalHash(location.hash).catch(e=>{$('qxt-sync').textContent=e.message||'Could not open that token';});
 },true);

@@ -1,0 +1,30 @@
+{
+  "status": "RELEASE_OWNER_CONDITIONAL_EXACT_HASH_APPROVAL_CONDITIONS_PROVEN",
+  "sourceRelease": "422a2526-509f-4681-91b7-1e865c1e5b0a",
+  "sourceWorkerSha256": "c0335a86ddb9eb525fe582297634422aee3e8e4b0922e413c992e385ac4dd95d",
+  "path": "b/p6-after-g3-20261117/terminal/qx-terminal.4VE2U3AY.mjs",
+  "sha256": "47585c418eeadbb4e3611425d580fdb45a2b7313b5bfad95cd26830ad68a3b7a",
+  "bytes": 431651,
+  "reviewedReferences": [
+    "https://www.tradingview.com/?utm_medium=lwc-link&utm_campaign=lwc-chart",
+    "Charting by TradingView"
+  ],
+  "referencesExactly": 2,
+  "graphInput": {
+    "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+    "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+  },
+  "closedAdvancedChartsInputs": 0,
+  "existingApacheLicense": {
+    "path": "vendor/lightweight-charts/LICENSE",
+    "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+  },
+  "previous32AllowancesUnchangedAtPrep": true,
+  "allOtherPolicyFieldsUnchangedAtPrep": true,
+  "authority": "Root explicitly approved thisprovenexact33rdpath/hash47585c41\u2026a3b7a foractualLIVEP6422a2526. UnchangedApachevendor/license/2knownrefs/noAdvancedCharts; no wildcard or guardcodechange.",
+  "precheck": "LICENSE-PRECHECK.log soleunknownnewderivedpath",
+  "network": 0,
+  "at": "2026-11-17T06:29:53.855698+00:00",
+  "previous32AllowancesValueExact": true,
+  "allOtherPolicyFieldsExact": true
+}
