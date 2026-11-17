@@ -1,3 +1,4 @@
+import { createSceneFrames, sceneMotionAllowed } from '/qx-scene-lifecycle.mjs';
 import {portraitWordScale,projectedWordFit} from './word-fit.mjs';
 // QHooks landing scene (2026-11-12): one fixed WebGL canvas behind the home page, driven by scroll progress P in [0, 6):
 //   0 hero · 1 builders · 2 callers · 3 holders · 4 traders · 5 close.
@@ -42,7 +43,7 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
   scene.background = new THREE.Color(0x050505);
   scene.fog = new THREE.FogExp2(0x050505, .03);
   const camera = new THREE.PerspectiveCamera(34, 1, .1, 100);
-  let W = 1, H = 1, PORT = false, P = 0, Pt = 0, t = 0, running = false, raf = 0, last = 0;
+  let W = 1, H = 1, PORT = false, P = 0, Pt = 0, t = 0, running = false, dead = false;
   const texLoader = new THREE.TextureLoader();
   const imgTex = (src) => { const tx = texLoader.load(src); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; return tx; };
 
@@ -320,7 +321,8 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
   let spring = null, studFlash = 0, forgeT = 0;
   const mountedAt = performance.now();
   const pointer = { x: 0, y: 0 }, pointerT = { x: 0, y: 0 };
-  addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') { pointerT.x = (e.clientX / innerWidth - .5) * 2; pointerT.y = (e.clientY / innerHeight - .5) * 2; } }, { passive: true });
+  const pointerMove = (e) => { if (e.pointerType === 'mouse') { pointerT.x = (e.clientX / innerWidth - .5) * 2; pointerT.y = (e.clientY / innerHeight - .5) * 2; } };
+  addEventListener('pointermove', pointerMove, { passive: true });
   function tug(side, usd = 0) {
     const k = Math.min(1, .35 + Math.log10(1 + usd) / 3.2);
     spring = { t0: t, a: (side === 'sell' ? -1.1 : side === 'burn' ? .7 : 1.6) * k * .07, y: (side === 'sell' ? -.05 : .1) * k };
@@ -338,10 +340,19 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
     setWord(txt) { forcedWord = txt ? String(txt) : null; nameIdx = -1; }, // the glyph gate renders each letter alone (null restores the chain words)
     setCall({ pct, label }) { callData = { pct, label }; },
     setBands(arr) { bands = Array.isArray(arr) && arr.length ? arr : null; },
-    setProgress(p) { Pt = clamp(p, 0, 5.999); if (!running) api.resume(); },
-    resume() { if (running) return; running = true; last = performance.now(); raf = requestAnimationFrame(frame); },
-    pause() { running = false; cancelAnimationFrame(raf); },
-    dispose() { api.pause(); renderer.dispose(); },
+    setProgress(p) { Pt = clamp(p, 0, 5.999); },
+    resume() { if (running || dead || document.hidden || !sceneMotionAllowed()) return; running = true; frames.resume(); },
+    pause() { running = false; frames.pause(); },
+    dispose() {
+      if (dead) return;
+      dead = true; api.pause(); frames.dispose(); removeEventListener('pointermove', pointerMove);
+      document.removeEventListener('visibilitychange', onVisibility);
+      const geometries = new Set(), materials = new Set(), textures = new Set();
+      for (const world of [scene, envScene]) world.traverse(o => { if (o.geometry) geometries.add(o.geometry); for (const m of [].concat(o.material || [])) materials.add(m); });
+      for (const m of materials) { for (const value of Object.values(m)) if (value?.isTexture) textures.add(value); m.dispose(); }
+      geometries.forEach(g => g.dispose()); textures.forEach(tx => tx.dispose()); scene.environment?.dispose(); geoCache.forEach(g => g.dispose());
+      composer.passes.forEach(pass => pass.dispose?.()); composer.dispose(); renderer.dispose();
+    },
     get running() { return running; },
     debug() { const low = new THREE.Vector3(0, -1.14, 0).applyMatrix4(hookRoot.matrixWorld).project(camera); const num = numberG.visible ? new THREE.Vector3(0, -.72, 0).applyMatrix4(numberG.matrixWorld).project(camera) : null;
       const bn = burnedG.visible ? (1 - new THREE.Vector3(0, -.72, 0).applyMatrix4(burnedG.matrixWorld).project(camera).y) / 2 * H : null;
@@ -358,9 +369,9 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
   /* ---------- the frame ---------- */
   const tmpV = new THREE.Vector3();
   let lastChapter = -1;
-  function frame(now) {
-    if (!running) return;
-    const dt = Math.min(.05, (now - last) / 1000); last = now; t += dt;
+  function frame(now, dt) {
+    if (!running || document.hidden || !sceneMotionAllowed()) { api.pause(); return; }
+    t += dt;
     resize();
     P += (Pt - P) * (1 - Math.exp(-dt * 7));
     pointer.x += (pointerT.x - pointer.x) * (1 - Math.exp(-dt * 3)); pointer.y += (pointerT.y - pointer.y) * (1 - Math.exp(-dt * 3));
@@ -474,8 +485,10 @@ export async function mountScene(canvas, { icons = [], logo = '/qhooks-logo.jpg'
       nameG.scale.multiplyScalar(projectedWordFit({left,right,width:W}));
     }
     composer.render();
-    raf = requestAnimationFrame(frame);
   }
+  const frames = createSceneFrames(frame);
+  const onVisibility = () => { if (document.hidden) api.pause(); };
+  document.addEventListener('visibilitychange', onVisibility);
   resize();
   return api;
 }

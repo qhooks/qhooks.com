@@ -1,0 +1,11 @@
+.qxt-costs{margin:12px 0 8px;padding:12px;border:1px solid #b7975838;background:#0e1010;color:#eae6dd;border-radius:8px;font-size:12px;line-height:1.4;min-width:0}
+.qxt-costs[hidden]{display:none!important}.qxt-cost-heading{display:block;color:#d2ad72;font-size:13px;margin-bottom:9px;font-weight:600}
+.qxt-costs dl{display:grid;grid-template-columns:minmax(95px,.8fr) minmax(0,1.3fr);gap:7px 12px;margin:0}
+.qxt-costs dt{color:#aaa99e;min-width:0}.qxt-costs dd{margin:0;text-align:right;min-width:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.qxt-costs .qxt-cost-note{display:block!important;-webkit-line-clamp:unset!important;max-height:none!important;height:auto!important;overflow:visible!important;color:#aaa99e;font-size:12px;line-height:1.45;margin:10px 0 0;border-top:1px solid #ffffff13;padding-top:9px}
+.qxt-quote-tools{flex-wrap:wrap;gap:6px;min-width:0}.qxt-quote-tools small{min-width:0;overflow-wrap:anywhere}
+@media(max-width:360px){.qxt-costs{padding:10px}.qxt-costs dl{grid-template-columns:minmax(88px,.8fr) minmax(0,1.2fr);gap:7px 8px}}
+
+.qxt-cost-details{margin-top:7px;border-top:1px solid #ffffff13;padding-top:3px}.qxt-cost-details>summary{font-size:12px;min-height:28px;display:list-item;cursor:pointer;color:#d2ad72;line-height:28px}.qxt-cost-details>dl{margin-top:8px}.qxt-cost-details[hidden]{display:none!important}
+
+.qxt-cost-heading[hidden]{display:none!important}

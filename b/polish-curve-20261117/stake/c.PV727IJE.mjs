@@ -1,0 +1,1 @@
+import{b as e}from"./c.XLIFKH5H.mjs";var r=e((t,o)=>{o.exports=function(){throw new Error("ws does not work in the browser. Browser clients must use the native WebSocket object")}}),n=r();export{n as default};

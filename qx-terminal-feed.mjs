@@ -1,5 +1,7 @@
+import{feedRowPriceView}from'./qx-feed-row-price-view.mjs';
 import{defaultTrendingMode,projectTrendingContracts,discoveryContractKey}from'./qx-discovery-groups.mjs';
 import{publicReadFetch}from'./qx-public-read.mjs';
+import{quickBuyPlan}from'./qx-quick-buy-plan.mjs';
 import{FUND_TOKENS,fundRow}from'./qx-fund-catalog.mjs';
 import {mountDiscoveryNext} from './qx-discovery-next.mjs';
 import {discoveryBadges} from './qx-discovery-badges.mjs';
@@ -56,13 +58,13 @@ for(const href of ['/qx-pulse.css','/qx-discovery-badges.css','/qx-discovery-gro
 const columns = [
   ['token', 'Token'], ['price', 'Price'], ['move', 'Change'],
   ['volume', 'Volume 24h'], ['liquidity', 'Liquidity'], ['mcap', 'MCap'],
-  ['holders','Holders'], ['txns', 'Swaps 24h'], ['makers', 'Wallet activity'], ['safety', 'Safety'], ['buy', 'Buy'],
+  ['holders','Holders'], ['txns', 'B / S · 24h'], ['makers', 'Wallet activity'], ['top10','Top 10'], ['dev','Dev'], ['riskgrid','Holder checks'], ['safety', 'Safety'], ['buy', 'Buy'],
 ];
 const nodes = new Map();
 const expandedContracts=new Set();let contractProjection={active:false},contractContext='';
 const layoutControls=el('div',{class:'qxfd-layout-controls',role:'group','aria-label':'Token layout'});
 for(const [id,label]of[['list','List'],['pulse','Pulse']]){const b=button(label,{'data-layout':id,'aria-pressed':String(state.layout===id)});b.addEventListener('click',()=>{if(state.layout===id)return;loader.cancel();state.layout=id;state.loading=false;try{storage?.setItem('qhooks:discovery:layout:v1',id);}catch{}renderRows();refresh();});layoutControls.append(b);}
-const root = el('section', { class: 'qxfd', id: 'qxt-discover', 'aria-label': 'Tokens' });
+const root = el('section', { class: 'qxfd qxfd-price-visible', id: 'qxt-discover', 'aria-label': 'Tokens' });
 const tabs = el('div', { class: 'qxfd-tabs', role: 'tablist', 'aria-label': 'Token lists' });
 const chainGroup = el('div', { class: 'qxfd-chains', role: 'group', 'aria-label': 'Token chains' });
 const status = el('span', { class: 'qxfd-status', role: 'status', 'aria-live': 'polite' });
@@ -98,7 +100,7 @@ for(const [label,filters] of [['Active',{liquidityMin:'10000',volumeMin:'10000',
 }
 // Common presets live in the instant chip row.
 function captureFilters(){return validateDiscoveryFilters(Object.fromEntries(Object.entries(filterFields).map(([k,v])=>[k,v.value])));}
-function updateWindow(){if(typeof windowChip!=='undefined')windowChip.value=state.window;for(const b of windows.children)b.setAttribute('aria-pressed',String(b.dataset.window===state.window));const label=WINDOWS.find(([k])=>k===state.window)?.[1]||'24h';headers.get('move')?.querySelector('button')?.replaceChildren(label+' change');}
+function updateWindow(){if(typeof windowChip!=='undefined')windowChip.value=state.window;for(const b of windows.children)b.setAttribute('aria-pressed',String(b.dataset.window===state.window));const label=WINDOWS.find(([k])=>k===state.window)?.[1]||'24h';const headButton=headers.get('move')?.querySelector('button');if(headButton){headButton.setAttribute('aria-label',label+' change');headButton.replaceChildren(el('span',{class:'qxfd-head-full'},label+' change'),el('span',{class:'qxfd-head-short','aria-hidden':'true'},label));}}
 windows.addEventListener('click',event=>{const key=event.target.closest('[data-window]')?.dataset.window;if(!WINDOWS.some(([k])=>k===key)||key===state.window)return;state.window=key;savePreference(storage,'window',key);updateWindow();refresh();});
 applyFilters.addEventListener('click',()=>{try{state.filters=captureFilters();filterDetails.open=false;filterDetails.querySelector('summary').focus({preventScroll:true});filterMessage.textContent='Filters applied to this list.';renderRows();refresh();}catch(error){filterMessage.textContent=error.message;}});
 const widen=button('Widen filters',{class:'qxfd-widen'});widen.addEventListener('click',()=>resetFilters.click());
@@ -111,13 +113,14 @@ const noticeText = el('span');
 const retry = button('Retry', { class: 'qxfd-retry' });
 const notice = el('div', { class: 'qxfd-notice', role: 'status', hidden: '' }, noticeText, retry);
 const scroll = el('div', { class: 'qxfd-scroll' });
-const table = el('table', { class: 'qxfd-table', 'aria-label': 'Tokens' });
+const table = el('table', { class: 'qxfd-table qxfd-has-holders', 'aria-label': 'Tokens' });
 const header = el('tr');
 const headers = new Map();
 for (const [key, label] of columns) {
   const th = el('th', { scope: 'col', class: 'qxfd-' + key });
   if (SORT_KEYS.includes(key)) {
-    th.append(button(label, { 'data-sort': key, title: 'Sort by ' + label }));
+    const short={mcap:'MC',volume:'Vol',liquidity:'Liq',holders:'Hold',move:'Change'}[key]||label;
+    const sortButton=button('', { 'data-sort': key, title: 'Sort by ' + label,'aria-label':label });sortButton.append(el('span',{class:'qxfd-head-full'},label),el('span',{class:'qxfd-head-short','aria-hidden':'true'},short));th.append(sortButton);
     th.setAttribute('aria-sort', 'none');
     headers.set(key, th);
   } else th.textContent = label;
@@ -147,15 +150,29 @@ chainChip.value=state.chain;chainChip.addEventListener('change',()=>chainGroup.q
 const windowChip=el('select',{'aria-label':'Change window',class:'qxfd-window-chip'},...WINDOWS.map(([id,label])=>el('option',{value:id},label)));windowChip.value=state.window;windowChip.addEventListener('change',()=>windows.querySelector('[data-window="'+windowChip.value+'"]')?.click());
 const settings=button('⚙',{'aria-label':'Trade settings',class:'qxfd-settings'}),quickChip=button('⚡ 0.01 ETH',{'aria-label':'Quick-buy amounts in Trade settings',class:'qxfd-quick-chip'});
 const settingsChain=()=>state.chain==='all'?'4663':state.chain;
+// One shared amount is shown only when it is true for every visible quick-buy row.
+const paintQuickPreset=models=>{const labels=new Set(models.filter(vm=>vm.quick.supported&&!vm.quick.stock).map(vm=>vm.quick.value+' '+vm.quick.unit)),plan=quickBuyPlan({chainId:settingsChain(),kind:'launch'},api?.quickForChain?.(settingsChain())||api?.state.quick||{}),mixed=state.chain==='all'&&labels.size>1;const caption=mixed?'Amounts':labels.size===1?[...labels][0]:plan.payment?plan.value+' '+plan.unit:'Trade settings';text(quickChip,'⚡ '+caption);quickChip.setAttribute('aria-label',quickChip.textContent+' · Trade settings');quickChip.title=mixed?'Quick-buy amounts vary by chain. Open Trade settings.':'Quick buy: '+caption;};
+
 for(const control of[settings,quickChip])control.addEventListener('click',()=>openQuickAmountSettings({chainId:settingsChain(),opener:control}));
 const hotNow=button('Hot now',{class:'qxfd-hot-now','aria-pressed':'false',title:'Sort by fresh momentum and observed 24h volume'});hotNow.addEventListener('click',()=>setSort('hot','desc'));
-const instant=el('div',{class:'qxfd-instant'},chainChip,windowChip,presetChips[0].button,hotNow,listOptions,settings);
-const listControls=[el('div',{class:'qxfd-toolbar'},tabs),instant];
+const instant=el('div',{class:'qxfd-instant'},chainChip,windowChip,hotNow,...presetChips.map(p=>p.button),listOptions,settings);
+const searchToggle=button('⌕',{'aria-label':'Search tokens',class:'qxfd-search-toggle','aria-expanded':'false','aria-controls':'qxt-search'});
+searchToggle.addEventListener('click',()=>{root.classList.toggle('qxfd-search-open');searchToggle.setAttribute('aria-expanded',String(root.classList.contains('qxfd-search-open')));if(root.classList.contains('qxfd-search-open'))search.focus({preventScroll:true});});
+search.addEventListener('focus',()=>{root.classList.add('qxfd-search-open');searchToggle.setAttribute('aria-expanded','true');});
+search.addEventListener('blur',()=>{if(!search.value){root.classList.remove('qxfd-search-open');searchToggle.setAttribute('aria-expanded','false');}});
+let proRows=false;try{proRows=storage?.getItem('qhooks:discovery:pro-rows:v1')==='true';}catch{}
+root.classList.toggle('qxfd-pro-rows',proRows);
+const proToggle=button('Pro rows',{'aria-pressed':String(proRows),class:'qxfd-pro-toggle'});
+proToggle.addEventListener('click',()=>{proRows=!proRows;root.classList.toggle('qxfd-pro-rows',proRows);proToggle.setAttribute('aria-pressed',String(proRows));try{storage?.setItem('qhooks:discovery:pro-rows:v1',String(proRows));}catch{}});
+const presetControls=el('div',{class:'qxfd-preset-controls',role:'group','aria-label':'Instant filter presets'},...presetChips.map(p=>p.button));
+listOptions.querySelector('.qxfd-list-options-body').prepend(presetControls);
+instant.insertBefore(proToggle,listOptions);instant.append(status);
+const listControls=[el('div',{class:'qxfd-toolbar'},layoutControls,searchToggle,tabs),instant];
 for(const control of[applyFilters,resetFilters,...presetChips.map(p=>p.button)])control.addEventListener('click',()=>{listOptions.open=false;listOptions.querySelector('summary').focus({preventScroll:true});});
 document.addEventListener('pointerdown',event=>{if(listOptions.open&&!listOptions.contains(event.target))listOptions.open=false;});
 
 root.append(
-  el('div', { class: 'qxfd-heading' }, walletBack, heading, layoutControls, quickChip, status),
+  el('div', { class: 'qxfd-heading' }, walletBack, heading),
   ...listControls,
   panel,
   el('div', { class: 'qxfd-footer' }, count, source,
@@ -166,8 +183,14 @@ const loaderOptions=changed=>({fetcher:publicReadFetch,timeout:25000,serverTimeo
 pulse=mountPulseBoard({host:panel,el,storage,makeLoader:({changed})=>createFeedLoader(loaderOptions(changed)),makeRow,updateRow,
  onTrending:()=>showTrending(),context:()=>({chain:state.chain,window:state.window,filters:state.filters,factsOf:evidenceMetrics}),visible:()=>!document.hidden&&!root.hidden&&pulseMode(),
  viewModels:rows=>sortRows(rows.filter(discoveryCandidate).map(r=>rowViewModel(r,{quick:api?.quickForChain?.(r.chainId)||api?.state.quick||{},window:state.window})),state.sort),
- onModels:models=>{if(!pulseMode())return;text(count,models.length+' tokens in Pulse');text(source,'New · Near bond ≥80% · Migrated with a destination');}
+ onModels:models=>{if(!pulseMode())return;paintQuickPreset(models);text(count,models.length+' tokens in Pulse');text(source,'New · Near bond ≥80% · Migrated with a destination');}
 });
+
+// Shared metric labels sit above each live Pulse column, not in every card.
+for(const pulseTable of pulse.root.querySelectorAll('table.qxfd-table')){
+ const row=el('tr',{},...['MC','Vol 24h','Liquidity','Change','Buys / sells'].map((label,i)=>el('th',{scope:'col','data-metric':String(i)},label)));
+ pulseTable.prepend(el('thead',{},row));
+}
 
 const back = button('← Tokens', { class: 'qxfd-back', 'aria-label': 'Back to tokens' });
 document.getElementById('qxt-head').prepend(back);
@@ -246,7 +269,14 @@ function visibleRows() {
   const context=JSON.stringify([state.tab,state.chain,state.window,state.query,state.filters,state.sort]);if(context!==contractContext){expandedContracts.clear();contractContext=context;}
   contractProjection=projectTrendingContracts(rows.filter(r=>state.chain==='all'||String(r.chainId)===state.chain),{...state,expanded:expandedContracts});
   const models=contractProjection.rows.map(r=>{const vm=rowViewModel(r,{quick:quickFor(r.chainId),window:state.window});return{...vm,contractGroup:contractProjection.metadata.get(discoveryContractKey(r))};});
-  return contractProjection.active?models:sortRows(models,state.sort);
+  if(!contractProjection.active)return sortRows(models,state.sort);
+  if(defaultTrendingMode(state))return models;
+  // Manual ordering applies to eligible representatives; expanded contracts
+  // remain adjacent to their own group and retain their exact actions.
+  const membersByGroup=new Map();
+  for(const vm of models)if(vm.contractGroup&&!vm.contractGroup.isRepresentative){const list=membersByGroup.get(vm.contractGroup.id)||[];list.push(vm);membersByGroup.set(vm.contractGroup.id,list);}
+  const representatives=models.filter(vm=>!vm.contractGroup||vm.contractGroup.isRepresentative);
+  return sortRows(representatives,state.sort).flatMap(vm=>[vm,...(membersByGroup.get(vm.contractGroup?.id)||[])]);
 }
 
 function makeRow(vm) {
@@ -262,7 +292,7 @@ function makeRow(vm) {
   avatar.append(letter, logo);
   const symbol = el('b'), name = el('span', { class: 'qxfd-name' }), rowAge = el('span', { class: 'qxfd-age' }), boost = el('small', { class: 'qxfd-boost', hidden: '', title: 'A paid DexScreener boost, not a ranking' }, 'Boosted');
   const chain = el('img', { class: 'qxfd-chain-icon', width: 13, height: 13, alt: '' });
-  const open = button('', { class: 'qxfd-open', tabindex: '-1' });
+  const open = el('a', { class: 'qxfd-open', tabindex: '-1', href:'#' });
   open.append(avatar, el('span', { class: 'qxfd-identity' }, el('span', { class: 'qxfd-symline' }, symbol, boost), name), chain, rowAge);
   const watch=button('☆',{class:'qxfd-watch','aria-pressed':'false','aria-label':'Add token to watchlist'});
   watch.addEventListener('click',async event=>{event.stopPropagation();if(!api?.library||!tr.isConnected)return;watch.disabled=true;watch.dataset.pending='true';try{const asset=libraryAsset(tr.__tokenVM);await api.library.watch(asset,!api.library.has(asset));}catch(error){notice.hidden=false;text(noticeText,error.message||'Could not save this token.');}finally{delete watch.dataset.pending;watch.disabled=false;}});
@@ -271,17 +301,22 @@ function makeRow(vm) {
   groupToggle.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();const group=tr.__tokenVM?.contractGroup;if(!group?.isRepresentative)return;expandedContracts.has(group.id)?expandedContracts.delete(group.id):expandedContracts.add(group.id);renderRows();});
   groupToggle.addEventListener('keydown',event=>{if(event.key!=='Tab')event.stopPropagation();});
   cells.token.append(watch,open,groupToggle);
-  const cap = el('span'), capKind = el('small', { class: 'qxfd-cap-kind' });
+  const priceValue=el('span',{class:'qxfd-price-value'}),priceStatus=el('small',{class:'qxfd-price-status'});cells.price.append(priceValue,priceStatus);
+  const capNumber=el('span',{class:'qxfd-cap-number'}),capUnit=el('span',{class:'qxfd-cap-unit'}),cap=el('span',{},capNumber,capUnit),capKind=el('small',{class:'qxfd-cap-kind'});
   cells.mcap.append(cap, capKind);
   const buys = el('span', { class: 'up' }), sells = el('span', { class: 'down' });
   cells.txns.append(buys, el('span', { class: 'qxfd-divider', 'aria-hidden': 'true' }, ' / '), sells);
   const safe = el('span', { class: 'qxfd-safety-mark' });
+  const riskFields=new Map();
+  for(const [id,label]of[['top10','Top 10'],['dev','Dev'],['snipers','Snipers'],['insiders','Insiders'],['bundlers','Bundlers'],['holders','Holders']]){
+    const value=el('b',{},DASH),item=el('span',{'data-risk-field':id},el('span',{},label),value);cells.riskgrid.append(item);riskFields.set(id,value);
+  }
   const tip = el('span', { class: 'qxfd-tooltip', role: 'tooltip' });
   cells.safety.classList.add('qxfd-evidence');cells.evidence=cells.safety;
-  const buy = button('', { class: 'qxfd-buy' });
+  const buy = button('', { class: 'qxfd-buy' }), buyValue=el('span',{class:'qxfd-buy-value'}),buyUnit=el('span',{class:'qxfd-buy-unit'});buy.append(buyValue,' ',buyUnit);
   const blocked = el('span', { class: 'qxfd-blocked', hidden: '' }, 'not tradable here');
   cells.buy.append(buy, blocked);
-  return { tr, cells, avatar, letter, logo, symbol, boost, name, rowAge, chain, open, watch, groupToggle, contractAddress, contractName, contractDetail, cap, capKind, buys, sells, safe, tip, buy, blocked, vm: null };
+  return { tr, cells, avatar, letter, logo, symbol, boost, name, rowAge, chain, open, watch, groupToggle, contractAddress, contractName, contractDetail, priceValue, priceStatus, cap, capNumber, capUnit, capKind, buys, sells, safe, tip, riskFields, buy, buyValue, buyUnit, blocked, vm: null };
 }
 
 function updateRow(node, vm) {
@@ -289,7 +324,14 @@ function updateRow(node, vm) {
   const group=vm.contractGroup;node.tr.classList.toggle('qxfd-contract-group',!!group?.isRepresentative);node.tr.classList.toggle('qxfd-contract-expanded',!!group?.expanded);node.tr.classList.toggle('qxfd-contract-member',!!group&&!group.isRepresentative);
   node.groupToggle.hidden=!group?.isRepresentative;if(group?.isRepresentative){text(node.groupToggle,'+'+(group.members.length-1));node.groupToggle.setAttribute('aria-expanded',String(group.expanded));node.groupToggle.setAttribute('aria-label','+'+(group.members.length-1)+' more contracts; same ticker '+vm.symbol+' on '+vm.chainName+'; '+group.members.length+' total; '+(group.expanded?'collapse':'expand'));node.groupToggle.title='Same ticker · '+group.members.length+' contracts. Separate token addresses, not a shared asset or issuer.';}
   node.contractDetail.hidden=!group?.expanded;if(group?.expanded){text(node.contractName,(group.isRepresentative?'Same ticker · '+group.members.length+' contracts · ':'')+(vm.name||vm.symbol));text(node.contractAddress,vm.address);node.contractAddress.title=vm.address;}
-  const evidence=discoveryBadges(vm.row,{h:el,compact:true}),evidenceKey=evidence.outerHTML;if(node.evidenceKey!==evidenceKey){node.evidenceKey=evidenceKey;const prior=node.cells.evidence.querySelector('details'),focused=prior?.contains(document.activeElement);if(prior?.open)evidence.querySelector('details').open=true;node.cells.evidence.replaceChildren(evidence);if(focused)evidence.querySelector('summary').focus({preventScroll:true});}
+  const evidence=discoveryBadges(vm.row,{h:el,compact:true});
+  // Keep canonical verdicts, links and descriptions; only their row presentation is compact.
+  for(const badge of evidence.querySelectorAll('.qxd-badge')){
+    const label=badge.textContent;badge.setAttribute('aria-label',label);badge.dataset.label=label;
+    text(badge,/^LP/.test(label)?'LP':/^Anti/.test(label)?'AS':/^Agent/.test(label)?'A':'P');
+  }
+  const summary=evidence.querySelector('summary');if(summary){summary.title=summary.textContent+' · Safety checks';summary.setAttribute('aria-label',summary.textContent+' · Safety checks');text(summary,'◇');}
+  const evidenceKey=evidence.outerHTML;if(node.evidenceKey!==evidenceKey){node.evidenceKey=evidenceKey;const prior=node.cells.evidence.querySelector('details'),focused=prior?.contains(document.activeElement);if(prior?.open)evidence.querySelector('details').open=true;node.cells.evidence.replaceChildren(evidence);if(focused)evidence.querySelector('summary').focus({preventScroll:true});}
   node.tr.classList.toggle("qxfd-fund-row",!!vm.fund);
   node.vm = vm; node.tr.__tokenVM=vm;node.watch.disabled=!api?.library||node.watch.dataset.pending==='true';
   const watching=!!api?.library?.has(libraryAsset(vm));
@@ -298,22 +340,34 @@ function updateRow(node, vm) {
   node.name.title = vm.name;
   node.boost.hidden = !vm.boosted;
   node.open.setAttribute('aria-label', `Open ${vm.symbol}, ${vm.name || vm.address}, on ${vm.chainName}`);
+  const href=vm.row.launch?.controller?'#m='+vm.chainId+':'+vm.row.launch.controller:'#t='+vm.chainId+':'+vm.address;
+  node.open.setAttribute('href',href);node.tr.dataset.href=href;
+  const metrics=evidenceMetrics(vm.row),pct=n=>typeof n==='number'&&Number.isFinite(n)?n.toFixed(1).replace(/\.0$/,'')+'%':DASH;
+  text(node.cells.top10,pct(metrics.top10Pct));text(node.cells.dev,pct(metrics.devPct));
+  for(const [id,value]of Object.entries({top10:pct(metrics.top10Pct),dev:pct(metrics.devPct),snipers:metrics.sameBlock===true?'Signal':DASH,insiders:metrics.sharedFunding===true?'Signal':DASH,bundlers:DASH,holders:vm.holders})){
+    text(node.riskFields.get(id),value);node.riskFields.get(id).parentElement.title=value===DASH?'Unknown · no fresh observation':id==='snipers'?'Same-block entry signal; not a percentage or proof of sniper activity':id==='insiders'?'Shared funding signal; not a percentage or proof of insider activity':metrics.source||'Received provider observation';
+  }
+  node.cells.riskgrid.setAttribute('aria-label','Holder checks. Missing observations are unknown. Entry and funding signals are not percentages.');
+
   node.chain.hidden = !vm.chainIcon;
   if (vm.chainIcon) {
     node.chain.setAttribute('src', '/chain-symbol-icons/' + vm.chainIcon + '.svg');
     node.chain.alt = vm.chainName;
   }
   if(JSON.stringify(old?.avatarSources)!==JSON.stringify(vm.avatarSources)){node.unbindAvatar?.();node.unbindAvatar=bindTokenAvatar(node.logo,{},vm.avatarSources);}
-  for (const key of ['price', 'move', 'volume', 'liquidity', 'makers','holders']) text(node.cells[key], vm[key]);
+  for (const key of ['move', 'volume', 'liquidity', 'makers','holders']) text(node.cells[key], vm[key]);
+  const priceView=feedRowPriceView(vm,{refreshing:state.loading||state.data?.stale||vm.row.stale});
+  text(node.priceValue,priceView.text);text(node.priceStatus,priceView.status);node.cells.price.title=priceView.title;node.cells.price.dataset.priceAt=priceView.at??'';node.cells.price.dataset.unit=priceView.unit||'';node.cells.price.dataset.refreshing=String(priceView.refreshing);
   node.cells.liquidity.dataset.known = String(vm.liquidity !== DASH);
-  if(vm.priceRefreshing)node.cells.price.append(el('small',{class:'qxfd-price-refreshing'},'Refreshing'));
+  node.cells.holders.dataset.known=String(vm.numeric.holders!==null);
+  node.cells.price.dataset.slickPrice='';node.cells.price.dataset.slickKey=vm.key;node.cells.price.dataset.slickValue=vm.numeric.price===null?'':String(vm.numeric.price);
   for (const key of ['move']) {
     node.cells[key].classList.toggle('up', vm.numeric[key] > 0);
     node.cells[key].classList.toggle('down', vm.numeric[key] < 0);
   }
   node.cells.move.setAttribute('data-label',(WINDOWS.find(([k])=>k===state.window)?.[1]||'24h')+' change');node.cells.move.setAttribute('data-window',WINDOWS.find(([k])=>k===state.window)?.[1]||'24h');
-  text(node.cap, vm.mcap); text(node.capKind, vm.priceRefreshing?'Refreshing':vm.capKind);
-  node.cells.mcap.setAttribute('data-label',vm.capKind||'MC');node.cells.mcap.dataset.refreshing=String(vm.priceRefreshing);
+  const capUnit=priceView.capUnit&&priceView.capUnit!=='USD'?priceView.capUnit:null;const capNumber=capUnit&&priceView.cap.endsWith(' '+capUnit)?priceView.cap.slice(0,-capUnit.length-1):priceView.cap;text(node.capNumber,capNumber);text(node.capUnit,capUnit?' '+capUnit:'');text(node.capKind,priceView.cap===DASH?'syncing':priceView.capKind==='FDV'?'FDV':'');
+  node.cells.mcap.setAttribute('data-label',priceView.capKind);node.cells.mcap.dataset.unit=priceView.capUnit||'';node.cells.mcap.removeAttribute('data-refreshing');node.cells.mcap.dataset.capState=priceView.cap===DASH?'syncing':'known';
   text(node.buys, vm.buys); text(node.sells, vm.sells);
   node.cells.txns.setAttribute('aria-label', `${vm.buys === DASH ? 'Unknown' : vm.buys} buys, ${vm.sells === DASH ? 'unknown' : vm.sells} sells in 24 hours`);
   node.cells.makers.title=vm.row.makersKind==='unique_wallets'?'Unique wallets in the received 24h swaps.':'Provider buyer and seller activity; a wallet may be counted on both sides.';
@@ -321,7 +375,7 @@ function updateRow(node, vm) {
   node.cells.safety.removeAttribute('data-flag');node.cells.safety.removeAttribute('title');node.cells.safety.removeAttribute('aria-label');node.cells.safety.tabIndex=-1;
   text(node.tip, vm.safety.title);
   const label = `${vm.quick.value} ${vm.quick.unit}`; // auditC: the bolt is a line icon drawn by CSS (.qxfd-buy::before), not an emoji
-  text(node.buy, label);
+  text(node.buyValue,vm.quick.value);text(node.buyUnit,vm.quick.unit);
   node.buy.setAttribute('aria-label', vm.quick.supported ? `Buy ${vm.symbol} with ${vm.quick.value} ${vm.quick.unit}` : `Open ${vm.symbol} in the trade ticket; quick buy is unavailable`);
   node.buy.title = vm.quick.supported ? `Buy ${vm.symbol} with ${vm.quick.value} ${vm.quick.unit}` : 'Open the trade ticket; quick buy is unavailable for this token';
   node.buy.hidden = vm.quick.stock || !vm.quick.supported; // no button where quick buy can't run (outside Elysium tokens)
@@ -341,7 +395,7 @@ function updateRow(node, vm) {
 
 function skeleton() {
   nodes.clear();
-  tbody.replaceChildren(...Array.from({ length: 12 }, () => el('tr', { class: 'qxfd-skeleton', 'aria-hidden': 'true' },
+  tbody.replaceChildren(...Array.from({ length: 24 }, () => el('tr', { class: 'qxfd-skeleton', 'aria-hidden': 'true' },
     ...columns.map(([key]) => el('td', { class: 'qxfd-' + key }, el('span', { class: 'qxfd-placeholder' }))))));
 }
 
@@ -362,7 +416,7 @@ function pinFounding() {
 function renderRows() {
   for(const b of layoutControls.children)b.setAttribute('aria-pressed',String(b.dataset.layout===state.layout));
   const isPulse=pulseMode();pauseUpdates.hidden=isPulse;arrivals.hidden=isPulse;pulse?.setActive(isPulse&&!root.hidden&&!document.hidden);
-  chainChip.value=state.chain;windowChip.value=state.window;for(const p of presetChips)p.button.setAttribute('aria-pressed',String(JSON.stringify(state.filters)===JSON.stringify(p.filters)));const quickChain=settingsChain(),quick=api?.quickForChain?.(quickChain)||api?.state.quick||{},unit=quickChain==='56'?'bnb':quickChain==='99901'?'hype':quickChain==='solana'?'usd':'eth';text(quickChip,'⚡ '+(quick[unit]||({eth:'0.01',bnb:'0.05',hype:'0.1',usd:'10'})[unit])+' '+({eth:'ETH',bnb:'BNB',hype:'HYPE',usd:'USDC'})[unit]);
+  chainChip.value=state.chain;windowChip.value=state.window;for(const p of presetChips)p.button.setAttribute('aria-pressed',String(JSON.stringify(state.filters)===JSON.stringify(p.filters)));const quickChain=settingsChain(),quick=api?.quickForChain?.(quickChain)||api?.state.quick||{},unit=quickChain==='56'?'bnb':quickChain==='99901'?'hype':quickChain==='solana'?'usd':'eth';paintQuickPreset([]);
   const wallet = state.wallet;layoutControls.hidden=!!wallet;quickChip.hidden=!!wallet;
   walletPanel.hidden = !wallet;
   scroll.hidden = !!wallet;
@@ -377,10 +431,13 @@ function renderRows() {
     return;
   }
   const activeFilters=Object.values(state.filters).filter(x=>x!=='').length;filterDetails.querySelector('summary').textContent=activeFilters?'Advanced filters · '+activeFilters:'Advanced filters';listOptions.querySelector('summary').textContent=activeFilters?'Filters · '+activeFilters:'Filters';
-  if(isPulse){root.querySelector('.qxfd-toolbar').hidden=true;if(quickChip.parentNode!==pulse.quickHost)pulse.quickHost.append(quickChip);scroll.hidden=true;empty.hidden=true;notice.hidden=true;text(heading,'Tokens');text(status,'');tabs.hidden=true;panel.removeAttribute('aria-labelledby');panel.setAttribute('aria-label','Pulse');panel.setAttribute('aria-busy','false');pulse?.render();return;}
+  root.classList.toggle('qxfd-pulse-mode',isPulse);root.classList.toggle('qxfd-wallet-mode',!!wallet);
+  if(isPulse){root.querySelector('.qxfd-toolbar').hidden=false;if(quickChip.parentNode!==listControls[0])listControls[0].append(quickChip);scroll.hidden=true;empty.hidden=true;notice.hidden=true;text(heading,'Tokens');text(status,'');tabs.hidden=true;panel.removeAttribute('aria-labelledby');panel.setAttribute('aria-label','Pulse');panel.setAttribute('aria-busy','false');pulse?.render();return;}
   root.querySelector('.qxfd-toolbar').hidden=false;if(quickChip.parentNode!==listControls[0])listControls[0].append(quickChip);tabs.hidden=false;panel.removeAttribute('aria-label');panel.setAttribute('aria-labelledby','qxfd-tab-'+state.tab);
   const rows = visibleRows();
   text(trendingNote,contractProjection.active?'Default Trending: $1K liquidity · $500 observed 24h volume · 20 observed swaps in 24h or a shorter received window · drops over 90% excluded. Same-ticker contracts can expand. Search, custom filters or a selected sort show the original matches.':'Trending: $1K minimum liquidity · drops over 90% excluded. A custom liquidity range replaces the default.');
+  paintQuickPreset(rows);
+  if(rows.length||state.data&&!state.loading)table.classList.toggle('qxfd-has-holders',rows.some(vm=>vm.numeric.holders!==null));
   const previousFocus = document.activeElement;
   const previousIndex = [...nodes.keys()].indexOf(focusedKey);
   const y = scroll.scrollTop, pageY = window.scrollY;
@@ -672,7 +729,7 @@ document.addEventListener('qxt:token', showToken);
 document.addEventListener('qxt:discover', () => showTokens({ restore: false }));
 window.addEventListener('hashchange', () => hasTokenHash(location.hash) ? showToken() : showTokens());
 
-async function openSelection({chainId, address, controller, stock = false, key}, buy = false, control) {
+async function openSelection({chainId, address, controller, symbol, stock = false, key}, buy = false, control) {
   if (!api || opening) {
     if (!api) { notice.hidden = false; text(noticeText, 'The trading terminal is still loading. Retry in a moment.'); }
     return;
@@ -681,7 +738,7 @@ async function openSelection({chainId, address, controller, stock = false, key},
   if (key) focusedKey = key;
   opening = true; if (control) control.disabled = true;
   try {
-    if (buy) await api.quickBuyExternal(chainId, address);
+    if (buy) await api.quickBuyExternal(chainId, address, {symbol, controller});
     else if (controller) await api.select(chainId, controller);
     else await api.selectExternal(chainId, address);
   } catch (error) {
@@ -690,11 +747,12 @@ async function openSelection({chainId, address, controller, stock = false, key},
 }
 function openRow(node, buy = false) {
   const vm = node.vm;
-  return openSelection({chainId: vm.chainId, address: vm.address, controller: vm.row.launch?.controller, stock: vm.quick.stock, key: vm.key}, buy, node.buy);
+  return openSelection({chainId: vm.chainId, address: vm.address, controller: vm.row.launch?.controller, symbol: vm.symbol, stock: vm.quick.stock, key: vm.key}, buy, node.buy);
 }
 root.addEventListener('click', event => {
   if (event.target.closest('.qxfd-safety, .qxfd-blocked, .qxfd-watch, .qxfd-evidence')) return;
   const tr = event.target.closest('tr[data-key]');
+  if(event.target.closest('a.qxfd-open')){if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||event.button)return;event.preventDefault();}
   if (tr&&tr.closest('.qxfd-table')){const node=pulseMode()?pulse.getNode(tr.dataset.key):nodes.get(tr.dataset.key);if(node)openRow(node,!!event.target.closest('.qxfd-buy'));}
 });
 root.addEventListener('focusin', event => {
@@ -729,7 +787,7 @@ document.addEventListener('keydown', event => {
     return;
   }
   const key = event.key.toLowerCase();
-  if (key === '/') { event.preventDefault(); search.focus(); }
+  if (key === '/') { event.preventDefault(); root.classList.add('qxfd-search-open');searchToggle.setAttribute('aria-expanded','true');search.focus(); }
   else if (['arrowdown', 'arrowup', 'j', 'k'].includes(key)) { event.preventDefault(); focusRow(key === 'arrowdown' || key === 'j' ? 1 : -1); }
   else if(pulseMode()&&/^[1-3]$/.test(key)){event.preventDefault();pulse.select(['new','bonding','migrated'][Number(key)-1]);}
   else if (/^[1-5]$/.test(key)) { event.preventDefault(); setTab(availableTabs()[Number(key) - 1]?.[0]); }
@@ -747,6 +805,7 @@ function connectTerminal() {
   if (api || !window.qxTerminal) return;
   api = window.qxTerminal;
   tokenLibraryUI=mountTokenLibrary(api,{discoveryHeading:root.querySelector('.qxfd-heading'),marketRows:()=>(pulseMode()?pulse.getModels().map(libraryAsset):[...nodes.values()].map(n=>libraryAsset(n.vm))).filter(Boolean)});
+  const access=root.querySelector('.qtl-discovery-access');if(access)instant.insertBefore(access,proToggle);
   rememberSearchResults();
   quickRow = document.querySelector('.qxt-quick'); quickHome = quickRow?.parentElement;
   if (quickRow) {

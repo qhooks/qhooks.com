@@ -119,6 +119,8 @@ function setOn(card, on) {
 }
 function dressCards() {
   if (!cards) return;
+  // The compact kit list keeps its rules in native disclosures; no decorative SVG construction.
+  if (cards.classList.contains('qq-kits-compact')) { markPicked(); return; }
   const list = [...cards.querySelectorAll('.qq-card')];
   if (!centerIO && 'IntersectionObserver' in window) {
     centerIO = new IntersectionObserver((es) => { for (const e of es) e.target.classList.toggle('is-center', e.isIntersecting); refreshOn(); }, { root: cards, rootMargin: '0px -30% 0px -30%', threshold: 0.5 });

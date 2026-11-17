@@ -1,3 +1,4 @@
+import{EXIT_PRESENTATION}from'./qx-exit-presentation.mjs';
 import {silentActive,oneClickPlan,withOneClick,pressGate} from './qx-instant-bridge.mjs';
 import { placeTriggerExit } from './qx-trigger-execution.mjs';
 import {orderErrorText as tradeError} from './qx-order-errors.mjs';
@@ -88,16 +89,18 @@ async function render() {
   if(!st||activeAction?.current())return;
   const c=st,ctx=viewContext(c,connectedAddress(),++renderSeq);ctx.assert();
   const me = connectedAddress(), status = h('p', { class: 'qtx-status', role: 'status', ariaLive: 'polite' });
-  const parts = [h('h2', { id: 'qts-heading' }, 'Take profit · stop loss'),
-    h('p', { class: 'qtb-note' }, 'Sells when the price reaches your target or falls to your stop, whichever comes first, and never for less than the minimum shown. Anyone can execute a reached order and earns its tip; while this page is open it offers to do that for you.')];
+  const parts = [h('h2', { id: 'qts-heading' }, EXIT_PRESENTATION.escrow.title),
+    h('p', { class: 'qtb-note' }, EXIT_PRESENTATION.escrow.type),
+    h('p', { class: 'qtb-note' }, EXIT_PRESENTATION.escrow.note)];
   const live=await isLive(c.chainId,'triggerOrders');ctx.assert();
   if (!live) {
     // ordersready (2026-11-13): the retired QTriggerOrders contract is not on this chain; TP/SL is the signed-order bracket.
     const ok = EXIT_CHAINS.includes(String(c.chainId)) && c.controller;
     const b = h('button', { type: 'button', class: 'workspace-button', disabled: !ok }, 'Set TP / SL');
     b.addEventListener('click', () => window.dispatchEvent(new CustomEvent('qhooks:order-open', { detail: { chainId: String(c.chainId), controller: c.controller, side: 'tpsl' } })));
-    card.replaceChildren(h('h2', { id: 'qts-heading' }, 'Take profit · stop loss'),
-      h('p', { class: 'qtb-note' }, ok ? 'Sells when the price reaches your target or falls to your stop, whichever comes first, never for less than the floor you choose. One press sets the signed exit; the QHooks keeper fills it, even with this page closed. Your tokens stay in your wallet until it fills.' : 'TP/SL is not available on ' + CHAIN_NAME[c.chainId] + ' yet.'),
+    card.replaceChildren(h('h2', { id: 'qts-heading' }, EXIT_PRESENTATION.signed.title),
+      h('p', { class: 'qtb-note' }, ok ? EXIT_PRESENTATION.signed.type : 'Orders unavailable on this chain'),
+      h('p', { class: 'qtb-note' }, ok ? EXIT_PRESENTATION.signed.note : 'TP/SL is not available on ' + CHAIN_NAME[c.chainId] + ' yet.'),
       b, status);
     card.hidden = false; return;
   }

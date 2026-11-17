@@ -41,6 +41,7 @@ function renderMarketCards({ document: d, container, rows, chainFor, onOpen }) {
     const article = d.createElement("article");
     article.className = "market-card mk-card" + (row.status === "unavailable" ? " is-off" : "");
     article.dataset.market = row.chainId + ":" + row.controller;
+    article.dataset.token = row.token;
     const chain = chainFor(row.chainId);
     const coin = d.createElement("span");
     coin.className = "mk-coin mk-card__coin";
@@ -83,7 +84,9 @@ function renderMarketCards({ document: d, container, rows, chainFor, onOpen }) {
     for (const cls of ["mk-card__px", "mk-card__chg", "mk-card__mc", "mk-card__age"]) { const n = d.createElement("span"); n.className = cls; live.append(n); }
     const statusP = d.createElement("p");
     statusP.className = "mk-card__status";
-    statusP.textContent = row.status === "unavailable" ? "Refreshing" : row.status === "observed" ? "Recently checked" : "Refreshes when you trade";
+    statusP.textContent = row.status === "unavailable" ? "Contract unavailable" : row.status === "observed" ? "Contract checked" : "Contract check due";
+    statusP.title = "Contract observation only; the quote has its own timestamp.";
+    id.append(statusP);
     const button = d.createElement("button");
     button.type = "button";
     button.className = "workspace-button mk-card__open";
@@ -91,7 +94,7 @@ function renderMarketCards({ document: d, container, rows, chainFor, onOpen }) {
     button.setAttribute("aria-label", "Open " + row.symbol + " market");
     button.disabled = row.status === "unavailable";
     button.addEventListener("click", () => onOpen(row));
-    article.append(coin, id, live, statusP, ...(fake ? [impostorBanner(fake, d)] : []), button);
+    article.append(coin, id, live, ...(fake ? [impostorBanner(fake, d)] : []), button);
     container.append(article);
   }
 }

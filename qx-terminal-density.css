@@ -1,99 +1,242 @@
-/* Discovery layout is scoped above the historical token-desk rules. */
-body.qa.qxt #qxt-discover{--qd-line:var(--qa-rule,#292d29);padding-top:8px}
-body.qa.qxt #qxt-discover .qxfd-heading{display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-height:40px;padding:0;margin:0 0 6px}
-body.qa.qxt #qxt-discover .qxfd-heading h1{font-size:22px;line-height:1.15;letter-spacing:-.035em;margin:0;order:0}
-body.qa.qxt #qxt-discover .qtl-discovery-access{order:1;flex:none;width:auto;margin:0;gap:4px}
-body.qa.qxt #qxt-discover .qtl-discovery-access .qtl-launch{flex:none;min-height:36px;min-width:32px;padding:4px;gap:2px;font-size:11px}
-body.qa.qxt #qxt-discover .qtl-discovery-access .qtl-launch>span:nth-child(2){position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
-body.qa.qxt #qxt-discover .qtl-glyph{font-size:17px}
-body.qa.qxt #qxt-discover .qtl-count{min-width:12px;font-size:11px}
-body.qa.qxt #qxt-discover .qxfd-quick-chip{order:2;flex:none;margin-left:auto}
-body.qa.qxt #qxt-discover .qxfd-status{order:3;flex:none;margin-left:8px;font-size:11px;line-height:16px;white-space:nowrap}
-.qxfd-quick-chip,.qxfd-settings,.qaq-open{border:1px solid var(--qd-line);background:var(--qa-wash-2,#191c18);color:var(--qa-gold-hi,#e3c38e);border-radius:4px;padding:6px 9px;font:650 12px var(--qa-sans);min-height:36px;white-space:nowrap;cursor:pointer}
-body.qa.qxt #qxt-discover .ta-search{margin:4px 0 6px}
-body.qa.qxt #qxt-discover .ta-search input{min-height:38px;height:38px;font-size:14px}
-body.qa.qxt #qxt-discover .qxfd-toolbar{min-height:38px;padding:0;gap:0}
-body.qa.qxt #qxt-discover .qxfd-tabs{gap:18px;max-width:100%;align-items:stretch;margin:0;padding:0}
-body.qa.qxt #qxt-discover .qxfd-tabs button{height:38px;min-height:38px;padding:8px 0;font-size:13px}
-.qxfd-instant{position:relative;display:flex;align-items:center;gap:6px;min-height:48px;padding:6px 0;flex:none;border-bottom:1px solid var(--qd-line)}
-.qxfd-instant>button,.qxfd-instant>select,.qxfd-instant>.qxfd-list-options>summary{flex-shrink:0;box-sizing:border-box;min-height:36px;padding:5px 10px;border:1px solid var(--qd-line);border-radius:4px;background:var(--qa-floor-2,#11150f);color:var(--qa-tx-2,#b8bcb3);font:600 12px var(--qa-sans);white-space:nowrap;cursor:pointer}
-.qxfd-instant>button[aria-pressed=true]{color:var(--qa-gold-hi);border-color:var(--qa-gold)}
-.qxfd-instant .qxfd-list-options{flex-shrink:0;position:static;margin:0}
-.qxfd-instant .qxfd-list-options>summary{gap:8px}
-.qxfd-instant .qxfd-list-options-body{position:absolute;top:46px;left:0;right:0;z-index:45;margin:0;max-height:70dvh;overflow:auto;background:var(--qa-slab,#171a15);box-shadow:0 18px 36px #0007}
-.qxfd-instant .qxfd-settings{margin-left:auto;min-width:36px;font-size:18px;padding:2px 8px}
-.qxfd-instant .qxfd-chain-chip{max-width:74px}
-.qxfd-instant .qxfd-window-chip{max-width:65px}
-body.qa.qxt #qxt-discover .qxfd-table{min-width:0!important;width:100%;font-size:12px}
-body.qa.qxt #qxt-discover .qxfd-table :is(.qxfd-liquidity,.qxfd-txns,.qxfd-makers){display:none!important}
-body.qa.qxt #qxt-discover .qxfd-table tr[data-key],body.qa.qxt #qxt-discover .qxfd-table thead tr{display:grid;grid-template-columns:minmax(220px,2fr) repeat(3,minmax(85px,1fr)) minmax(65px,.7fr) minmax(70px,.7fr) minmax(92px,1fr) 110px;grid-template-areas:none!important;column-gap:14px!important;padding:6px 0!important;box-sizing:border-box}
-body.qa.qxt #qxt-discover .qxfd-table tr[data-key]{min-height:60px;border-bottom:1px solid var(--qd-line)!important}
-body.qa.qxt #qxt-discover .qxfd-table :is(td,th){grid-area:auto!important;grid-row:1!important;font-size:12px}
-body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-token{grid-column:1!important;text-align:left}
-body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-price{grid-column:2!important}
-body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-mcap{grid-column:3!important}
-body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-volume{grid-column:4!important}
-body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-holders{grid-column:5!important}
-body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-move{grid-column:6!important}
-body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-safety{display:block;grid-column:7!important}
-body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-buy{grid-column:8!important}
-body.qa.qxt #qxt-discover .qxfd-table td.qxfd-token{padding-left:24px!important;overflow:visible}
-body.qa.qxt #qxt-discover .qxfd-open{display:grid!important;grid-template-columns:32px minmax(0,1fr) auto!important;grid-template-rows:auto!important;min-height:44px;height:auto;gap:0 8px!important;padding:0}
-body.qa.qxt #qxt-discover .qxfd-avatar{width:32px;height:32px;grid-column:1;grid-row:1}
-body.qa.qxt #qxt-discover .qxfd-chain-icon{position:absolute;left:22px;bottom:0;width:12px;height:12px}
-body.qa.qxt #qxt-discover .qxfd-identity{grid-column:2;grid-row:1;display:block;min-width:0}
-body.qa.qxt #qxt-discover .qxfd-identity b{font-size:14px;line-height:1.2;max-width:none;overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere}
-body.qa.qxt #qxt-discover .qxfd-name{display:block;font-size:11px;max-width:180px}
-body.qa.qxt #qxt-discover .qxfd-age{grid-column:3;grid-row:1;font-size:11px;white-space:nowrap}
-body.qa.qxt #qxt-discover .qxfd-watch{width:20px;min-width:20px;max-width:20px;padding:0;height:44px;font-size:18px}
-body.qa.qxt #qxt-discover button.qxfd-buy{width:100%!important;min-height:44px;height:auto!important;padding:6px 8px!important;font:700 12px/1.3 var(--qa-sans)!important;white-space:normal;overflow-wrap:anywhere}
-body.qa.qxt #qxt-discover .qxfd-cap-kind{display:block;font-size:11px;line-height:1.15;margin:2px 0 0;overflow-wrap:anywhere;color:var(--qa-tx-3)}
-.qaq-sheet{box-sizing:border-box;width:min(440px,100vw);max-width:100vw;max-height:90dvh;border:1px solid var(--qa-rule);border-radius:14px;padding:22px;background:var(--qa-slab,#141812);color:var(--qa-tx,#f4f1e9);font:14px var(--qa-sans,sans-serif);overflow:auto}.qaq-sheet::backdrop{background:#0009;backdrop-filter:blur(5px)}.qaq-sheet header{display:flex;justify-content:space-between;align-items:center;gap:12px}.qaq-sheet h2{font-size:24px;letter-spacing:-.035em;margin:0}.qaq-sheet header button{border:0;border-radius:6px;background:var(--qa-wash-2,#292d26);color:inherit;width:40px;height:40px;font-size:24px}.qaq-scope,.qaq-help{font-size:13px;line-height:1.5;color:var(--qa-tx-3)}.qaq-sheet label{display:grid;gap:7px}.qaq-sheet input,.qaq-sheet select{box-sizing:border-box;width:100%;min-width:0;min-height:44px;font-size:16px;border:1px solid var(--qa-rule);border-radius:5px;background:var(--qa-floor,#0b0e09);color:inherit;padding:10px}.qaq-fields{display:grid;grid-template-columns:1fr 1fr;gap:16px}.qaq-save{width:100%;min-height:48px;margin-top:10px;border:0;border-radius:5px;background:var(--qa-gold-metal,#d5b376);color:#17170f;font-weight:700;font-size:15px}.qaq-sheet [role=status]{min-height:20px;color:var(--qa-gold-hi);font-size:13px}
+/* Quick-amount settings dialog retains its existing input/action dimensions. */
+.qaq-sheet{box-sizing:border-box;width:min(440px,100vw);max-width:100vw;max-height:90dvh;border:1px solid var(--qa-rule);border-radius:4px;padding:22px;background:var(--qa-slab,#141812);color:var(--qa-tx,#f4f1e9);font:14px var(--qa-sans,sans-serif);overflow:auto}
+.qaq-sheet::backdrop{background:#0009}.qaq-sheet header{display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;z-index:2;background:var(--qa-slab)}
+.qaq-sheet h2{font-size:24px;margin:0}.qaq-sheet header button{border:0;border-radius:2px;background:var(--qa-wash-2);color:inherit;width:44px;height:44px;min-width:44px;font-size:24px}
+.qaq-scope,.qaq-help{font-size:13px;line-height:1.5;color:var(--qa-tx-3)}.qaq-sheet label{display:grid;gap:7px}
+body.qa.qxt .qaq-sheet :is(input,select){box-sizing:border-box;width:100%;min-width:0;min-height:44px;font-size:16px;border:1px solid var(--qa-rule);border-radius:2px;background:var(--qa-floor);color:inherit;padding:10px}
+.qaq-fields{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+body.qa.qxt .qaq-sheet .qaq-save{width:100%;min-height:48px;margin-top:10px;border:0;border-radius:2px;color:var(--qa-tx-on-gold);background:var(--qa-gold-metal);font:700 15px var(--qa-sans)}
+.qaq-sheet [role=status]{min-height:20px;color:var(--qa-gold-hi);font-size:13px}
+@media(max-width:759px){.qaq-sheet{margin:auto 0 0;width:100%;padding:20px 18px max(20px,env(safe-area-inset-bottom))}}
 
-@media(max-width:1099px) and (min-width:760px){body.qa.qxt #qxt-discover .qxfd-table tr[data-key],body.qa.qxt #qxt-discover .qxfd-table thead tr{grid-template-columns:minmax(180px,2fr) repeat(3,minmax(65px,1fr)) minmax(50px,.7fr) minmax(55px,.7fr) 90px;column-gap:8px!important}body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-safety{display:none}body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-buy{grid-column:7!important}}
-@media(max-width:759px){
-body.qa.qxt #qxt-discover{padding-top:4px}
-body.qa.qxt #qxt-discover .qxfd-heading{gap:4px}
-body.qa.qxt #qxt-discover .qxfd-heading h1{font-size:20px}
-body.qa.qxt #qxt-discover .qxfd-status{flex-basis:100%;margin:0;line-height:14px}
-body.qa.qxt #qxt-discover .qxfd-quick-chip{font-size:11px;padding:5px 6px}
-.qxfd-instant{gap:4px;max-width:100%;min-height:44px}
-.qxfd-instant>button,.qxfd-instant>select,.qxfd-instant>.qxfd-list-options>summary{font-size:11px;padding:5px 7px;min-height:36px}
-body.qa.qxt #qxt-discover .qxfd-instant>select{appearance:none;text-align:center;padding:5px 5px;font:600 11px var(--qa-sans)}
-.qxfd-instant .qxfd-chain-chip{width:45px}.qxfd-instant .qxfd-window-chip{width:36px}
-.qxfd-instant .qxfd-settings{font-size:17px;padding:2px 6px;min-width:32px}
-.qxfd-instant .qxfd-list-options>summary{gap:4px}.qxfd-instant .qxfd-list-options-body{top:44px}
-body.qa.qxt #qxt-discover .qxfd-table tbody tr[data-key]{grid-template-columns:repeat(4,minmax(0,1fr)) 76px!important;grid-template-rows:minmax(36px,auto) minmax(30px,auto);grid-template-areas:none!important;gap:4px!important;padding:8px var(--qa-pad,18px)!important;min-height:86px;align-items:center}
-body.qa.qxt #qxt-discover .qxfd-table tbody td{height:auto;padding:0!important;text-align:left;width:auto!important;overflow:visible;min-width:0}
-body.qa.qxt #qxt-discover .qxfd-table tbody td.qxfd-token{grid-area:1/1/2/5!important;padding:0 0 0 24px!important;display:block;position:relative}
-body.qa.qxt #qxt-discover .qxfd-name,body.qa.qxt #qxt-discover .qxfd-boost{display:none}
-body.qa.qxt #qxt-discover .qxfd-table tbody :is(.qxfd-price,.qxfd-safety){display:none!important}
-body.qa.qxt #qxt-discover .qxfd-table tbody .qxfd-mcap{grid-area:2/1/3/2!important}
-body.qa.qxt #qxt-discover .qxfd-table tbody .qxfd-volume{grid-area:2/2/3/3!important}
-body.qa.qxt #qxt-discover .qxfd-table tbody .qxfd-holders{grid-area:2/3/3/4!important}
-body.qa.qxt #qxt-discover .qxfd-table tbody .qxfd-move{grid-area:2/4/3/5!important}
-body.qa.qxt #qxt-discover .qxfd-table tbody td:is(.qxfd-mcap,.qxfd-volume,.qxfd-holders,.qxfd-move)::before{content:attr(data-label);display:block!important;font:500 11px/1 var(--qa-sans);color:var(--qa-tx-3);margin:0 0 3px}
-body.qa.qxt #qxt-discover .qxfd-table tbody td.qxfd-mcap::before{content:'MC'}
-body.qa.qxt #qxt-discover .qxfd-table tbody td.qxfd-volume::before{content:'Vol 24h'}
-body.qa.qxt #qxt-discover .qxfd-table tbody td.qxfd-holders::before{content:'Holders'}
-body.qa.qxt #qxt-discover .qxfd-table tbody td.qxfd-move::before{content:attr(data-window)}
-body.qa.qxt #qxt-discover .qxfd-table tbody td.qxfd-buy{grid-area:1/5/3/6!important;align-self:center;display:flex;justify-content:flex-end;flex-direction:column}
-body.qa.qxt #qxt-discover .qxfd-open{min-height:36px;grid-template-columns:30px minmax(0,1fr) auto!important;gap:0 7px!important}
-body.qa.qxt #qxt-discover .qxfd-avatar{width:30px;height:30px}
-body.qa.qxt #qxt-discover .qxfd-chain-icon{left:20px}
-body.qa.qxt #qxt-discover .qxfd-identity b{font-size:14px}
-body.qa.qxt #qxt-discover button.qxfd-buy{width:76px!important;min-width:0;padding:6px 4px!important;font-size:11px!important}
-.qaq-sheet{margin:auto 0 0;border-radius:16px 16px 0 0;width:100%;padding:20px 18px max(20px,env(safe-area-inset-bottom))}
+/* SLICK: a single terminal-scoped density layer. Data and trading flows stay in their original modules. */
+body.qa.qxt{--qa-hdr-h:48px;--qa-nav-h:48px;--qa-tabbar-h:56px;--qa-pad:16px;--qa-section-gap:16px;--qa-fs-body:12.5px;--qa-fs-meta:11.5px;--qa-fs-small:11px;--qa-fs-micro:10px;--qa-fs-price:32px;--qa-fs-stat:15px}
+body.qa.qxt :is(.qa-hdr,.qa-nav){min-height:48px;height:48px;box-sizing:border-box}
+body.qa.qxt .qa-hdr{padding-block:0}
+body.qa.qxt :is(.qa-hdr__logo,.qa-hdr__back,.qa-hdr__menu,.qa-hdr__more,.qa-hdr__actions .qa-btn,.qa-nav-brand,.qa-tabbar__launch){border-radius:3px}
+body.qa.qxt .qa-hdr__logo img{border-radius:2px}
+body.qa.qxt :is(.qa-nav__brand,.qa-hdr__logo){height:auto}
+body.qa.qxt .qa-hdr .ta-search{height:32px;min-height:32px;border-radius:3px}
+body.qa.qxt .qa-tabbar{height:56px;min-height:56px}
+body.qa.qxt .qa-tabbar__a{font-size:10px}
+body.qa.qxt .qa-tabbar__a .qa-i{width:20px;height:20px}
+body.qa.qxt #qxt-discover{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;padding:0;gap:0;min-width:0}
+body.qa.qxt #qxt-discover[hidden]{display:none}
+body.qa.qxt #qxt-discover .qxfd-heading{display:contents}
+body.qa.qxt #qxt-discover .qxfd-heading h1{display:none}
+body.qa.qxt #qxt-discover .qxfd-heading .qxfd-wallet-back{grid-column:1/-1}
+body.qa.qxt #qxt-discover .qxfd-toolbar{grid-column:1;grid-row:1;min-height:40px;height:40px;display:flex;gap:8px;padding:0;border-bottom:1px solid var(--qd-line);min-width:0}
+body.qa.qxt #qxt-discover .qxfd-toolbar[hidden]{display:none}
+body.qa.qxt #qxt-discover .qxfd-layout-controls{flex:none;padding:0;gap:0;height:28px;align-items:center;border:0;border-radius:2px}
+body.qa.qxt #qxt-discover .qxfd-layout-controls button{height:28px;min-height:28px;padding:0 9px;font-size:11px;border-radius:2px}
+body.qa.qxt #qxt-discover .qxfd-tabs{display:flex;flex:1;min-width:0;gap:16px;overflow:auto;scrollbar-width:none;white-space:nowrap}
+body.qa.qxt #qxt-discover .qxfd-tabs button{flex:none;height:40px;min-height:40px;padding:0;font-size:12px;line-height:1.1}
+body.qa.qxt #qxt-discover .qxfd-toolbar .qxfd-quick-chip{height:28px;min-height:28px;margin:0;padding:0 7px;font-size:11px;border-radius:2px}
+body.qa.qxt #qxt-discover .qxfd-instant{grid-column:2;grid-row:1;min-height:40px;height:40px;gap:5px;padding:0 0 0 10px;min-width:0}
+body.qa.qxt #qxt-discover .qxfd-instant>:is(button,select),body.qa.qxt #qxt-discover .qxfd-instant>.qxfd-list-options>summary{height:28px;min-height:28px;border-radius:2px;padding:0 7px;font-size:11px;line-height:1.1}
+body.qa.qxt #qxt-discover .qxfd-instant .qxfd-chain-chip{width:52px;max-width:none;appearance:none}
+body.qa.qxt #qxt-discover .qxfd-instant .qxfd-window-chip{width:40px;max-width:none;appearance:none}
+body.qa.qxt #qxt-discover .qxfd-instant .qxfd-settings{width:28px;min-width:28px;padding:0;font-size:17px}
+body.qa.qxt #qxt-discover .qxfd-instant .qxfd-status{font-size:10px;line-height:1.1;white-space:nowrap;margin:0;flex:none;max-width:125px;overflow:hidden;text-overflow:ellipsis}
+body.qa.qxt #qxt-discover .qtl-discovery-access{display:flex;flex:none;gap:2px;margin:0}
+body.qa.qxt #qxt-discover .qtl-discovery-access .qtl-launch{min-height:28px;height:28px;min-width:24px;padding:0 4px;border-radius:2px;gap:2px;font-size:10px}
+body.qa.qxt #qxt-discover .qtl-discovery-access .qtl-launch>span:nth-child(2){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+body.qa.qxt #qxt-discover .qtl-discovery-access .qtl-glyph{font-size:16px}
+body.qa.qxt #qxt-discover .qxfd-search-toggle{display:none;border:1px solid var(--qa-rule);background:var(--qa-wash);border-radius:2px;color:var(--qa-tx);font-size:24px;padding:0}
+body.qa.qxt #qxt-discover .qxfd-panel{grid-column:1/-1;min-width:0}
+body.qa.qxt #qxt-discover .qxfd-footer{grid-column:1/-1}
+body.qa.qxt #qxt-discover .qxfd-list-options-body{top:39px;min-width:280px}
+body.qa.qxt #qxt-discover .qxfd-preset-controls{display:flex;gap:6px;padding:6px 0}
+body.qa.qxt #qxt-discover .qxfd-preset-controls button{min-height:32px;border:1px solid var(--qa-rule);border-radius:2px;background:var(--qa-wash);color:var(--qa-tx-2);padding:0 10px;font-size:12px}
+body.qa.qxt #qxt-discover .qxfd-pro-toggle[aria-pressed=true]{color:var(--qa-gold-hi);border-color:var(--qa-gold)}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table{display:block;min-width:0;width:100%;font-variant-numeric:tabular-nums}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(thead,tbody){display:block;width:100%}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(tr[data-key],thead tr,.qxfd-skeleton){display:grid;grid-template-columns:minmax(165px,1.65fr) minmax(72px,.85fr) minmax(72px,.8fr) minmax(68px,.75fr) minmax(72px,.8fr) minmax(74px,.8fr) minmax(64px,.65fr) minmax(48px,.5fr) minmax(44px,.45fr) minmax(55px,.6fr) minmax(48px,.5fr) 90px;grid-template-areas:none!important;column-gap:10px!important;align-items:center;box-sizing:border-box;padding:0!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table tr[data-key]{position:relative;height:40px;min-height:40px;border-bottom:1px solid var(--qd-line)!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table thead{position:sticky;top:48px;z-index:10;background:var(--qa-floor-2)}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table thead tr{height:28px;min-height:28px;border-bottom:1px solid var(--qa-rule)}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th){display:block!important;grid-row:1!important;grid-area:auto!important;min-width:0;padding:0!important;font-size:11px;line-height:1.2;white-space:nowrap;text-align:right}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table th{font-size:10px;color:var(--qa-tx-3);font-weight:500}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table th button{font-size:10px;min-height:28px;line-height:1.1}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-token{grid-column:1!important;text-align:left;overflow:visible}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-price{grid-column:2!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-mcap{grid-column:3!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-liquidity{grid-column:4!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-volume{grid-column:5!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-txns{grid-column:6!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-holders{grid-column:7!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-top10{grid-column:8!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-dev{grid-column:9!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-move{grid-column:10!important;font-size:13px;font-weight:700}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-safety{grid-column:11!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-buy{grid-column:12!important;display:flex!important;align-items:center;justify-content:flex-end}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(.qxfd-makers,.qxfd-riskgrid){display:none!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table:not(.qxfd-has-holders) :is(td,th).qxfd-holders{display:none!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table:not(.qxfd-has-holders) :is(tr[data-key],thead tr,.qxfd-skeleton){grid-template-columns:minmax(165px,1.65fr) minmax(72px,.85fr) minmax(72px,.8fr) minmax(68px,.75fr) minmax(72px,.8fr) minmax(74px,.8fr) minmax(48px,.5fr) minmax(44px,.45fr) minmax(55px,.6fr) minmax(48px,.5fr) 90px}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table:not(.qxfd-has-holders) :is(td,th).qxfd-top10{grid-column:7!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table:not(.qxfd-has-holders) :is(td,th).qxfd-dev{grid-column:8!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table:not(.qxfd-has-holders) :is(td,th).qxfd-move{grid-column:9!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table:not(.qxfd-has-holders) :is(td,th).qxfd-safety{grid-column:10!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table:not(.qxfd-has-holders) :is(td,th).qxfd-buy{grid-column:11!important}
+body.qa.qxt #qxt-discover .qxfd-open{display:grid!important;grid-template-columns:24px minmax(0,1fr) auto!important;grid-template-rows:auto auto!important;gap:0 7px!important;min-height:32px;height:32px!important;padding:0 0 0 22px;color:inherit;text-decoration:none;background:none;border:0}
+body.qa.qxt #qxt-discover .qxfd-open::after{content:'';position:absolute;inset:0;z-index:1}
+body.qa.qxt #qxt-discover .qxfd-open:focus-visible::after{outline:1px solid var(--qa-gold-hi);outline-offset:-1px}
+body.qa.qxt #qxt-discover .qxfd-avatar{position:relative;width:24px;height:24px;grid-column:1;grid-row:1/3;overflow:hidden;border:0;border-radius:2px;box-shadow:none;background:var(--qa-wash-2)}
+body.qa.qxt #qxt-discover .qxfd-avatar::before,body.qa.qxt #qxt-discover .qxfd-avatar::after{display:none}
+body.qa.qxt #qxt-discover .qxfd-avatar img{border-radius:2px;width:100%;height:100%;object-fit:cover}
+body.qa.qxt #qxt-discover .qxfd-chain-icon{position:absolute;left:38px;top:23px;bottom:auto;width:10px;height:10px;border-radius:1px;z-index:2}
+body.qa.qxt #qxt-discover .qxfd-identity{grid-column:2;grid-row:1/3;min-width:0;display:grid;gap:1px}
+body.qa.qxt #qxt-discover .qxfd-symline{display:flex;align-items:center;gap:3px;min-width:0}
+body.qa.qxt #qxt-discover .qxfd-identity b{font-size:13px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;font-weight:650}
+body.qa.qxt #qxt-discover .qxfd-name{display:block;font-size:10px;line-height:1.15;max-width:130px;white-space:nowrap;overflow:hidden}
+body.qa.qxt #qxt-discover .qxfd-age{grid-column:3;grid-row:1/3;max-width:55px;overflow:hidden;text-overflow:ellipsis;font-size:10px;line-height:1.15}
+body.qa.qxt #qxt-discover .qxfd-watch{position:absolute;left:0;top:6px;z-index:2;width:22px;min-width:22px;height:28px;padding:0;font-size:15px}
+body.qa.qxt #qxt-discover .qxfd-table .qxfd-cap-kind{display:none}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table td::before{display:none!important}
+body.qa.qxt #qxt-discover .qxfd-table button.qxfd-buy{position:relative;z-index:2;width:auto!important;min-width:28px;min-height:28px;height:28px!important;padding:0 7px!important;border-radius:2px!important;font-size:11px!important;line-height:1!important}
+body.qa.qxt #qxt-discover .qxfd-table button.qxfd-buy::before{width:12px;height:12px}
+body.qa.qxt #qxt-discover .qxfd-table .qxfd-evidence{position:relative;z-index:2}
+body.qa.qxt #qxt-discover .qxfd-evidence .qxd-badges{display:flex;flex-wrap:nowrap;align-items:center;justify-content:flex-end;gap:2px;min-height:24px}
+body.qa.qxt #qxt-discover .qxfd-evidence .qxd-badge{display:grid;place-items:center;min-width:16px;height:20px;padding:0 2px;font-size:9px;line-height:1;border:1px solid var(--qa-rule);border-radius:2px;box-sizing:border-box}
+body.qa.qxt #qxt-discover .qxfd-evidence .qxd-checks{position:relative;display:block}
+body.qa.qxt #qxt-discover .qxfd-evidence .qxd-checks summary{display:grid;place-items:center;width:24px;min-width:24px;min-height:24px;height:24px;padding:0!important;font-size:17px;border-radius:2px;box-sizing:border-box;line-height:1;list-style:none}
+body.qa.qxt #qxt-discover .qxfd-evidence .qxd-checks summary::after{display:none}
+body.qa.qxt #qxt-discover .qxfd-evidence .qxd-checks-panel{position:absolute;z-index:40;right:0;top:27px;width:260px;max-width:calc(100vw - 24px);background:var(--qa-slab);border:1px solid var(--qa-rule);padding:12px;box-sizing:border-box;box-shadow:0 8px 24px #0006}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-skeleton{height:40px;min-height:40px;border-bottom:1px solid var(--qa-rule)}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-skeleton td{height:10px!important}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-skeleton .qxfd-token{height:24px!important}
+body.qa.qxt #qxt-discover.qxfd-pro-rows .qxfd-scroll .qxfd-table tr[data-key]{height:64px;min-height:64px;grid-template-rows:31px 28px;align-items:center}
+body.qa.qxt #qxt-discover.qxfd-pro-rows .qxfd-scroll .qxfd-table td.qxfd-riskgrid{display:grid!important;grid-column:2/-2!important;grid-row:2!important;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;text-align:left}
+body.qa.qxt #qxt-discover .qxfd-riskgrid>span{display:flex;justify-content:space-between;align-items:center;gap:4px;border-top:1px solid var(--qa-rule);font-size:10px;color:var(--qa-tx-3);padding-top:4px}
+body.qa.qxt #qxt-discover .qxfd-riskgrid b{color:var(--qa-tx-2);font-size:10px;font-weight:600}
+body.qa.qxt #qxt-discover.qxfd-pro-rows .qxfd-scroll .qxfd-table :is(td.qxfd-token,td.qxfd-buy){grid-row:1/3!important}
+body.qa.qxt #qxt-discover.qxfd-pro-rows .qxfd-scroll .qxfd-skeleton{height:64px;min-height:64px}
+@media(max-width:1099px){
+ body.qa.qxt{--qa-pad:12px;--qa-section-gap:12px;--qa-fs-body:13px;--qa-fs-price:28px;--qa-fs-stat:14px}
+ body.qa.qxt #qxt-discover{display:flex;flex-direction:column}
+ body.qa.qxt #qxt-discover .qxfd-toolbar{height:36px;min-height:36px;gap:5px}
+ body.qa.qxt #qxt-discover .qxfd-tabs{gap:14px}
+ body.qa.qxt #qxt-discover .qxfd-tabs button{height:36px;min-height:36px;font-size:12px}
+ body.qa.qxt #qxt-discover .qxfd-toolbar .qxfd-quick-chip{max-width:95px;overflow:hidden;font-size:10px;padding:0 5px}
+ body.qa.qxt #qxt-discover .qxfd-search-toggle{display:block;width:28px;min-width:28px;height:28px;line-height:1}
+ body.qa.qxt #qxt-discover .qxfd-layout-controls button{padding:0 6px;font-size:11px}
+ body.qa.qxt #qxt-discover .ta-search{display:none;margin:0}
+ body.qa.qxt #qxt-discover.qxfd-search-open .ta-search{display:flex;position:absolute;top:36px;left:0;right:0;z-index:50;height:44px;margin:0;padding:0 12px;background:var(--qa-slab);border:1px solid var(--qa-gold);border-radius:2px}
+ body.qa.qxt #qxt-discover.qxfd-search-open .ta-search input{font-size:16px;height:44px}
+ body.qa.qxt #qxt-discover .qxfd-instant{height:32px;min-height:32px;padding:0;gap:4px}
+ body.qa.qxt #qxt-discover .qxfd-instant>:is(button,select),body.qa.qxt #qxt-discover .qxfd-instant>.qxfd-list-options>summary{height:28px;min-height:28px;padding:0 6px;font-size:10px}
+ body.qa.qxt #qxt-discover .qxfd-pro-toggle{display:none}
+ body.qa.qxt #qxt-discover .qfd-status{margin-left:auto}
+ body.qa.qxt #qxt-discover .qxfd-status{max-width:100px;font-size:10px!important}
+ body.qa.qxt #qxt-discover .qtl-discovery-access .qtl-count{display:none}
+ body.qa.qxt #qxt-discover .qtl-discovery-access .qtl-launch{min-width:24px;padding:0 3px}
+ body.qa.qxt #qxt-discover .qxfd-list-options-body{top:68px}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table thead{display:block!important;top:48px}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table thead tr{height:24px;min-height:24px;padding:0!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(tr[data-key],thead tr,.qxfd-skeleton){grid-template-columns:minmax(110px,1.65fr) minmax(62px,.9fr) minmax(56px,.8fr) 24px 32px!important;grid-template-rows:1fr!important;column-gap:6px!important;row-gap:0!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table tr[data-key]{height:56px;min-height:56px;padding:0!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th){grid-row:1!important;line-height:1.15}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th):is(.qxfd-price,.qxfd-liquidity,.qxfd-txns,.qxfd-makers,.qxfd-holders,.qxfd-top10,.qxfd-dev,.qxfd-riskgrid){display:none!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-token{grid-column:1!important;grid-area:auto!important;padding:0!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-mcap{grid-column:2!important;grid-area:auto!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-volume{grid-column:3!important;grid-area:auto!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-move{grid-column:2!important;grid-row:1!important;align-self:end;padding-bottom:7px!important;font-size:13px}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table td.qxfd-mcap{align-self:start;padding-top:9px!important;font-size:12px}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-safety{display:block!important;grid-column:4!important;grid-area:auto!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(td,th).qxfd-buy{grid-column:5!important;grid-area:auto!important;display:flex!important;align-self:center}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table th.qxfd-move{display:none!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table th.qxfd-mcap button::after{content:' / %';font-size:10px;color:var(--qa-tx-3)}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table th:is(.qxfd-safety,.qxfd-buy){font-size:0}
+ body.qa.qxt #qxt-discover .qxfd-open{grid-template-columns:28px minmax(0,1fr)!important;grid-template-rows:auto auto!important;min-height:40px;height:40px!important;padding-left:0;margin-left:0;gap:1px 6px!important}
+ body.qa.qxt #qxt-discover .qxfd-avatar{width:28px;height:28px;grid-column:1;grid-row:1/3}
+ body.qa.qxt #qxt-discover .qxfd-chain-icon{left:20px;top:32px;width:10px;height:10px}
+ body.qa.qxt #qxt-discover .qxfd-watch{display:none}
+ body.qa.qxt #qxt-discover .qxfd-identity{grid-column:2;grid-row:1;align-self:end;display:block}
+ body.qa.qxt #qxt-discover .qxfd-identity b{font-size:13px;line-height:1.15}
+ body.qa.qxt #qxt-discover .qxfd-name{display:none}
+ body.qa.qxt #qxt-discover .qxfd-age{grid-column:2;grid-row:2;align-self:start;max-width:100%;font-size:10px;line-height:1.1}
+ body.qa.qxt #qxt-discover .qxfd-table button.qxfd-buy{font-size:0!important;width:32px!important;height:32px!important;min-height:32px;min-width:32px;padding:0!important;justify-content:center}
+ body.qa.qxt #qxt-discover .qxfd-table button.qxfd-buy::before{margin:0;width:14px;height:14px}
+ body.qa.qxt #qxt-discover .qxfd-evidence .qxd-badge{display:none}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-skeleton{height:56px;min-height:56px}
+ body.qa.qxt #qxt-discover.qxfd-pro-rows .qxfd-scroll .qxfd-table tr[data-key]{height:56px;min-height:56px;grid-template-rows:1fr}
+ body.qa.qxt #qxt-discover.qxfd-pro-rows .qxfd-scroll .qxfd-table td.qxfd-riskgrid{display:none!important}
 }
-@media(max-width:359px){.qxfd-instant{gap:3px}.qxfd-instant .qxfd-chain-chip,.qxfd-instant .qxfd-window-chip{width:32px}.qxfd-instant>button,.qxfd-instant>select,.qxfd-instant>.qxfd-list-options>summary{padding:5px}.qxfd-instant .qxfd-settings{min-width:28px}body.qa.qxt #qxt-discover .qxfd-identity b{font-size:13px}body.qa.qxt #qxt-discover .qxfd-table tbody tr[data-key]{grid-template-columns:repeat(4,minmax(0,1fr)) 70px!important}body.qa.qxt #qxt-discover button.qxfd-buy{width:70px!important}}
 
-body.qa.qxt .qaq-sheet :is(input,select){font-size:16px;padding:10px;min-height:44px}
+/* Explicit grid rows prevent the legacy table's named areas from auto-placing cells. */
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > :is(td,th){grid-area:auto!important;grid-row:1!important}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table tbody tr[data-key] > td::before{display:none!important}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-token{grid-column:1!important}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-price{grid-column:2!important}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-mcap{grid-column:3!important}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-liquidity{grid-column:4!important}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-volume{grid-column:5!important}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-txns{grid-column:6!important}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-holders{grid-column:7!important}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-top10{grid-column:8!important}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-dev{grid-column:9!important}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-move{grid-column:10!important}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-safety{grid-column:11!important}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-buy{grid-column:12!important}
+body.qa.qxt #qxt-discover .qxfd-scroll{padding-top:0;margin-top:0}
+body.qa.qxt #qxt-discover.qxfd-pro-rows .qxfd-scroll table.qxfd-table tbody tr[data-key]>.qxfd-riskgrid{grid-column:2/-2!important;grid-row:2!important}
+body.qa.qxt #qxt-discover.qxfd-pro-rows .qxfd-scroll table.qxfd-table tbody tr[data-key]>:is(.qxfd-token,.qxfd-buy){grid-row:1/3!important}
+@media(max-width:1099px){
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-token{grid-column:1!important;grid-row:1!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-mcap{grid-column:2!important;grid-row:1!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-move{grid-column:2!important;grid-row:1!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-volume{grid-column:3!important;grid-row:1!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-safety{grid-column:4!important;grid-row:1!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table :is(thead,tbody) tr > .qxfd-buy{grid-column:5!important;grid-row:1!important}
+}
 
-body.qa.qxt .qaq-sheet .qaq-save{color:var(--qa-tx-on-gold,#211505);background:var(--qa-gold-metal,#d5b376);font:700 15px var(--qa-sans)}
+/* Missing global holder counts remove that column, with the remaining columns retaining their alignment. */
+@media(min-width:1100px){
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table:not(.qxfd-has-holders) :is(thead,tbody) tr>.qxfd-top10{grid-column:7!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table:not(.qxfd-has-holders) :is(thead,tbody) tr>.qxfd-dev{grid-column:8!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table:not(.qxfd-has-holders) :is(thead,tbody) tr>.qxfd-move{grid-column:9!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table:not(.qxfd-has-holders) :is(thead,tbody) tr>.qxfd-safety{grid-column:10!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table:not(.qxfd-has-holders) :is(thead,tbody) tr>.qxfd-buy{grid-column:11!important}
+}
+body.qa.qxt #qxt-discover .qxfd-panel{padding:0;margin:0}
+body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table{margin:0}
+body.qa.qxt #qxt-discover .qxfd-instant{display:flex;align-items:center;flex-wrap:nowrap}
+body.qa.qxt #qxt-discover .qxfd-scroll{width:100%!important;max-width:100%;margin-inline:0!important;overflow:visible}
+body.qa.qxt #qxt-discover .qxfd-quick-chip{border:1px solid var(--qa-rule);background:var(--qa-wash);color:var(--qa-gold-hi);font:650 11px var(--qa-sans);cursor:pointer}
+body.qa.qxt #qxt-discover .qxfd-status{margin-left:auto!important}
+body.qa.qxt #qxt-discover .qxfd-instant .qxfd-settings{border:1px solid var(--qa-rule);background:var(--qa-wash);color:var(--qa-tx-2);cursor:pointer}
+body.qa.qxt #qxt-discover .qxfd-instant .qfd-settings{display:none}
+body.qa.qxt #qxt-discover .qtl-discovery-access{width:auto;max-width:none;flex:0 0 auto}
+body.qa.qxt #qxt-discover .qtl-discovery-access .qtl-launch{flex:none;width:24px;min-width:24px;max-width:24px}
+body.qa.qxt #qxt-discover .qxfd-instant>:is(button,select,.qxfd-list-options){flex:0 0 auto}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table thead{clip:auto!important;clip-path:none!important;position:sticky!important;width:100%!important;height:auto!important;overflow:visible!important}
+body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table thead tr{position:static!important;clip:auto!important;clip-path:none!important;width:100%!important;overflow:visible!important}
+body.qa.qxt #qxt-discover .qxfd-evidence .qxd-badge{font-size:10px}
+body.qa.qxt .qa-hdr :is(button,.qa-btn--icon){border-radius:3px!important}
+@media(max-width:1099px){
+ body.qa.qxt #qxt-discover .qxfd-instant .qxfd-chain-chip{width:45px}
+ body.qa.qxt #qxt-discover .qxfd-instant .qxfd-window-chip{width:36px}
+ body.qa.qxt #qxt-discover .qxfd-instant .qxfd-status{flex:1 1 auto;min-width:0;max-width:none;overflow:hidden;text-overflow:ellipsis}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table thead th{height:24px!important;align-content:center}
+}
 
-/* Keep the new settings sheet close target visible and finger-sized. */
-.qaq-sheet>header{position:sticky;top:0;z-index:2;background:var(--qa-slab,#141812)}
-.qaq-sheet>header>button{width:44px;height:44px;min-width:44px}
+body.qa.qxt.qxt-discover-mode>footer.qa-foot{display:none!important}
+
+@media(min-width:1100px){body.qa.qxt #qxt-discover .qtl-discovery-access .qtl-launch{width:42px;min-width:42px;max-width:42px}}
+/* The list remains a viewport-sized workspace when a source is sparse or empty. */
+body.qa.qxt #qxt-discover .qxfd-panel{min-height:calc(100dvh - 88px)}
+@media(max-width:1099px){body.qa.qxt #qxt-discover .qxfd-panel{min-height:calc(100dvh - 116px)}}
+body.qa.qxt #qxt-discover .qxfd-latency-host{flex:none;max-width:35px;font-size:10px;line-height:1;white-space:nowrap;color:var(--qa-tx-3)}
+@media(max-width:359px){
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(tr[data-key],thead tr,.qxfd-skeleton){grid-template-columns:minmax(88px,1.4fr) minmax(56px,.9fr) minmax(48px,.8fr) 24px 28px!important;column-gap:4px!important}
+ body.qa.qxt #qxt-discover .qxfd-table button.qxfd-buy{width:28px!important;min-width:28px}
+ body.qa.qxt #qxt-discover .qxfd-instant .qxfd-settings{width:24px;min-width:24px}
+ body.qa.qxt #qxt-discover .qxfd-instant .qxfd-status{font-size:10px!important}
+ body.qa.qxt #qxt-discover .qxfd-toolbar .qxfd-quick-chip{max-width:78px}
+}
+body.qa.qxt #qxt-discover .qxfd-evidence .qxd-checks-panel{left:auto!important}
+body.qa.qxt #qxt-discover .qxfd-evidence .qxd-checks[open]{width:auto;border:0;background:none;flex:none}
+@media(max-width:1099px){body.qa.qxt .qa-ambient__art{filter:none!important;background-image:none!important}}
 
 /* Funds retain Price and compact controls on phones. */
 @media(max-width:759px){
@@ -111,32 +254,214 @@ body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row td.qxfd-buy{grid-area:1/5/3
 body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row .qxfd-price-refreshing{display:inline;margin-left:4px}
 body.qa.qxt #qxt-discover #qxfd-panel .qxfd-fund-row:has(.qxd-checks[open]){grid-template-rows:auto auto!important}
 }
+@media(max-width:1099px){
+ body.qa.qxt #qxt-discover .qxfd-fund-row .qxfd-identity{grid-row:1/3;align-self:center}
+ body.qa.qxt #qxt-discover .qxfd-fund-row .qxfd-name{display:block;max-width:120px;font-size:10px;line-height:1.15;text-overflow:ellipsis}
+ body.qa.qxt #qxt-discover .qxfd-fund-row .qxfd-age{display:none}
+}
+/* A sighted touch user sees the exact preset currency before pressing quick buy. */
+body.qa.qxt #qxt-discover .qxfd-table .qxfd-buy-value,body.qa.qxt #qxt-discover .qxfd-table .qxfd-buy-unit{font:inherit}
+@media(max-width:1099px){
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(tr[data-key],thead tr,.qxfd-skeleton){grid-template-columns:minmax(100px,1.5fr) minmax(58px,.9fr) minmax(52px,.8fr) 24px 48px!important}
+ body.qa.qxt #qxt-discover .qxfd-table button.qxfd-buy{display:grid;grid-template-columns:10px minmax(0,1fr);grid-template-rows:1fr 1fr;gap:0 2px;width:48px!important;min-width:48px;height:32px!important;min-height:32px;font-size:10px!important;padding:3px!important;white-space:normal;line-height:1.1!important}
+ body.qa.qxt #qxt-discover .qxfd-table button.qxfd-buy::before{grid-column:1;grid-row:1/3;width:10px;height:12px;align-self:center;margin:0}
+ body.qa.qxt #qxt-discover .qxfd-table button.qxfd-buy .qxfd-buy-value{grid-column:2;grid-row:1;overflow-wrap:anywhere;font-size:10px;line-height:1.05}
+ body.qa.qxt #qxt-discover .qxfd-table button.qxfd-buy .qxfd-buy-unit{grid-column:2;grid-row:2;font-size:10px;line-height:1.05}
+}
+@media(max-width:359px){body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table :is(tr[data-key],thead tr,.qxfd-skeleton){grid-template-columns:minmax(88px,1.4fr) minmax(56px,.9fr) minmax(48px,.8fr) 24px 44px!important;column-gap:4px!important}body.qa.qxt #qxt-discover .qxfd-table button.qxfd-buy{width:44px!important;min-width:44px}}
+@media(max-width:1099px){body.qa.qxt #qxt-discover .qxfd-instant>.qxfd-list-options{width:65px}body.qa.qxt #qxt-discover .qxfd-instant>.qxfd-list-options>summary{box-sizing:border-box;width:65px;padding-inline:5px}}
+/* The legacy staging holder is moved into the shell by the renderer. It must not occupy a transient85px row. */
+body.qa.qxt>#ta-holder{display:none}
+/* Multiple observed safety flags share the cell without displacing the buy action. */
+@media(min-width:1100px){
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-evidence .qxd-badges:has(.qxd-badge){position:relative;flex-wrap:wrap;justify-content:flex-end;align-content:center;gap:1px;padding-right:26px;min-height:24px;box-sizing:border-box}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-evidence .qxd-badges:has(.qxd-badge)>.qxd-checks{position:absolute;right:0;top:0}
+ body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-evidence .qxd-badges>.qxd-badge{min-width:12px;height:11px;padding:0 1px;border:0;font-size:10px;line-height:1}
+}
 
-/* G3: liquidity remains visible without adding height to the mobile rows. */
-body.qa.qxt #qxt-discover .qxfd-table tr[data-key],body.qa.qxt #qxt-discover .qxfd-table thead tr{grid-template-columns:minmax(200px,2fr) repeat(4,minmax(76px,1fr)) minmax(55px,.7fr) minmax(60px,.7fr) minmax(80px,1fr) 110px}
-body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-liquidity{display:block!important;grid-column:5!important}
-body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-holders{grid-column:6!important}
-body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-move{grid-column:7!important;font-size:13px}
-body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-safety{grid-column:8!important}
-body.qa.qxt #qxt-discover #qxfd-panel .qxfd-table td.qxfd-safety.qxfd-evidence{grid-column:8!important;grid-row:1!important}
-body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-buy{grid-column:9!important}
+/* Preserve G3 liquidity and Hot now within the compact density grid. */
 .qxfd-trending-note{font:12px/1.5 var(--qa-sans);color:var(--qa-tx-3);margin:12px;white-space:normal}
-@media(max-width:1099px) and (min-width:760px){
-body.qa.qxt #qxt-discover .qxfd-table tr[data-key],body.qa.qxt #qxt-discover .qxfd-table thead tr{grid-template-columns:minmax(160px,2fr) repeat(4,minmax(60px,1fr)) minmax(45px,.7fr) minmax(50px,.7fr) 90px}
-body.qa.qxt #qxt-discover .qxfd-table :is(td,th).qxfd-buy{grid-column:8!important}
-body.qa.qxt #qxt-discover #qxfd-panel .qxfd-table td.qxfd-safety.qxfd-evidence{grid-area:2/1/3/-1!important}
+body.qa.qxt #qxt-discover .qxfd-instant>.qxfd-hot-now{font-size:12px}
+@media(max-width:1099px){
+ body.qa.qxt #qxt-discover .qxfd-instant>.qxfd-hot-now{max-width:56px;padding-inline:4px;font-size:11px;white-space:nowrap}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table tbody tr:not(.qxfd-fund-row)>.qxfd-volume{align-self:start;padding-top:9px!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table tbody tr:not(.qxfd-fund-row)>.qxfd-liquidity{display:block!important;grid-column:3!important;grid-row:1!important;align-self:end;padding-bottom:7px!important;font-size:12px}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table thead tr>.qxfd-liquidity{display:none!important}
+}
+
+/* G3 adds a sort action: keep every narrow control and source age readable. */
+@media(max-width:1099px){
+ body.qa.qxt #qxt-discover .qxfd-instant{height:auto;min-height:32px;flex-wrap:wrap;row-gap:2px}
+ body.qa.qxt #qxt-discover .qxfd-instant .qxfd-status{flex:1 0 72px;min-width:72px;white-space:nowrap}
+ body.qa.qxt #qxt-discover .qxfd-instant .qtl-discovery-access{flex:none}
+ body.qa.qxt #qxt-discover .qxfd-instant>.qxfd-list-options{margin:0}
+ body.qa.qxt #qxt-discover .qxfd-instant>.qxfd-list-options>summary{height:28px;min-height:28px;padding-block:0}
+}
+
+/* Filter controls retain their backing layer above whole-row hit targets. */
+body.qa.qxt #qxt-discover .qxfd-toolbar{position:relative;z-index:21}
+body.qa.qxt #qxt-discover .qxfd-instant{position:relative;z-index:20}
+body.qa.qxt #qxt-discover .qxfd-instant .qxfd-list-options{position:static}
+body.qa.qxt #qxt-discover .qxfd-instant .qxfd-list-options-body{position:absolute;left:0;right:0;z-index:45;margin:0;max-height:70dvh;overflow:auto;background:var(--qa-slab,#171a15);box-shadow:0 18px 36px #0007}
+
+/* P4: original source status beside the price; cap labels never carry refresh copy. */
+body.qa.qxt #qxt-discover.qxfd-price-visible .qxfd-price-value{display:block;font-size:13px;line-height:1.25;font-variant-numeric:tabular-nums;color:var(--qa-tx)}
+body.qa.qxt #qxt-discover.qxfd-price-visible .qxfd-price-status{display:block;margin-top:3px;font:400 12px/1.25 var(--qa-sans);color:var(--qa-tx-3);white-space:normal}
+body.qa.qxt #qxt-discover.qxfd-price-visible .qxfd-head-short{display:none}
+@media(max-width:759px){
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr[data-key]{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.65fr) minmax(0,1.25fr) 76px!important;grid-template-rows:minmax(32px,auto) minmax(18px,auto) minmax(18px,auto)!important;row-gap:0!important;padding-top:1px!important;padding-bottom:2px!important;min-height:72px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-token{grid-area:1/1/2/6!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-open{min-height:32px!important;height:32px!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-watch{height:32px;min-height:32px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-group-toggle{margin-top:-32px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-price{display:flex!important;grid-area:2/1/3/6!important;align-items:baseline;flex-wrap:wrap;gap:2px 6px;padding-left:24px!important;white-space:normal}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-price-status{margin:0;white-space:nowrap}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-price::before{content:none!important;display:none!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-mcap{grid-area:3/1/4/2!important;display:flex!important;align-items:baseline;gap:3px;white-space:nowrap}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-volume{grid-area:3/2/4/3!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-liquidity{grid-area:3/3/4/4!important;display:block!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-holders{grid-area:3/4/4/5!important;display:block!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-move{grid-area:3/5/4/6!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td:is(.qxfd-mcap,.qxfd-volume,.qxfd-liquidity,.qxfd-holders,.qxfd-move){font-size:12px;line-height:18px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td:is(.qxfd-mcap,.qxfd-volume,.qxfd-liquidity,.qxfd-holders,.qxfd-move)::before{display:none!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-cap-kind{display:inline;margin:0;font-size:12px;line-height:18px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-buy{grid-area:1/6/4/7!important;align-self:start;height:44px!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-safety.qxfd-evidence{display:block!important;grid-area:1/6/4/7!important;align-self:end;justify-self:end;height:24px!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxd-checks>summary{min-height:24px;height:24px;font-size:12px;padding:0 4px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table thead{display:block!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table thead tr{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.65fr) minmax(0,1.25fr) 76px!important;gap:4px!important;padding:0 var(--qa-pad,18px)!important;height:24px;min-height:24px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table thead th{display:none!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table thead th:is(.qxfd-mcap,.qxfd-volume,.qxfd-liquidity,.qxfd-holders,.qxfd-move){display:block!important;font:500 12px/24px var(--qa-sans);white-space:nowrap;text-align:left;padding:0!important;height:24px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table thead th button{padding:0;min-height:24px;line-height:24px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-head-full{display:none}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-head-short{display:inline}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table thead .qxfd-mcap{grid-column:1!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table thead .qxfd-volume{grid-column:2!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table thead .qxfd-liquidity{grid-column:3!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table thead .qxfd-holders{grid-column:4!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table thead .qxfd-move{grid-column:5!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr.qxfd-contract-expanded[data-key]{height:auto!important;min-height:0!important;grid-template-rows:auto auto auto auto!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr.qxfd-contract-expanded[data-key]>td.qxfd-contract-detail{grid-row:4!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel tr:has(.qxd-checks[open]){height:auto!important;grid-template-rows:auto auto auto auto!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel tr:has(.qxd-checks[open]) td.qxfd-safety.qxfd-evidence{grid-area:4/1/5/-1!important;align-self:auto;height:auto!important;width:100%!important;justify-self:stretch}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel tr.qxfd-contract-expanded:has(.qxd-checks[open]){grid-template-rows:auto auto auto auto auto!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr.qxfd-contract-expanded:has(.qxd-checks[open])>td.qxfd-contract-detail{grid-row:5!important}
+}
+@media(max-width:359px){body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr[data-key],body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table thead tr{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.65fr) minmax(0,1.25fr) 70px!important}}
+
+@media(max-width:759px){
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-open{grid-template-columns:28px minmax(0,1fr) auto!important;grid-template-rows:32px!important;column-gap:6px!important;row-gap:0!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-avatar{grid-column:1;grid-row:1;width:26px!important;height:26px!important;min-width:26px;max-width:26px;border-radius:4px;align-self:center}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-avatar img{width:100%;height:100%;border-radius:inherit}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-identity{grid-column:2;grid-row:1;min-width:0}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-identity b{font-size:13px;white-space:nowrap;max-width:none;overflow:visible;text-overflow:clip}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-age{grid-column:3;grid-row:1;font-size:12px;white-space:nowrap}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-chain-icon{left:18px;bottom:0;width:10px;height:10px}
+}
+
+@media(max-width:759px){
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table thead{position:static!important;width:100%!important;height:auto!important;clip:auto!important;clip-path:none!important;overflow:visible!important;margin:0!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-mcap:not([data-unit="USD"]){white-space:normal}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-mcap>span{min-width:0}
+}
+
+@media(max-width:759px){
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-price-value,body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-price-status{line-height:18px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-chain-icon{bottom:3px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-mcap{position:relative;display:block!important;white-space:nowrap}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-cap-unit,body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-cap-kind{position:absolute;left:0;top:-18px;line-height:18px;font:400 12px/18px var(--qa-sans);color:var(--qa-tx-3);white-space:nowrap;margin:0}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel tr:has(td.qxfd-mcap[data-unit]:not([data-unit="USD"]):not([data-unit=""])) td.qxfd-price{padding-left:36px!important;gap:2px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel tr:has(td.qxfd-mcap[data-unit]:not([data-unit="USD"]):not([data-unit=""])) .qxfd-price-value{font-size:12px}
 }
 @media(max-width:759px){
-body.qa.qxt #qxt-discover .qxfd-table tbody tr[data-key]:not(.qxfd-fund-row){grid-template-columns:repeat(5,minmax(0,1fr)) 76px!important}
-body.qa.qxt #qxt-discover .qxfd-table tbody tr:not(.qxfd-fund-row) td.qxfd-token{grid-area:1/1/2/6!important}
-body.qa.qxt #qxt-discover .qxfd-table tbody tr:not(.qxfd-fund-row) td.qxfd-liquidity{grid-area:2/3/3/4!important}
-body.qa.qxt #qxt-discover .qxfd-table tbody tr:not(.qxfd-fund-row) td.qxfd-holders{grid-area:2/4/3/5!important}
-body.qa.qxt #qxt-discover .qxfd-table tbody tr:not(.qxfd-fund-row) td.qxfd-move{grid-area:2/5/3/6!important}
-body.qa.qxt #qxt-discover .qxfd-table tbody tr:not(.qxfd-fund-row) td.qxfd-buy{grid-area:1/6/2/7!important}
-body.qa.qxt #qxt-discover #qxfd-panel .qxfd-table tbody tr:not(.qxfd-fund-row) td.qxfd-safety.qxfd-evidence{grid-area:2/6/3/7!important;justify-self:end}
-body.qa.qxt #qxt-discover .qxfd-table tbody td.qxfd-liquidity::before{content:'Liq';display:block!important;font:500 12px/1 var(--qa-sans);color:var(--qa-tx-3);margin-bottom:3px}
-body.qa.qxt #qxt-discover .qxfd-table tbody tr.qxfd-fund-row td.qxfd-liquidity{display:none!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-price{align-items:center!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td:is(.qxfd-mcap,.qxfd-volume,.qxfd-liquidity,.qxfd-holders,.qxfd-move){font-size:12px!important;line-height:18px!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table thead th.qxfd-move button{padding-left:4px}
 }
-@media(max-width:359px){body.qa.qxt #qxt-discover .qxfd-table tbody tr[data-key]:not(.qxfd-fund-row){grid-template-columns:repeat(5,minmax(0,1fr)) 70px!important}}
+/* Reserve a real sibling slot for G3's contract count; no float over the age/ticker. */
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-table tbody tr.qxfd-contract-group>td.qxfd-token{display:grid!important;grid-template-columns:minmax(0,1fr) 28px;align-items:center;column-gap:4px}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-table tbody tr.qxfd-contract-group .qxfd-open{grid-column:1;min-width:0}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-table tbody tr.qxfd-contract-group .qxfd-group-toggle{float:none;position:static;margin:0;grid-column:2;grid-row:1;align-self:center;justify-self:end}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-table tbody tr.qxfd-contract-group .qxfd-symline{padding-right:0}
+@media(max-width:759px){body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-identity b{white-space:normal;overflow-wrap:anywhere;line-height:15px}}
+/* Open checks get an intrinsic row; their content cannot sit over prices or contract details. */
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-open{position:relative}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-chain-icon{position:absolute!important;grid-area:auto!important}
+@media(max-width:759px){
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-chain-icon{left:18px!important;bottom:3px!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr:has(.qxd-checks[open]){height:auto!important;grid-template-rows:auto auto auto auto!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr:has(.qxd-checks[open])>td.qxfd-safety.qxfd-evidence{grid-area:4/1/5/-1!important;align-self:auto;justify-self:stretch;height:auto!important;width:100%!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr.qxfd-contract-expanded:has(.qxd-checks[open]){grid-template-rows:auto auto auto auto auto!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr.qxfd-contract-expanded:has(.qxd-checks[open])>td.qxfd-contract-detail{grid-row:5!important}
+}
+@media(min-width:760px){
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-chain-icon{left:22px!important;bottom:0!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr:has(.qxd-checks[open]){height:auto!important;grid-template-rows:auto auto auto!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr:has(.qxd-checks[open])>td.qxfd-safety.qxfd-evidence{grid-column:1/-1!important;grid-row:2!important;height:auto!important;width:100%!important;align-self:auto;justify-self:stretch}
+}
 
-body.qa.qxt #qxt-discover .qxfd-instant>.qxfd-hot-now{font-size:12px}
+/* The price band replaces the former stacked mobile cap/volume layout. */
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-token{display:grid!important;grid-template-columns:24px minmax(0,1fr);column-gap:2px;align-items:center}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr.qxfd-contract-group>td.qxfd-token{grid-template-columns:24px minmax(0,1fr) 28px}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-watch{display:grid!important;position:static;grid-column:1;grid-row:1;place-items:center;width:24px;min-width:24px;height:24px;min-height:24px;padding:0;line-height:24px;margin:0;align-self:center}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-open{grid-column:2;grid-row:1;padding:0!important;margin:0;min-width:0;align-self:center}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-group-toggle{grid-column:3;grid-row:1}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr.qxfd-contract-group .qxfd-open{grid-column:2;grid-row:1}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr.qxfd-contract-group .qxfd-group-toggle{grid-column:3;grid-row:1}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-chain-icon{top:auto!important}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-evidence .qxd-checks[open]{width:100%;display:block}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-evidence .qxd-checks[open]>.qxd-checks-panel{position:static!important;width:100%!important;max-width:none!important;margin:4px 0 0}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-evidence:has(.qxd-checks[open]) .qxd-badges{display:block}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-age{padding:0!important;max-width:none}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-watch{transform:none;inset:auto}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table button.qxfd-buy{display:flex!important;align-items:center;justify-content:center;gap:2px;white-space:nowrap;font-size:12px!important;line-height:16px!important}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table button.qxfd-buy :is(.qxfd-buy-value,.qxfd-buy-unit){display:inline;font-size:12px!important;line-height:16px!important;overflow-wrap:normal}
+@media(max-width:759px){
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr[data-key]{height:auto!important;min-height:72px!important;grid-template-rows:35px 18px 18px!important;padding-block:0!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td:is(.qxfd-mcap,.qxfd-volume,.qxfd-liquidity,.qxfd-holders,.qxfd-move){padding:0!important;align-self:center;justify-self:start;transform:none;margin:0}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-open{grid-template-columns:28px minmax(0,1fr)!important;grid-template-rows:18px 17px!important;height:35px!important;min-height:35px!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-avatar{grid-row:1/3}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-identity{grid-column:2;grid-row:1;align-self:center;padding:0}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-identity b{white-space:nowrap;line-height:18px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-age{grid-column:2;grid-row:2;align-self:center;line-height:17px;padding:0}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table button.qxfd-buy{width:100%!important;height:44px!important;min-height:44px!important;padding:0 2px!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table th.qxfd-mcap button::after{content:none}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table:not(.qxfd-has-holders) :is(tbody tr[data-key],thead tr){grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.25fr) 76px!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table:not(.qxfd-has-holders) :is(td,th).qxfd-holders{display:none!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table:not(.qxfd-has-holders) td.qxfd-token{grid-area:1/1/2/5!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table:not(.qxfd-has-holders) td.qxfd-price{grid-area:2/1/3/5!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table:not(.qxfd-has-holders) td.qxfd-move{grid-area:3/4/4/5!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table:not(.qxfd-has-holders) th.qxfd-move{grid-column:4!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table:not(.qxfd-has-holders) td.qxfd-buy{grid-area:1/5/4/6!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table:not(.qxfd-has-holders) td.qxfd-safety.qxfd-evidence{grid-area:1/5/4/6!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-fund-row .qxfd-identity{grid-row:1/3;display:grid;grid-template-rows:18px 17px;align-self:center}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-fund-row .qxfd-name{font-size:12px;line-height:17px;max-width:none;transform:translateY(-1px)}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-skeleton{height:72px!important;min-height:72px!important}
+}
+@media(max-width:359px){body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table:not(.qxfd-has-holders) :is(tbody tr[data-key],thead tr){grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.25fr) 70px!important}}
+@media(min-width:760px){
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr.qxfd-contract-expanded{grid-template-rows:minmax(40px,auto) auto!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr:has(.qxd-checks[open]){grid-template-rows:minmax(40px,auto) auto auto!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr.qxfd-contract-expanded:has(.qxd-checks[open]){grid-template-rows:minmax(40px,auto) auto auto!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-chain-icon{left:16px!important;bottom:2px!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible.qxfd-pro-rows #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr[data-key]{grid-template-rows:40px 23px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible.qxfd-pro-rows #qxfd-panel .qxfd-price-status{margin-top:3px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-open{grid-template-rows:32px!important;min-height:32px!important;height:32px!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-avatar{grid-row:1;align-self:center}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-identity{display:grid;grid-template-rows:16px 14px;gap:1px;align-self:center}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-identity b{line-height:16px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll .qxfd-name{line-height:14px}
+}
+
+/* P0 unknown-cap caption gets its own slot; long visible price/age can grow. */
+@media(max-width:759px){
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr[data-key]{grid-template-rows:35px minmax(18px,auto) 18px!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody tr:has(td.qxfd-mcap[data-cap-state="syncing"]) td.qxfd-price{padding-left:52px!important}
+}
+
+/* Keep the observed cap type/status visible in the desktop metric cell. */
+@media(min-width:760px){
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table tbody td.qxfd-mcap{display:block!important;align-self:center;line-height:16px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-table .qxfd-cap-kind{display:block;margin:0;font:400 12px/16px var(--qa-sans);color:var(--qa-tx-3);white-space:nowrap}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-table .qxfd-cap-kind:empty{display:none}
+}

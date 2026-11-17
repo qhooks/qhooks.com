@@ -1,0 +1,33 @@
+{
+  "status": "ROOT_EXACT_LICENSED_STATIC_UNION_ARTIFACTS_BOUND_TO_ACTUAL_RELEASE",
+  "sourceRelease": "59158504-d42c-4409-8a3b-292ade72e00e",
+  "sourceCandidate": "/Users/randallholt/.codex/.chatgpt-projects/g-p-6942a2559d94819197bc2c26ef325393/work/qhooks-polish-curve-current-codex-candidate-20261117",
+  "sourceWorkerSha256": "8e378cf0108370e68d1571ca10e3f58ca3ff38b39a69752557a074ff2eba0486",
+  "previousAllowanceCount": 37,
+  "newExactAllowanceCount": 1,
+  "previousAllowancesAndAllOtherPolicyExact": true,
+  "authority": "Root authorized only proven exact licensed LWC derivative rows under the existing audited vendor/license/two-attribution policy. No wildcard or proprietary path exception. No claim source candidate is LIVE.",
+  "artifacts": [
+    {
+      "path": "b/polish-curve-20261117/terminal/qx-terminal.6QI4TQEF.mjs",
+      "sha256": "c47a1b11192f1cc4baa4bd5db0c25ef0dee12c5b6e08ba8459f3fe4b7769b96f",
+      "bytes": 438313,
+      "graph": "/Users/randallholt/.codex/.chatgpt-projects/g-p-6942a2559d94819197bc2c26ef325393/work/qhooks-polish-curve-current-codex-candidate-20261117/lead/perf/terminal.manifest.json",
+      "graphInput": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "existingApacheLicense": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      },
+      "referencesExactly": 2,
+      "reviewedReferences": [
+        "https://www.tradingview.com/?utm_medium=lwc-link&utm_campaign=lwc-chart",
+        "Charting by TradingView"
+      ],
+      "closedAdvancedChartsInputs": 0
+    }
+  ],
+  "actualNetworkCalls": 0
+}

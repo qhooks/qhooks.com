@@ -1,0 +1,1 @@
+function i(e){let n=o=>{o.persisted===!0&&e.location.reload()};return e.addEventListener("pageshow",n),()=>e.removeEventListener("pageshow",n)}typeof window<"u"&&i(window);export{i as bindWalletPageResume};

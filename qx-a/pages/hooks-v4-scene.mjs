@@ -1,3 +1,4 @@
+import { createSceneFrames, sceneMotionAllowed } from '/qx-scene-lifecycle.mjs';
 // /hooks v4 (2026-11-12): the lit set for the Builders Lab. The same stage as /create and Portfolio (the pre-rendered
 // void with its light shaft, dust and polished floor from /qx-a/set/), with the live object on top in real PBR:
 // the QHooks hook (brushed steel, gold eye, collar and studs) hanging in the shaft, and a launch block (the v6 film
@@ -102,7 +103,7 @@ function faceCanvas({ title, sub, note, index, img, sym }) {
   return c;
 }
 
-const CSS = `.hk4-set{position:absolute;inset:0;overflow:hidden;background:#050605}.hk4-set>video,.hk4-set>canvas{position:absolute;inset:0;width:100%;height:100%;display:block}.hk4-set>video{object-fit:cover}
+const CSS = `.hk4-set[hidden]{display:none}.hk4-set{position:absolute;inset:0;overflow:hidden;background:#050605}.hk4-set>video,.hk4-set>canvas{position:absolute;inset:0;width:100%;height:100%;display:block}.hk4-set>video{object-fit:cover}
 .hk4-grain{position:absolute;inset:-50%;pointer-events:none;opacity:.09;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.2'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");animation:hk4-grain .5s steps(5) infinite}
 @keyframes hk4-grain{0%{transform:translate(0,0)}20%{transform:translate(-7%,4%)}40%{transform:translate(5%,-6%)}60%{transform:translate(-3%,8%)}80%{transform:translate(8%,2%)}}
 @media (prefers-reduced-motion:reduce){.hk4-grain{animation:none}}`;
@@ -120,7 +121,9 @@ export function mountHookSet(host, { posY = .62, plate = '/qx-a/set/', prop = nu
   const grain = document.createElement('div'); grain.className = 'hk4-grain';
   stage.append(video, cv, grain); host.append(stage);
   renderer.toneMapping = ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1; renderer.outputColorSpace = SRGBColorSpace; renderer.setClearColor(0, 0);
-  const scene = new Scene(); scene.environment = new PMREMGenerator(renderer).fromScene(roomScene(), .04).texture;
+  const scene = new Scene(), room = roomScene(), pmrem = new PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(room, .04).texture; pmrem.dispose();
+  room.traverse(o => { o.geometry?.dispose(); o.material?.dispose(); });
   const cam = new PerspectiveCamera(CAM.fov, PLATE.w / PLATE.h, .1, 100); cam.position.set(...CAM.pos); cam.lookAt(...CAM.look);
   // the glow: a restrained bloom over the HDR frame (gold speculars, the eye, studs, the block's edge); type and the face stay under its threshold
   const composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, cam));
@@ -158,7 +161,7 @@ export function mountHookSet(host, { posY = .62, plate = '/qx-a/set/', prop = nu
     fragmentShader: 'uniform float uA; varying float vS; varying float vD; varying float vTw; void main(){ float r = length(gl_PointCoord - .5) * 2.0; float edge = mix(.3, .0, vD); float a = (1.0 - smoothstep(edge, 1.0, r)) * uA * (.3 + .7 * vS) * (1.0 - .6 * vD) * vTw; gl_FragColor = vec4(vec3(1.0, .88, .64) * a, a); }' });
   scene.add(new Points(dustGeo, dustMat));
 
-  let W = 1, H = 1, raf = 0, visible = true, t0 = performance.now(), seatAt = -1e9, pulseAt = -1e9, swing = 0, swingV = 0, seated = false;
+  let W = 1, H = 1, visible = false, paused = true, dead = false, t0 = performance.now(), seatAt = -1e9, pulseAt = -1e9, swing = 0, swingV = 0, seated = false;
   function size() {
     const r = stage.getBoundingClientRect(); W = Math.max(1, r.width); H = Math.max(1, r.height);
     const dpr = Math.min(devicePixelRatio || 1, LOW ? 1.25 : W < 700 ? 1.75 : 2); renderer.setPixelRatio(dpr); renderer.setSize(W, H, false);
@@ -177,6 +180,7 @@ export function mountHookSet(host, { posY = .62, plate = '/qx-a/set/', prop = nu
   // 2026-11-12 audit #3: the launch-block slab read as skewered on the hook, so the prop is no longer loaded; the page's
   // text callout carries the data. form/pulse/setFace stay as no-op-safe calls (the block group stays empty and hidden).
   const loaded = !prop ? Promise.resolve() : new GLTFLoader().loadAsync(prop).then((g) => {
+    if (dead) { g.scene.traverse(o => { o.geometry?.dispose(); for (const m of [].concat(o.material || [])) m.dispose(); }); return; }
     const root = g.scene;
     root.traverse((o) => { if (!o.isMesh) return; const n = o.material?.name || ''; if (n === 'Gold') o.material = gold; else if (n === 'Slab') o.material = slab; else if (o.name === 'face') { faceMesh = o; o.material = new MeshStandardMaterial({ color: 0xffffff, roughness: .18, metalness: .1, emissive: 0xffffff, emissiveIntensity: .62, envMapIntensity: .35 }); } else o.material = slab; });
     // a glass pane over the face, for the room's reflection
@@ -185,8 +189,9 @@ export function mountHookSet(host, { posY = .62, plate = '/qx-a/set/', prop = nu
     mBlock = block.clone(true); mBlock.traverse((o) => { if (!o.isMesh) return; o.material = o.material === gold ? gGold : o.material === glass ? gGlass : o.name === 'face' ? ghost(o.material) : gSlab; }); mRig.add(mBlock);
     if (pendingFace) setFaceCanvas(pendingFace); go();
   }).catch((e) => { console.warn('hooks-v4: launch block', e?.message || e); });
-  function frame(now) {
-    raf = 0; const t = RM ? 0 : (now - t0) / 1000, dt = 1 / 60;
+  function frame(now, dt) {
+    if (!allowed()) { go(); return; }
+    const t = RM ? 0 : (now - t0) / 1000;
     const since = (now - seatAt) / 1000, sp = (now - pulseAt) / 1000;
     // the sway: a slow pendulum from the eye, plus the tug when the block lands
     swingV += (-swing * 4.5 - swingV * 1.2) * dt; swing += swingV * dt;
@@ -203,20 +208,41 @@ export function mountHookSet(host, { posY = .62, plate = '/qx-a/set/', prop = nu
     dustMat.uniforms.uT.value = t; dustMat.uniforms.uA.value = .7 + .4 * Math.max(0, 1 - sp / 1.4);
     mPivot.rotation.copy(pivot.rotation);
     composer.render();
-    if (!RM && visible && !document.hidden) raf = requestAnimationFrame(frame);
   }
-  const go = () => { if (!raf) raf = requestAnimationFrame(frame); };
-  const play = () => { if (RM) return; const p = video.play(); p?.catch?.(() => {}); };
-  size(); new ResizeObserver(() => { size(); go(); }).observe(stage);
-  new IntersectionObserver((e) => { visible = e[0].isIntersecting; if (visible) { play(); go(); } else video.pause(); }).observe(stage);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) { play(); go(); } });
-  play(); go();
+  const frames = createSceneFrames(frame);
+  const allowed = () => {
+    const rect = stage.getBoundingClientRect();
+    return !dead && !paused && visible && !document.hidden && sceneMotionAllowed() && rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight;
+  };
+  const go = () => {
+    if (!allowed()) { frames.pause(); video.pause(); grain.style.animationPlayState = 'paused'; return; }
+    grain.style.animationPlayState = 'running'; frames.resume();
+    if (video.paused) video.play()?.catch?.(() => {});
+  };
+  const resizeObserver = new ResizeObserver(() => { size(); go(); });
+  const intersection = new IntersectionObserver(entries => { visible = entries.some(e => e.isIntersecting); go(); });
+  size(); resizeObserver.observe(stage); intersection.observe(stage);
+  document.addEventListener('visibilitychange', go);
   const api = {
-    stage, _dbg: () => ({ seated, vis: block.visible, kids: block.children.length, pos: block.position.toArray(), face: !!faceMesh, mb: !!mBlock, mbVis: mBlock?.visible }),
+    stage,
+    resume() { paused = false; go(); },
+    pause() { paused = true; go(); },
+    dispose() {
+      if (dead) return;
+      dead = true; frames.dispose(); video.pause();
+      resizeObserver.disconnect(); intersection.disconnect(); document.removeEventListener('visibilitychange', go);
+      video.querySelectorAll('source').forEach(source => source.removeAttribute('src')); video.removeAttribute('src'); video.load();
+      const geometries = new Set(), materials = new Set(), textures = new Set();
+      scene.traverse(o => { if (o.geometry) geometries.add(o.geometry); for (const m of [].concat(o.material || [])) materials.add(m); });
+      for (const m of materials) { for (const value of Object.values(m)) if (value?.isTexture) textures.add(value); m.dispose(); }
+      geometries.forEach(g => g.dispose()); textures.forEach(t => t.dispose()); scene.environment?.dispose();
+      composer.passes.forEach(pass => pass.dispose?.()); composer.dispose(); renderer.dispose(); stage.remove(); if (host.hk4 === api) delete host.hk4;
+    },
+    _dbg: () => ({ seated, vis: block.visible, kids: block.children.length, pos: block.position.toArray(), face: !!faceMesh, mb: !!mBlock, mbVis: mBlock?.visible }),
     /** The face's data: { title, sub, note, index, img, sym }. */
     setFace(data) { const c = faceCanvas(data); if (faceMesh) setFaceCanvas(c); else pendingFace = c; go(); },
     /** The block seats onto the hook (page open). */
-    form() { seated = true; block.visible = !!block.children.length; block.userData.tugged = false; seatAt = performance.now(); loaded.then(() => { block.visible = true; go(); }); go(); },
+    form() { seated = true; block.visible = !!block.children.length; block.userData.tugged = false; seatAt = performance.now(); loaded.then(() => { if (!dead) { block.visible = true; go(); } }); go(); },
     /** A trade ran through: the block lifts and re-seats, the light flares. */
     pulse() { if (!seated) return this.form(); block.userData.tug2 = false; pulseAt = performance.now(); go(); },
   };

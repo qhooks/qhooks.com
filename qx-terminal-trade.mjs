@@ -1,3 +1,7 @@
+import{quickBuyPaymentOptions,resolveQuickBuyPayment,sameQuickPayment}from'./qx-quick-buy-plan.mjs';
+import {costContext,tradeCosts} from './qx-ticket-cost-core.mjs';
+import {createTicketCostReader,ticketCostEnvelope} from './qx-ticket-cost-read.mjs';
+import {mountTicketCosts} from './qx-ticket-cost-view.mjs';
 import {waitTransactionReceipt} from './qx-transaction-receipt.mjs';
 import {walletTradingStorage} from './qx-trade-settings-context.mjs';
 import {COPY_RISK} from '/qx-copy-review-core.mjs';
@@ -53,10 +57,11 @@ function holderRate(who) {
     .then(r => BigInt(r || "0x0") === 1n).catch(() => { holderReads.delete(k); return false; }));
   return holderReads.get(k);
 }
-function feeLine(chainId, extra = "") {
+function feeLine(chainId, extra = "", onRate = () => {}) {
   const s = h("span", { class: "qxt-fee" }, "30% cashback from the 1% QHooks fee" + extra);
   if (String(chainId) === "4663") Promise.all([holderRate(connectedAddress()), holderMinTokens()]).then(([on, min]) => {
     if (!min) return; // holderMin 0 (holder cashback off) or unread: the plain 30% line stays
+    onRate(on?40:30);
     s.textContent = on ? "40% cashback from the 1% QHooks fee · QHOOKS holder" + extra : "30% cashback from the 1% QHooks fee · 40% when you hold " + shortText(min) + "+ QHOOKS" + extra;
   });
   return s;
@@ -87,6 +92,49 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   let quoteLoading = false, quoteAgeTimer = null;
   let marketPrices=[], rowReview=null, lastReceipt=null, lastSubmitError=null;
   const hub = getWalletHub(window);
+  const costs=mountTicketCosts({h,now}),costReader=createTicketCostReader({rpc});
+  let shownCost=null;const costRates=new WeakMap();
+  function costRebate(c,share){costRates.set(c,share);if(shownCost?.trade===c)costs.cashback(share,shownCost.record);}
+  function clearCosts(){shownCost=null;costReader.cancel();costs.clear();}
+  function changedCostPath(){if(shownCost){costReader.cancel();costs.context(null);}}
+  window.addEventListener('qhooks:trade-prefs',changedCostPath);
+  const costParent=card.parentNode;
+  if(costParent&&typeof MutationObserver!=='undefined'){
+    const observer=new MutationObserver(()=>{if(!card.isConnected||!costs.element.isConnected){clearCosts();window.removeEventListener('qhooks:trade-prefs',changedCostPath);observer.disconnect();}});
+    observer.observe(costParent,{childList:true});observer.observe(card,{childList:true});
+  }
+  function costAssets(c){
+    const family=st.sol?'solana':'evm',chainId=st.chainId;
+    const asset=(id,symbol,decimals)=>Object.freeze({family,chainId,id:st.sol?id:String(id).toLowerCase(),symbol,decimals});
+    const native=()=>asset(st.sol?SOL_MINT:ZERO,st.sol?'SOL':NATIVE[chainId],st.sol?9:18);
+    const chosen=st.multi?c.route.pool:selectedQuote();
+    const input=c.side==='sell'?asset(st.token,st.symbol,st.decimals):c.pay==='native'?native():st.sol?asset(SOL_USDC,'USDC',6):c.payAsset?asset(c.payAsset.address,c.payAsset.symbol,c.payAsset.decimals):asset(st.ext?xTokens().sell:st.nativePool?ZERO:chosen.quote,payUnit(),payDecimals());
+    const output=c.side==='buy'?asset(st.token,st.symbol,st.decimals):st.sol?(pay==='native'?native():asset(SOL_USDC,'USDC',6)):st.ext?(xTokens().buy===XNATIVE?native():asset(xTokens().buy,xTokens().outSym,xTokens().outDec)):asset(chosen.quote,chosen.quoteSymbol,chosen.quoteDecimals);
+    return {input,output,native:native()};
+  }
+  function presentCosts(c,{grossOutput=null,impactPct=null,provider=null}={}){
+    const state=st,assets=costAssets(c),context=costContext(c,assets,state.sol?'solana':'evm');
+    const route=state.sol?(provider?.route==='dbc'?'Meteora DBC':provider?.router?'Jupiter · '+provider.router:'Jupiter'):state.ext?(provider?.direct?'Direct curve':provider?.sources?.join(' → ')||'0x'):c.route?.label||'QHooks pool';
+    const record=tradeCosts({context,received:c.got,minimum:c.minOut,grossOutput,impactPct,route,solOrder:provider});
+    shownCost={record,trade:c};costs.set(record);if(costRates.has(c))costs.cashback(costRates.get(c),record);
+    const alive=()=>shownCost?.record===record&&card.isConnected!==false&&st===state&&quoteMatches(c)&&sameOwner(c.owner,quoteOwner(),!!state.sol)&&now()-c.readAt<=30000;
+    if(state.sol)return;
+    if(!c.owner){costs.network({state:'unknown',reason:'Connect for a wallet-specific network estimate'},record);return;}
+    // Use only already-known wallet/session state. Never fetch auth/session state for a display estimate.
+    const embedded=hub.snapshot().current?.entry?.rdns==='io.qhooks.privy'||globalThis.qhooksPrivySignerControls?.wallet?.address?.toLowerCase()===c.owner.toLowerCase();
+    const ordinary=!embedded&&!tradePlan(c).silent&&!silentActive()&&!c.homeRequired&&!c.funding&&!homeReturnNeeded(c.chainId,homePref,homeEnabled);
+    void (async()=>{
+      try{
+        const router=await extraAddress('feeRouter',c.chainId);if(!alive())return;
+        if(!router)throw Error('router unavailable');
+        const external=state.ext?{...xTokens(),q:provider}:null;
+        const build=timestamp=>ticketCostEnvelope({state,trade:c,router,deadline:timestamp+(state.ext?600n:1200n),external,encoders:{feeSwapCall,nativeHops,viaSwapCall}});
+        const tokenIn=build(0n).tokenIn;
+        const result=await costReader.read({chainId:c.chainId,owner:c.owner,amount:c.a,router,nativeAsset:assets.native,ordinary,isCurrent:alive,envelope:{tokenIn,build:timestamp=>build(timestamp).tx}});
+        if(result&&alive())costs.network(c.homeRequired||c.funding?{...result,fullSpend:false,reason:'Destination-chain estimate · Move costs shown separately'}:result,record);
+      }catch{if(alive())costs.network({state:'unknown',reason:'Network estimate unavailable · check your wallet before signing'},record);}
+    })();
+  }
   loadFundingStyle();
   const homeSettings = homePicker({getOwner: () => connectedAddress()});
   if (!document.getElementById('qhome-style')) { const style = document.createElement('link'); style.id = 'qhome-style'; style.rel = 'stylesheet'; style.href = '/qx-home-currency.css'; document.head.append(style); }
@@ -195,7 +243,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   const risk = h('div', { class: 'qxt-risk', hidden: true });
   const followup = h('div', {class: 'qxt-followup'});
   const funding = createFundingRow({ h, getPlan: q => tradePlan(current, q), onChange: ({ quote, ready }) => {
-    clearArmed(); if (current) current.funding = quote;
+    changedCostPath();clearArmed(); if (current) current.funding = quote;
     go.disabled = busy || !!(current?.homeRequired && !current.home) || !quoteMatches(current) || !ready || (st?.safety?.verdict === 'danger' && !risk.querySelector('input')?.checked);
     // The primary button names the whole path when it moves money first (Relay), so one tap reads as one action.
     if (funding.noSource) void balances().then(showAddFunds).catch(() => {});
@@ -204,13 +252,13 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   const quoteDetails=h('div',{class:'qxt-quote-details'});
   tradingSettings.element.append(h('label',{class:'qxt-pay qxt-live-slippage'},h('span',{},'Slippage'),tolSel));
   const settingsSummary=h('summary',{},'Settings');
-  const settings=h('details',{class:'qxt-ticket-settings'},settingsSummary,homeRow,thesisRow,quoteDetails,quoteTools,cashSettings(h),cash);
+  const settings=h('details',{class:'qxt-ticket-settings'},settingsSummary,homeRow,thesisRow,quoteDetails,cashSettings(h),cash);
   settings.addEventListener('keydown',event=>{if(event.key==='Escape'&&settings.open){event.preventDefault();event.stopPropagation();settings.open=false;settingsSummary.focus();}});
   function presentQuote(...nodes){const main=nodes.filter((n,i)=>i===0||String(n.getAttribute?.('class')||n.className||'').split(' ').includes('qxt-impact'));out.replaceChildren(...main);quoteDetails.replaceChildren(...nodes.filter(n=>!main.includes(n)));}
   card.replaceChildren(
     h('div', { class: 'qxt-side-toggle', role: 'group', ariaLabel: 'Trade side' }, ...sideBtns, sellToCash),
     payRow,
-    risk, ...avail.elements, h('div', { class: 'qxt-amount qxt-amount-fit' }, amount, amountDisplay, usdInput, usdDisplay, unit), h('div', {class: 'qxt-usd-row'}, usdEcho, unitToggle), addFunds, funding.element, presets, out, go, signIn, tradingSettings.element, status, followup, settings, h('a', {href:'/trust',class:'qxt-muted',style:'display:block;font-size:11px;padding:12px 0;text-underline-offset:3px'}, 'Trust Hub · checks, fees & contracts'));
+    risk, ...avail.elements, h('div', { class: 'qxt-amount qxt-amount-fit' }, amount, amountDisplay, usdInput, usdDisplay, unit), h('div', {class: 'qxt-usd-row'}, usdEcho, unitToggle), addFunds, funding.element, presets, out, costs.element, quoteTools, go, signIn, tradingSettings.element, status, followup, settings, h('a', {href:'/trust',class:'qxt-muted',style:'display:block;font-size:11px;padding:12px 0;text-underline-offset:3px'}, 'Trust Hub · checks, fees & contracts'));
   if(!rowMode)import('/qx-oneclick.mjs').then(m => m.mountOneClickToggle(settings)).catch(() => {}); // One-click trading toggle (hidden unless an email/Google wallet is connected)
 
   const calloutContext=()=>st?{chainId:String(st.chainId),token:String(st.token).toLowerCase(),owner:connectedAddress()?.toLowerCase()}:null;
@@ -233,6 +281,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   const isSelection=intent=>!!intent&&intent===selection;
   function beginSelection(target) {
     if(busy||recovery){status.textContent=busy?'Finish the current trade before opening another token.':'Resolve the funded trade below before opening another token.';return false;}
+    clearCosts();
     copyPrepared=null;copyReview.invalidate();
     selection=Object.freeze({revision:++selectionRevision,key:targetKey(target)});thesis.value='';tokenFeed.setMarket(null);calloutMarket='';
     clearTimeout(timer);qseq++;current=null;st=null;priceUsd=null;marketPrices=[];sellCash=false;homeSelected=false;sellPrefillOwner=null;pendingSellPrefill=false;
@@ -253,6 +302,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   function hasQuoteAmount() { try { return !!st&&parseUnits(amount.value,payDecimals())>0n; } catch { return false; } }
   function renderQuoteFreshness() {
     clearTimeout(quoteAgeTimer);
+    if(shownCost){const c=shownCost.trade;if(!quoteMatches(c)||!sameOwner(c.owner,quoteOwner(),!!st?.sol)){clearCosts();}else{if(now()-c.readAt>30000)costReader.cancel();costs.tick();}}
     const hasAmount=hasQuoteAmount();
     quoteTools.hidden=!hasAmount;
     refreshQuote.disabled=!hasAmount||quoteLoading||busy||!!recovery;
@@ -271,7 +321,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   function quoteReadIsCurrent(read) {
     if(read.revision!==qseq||read.state!==st||!isSelection(read.selection))return false;
     if(sameOwner(read.owner,quoteOwner(),read.sol))return true;
-    current=null;go.disabled=true;out.textContent='Wallet changed. Refresh the quote.';
+    clearCosts();current=null;go.disabled=true;out.textContent='Wallet changed. Refresh the quote.';
     return false;
   }
   refreshQuote.addEventListener('click',()=>{if(!busy&&!recovery&&!quoteLoading&&hasQuoteAmount())refresh();});
@@ -366,7 +416,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
     clearArmed(); return plan;
   }
   let lastWallet = hub.snapshot().current;
-  hub.subscribe(({ current: wallet }) => { if (wallet !== lastWallet) { clearArmed(); lastWallet = wallet; } showSignIn();queueMicrotask(()=>buyCallout.refresh()); });
+  hub.subscribe(({ current: wallet }) => { if (wallet !== lastWallet) { clearCosts();clearArmed(); lastWallet = wallet; } showSignIn();queueMicrotask(()=>buyCallout.refresh()); });
   window.addEventListener('qhooks:trade-prefs', clearArmed);
 
   function paintCachedHolding() {
@@ -453,12 +503,13 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
       const { outDec, outSym } = xTokens(), cut = v => side === 'sell' ? v - v * FEE_BPS / 10000n : v;
       const got = cut(BigInt(q.buyAmount)), minOut = cut(BigInt(q.minBuyAmount));
       const impactPct = rq?.buyAmount ? impactFromQuotes(BigInt(q.buyAmount), a, BigInt(rq.buyAmount), small) : null;
-      current = bindQuote({ side, pay, a, got, minOut, x: true },mine,read.owner,read.toleranceBps);
+      current = bindQuote({ side, pay, a, got, minOut, x: true },mine,read.owner,read.toleranceBps);const costQuote=current;
       presentQuote(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
         h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4) + (q.sources?.length ? ' · via ' + q.sources.map(s => s.replace(/_/g, ' ')).join(', ') : '')),
         ...impactNodes(impactPct),
-        feeLine(st.chainId, q.direct ? ' · straight to the curve' : ' · routed by 0x'), ...(st.curve ? [h('span', {class: 'qxt-fee qxt-curve-fee'}, curveFeeText(st.curve))] : []));
+        feeLine(st.chainId, q.direct ? ' · straight to the curve' : ' · routed by 0x',rate=>costRebate(costQuote,rate)), ...(st.curve ? [h('span', {class: 'qxt-fee qxt-curve-fee'}, curveFeeText(st.curve))] : []));
       await offerFunding(mine);
+      if(quoteMatches(current))presentCosts(current,{grossOutput:BigInt(q.buyAmount),impactPct,provider:q});
     } catch (e) { if (mine === qseq) {current=null;go.disabled=true;out.textContent = e.message;} }
   }
   async function extSubmit(c) {
@@ -518,6 +569,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
         h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4)),
         ...impactNodes(o.priceImpact != null && Number.isFinite(Number(o.priceImpact)) ? Math.abs(Number(o.priceImpact)) : null),
         h('span', { class: 'qxt-fee' }, o.route==='dbc'?'Direct Meteora DBC · fee includes the launch anti-snipe schedule · 30% of the QHooks share as cashback':solOrderFeeCopy(o)));
+      presentCosts(current,{impactPct:o.priceImpact != null && Number.isFinite(Number(o.priceImpact))?Math.abs(Number(o.priceImpact)):null,provider:o});
       go.disabled = busy || (st.safety?.verdict === 'danger' && !risk.querySelector('input')?.checked);
     } catch (e) { if (mine === qseq) {current=null;go.disabled=true;out.textContent = e.message;} }
   }
@@ -549,7 +601,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
     } catch (e) { s(e.message || 'The trade did not go through'); }
     lock(false); layout();
   }
-  onSolChange(() => { buyCallout.refresh(); if (st?.sol&&!busy&&!recovery) { if(sellPrefillOwner&&sellPrefillOwner!==solAddress()){setAmount('');sellPrefillOwner=null;} refresh(); layout(); } });
+  onSolChange(() => { clearCosts();buyCallout.refresh(); if (st?.sol&&!busy&&!recovery) { if(sellPrefillOwner&&sellPrefillOwner!==solAddress()){setAmount('');sellPrefillOwner=null;} refresh(); layout(); } });
 
   function renderRisk() {
     const v = st?.ext || st?.direct ? st.safety : null;
@@ -613,6 +665,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   }
 
   function refresh() {
+    clearCosts();
     syncUsd();
     if (busy||recovery) return;
     pendingSellPrefill=false;
@@ -630,6 +683,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
     if (st.noRoute) { out.textContent=st.noRoute; current=null; go.disabled=true; return; }
     syncProfile();
     if (!copyReview.active&&!st.sol && (homeSelected || homeReturnNeeded(st.chainId, homePref, homeEnabled))) tol = String(homeSlippage(tol));
+    clearCosts();
     const mine = ++qseq,read={revision:mine,state:st,selection,owner:quoteOwner(),sol:!!st.sol,toleranceBps:Number(tol)}; let a;
     quoteLoading=true;renderQuoteFreshness();
     try {
@@ -665,19 +719,21 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
         [got, refGot] = await Promise.all([quoteSingle(chainId, key, zeroForOne, spend), quoteSingle(chainId, key, zeroForOne, small).catch(() => null)]);
       }
       const impactPct = refGot != null ? impactFromQuotes(got, spend, refGot, small) : null;
+      const costGrossOutput=got;
       if (side === 'sell') got -= got * FEE_BPS / 10000n;
       if (!quoteReadIsCurrent(read)) return;
       const minOut = got * (10000n - BigInt(read.toleranceBps)) / 10000n;
       const outDec = side === 'buy' ? st.decimals : st.multi?route.pool.quoteDecimals:selectedQuote().quoteDecimals, outSym = side === 'buy' ? st.symbol : st.multi?route.pool.quoteSymbol:selectedQuote().quoteSymbol;
-      current = bindQuote({ side, pay, a, got, minOut, route },mine,read.owner,read.toleranceBps);
+      current = bindQuote({ side, pay, a, got, minOut, route },mine,read.owner,read.toleranceBps);const costQuote=current;
       presentQuote(h('b', {}, '≈ ' + formatUnits(got, outDec, 4) + ' ' + outSym),
         h('span', {}, 'at least ' + formatUnits(minOut, outDec, 4) + ' · block charges included'),
         ...impactNodes(impactPct),
-        feeLine(chainId),
+        feeLine(chainId,'',rate=>costRebate(costQuote,rate)),
         ...(route ? [h('span', {}, route.label)] : []));
       go.disabled = !connectedAddress() || busy || homeSelected;
       if (!connectedAddress()) status.textContent = 'Connect a wallet to trade.';
       await offerFunding(mine);
+      if(quoteMatches(current))presentCosts(current,{grossOutput:costGrossOutput,impactPct});
     } catch (e) { if (mine === qseq) {current=null;go.disabled=true;out.textContent = /revert|execution/i.test(e.message || '') ? 'The pool refuses this trade right now (its rules may be closed to it).' : tradeError(e);} }
     finally {if(mine===qseq){quoteLoading=false;renderQuoteFreshness();}}
   }
@@ -904,7 +960,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   amountDisplay.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) submit(); } });
   balance.addEventListener('click', async () => { if(busy||recovery||!st)return;const intent=selection,activeState=st,mine=++qseq;clearTimeout(timer);current=null;go.disabled=true;sellPrefillOwner=null;clearArmed();quoteLoading=false;renderQuoteFreshness(); const b = await balances(); if(!isSelection(intent)||st!==activeState||mine!==qseq)return;if (b) { setAmount( formatUnits(spendable(b), payDecimals(), payDecimals()).replace(/,/g, '')); refresh(); } });
   go.addEventListener('click', submit);
-  onWalletChange(() => { clearArmed(); if (!busy && recovery?.pendingBuy && recovery.pendingBuy.owner.toLowerCase() !== connectedAddress()?.toLowerCase()) {recovery = null; current = null; followup.replaceChildren(); lock(false);} if (!busy&&!recovery&&!st?.sol) {paintCachedHolding();if (!rowMode&&restorePendingBuy()) return; if(sellPrefillOwner&&sellPrefillOwner.toLowerCase()!==connectedAddress()?.toLowerCase()){setAmount('');sellPrefillOwner=null;}void syncHome(true).then(() => {refresh();layout();});} });
+  onWalletChange(() => { clearCosts();clearArmed(); if (!busy && recovery?.pendingBuy && recovery.pendingBuy.owner.toLowerCase() !== connectedAddress()?.toLowerCase()) {recovery = null; current = null; followup.replaceChildren(); lock(false);} if (!busy&&!recovery&&!st?.sol) {paintCachedHolding();if (!rowMode&&restorePendingBuy()) return; if(sellPrefillOwner&&sellPrefillOwner.toLowerCase()!==connectedAddress()?.toLowerCase()){setAmount('');sellPrefillOwner=null;}void syncHome(true).then(() => {refresh();layout();});} });
 
   sellToCash.addEventListener('click', async () => {
     if (!st || busy||recovery) return;
@@ -1058,21 +1114,27 @@ if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} setAmount( '');s
     },
     rowElements:()=>({risk,status,ready:go}),
     /// Instant buy from the feed: sets the amount in the given unit class and sends once quoted.
-    async quickBuy(cls, value) {
+    async quickBuy(cls, value, payment = null) {
       if (!st || busy||recovery) return;
       const intent=selection;
+      const choices=()=>quickBuyPaymentOptions(st,paySel.options,NATIVE[st.chainId]);
+      const request={cls,value,payment},details={chainId:st.chainId,noRoute:st.noRoute,symbol:st.symbol};
+      const chosen=resolveQuickBuyPayment(request,choices(),details);
+      const stop=reason=>{status.textContent=reason;throw Error(reason);};
+      if(!chosen.ok)stop(chosen.reason);
+      if(homeSelected)stop('Choose the payment currency in the trade ticket before using quick buy.');
       clearArmed();clearTimeout(timer);qseq++;current=null;go.disabled=true;sellPrefillOwner=null;
       quoteLoading=false;renderQuoteFreshness();
       side = 'buy'; sellCash = false;
-      const native = nativeRoute(st.chainId, st.quote);
-      // Any-token tickets with no stable quote (Robinhood Chain) pay in the native coin, their only option.
-      // HYPE (Elysium): pay in the coin people hold (native HYPE, wrapped by the router), as the ticket defaults to.
-      pay = st.ext && !st.quote ? 'native' : st.nativePool ? 'native' : cls === 'hype' && native?.wrap && unitClass(NATIVE[st.chainId]) === 'hype' ? 'native' : unitClass(st.quoteSymbol) === cls ? 'quote' : native && unitClass(NATIVE[st.chainId]) === cls ? 'native' : 'quote';
-      if(st.multi){const q=st.pools.find(p=>unitClass(p.quoteSymbol)===cls);pay=unitClass(NATIVE[st.chainId])===cls?'native':q?.quote||'native';}
-      paySel.value = pay; setAmount( value);
-      await layout();if(!isSelection(intent))return; clearTimeout(timer); await quote();
-      if (isSelection(intent)&&quoteMatches(current)) await submit();
+      pay=chosen.pay;paySel.value=pay;setAmount(chosen.value);
+      await layout();if(!isSelection(intent))return;clearTimeout(timer);
+      const matches=()=>{const check=resolveQuickBuyPayment({...request,payment:chosen.payment},choices(),details);return check.ok&&pay===check.pay&&!homeSelected&&sameQuickPayment(check.payment,chosen.payment);};
+      if(!matches())stop('The quick-buy payment changed. Choose a payment currency in the trade ticket.');
+      await quote();if(!isSelection(intent))return;
+      if(!matches())stop('The quick-buy payment changed. Review the trade ticket.');
+      if(quoteMatches(current))await submit();
     },
+
     get unitClass() { return st ? unitClass(pay === 'native' ? NATIVE[st.chainId] : st.quoteSymbol) : null; }
   };
 }

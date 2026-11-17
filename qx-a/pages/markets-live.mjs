@@ -2,6 +2,8 @@
 // same feed the terminal and home use; USD price, market cap, 24h change and the last trade come from its summaries.
 // Prices tick (flash up or down) only when the feed reports a new price.
 import { fmt, RM } from '/qx-a/components.mjs';
+import {marketQuoteState} from '/qx-market-quote-state.mjs';
+import {priceState} from '/qx-price-state.mjs';
 
 const ADDR = /^0x[0-9a-f]{40}$/;
 const num = (v) => typeof v === 'number' && Number.isFinite(v) ? v : null;
@@ -18,10 +20,10 @@ export async function launchFeed({ fetcher = fetch } = {}) {
   const j = await r.json();
   if (!Array.isArray(j?.markets)) throw Error('feed shape');
   return j.markets.filter((m) => /^\d+$/.test(String(m?.chainId)) && ADDR.test(String(m?.controller).toLowerCase())).map((m) => {
-    const s = m.summary || {};
-    return { key: m.chainId + ':' + String(m.controller).toLowerCase(), chainId: String(m.chainId), controller: String(m.controller).toLowerCase(), token: m.token, live: !!m.live,
+    const s = m.summary || {}, quote=marketQuoteState(m);
+    return { ...quote, key: m.chainId + ':' + String(m.controller).toLowerCase(), chainId: String(m.chainId), controller: String(m.controller).toLowerCase(), token: m.token, live: !!m.live,
       symbol: String(m.symbol || m.name || 'Token').slice(0, 24), name: String(m.name || '').slice(0, 48), logo: artURL(m.logo || m.profileImage), banner: artURL(m.profileBanner),
-      priceUsd: num(s.priceUsd), mcapUsd: num(s.mcapUsd), volUsd: num(s.volume24Usd), change: num(s.change24), trades24: num(s.trades24), holders: num(s.holders), lastTradeAt: num(s.lastTradeAt) };
+      priceUsd: quote?.priceUsd??null, mcapUsd: quote?.marketCapUsd??null, volUsd: quote?.volume24Usd??null, change: quote?.change24??null, trades24: priceState(quote?.observedAt).usable?num(s.trades24):null, holders: num(s.holders), lastTradeAt: num(s.lastTradeAt) };
   });
 }
 /// A coin: the token's own image, or its first letter on gold.
@@ -46,7 +48,7 @@ export function tick(node, text, value, prev) {
   requestAnimationFrame(() => requestAnimationFrame(() => node.classList.remove('is-up', 'is-down')));
 }
 /// Ages count up every second on [data-ts] nodes under root.
-export function ageClock(root) {
-  const paint = () => root.querySelectorAll('[data-ts]').forEach((n) => { n.textContent = ageText(Number(n.dataset.ts)); });
+export function ageClock(root,{beforePaint}={}) {
+  const paint = () => { if(document.hidden)return;beforePaint?.();root.querySelectorAll('[data-ts]').forEach((n) => { n.textContent = ageText(Number(n.dataset.ts)); }); };
   paint(); return setInterval(paint, 1000);
 }

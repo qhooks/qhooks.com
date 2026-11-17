@@ -3,6 +3,8 @@ import{createTerminalResolutionView}from'./qx-terminal-resolution-view.mjs';
 import {readMarket} from '/qx-market-transport.mjs';
 import{publicReadFetch}from'./qx-public-read.mjs';
 import{fundFor}from'./qx-fund-catalog.mjs';
+import{quickBuyPlan}from'./qx-quick-buy-plan.mjs';
+import{openQuickBuyWallet}from'./qx-quick-buy-context.mjs';
 import {discoveryEvidence,evidenceTime} from './qx-discovery-evidence.mjs';
 import {discoveryBadges} from './qx-discovery-badges.mjs';
 import {tokenCreatorTruth,creatorRiskView,executionRiskView} from './qx-token-creator.mjs';
@@ -433,13 +435,13 @@ function renderFeed() {
  const rows=feedRows(),xPart=xs.length?[h('li',{class:'qxt-sect'},'Outside tokens'),...xs.map((x,i)=>xItem(x,rows.length+i))]:q.length>=2?[searchNotice()]:[];
  if(!rows.length){list.replaceChildren(...foundingPin(),h('li',{class:'qxt-workspace-empty'},h('b',{},'No matching QHooks launches'),h('p',{},'Outside tokens remain available in Tokens, Recent and Watchlist.'),h('button',{type:'button',class:'qxt-context-action',onclick:()=>document.dispatchEvent(new CustomEvent('qxt:discover'))},'Browse tokens')),...xPart);return;}
  list.replaceChildren(...foundingPin(),...rows.map((m,i)=>{
-  const s=m.summary,u=unitOf(m),sel=state.sel&&keyOf(state.sel)===keyOf(m);
+  const s=m.summary,plan=quickBuyPlan({chainId:m.chainId,token:m.token,kind:'launch'},quickForChain(m.chainId)),sel=state.sel&&keyOf(state.sel)===keyOf(m);
   // Card amounts (2026-11-10, quoteusd): dollars, the quote amount on hover; "Refreshing" while unknown, never "0 WETH".
   const amt=(usd,q)=>Number.isFinite(usd)&&usd>0?h('span',{title:Number(q)>0?money(q,m.quoteSymbol):undefined},'$'+compact(usd)):Number(q)>0?money(q,m.quoteSymbol):Number.isFinite(usd)&&usd===0&&s?.lastTradeAt?'$0':'Refreshing';
   return h('li',{class:'qxt-has-qb '+(sel?'sel ':'')+(i===state.cursor?'cur':''),'data-key':keyOf(m)},h('button',{type:'button',class:'qxt-row',onclick:()=>select(m.chainId,m.controller)},avatar(m),
    h('span',{class:'qxt-r1'},h('b',{},m.symbol),h('span',{class:'qxt-rail-chain'},CHAIN_NAME[m.chainId]||m.chainId),h('span',{class:'qxt-age'},age(m.launchedAt))),
    s?h('span',{class:'qxt-r2'},h('span',{},h('i',{},'MC '),amt(s.mcapUsd,s.mcap)),h('span',{},h('i',{},'V '),amt(s.volume24Usd,s.volume24)),h('span',{class:s.change24>0?'up':s.change24<0?'down':''},pct(s.change24))):h('span',{class:'qxt-r2 qxt-quiet'},'Refreshing…'),
-   h('span',{class:'qxt-r3 qxt-rail-contract'},h('code',{title:m.token||m.controller},short(m.token||m.controller)),...badges(m))),h('button',{type:'button',class:'qxt-qb',title:'Buy '+m.symbol+' with '+quickForChain(m.chainId)[u]+' '+QUNIT[u],onclick:()=>quickBuy(m)},String(quickForChain(m.chainId)[u])));
+   h('span',{class:'qxt-r3 qxt-rail-contract'},h('code',{title:m.token||m.controller},short(m.token||m.controller)),...badges(m))),h('button',{type:'button',class:'qxt-qb',title:'Buy '+m.symbol+' with '+plan.value+' '+plan.unit,onclick:()=>quickBuy(m)},plan.value+' '+plan.unit));
  }),...xPart);
 }
 let feedRevision=0;
@@ -1134,25 +1136,28 @@ function explicitTrade(run,target,owner,action){
   action:()=>{if($('qxt-sync').textContent===pending)$('qxt-sync').textContent='';return action();}});
 }
 async function quickBuy(m) {
-  const u = unitOf(m);
-  if (!state.me) { $('qxt-connect').click(); return; }
-  const target={kind:'launch',chainId:String(m.chainId),controller:m.controller,token:m.token||null},owner=tradeOwner(target),value=quickForChain(m.chainId)[u];
+  const plan=quickBuyPlan({chainId:m.chainId,token:m.token,kind:'launch'},quickForChain(m.chainId));
+  if(!plan.supported){$('qxt-sync').textContent=plan.reason;return;}
+  const target={kind:'launch',chainId:String(m.chainId),controller:m.controller,token:m.token||null},owner=tradeOwner(target);
+  if(!owner){openQuickBuyWallet({...target,symbol:m.symbol},plan,{open:()=>hub.open()});return;}
   const opening=select(m.chainId,m.controller),run=selectionFlow.current();if(!await opening)return;
-  return explicitTrade(run,target,owner,()=>ticket.quickBuy(u==='usd'?'usd':u,value));
+  return explicitTrade(run,target,owner,()=>ticket.quickBuy(plan.cls,plan.value,plan.payment));
 }
-async function quickBuyExternal(chainId, address) {
+async function quickBuyExternal(chainId, address, hint = {}) {
   chainId = String(chainId);
   const plan = externalQuick(chainId, address, quickForChain(chainId));
   if (plan.stock) return;
-  if (!state.me) { $('qxt-connect').click(); return; }
   const launch = state.markets.find(m => m.live && String(m.chainId) === chainId && (chainId === 'solana' ? m.token === address : m.token?.toLowerCase() === address.toLowerCase()));
   if (launch) return quickBuy(launch);
-  const target={kind:'external',chainId,address},owner=tradeOwner(target),ready=selectExternal(chainId,address),run=selectionFlow.current(),mine=mseq;
+  if(!plan.supported){$('qxt-sync').textContent=plan.reason;return;}
+  const target={kind:'external',chainId,address},owner=tradeOwner(target);
+  if(!owner){openQuickBuyWallet({...target,token:address,symbol:hint.symbol||address},plan,{open:()=>hub.open()});return;}
+  const ready=selectExternal(chainId,address),run=selectionFlow.current(),mine=mseq;
   if(!await ready)return;
   if (mine !== mseq || !state.data || !ticket.unitClass) return;
-  if (!plan.supported) { $('qxt-sync').textContent = 'Use the trade ticket for this token; quick buy is unavailable.'; return; }
-  return explicitTrade(run,target,owner,()=>ticket.quickBuy(plan.cls,plan.value));
+  return explicitTrade(run,target,owner,()=>ticket.quickBuy(plan.cls,plan.value,plan.payment));
 }
+
 /// A Trade link (#pool=…) lists the market if needed, then opens it.
 async function openPoolLink(text) {
   const pool = JSON.parse(text);

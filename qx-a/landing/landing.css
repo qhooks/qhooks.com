@@ -240,3 +240,11 @@ body.l3-body { background: var(--qa-floor, #070807); }
   .l3-ch__in, .l3-ch--traders .l3-ch__in, .l3-ch--close .l3-ch__in { grid-template-columns: minmax(0, 46fr) minmax(0, 54fr); }
   .l3-close h2 { font-size: clamp(60px, 6.3vw, 100px); }
 }
+
+/* SLICK mobile: gradients carry the light, without filtered paint surfaces. */
+@media(max-width:759px){
+ .l3-poster::before{filter:none;background:linear-gradient(90deg,transparent,rgba(255,236,200,.08) 35%,rgba(255,236,200,.12) 60%,transparent)}
+ .l3-poster img{filter:none}
+ .l3-word,.l3-brand__a,.l3-brand__b,.l3-close h2{filter:none;transition-property:opacity,transform;transition-duration:160ms}
+ .l3-slab,.l3-tag{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(9,11,10,.96)}
+}

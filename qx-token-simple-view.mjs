@@ -1,3 +1,4 @@
+import{EXIT_PRESENTATION}from'./qx-exit-presentation.mjs';
 // One primary row delegates to the existing market panes; original nodes stay mounted.
 export function mountSimpleTokenView({document:doc=globalThis.document,h,onChange=()=>{}}){
  const get=id=>doc.getElementById(id),trades=get('traders'),calls=get('callers'),proof=get('builder'),holders=get('holders'),oldTabs=get('qxt-data-tabs');
@@ -41,7 +42,7 @@ export function mountSimpleTokenView({document:doc=globalThis.document,h,onChang
  oldTabs.addEventListener('click',nativeClick);const paneObserver=new MutationObserver(sync);paneObserver.observe(oldTabs,{subtree:true,attributes:true,attributeFilter:['aria-selected']});
  const fold=(node,label)=>{if(!node)return;const details=h('details',{class:'ta-data-more'},h('summary',{},label));node.before(details);details.append(node);return details;};
  const full=fold(get('qxt-repoproof'),'Full QProof report');fold(get('ta-about'),'Token & launch details');fold(proof?.querySelector('.qxt-workspace-context'),'Data sources & coverage');fold(proof?.querySelector('.qxt-tools'),'Launch tools');
- const alertDetails=h('details',{class:'ta-data-more ta-alert-details'},h('summary',{},'Price alerts'));proof?.append(alertDetails);
+ const alertDetails=h('details',{class:'ta-data-more ta-alert-details'},h('summary',{},EXIT_PRESENTATION.delivery.title));proof?.append(alertDetails);
  const moveAlerts=()=>{const node=get('qxt-trade')?.querySelector(':scope > .ta');if(node&&node.parentElement!==alertDetails)alertDetails.append(node);};
  const observer=new MutationObserver(moveAlerts);if(get('qxt-trade'))observer.observe(get('qxt-trade'),{childList:true});moveAlerts();
  const fullClick=e=>{if(e.target.closest('.ta-proofpop__full')?.tagName==='BUTTON'){select('proof');if(full)full.open=true;}};doc.addEventListener('click',fullClick,true);

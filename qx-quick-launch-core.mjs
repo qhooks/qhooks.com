@@ -1,3 +1,4 @@
+import {requireLaunchTicker} from './qx-launch-ticker.mjs';
 import {socialURL} from './qx-token-profile-core.mjs';
 import {requireBannerHash} from './qx-token-banner.mjs';
 // Quick launch (one transaction through QSimpleLaunch) and the launch-idea cards on /create.
@@ -252,9 +253,9 @@ function stringTail(s) {const b = enc.encode(s), h = hexOf(b);return word(b.leng
 export const NEED_IMAGE = 'Add an image for your token.';
 /// Checks name, ticker and the token's meta JSON. Throws a plain sentence.
 export function validateQuick({name, symbol, image = '', banner = '', description = '', x = '', telegram = '', website = ''}) {
- const n = String(name ?? '').trim(), s = String(symbol ?? '').trim().toUpperCase();
+ const n = String(name ?? '').trim(), s = String(symbol ?? '').toUpperCase();
  if (!n || !n.isWellFormed() || enc.encode(n).length > 64) throw new TypeError('Enter a token name, up to 64 characters.');
- if (!/^[A-Z0-9]{1,10}$/.test(s)) throw new TypeError('Use 1–10 letters or digits for the ticker.');
+ requireLaunchTicker(s);
  if (!image) throw new TypeError(NEED_IMAGE);
  if (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(image)) throw new TypeError('Choose a PNG, JPEG or WebP image.');
  requireBannerHash(banner);

@@ -120,7 +120,8 @@ export function nativeSwapCall(chainId, key, token, quoteToken, amountIn, minOut
 // (more for qualifying holders on Robinhood Chain), 20% to the trader's referrer (fixed on their first referred
 // trade), the rest to the platform. The fee comes off the input on buys and off the output on sells, so it is
 // always in the quote currency (or the native coin when paying with it).
-export const FEE_BPS = 100n;
+import {FEE_BPS} from './qx-trade-fee-policy.mjs';
+export {FEE_BPS};
 const HOP_T = `(${KEY_T},bool,bytes)`;
 /// Router calldata for an exact-in swap through `hops` ([{ key, zeroForOne }]); `wrap` wraps native value first.
 export function feeSwapCall(chainId, hops, amountIn, minOut, wrap, feeOnInput, deadline, referrer = savedReferrer()) {

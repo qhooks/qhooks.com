@@ -1,3 +1,4 @@
+import { mountVisibleScene } from '/qx-scene-lifecycle.mjs';
 import{publicReadFetch}from'../../qx-public-read.mjs';
 import{homeTradeLink}from'/qx-home-trade-link.mjs';
 import{assetPriceFields,priceObservation}from'/qx-price-state.mjs';
@@ -56,7 +57,8 @@ fillChainCount();
 // and live slab the first time it is reached.
 const chapters = [...document.querySelectorAll('.l3-ch')];
 const stageEl = $('[data-l3-stage]'), glCanvas = $('[data-l3-gl]');
-let scene = null, P = 0, scrollRaf = 0, stageOn = true;
+const homeSceneTimers = new Set();
+let scene = null, homeSceneGate = null, P = 0, scrollRaf = 0, stageOn = true;
 function measure() {
   const vh = innerHeight, y = scrollY;
   let p = 0, endY = 0;
@@ -80,7 +82,7 @@ function measure() {
   const o = clamp(1 - (y - (endY - vh * 1.05)) / (vh * .45));
   stageEl?.style.setProperty('--l3-stage-o', o.toFixed(3));
   const want = o > 0 && !document.hidden && (stageEl?.getBoundingClientRect().bottom||0)>0;
-  if (scene) { scene.setProgress(P); if (want !== stageOn) { stageOn = want; want ? scene.resume() : scene.pause(); } if (!want) scene.pause(); }
+  stageOn = want; scene?.setProgress(P); homeSceneGate?.update();
 }
 const onScroll = () => { if (scrollRaf) return; scrollRaf = requestAnimationFrame(() => { scrollRaf = 0; measure(); }); };
 addEventListener('scroll', onScroll, { passive: true });
@@ -89,18 +91,27 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) scene
 measure();
 chapters[0]?.classList.add('is-in');
 
-// WebGL after the first paint: the text never waits on it. No WebGL, reduced motion or Save-Data keep the poster.
-const canGL = () => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } };
-if (!document.body.classList.contains('ux-home-simple') && glCanvas && !RM && !navigator.connection?.saveData && canGL()) {
-  const start = () => import('/qx-a/landing/scene.mjs').then(async ({ mountScene }) => {
+// The existing poster stays until foreground/viewport/policy admission, before heavy import.
+homeSceneGate = mountVisibleScene({
+  host: document.querySelector('.l3-chapters') || stageEl,
+  enabled: () => !!glCanvas && stageOn && !document.body.classList.contains('ux-home-simple'),
+  async load({ admitted }) {
+    const { mountScene } = await import('/qx-a/landing/scene.mjs');
     await (document.fonts?.load?.('900 100px "Mona Sans"') || Promise.resolve()).catch(() => {});
-    scene = await mountScene(glCanvas, { icons: COIN_ICONS, logo: QLOGO });
-    document.body.classList.add('l3-live'); globalThis.__l3 = scene;
+    if (!admitted()) return null;
+    const mounted = await mountScene(glCanvas, { icons: COIN_ICONS, logo: '/qhooks-logo.jpg' });
+    if (!admitted()) { mounted.dispose(); return null; }
+    scene = mounted; globalThis.__l3 = scene;
     measure(); scene.setProgress(P); pushCall(); if (Pm.burned != null) scene.setBurned(Pm.burned, fmt.tok);
-    sceneQ.splice(0).filter((q) => q.name === 'setBurned' || Date.now() - q.at < 180000).forEach((q, i) => setTimeout(() => scene[q.name]?.(...q.args), 400 + i * 420));
-  }).catch((e) => { console.warn('landing scene', e?.message || e); });
-  if (document.readyState === 'complete') requestAnimationFrame(() => setTimeout(start, 60)); else addEventListener('load', () => requestAnimationFrame(() => setTimeout(start, 60)), { once: true });
-}
+    sceneQ.splice(0).filter((q) => q.name === 'setBurned' || Date.now() - q.at < 180000).forEach((q, i) => {
+      const timer=setTimeout(()=>{homeSceneTimers.delete(timer);if(admitted())scene?.[q.name]?.(...q.args);},400+i*420);homeSceneTimers.add(timer);
+    });
+    return scene;
+  },
+  onReady() { document.body.classList.add('l3-live'); measure(); },
+  onFallback() { document.body.classList.remove('l3-live'); },
+  onDispose() { for(const timer of homeSceneTimers)clearTimeout(timer);homeSceneTimers.clear();scene=null;globalThis.__l3=null;document.body.classList.remove('l3-live'); },
+});
 
 /* ================= data helpers ================= */
 async function getJSON(url, ms = 12000) {

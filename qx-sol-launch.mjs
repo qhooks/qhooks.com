@@ -1,13 +1,19 @@
+import {solModel,mountCreateModelPreview} from './qx-create-model-preview.mjs';
+import {mountLaunchTickerInput} from './qx-launch-ticker.mjs';
+import {launchReadiness,paintLaunchReadiness} from './qx-quick-launch-readiness.mjs';
+import {getWalletHub} from './wallet-hub-fresh.mjs';
+import {launchIdentityDraft,draftTokenProfile} from './qx-create-draft.mjs';
 import {solLaunchError} from './qx-sol-launch-errors.mjs';
 import {recordSolLaunch} from './qx-sol-launch-record.mjs';
 import {SOL_LAUNCH_CONFIG as C,solLaunchConfigReady} from './qx-sol-launch-config.mjs';
 import {solReviewLines,normalizeSolMetadata,solAmount,solText} from './qx-sol-launch-values.mjs';
-import {mountTokenProfileEditor,editableTokenProfileDraft,onTokenProfileDraft} from './qx-token-profile.mjs';
+import {mountTokenProfileEditor,editableTokenProfileDraft,onTokenProfileDraft,setTokenProfileDraft} from './qx-token-profile.mjs';
 import {solAddress,solWallets,connectSol,onSolChange} from './qx-solana.mjs';
 import {solApi,solRuntime,prepareSolTransaction,sendPreparedSol,buildSolLaunch} from './qx-sol-launch-client.mjs';
 const el=(tag,attrs={},...kids)=>{const n=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')n.className=v;else if(k.startsWith('on'))n.addEventListener(k.slice(2),v);else n.setAttribute(k,v);}n.append(...kids.flat().filter(x=>x!=null));return n;};
 const button=(text,fn,primary=false)=>el('button',{type:'button',class:primary?'qxc-primary':'',onclick:fn},text);
 export function mountSolCreate({chainSelect,onExit=()=>{}}){
+ const quick=document.querySelector('.cr5 #qq-quick'),identityDraft=launchIdentityDraft(),inline=!!quick;
  const root=el('section',{class:'qxc-sol',hidden:'',id:'qsc-root'}),chainSlot=el('div',{class:'qxc-fields'}),message=el('p',{class:'qxc-message',role:'status','aria-live':'polite'}),wallets=el('div',{class:'qxc-key-actions'});
  const receiptLink=el('p',{class:'qxc-number'});
  const screens=[1,2,3].map(i=>el('section',{class:'qxc-panel',id:'qsc-step-'+i,'aria-labelledby':'qsc-title-'+i},el('div',{class:'qxc-panel-head'},el('h2',{id:'qsc-title-'+i,tabindex:'-1'},['Your token','Hooks & rules','Review & launch'][i-1]),el('span',{},'0'+i+' / 03'))));
@@ -20,30 +26,58 @@ export function mountSolCreate({chainSelect,onExit=()=>{}}){
  screens[0].append(el('div',{class:'qxc-fields'},el('label',{},'Name',name),el('label',{},'Ticker',symbol)),wallets,mountTokenProfileEditor({id:'qsc-profile',chain:()=> 'solana',name:()=>name.value,symbol:()=>symbol.value,imageRequired:true,bannerRequired:true}),el('div',{class:'qxc-actions'},button('Hooks & rules →',()=>go(2),true)));
  const rules=el('dl',{class:'qxc-sol-rules'},...solReviewLines().flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)]));
  screens[1].append(rules,el('label',{},'Your optional first buy · SOL',buy),el('p',{id:'qsc-buy-note',class:'qxc-fine'},'Included in the launch transaction. The opening 50% anti-snipe fee applies; 1% price tolerance. Leave 0 to launch without buying.'),el('div',{class:'qxc-actions'},button('← Your token',()=>go(1)),button('Review launch →',()=>go(3),true)));
- const review=el('div'),launch=button('Confirm and launch',()=>void confirm(),true),prepareButton=button('Prepare launch review',()=>void prepareLaunch(),true),recover=button('Check launch confirmation',()=>void recoverPending(),true),done=el('div',{class:'qxc-done'});
+ const review=el('div'),launch=button('Confirm and launch',()=>void confirm(),true),prepareButton=button('Prepare launch review',()=>void reviewAction(),true),recover=button('Check launch confirmation',()=>void recoverPending(),true),done=el('div',{class:'qxc-done'});
  screens[2].append(review,el('div',{class:'qxc-actions'},button('← Hooks & rules',()=>go(2)),prepareButton,launch,recover),done);
  root.append(chainSlot,...screens,message,receiptLink);document.getElementById('qc-screen-1').before(root);
  const chainLabel=chainSelect.closest('label'),origin=chainLabel.parentNode,after=chainLabel.nextSibling;
  chainSelect.append(el('option',{value:'solana'},'Solana'));
- const originals=()=>[...document.querySelectorAll('[id^="qc-screen-"],#qc-saved-launch,#qc-message,.qxc-wallet,#qq-quick')];
+ const originals=()=>[...document.querySelectorAll('[id^="qc-screen-"],#qc-saved-launch,#qc-message,.qxc-wallet'+(inline?'':',#qq-quick'))];
  const notify=(text,error=false)=>{message.textContent=text;message.dataset.error=String(error);};
+ const rootOrigin=root.parentNode,rootAfter=root.nextSibling;
+ let draftError='';
+ const readinessHost=el('div',{class:'qq-readiness',id:'qsc-readiness',role:'status','aria-live':'polite','aria-atomic':'true'});prepareButton.setAttribute('aria-describedby','qsc-readiness');launch.setAttribute('aria-describedby','qsc-readiness');prepareButton.closest('.qxc-actions').before(readinessHost);
+ const inlineLimit=el('p',{class:'qxc-message',role:'status','aria-live':'polite'});
+ const modelAnchor=el('div');root.append(modelAnchor);const modelPreview=mountCreateModelPreview({before:modelAnchor,id:'qsc-model-preview'});modelAnchor.remove();
+ if(inline){
+  root.classList.add('qsc-inline');
+  const hiddenIdentity=el('div',{hidden:''},screens[0]),options=el('details',{class:'qsc-inline-options'},el('summary',{},'Hooks & rules'),rules,screens[1].querySelector('label'),document.getElementById('qsc-buy-note'));
+  const actions=screens[2].querySelector('.qxc-actions');actions.firstElementChild.hidden=true;
+  root.replaceChildren(hiddenIdentity,wallets,inlineLimit,modelPreview.element,options,review,readinessHost,actions,done,message,receiptLink);
+ }
+ function syncIdentity(){
+  if(!inline||busy||pending)return;
+  const d=identityDraft.get();if(!d)return;
+  name.value=d.name;symbol.value=d.symbol;save();
+  try{setTokenProfileDraft('solana',draftTokenProfile(d));draftError='';}catch(e){draftError=solLaunchError(e);}
+  render();
+ }
+ document.addEventListener('qhooks:create-draft',()=>{if(active)syncIdentity();});
  function fields(){return normalizeSolMetadata({mint:mint?.publicKey.toBase58()||C.quoteMint,name:name.value,symbol:symbol.value,...editableTokenProfileDraft('solana')});}
  function go(next){if(busy)return;try{if(next>1)fields();if(next>2)solAmount(buy.value);step=next;render();document.getElementById('qsc-title-'+step).focus({preventScroll:true});root.scrollIntoView({block:'start'});}catch(e){notify(solLaunchError(e),true);}}
  async function loadConfig(){try{config=await solApi('config');config={...config,ready:solLaunchConfigReady(config)};notify(config.ready?'':'Solana launches open shortly.');}catch{config={ready:false};notify('Solana launches open shortly.');}render();}
  function render(){
-  if(!active)return;root.hidden=false;for(const n of originals())n.hidden=true;
-  for(let i=0;i<3;i++)screens[i].hidden=i!==step-1;
+  mountLaunchTickerInput(symbol,{id:'qsc-symbol-rule'}).paint();
+  if(!active)return;modelPreview.update(solModel({ready:!!config?.ready,cost,prepared,pending:!!pending}));root.hidden=false;for(const n of originals())n.hidden=true;
+  if(!inline)for(let i=0;i<3;i++)screens[i].hidden=i!==step-1;
   document.querySelectorAll('[data-screen]').forEach(b=>{b.disabled=busy;if(Number(b.dataset.screen)===step)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');});
   wallets.replaceChildren(el('p',{class:'qxc-fine'},solAddress()?'Solana wallet · '+solAddress():'Connect your Solana wallet.'),...solWallets().map(w=>button((solAddress()?'Use ':'Connect ')+w.name,async()=>{try{await connectSol(w.name);prepared=null;render();}catch(e){notify(solLaunchError(e),true);}})));
   if(!solWallets().length)wallets.append(el('p',{class:'qxc-fine'},'Install a Wallet Standard wallet such as Phantom, Solflare or Backpack.'));
   receiptLink.replaceChildren(...(pending?[el('a',{href:'https://solscan.io/tx/'+pending.signature,target:'_blank',rel:'noopener'},'Transaction · '+pending.signature)]:[]));
-  launch.hidden=!config?.ready||!prepared||!!pending;launch.disabled=busy||!artReady();prepareButton.hidden=!config?.ready||!!prepared||!!pending;prepareButton.disabled=busy||!solAddress()||!artReady();recover.hidden=!pending;recover.disabled=busy;
+  const readiness=readinessState();paintLaunchReadiness(readinessHost,readiness);
+  launch.hidden=!config?.ready||!prepared||!!pending;launch.disabled=readiness.disabled;prepareButton.hidden=!!prepared||!!pending;prepareButton.disabled=readiness.disabled;prepareButton.textContent=readiness.label;recover.hidden=!pending;recover.disabled=busy;
+  if(inline){
+   quick.hidden=false;for(const n of quick.querySelectorAll('#qq-name,#qq-symbol,#qq-image,#qq-banner,#qq-description,#qq-x,#qq-telegram,#qq-website'))n.disabled=busy||!!pending;
+   const nameError=new TextEncoder().encode(name.value.trim()).length>32?'Use a name of 1–32 UTF-8 bytes, without angle brackets.':'';inlineLimit.textContent=draftError||nameError;inlineLimit.hidden=!inlineLimit.textContent;
+   if(nameError||draftError)prepareButton.disabled=true;review.hidden=!prepared&&!pending;done.hidden=!done.childNodes.length;
+  }
   chainSelect.disabled=busy;const quickPicker=document.getElementById('qq-chain');if(quickPicker)quickPicker.disabled=busy;
   for(const n of [name,symbol,buy,...screens[0].querySelectorAll('#qsc-profile input,#qsc-profile textarea,#qsc-profile button')])n.disabled=busy||!!pending;
   review.replaceChildren(el('p',{class:'qxc-kicker'},'Solana · Meteora DBC'),el('h3',{},name.value+' · '+symbol.value),el('dl',{class:'qxc-sol-rules'},...solReviewLines().flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)])));
   if(cost)review.append(el('dl',{class:'qxc-sol-rules'},el('dt',{},'Flat launch fee'),el('dd',{},solText(cost.lamports)+' SOL · about $'+C.flatLaunchUsd+' · one transfer to QHooks'),el('dt',{},'Rent · upfront estimate'),el('dd',{},solText(cost.rent)+' SOL · temporary wrapped SOL account rent may return'),el('dt',{},'Network fee · estimate'),el('dd',{},solText(prepared.networkLamports)+' SOL'),el('dt',{},'First buy'),el('dd',{},buy.value+' SOL · opening anti-snipe applies')));
   if(!config?.ready)notify('Solana launches open shortly.');
  }
+ function readinessState(){let profile={},validationError='';try{profile=editableTokenProfileDraft('solana');fields();solAmount(buy.value);}catch(e){validationError=solLaunchError(e);}return launchReadiness({kind:'solana',available:config?.ready,hold:'Solana launches open shortly.',busy,pending:!!pending,image:profile.image,banner:profile.banner,name:name.value,symbol:symbol.value,wallet:!!solAddress(),validationError:draftError||validationError,prepared:!!prepared,reviewError:message.dataset.error==='true'?message.textContent:''});}
+ async function reviewAction(){const state=readinessState();if(state.disabled)return;if(state.action==='connect'){notify('Choose your Solana wallet.');const{readPrivyAppConfig}=await import('./qx-privy-app-config.mjs');const settings=await readPrivyAppConfig();if(!active||readinessState().action!=='connect')return;if(settings?.solana_wallet_auth===true)getWalletHub(window).open();else{wallets.tabIndex=-1;(wallets.querySelector('button')||wallets).focus({preventScroll:true});wallets.scrollIntoView({block:'nearest'});}return;}await prepareLaunch();}
  function artReady(){try{const p=editableTokenProfileDraft('solana');return !!p.image&&!!p.banner;}catch{return false;}}
  async function prepareLaunch(){
   if(busy||pending)return;busy=true;render();try{
@@ -66,11 +100,18 @@ export function mountSolCreate({chainSelect,onExit=()=>{}}){
  }catch(e){notify(solLaunchError(e,'Could not confirm your launch. Please try again.')+(pending?' Check confirmation to continue.':''),true);}finally{busy=false;render();}}
  async function record(){const r=await recordSolLaunch(pending.signature),l=r.launch;pending=null;mint=null;prepared=null;try{localStorage.removeItem('qhooks:sol-launch:pending');}catch{}done.replaceChildren(el('p',{class:'qxc-kicker'},'Launch complete'),el('h3',{},'Launched.'),el('p',{},l.name+' · '+l.symbol),el('p',{class:'qxc-number'},l.mint),el('a',{class:'qxc-primary',href:'/terminal#t=solana:'+l.mint},'Open your market →'));notify('Your coin is live on QHooks.');}
  async function recoverPending(){if(!pending||busy)return;busy=true;render();try{await record();}catch(e){notify(solLaunchError(e),true);}finally{busy=false;render();}}
- function select(value){if(busy)return;active=value;if(active){chainSlot.append(chainLabel);chainSelect.value='solana';const u=new URL(location.href);u.searchParams.set('chain','solana');history.replaceState(history.state,'',u);render();void loadConfig();if(pending){step=3;render();}}else{root.hidden=true;origin.insertBefore(chainLabel,after);document.querySelector('.qxc-wallet').hidden=false;document.getElementById('qc-message').hidden=false;onExit();}}
+ function select(value){if(busy)return;active=value;if(active){
+  const picker=document.getElementById('qq-chain');if(inline&&picker&&picker.value!=='solana'){picker.value='solana';picker.dispatchEvent(new Event('change',{bubbles:true}));return;}
+  if(inline){quick.insertBefore(root,quick.querySelector('.cr-go'));syncIdentity();}else chainSlot.append(chainLabel);
+  chainSelect.value='solana';const u=new URL(location.href);u.searchParams.set('chain','solana');history.replaceState(history.state,'',u);render();void loadConfig();if(pending){step=3;render();}
+ }else{
+  root.hidden=true;if(inline){rootOrigin.insertBefore(root,rootAfter);for(const n of quick.querySelectorAll('#qq-name,#qq-symbol,#qq-image,#qq-banner,#qq-description,#qq-x,#qq-telegram,#qq-website'))n.disabled=false;}else origin.insertBefore(chainLabel,after);
+  document.querySelector('.qxc-wallet').hidden=false;document.getElementById('qc-message').hidden=false;onExit();
+ }}
  chainSelect.addEventListener('change',e=>{if(chainSelect.value==='solana'){e.stopImmediatePropagation();select(true);}else if(active)select(false);},true);
  document.querySelector('.qxc-progress').addEventListener('click',e=>{const b=e.target.closest('[data-screen]');if(active&&b){e.stopImmediatePropagation();go(Number(b.dataset.screen));}},true);
  document.addEventListener('qhooks:sol-create',e=>{if(e.detail?.chain&&e.detail.chain!=='solana'){if(active){select(false);chainSelect.value=e.detail.chain;chainSelect.dispatchEvent(new Event('change',{bubbles:true}));}}else select(true);});
  onTokenProfileDraft(({chain})=>{if(chain==='solana'&&!busy){save();render();}});
- onSolChange(()=>{if(!busy){prepared=null;mint=null;metadataUri=null;cost=null;}render();});if(q.get('chain')==='solana')select(true);
+ onSolChange(()=>{if(!busy){prepared=null;mint=null;metadataUri=null;cost=null;}render();});if(q.get('chain')==='solana'||document.getElementById('qq-chain')?.value==='solana')select(true);
  return {get active(){return active;},render,select};
 }

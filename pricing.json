@@ -61,6 +61,7 @@
   ],
   "trading": {
     "model": "creator-lp-plus-protocol",
+    "platformFeeBps": "100",
     "collectionEnabled": true,
     "reference": {
       "creatorFeePpm": "10000",

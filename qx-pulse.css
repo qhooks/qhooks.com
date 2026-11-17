@@ -1,54 +1,76 @@
-/* Pulse uses the existing token rows and quick-buy actions in a scoped, dense layout. */
-.qxfd-layout-controls{display:flex;gap:2px;padding:2px;border:1px solid var(--qx-line);border-radius:5px}
-.qxfd-layout-controls button{min-height:32px;padding:0 12px;border:0;border-radius:3px;background:none;color:var(--qx-muted);font:550 12px var(--qx-sans)}
+/* SLICK Pulse uses the list's actual models and actions, with no extra data reads. */
+.qxfd-layout-controls{display:flex;gap:2px;border:1px solid var(--qx-line)}
+.qxfd-layout-controls button{background:none;color:var(--qx-muted);border:0;font:600 11px var(--qx-sans);cursor:pointer}
 .qxfd-layout-controls [aria-pressed=true]{color:var(--qx-brass);background:var(--qx-panel-2)}
-.qxfd-pulse{display:flex;flex:1;min-height:0;flex-direction:column;min-width:0}
-.qxp-toolbar{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 16px;border-bottom:1px solid var(--qx-line)}
-.qxp-tabs{display:none}.qxp-pause,.qxp-retry{min-height:32px;padding:0 8px;border:0;background:none;color:var(--qx-muted);font:11px var(--qx-sans)}
-.qxp-pause[aria-pressed=true],.qxp-paused{color:var(--qx-brass)}.qxp-paused{font:11px var(--qx-sans)}
-.qxp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));flex:1;min-height:0;overflow:hidden}
-.qxp-column{min-width:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;border-right:1px solid var(--qx-line)}.qxp-column:last-child{border-right:0}
-.qxp-head{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:8px;height:43px;padding:0 12px;background:var(--qx-bg-2);border-bottom:1px solid var(--qx-line)}
-.qxp-head h2{font:600 13px var(--qx-sans);margin:0}.qxp-count,.qxp-fresh{font:11px var(--qx-mono);color:var(--qx-muted)}.qxp-count{padding:2px 5px;background:var(--qx-panel);border-radius:3px}.qxp-count:empty{display:none}.qxp-fresh{margin-left:auto;white-space:nowrap}
-.qxp-empty{padding:28px 16px;color:var(--qx-muted);font:12px/1.6 var(--qx-sans);text-align:center}
-.qxfd-pulse .qxfd-table{display:block;min-width:0;width:100%}.qxfd-pulse tbody{display:block;width:100%}
-.qxfd-pulse .qxfd-table tbody tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 100px;gap:5px 8px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--qx-line);width:100%;box-sizing:border-box}
-.qxfd-pulse .qxfd-table tbody td{display:block!important;width:auto!important;height:auto;min-width:0;border:0;padding:0;overflow:hidden;text-overflow:ellipsis;text-align:left;font-size:11px;line-height:1.3}
-.qxfd-pulse .qxfd-table tbody .qxfd-token{grid-column:1/-1;display:flex!important;align-items:center;padding:0}
-.qxfd-pulse .qxfd-open{display:grid;grid-template-columns:28px minmax(0,1fr) 13px auto;gap:6px;flex:1;min-width:0;height:31px}.qxfd-pulse .qxfd-identity{display:block;min-width:0}.qxfd-pulse .qxfd-symline{display:flex}.qxfd-pulse .qxfd-identity b{max-width:none;font-size:12px}.qxfd-pulse .qxfd-name{display:none}
-.qxfd-pulse .qxfd-table tbody .qxfd-price,.qxfd-pulse .qxfd-table tbody .qxfd-liquidity,.qxfd-pulse .qxfd-table tbody .qxfd-txns,.qxfd-pulse .qxfd-table tbody .qxfd-makers,.qxfd-pulse .qxfd-table tbody .qxfd-safety{display:none!important}
-.qxfd-pulse .qxfd-table tbody .qxfd-mcap{grid-column:1;grid-row:2}.qxfd-pulse .qxfd-cap-kind{display:none}.qxfd-pulse .qxfd-table tbody .qxfd-volume{grid-column:2;grid-row:2}.qxfd-pulse .qxfd-table tbody .qxfd-move{grid-column:3;grid-row:2;text-align:right}
-.qxfd-pulse .qxfd-table tbody .qxfd-holders{grid-column:2/4;grid-row:3;color:var(--qx-muted);text-align:right}.qxfd-pulse .qxfd-table tbody .qxfd-holders::before{content:'H ';font:11px var(--qx-sans)}
-.qxfd-pulse .qxfd-table tbody .qxfd-mcap::before,.qxfd-pulse .qxfd-table tbody .qxfd-volume::before{display:block;color:var(--qx-muted);font:11px var(--qx-sans);margin:0 0 2px;content:attr(data-label)}
-.qxfd-pulse .qxfd-table tbody .qxfd-move::before{content:attr(data-window);display:block;color:var(--qx-muted);font:11px var(--qx-sans);margin:0 0 2px}
-.qxfd-pulse .qxfd-table tbody .qxfd-buy{grid-column:4;grid-row:2/4;overflow:visible;text-align:right;align-self:center}
-.qxfd-pulse .qxfd-table button.qxfd-buy{min-height:44px;height:44px;width:100%;font-size:11px;padding:0 5px}
-.qxfd-pulse .qxfd-table tbody .qxfd-evidence{grid-column:1/-1;grid-row:4;overflow:visible}
-.qxp-skeleton td{grid-column:1/-1;display:flex!important;gap:12px;align-items:center;min-height:83px!important}.qxp-skeleton span{height:10px;width:20%;border-radius:3px;background:var(--qx-panel-2);animation:qxfd-pulse 1.3s ease-in-out infinite alternate}.qxp-skeleton span:first-child{width:30px;height:30px;border-radius:50%}
-@media(max-width:1099px){.qxp-grid{display:block;overflow:visible}.qxp-column{overflow:visible;border:0}.qxp-tabs{display:flex;flex:1;gap:14px;min-width:0}.qxp-tabs button{min-height:44px;padding:0;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--qx-muted);font:550 12px var(--qx-sans);white-space:nowrap}.qxp-tabs [aria-selected=true]{border-color:var(--qx-brass);color:var(--qx-brass)}.qxp-toolbar{padding:0 12px;gap:6px;flex-wrap:wrap}.qxp-paused{display:none}.qxp-head{position:static;height:32px}.qxp-head h2{display:none}.qxfd-pulse .qxfd-table tbody tr{gap:5px 8px}.qxfd-pulse{flex:none}.qxfd .qxfd-heading{gap:5px 10px}.qxfd-layout-controls button{min-height:36px;padding:0 10px}.qxfd-pulse .qxfd-table tbody .qxfd-token{padding:0!important}}
-@media(prefers-reduced-motion:reduce){.qxp-skeleton span{animation:none}}
-/* Override the list's deliberately strong density rules only inside Pulse. */
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody tr[data-key]{grid-template-columns:repeat(3,minmax(0,1fr)) 100px!important;grid-template-rows:auto auto auto auto!important;gap:5px 8px!important;padding:9px 12px!important;min-height:112px}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td{grid-area:auto!important;grid-row:auto!important;font-size:11px}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-token{grid-area:1/1/2/5!important;padding:0 0 0 24px!important;display:block!important;overflow:visible}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody .qxfd-mcap{grid-area:2/1/3/2!important}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody .qxfd-volume{grid-area:2/2/3/3!important}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody .qxfd-move{grid-area:2/3/3/4!important}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody .qxfd-holders{grid-area:3/2/4/4!important}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody .qxfd-holders::before{content:'H ';display:inline!important;margin:0}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-buy{grid-area:2/4/4/5!important;display:block!important;align-self:center}
-body.qa.qxt #qxt-discover .qxfd-pulse button.qxfd-buy{width:100%!important;min-height:44px!important;font-size:11px!important}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-evidence{display:block!important;grid-area:4/1/5/5!important}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody :is(.qxfd-price,.qxfd-liquidity,.qxfd-txns,.qxfd-makers){display:none!important}
+.qxfd-pulse{display:flex;flex-direction:column;min-width:0;min-height:0}
+.qxp-toolbar{display:flex;align-items:center;min-height:28px;height:28px;padding:0 8px;border-bottom:1px solid var(--qx-line);gap:8px}
+.qxp-tabs{display:none}
+.qxp-pause,.qxp-retry{min-height:24px;padding:0 7px;border:0;border-radius:2px;background:none;color:var(--qx-muted);font:11px var(--qx-sans);cursor:pointer}
+.qxp-paused{font:10px var(--qx-sans);color:var(--qx-brass)}
+.qxp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));min-height:0;min-width:0}
+.qxp-column{min-width:0;overflow:auto;border-right:1px solid var(--qx-line);scrollbar-width:thin;overscroll-behavior:contain}
+.qxp-column:last-child{border-right:0}
+.qxp-head{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:7px;height:30px;padding:0 8px;background:var(--qx-bg-2);border-bottom:1px solid var(--qx-line)}
+.qxp-head h2{font:650 12px var(--qx-sans);margin:0}.qxp-count,.qxp-fresh{font:10px var(--qx-sans);color:var(--qx-muted)}
+.qxp-count{padding:1px 4px;background:var(--qx-panel);border-radius:2px}.qxp-count:empty{display:none}.qxp-fresh{margin-left:auto;white-space:nowrap}
+.qxp-empty{padding:24px 12px;color:var(--qx-muted);font:12px/1.5 var(--qx-sans);text-align:left}
+.qxp-quick-host{display:none}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table{display:block;min-width:0;width:100%}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody{display:block;width:100%}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody tr[data-key]{position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) 32px!important;grid-template-rows:26px 22px 19px!important;gap:0 6px!important;align-items:center;height:76px;min-height:76px;padding:4px 8px!important;border-bottom:1px solid var(--qx-line)!important;box-sizing:border-box}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td{display:block!important;grid-area:auto!important;grid-row:auto!important;min-width:0;width:auto!important;height:auto;padding:0!important;border:0;font-size:11px;line-height:1.1;white-space:nowrap;text-align:left;overflow:visible}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-token{grid-area:1/1/2/7!important;padding:0!important}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-open{display:grid!important;grid-template-columns:24px minmax(0,1fr) auto!important;grid-template-rows:1fr!important;min-height:24px;height:24px!important;padding-left:22px;gap:0 6px!important}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-avatar{grid-area:1/1/2/2;width:24px;height:24px}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-identity{grid-area:1/2/2/3;display:block}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-age{grid-area:1/3/2/4;max-width:120px}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-name{display:none}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-chain-icon{left:38px;top:19px}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-watch{left:6px;top:4px;height:24px;min-width:20px;width:20px}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-mcap{grid-area:2/1/3/2!important}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-volume{grid-area:2/2/3/3!important}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-liquidity{grid-area:2/3/3/4!important;display:block!important}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-move{grid-area:2/4/3/5!important;font-size:13px;font-weight:700}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-txns{grid-area:2/5/3/7!important;display:block!important;text-align:right}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-top10{grid-area:3/1/4/2!important}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-dev{grid-area:3/2/4/3!important}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-holders{grid-area:3/3/4/4!important;color:var(--qx-muted)}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-price{grid-area:3/4/4/5!important;font-size:10px;overflow:hidden}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-evidence{grid-area:3/5/4/6!important}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-buy{grid-area:3/6/4/7!important;display:flex!important;justify-content:flex-end;align-self:center}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody :is(.qxfd-makers,.qxfd-riskgrid){display:none!important}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td::before{display:none!important}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-top10::before{content:'T10 ';display:inline!important;color:var(--qx-muted);font-size:10px}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-dev::before{content:'Dev ';display:inline!important;color:var(--qx-muted);font-size:10px}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-holders::before{content:'H ';display:inline!important;color:var(--qx-muted);font-size:10px}
+body.qa.qxt #qxt-discover .qxfd-pulse button.qxfd-buy{height:24px!important;min-height:24px;width:28px!important;min-width:28px;padding:0!important;font-size:0!important}
+body.qa.qxt #qxt-discover .qxfd-pulse button.qxfd-buy::before{margin:0}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-evidence .qxd-badge{display:none}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-cap-kind{display:none!important}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxd-checks-panel{top:24px;right:0}
+.qxp-skeleton{height:76px;min-height:76px;border-bottom:1px solid var(--qx-line)}
+.qxp-skeleton td{display:flex!important;gap:12px;align-items:center;height:76px;padding:0 8px!important}
+.qxp-skeleton span{height:10px;width:20%;border-radius:2px;background:var(--qx-panel-2);animation:qxfd-pulse 1.3s ease-in-out infinite alternate}
+.qxp-skeleton span:first-child{width:24px;height:24px;border-radius:2px}
 .qxfd-filter-coverage{grid-column:1/-1;max-width:60ch;font:11px/1.5 var(--qx-sans);color:var(--qx-muted);margin:4px 0}
-.qxfd-toolbar:has(.qxfd-tabs[hidden]){display:none}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td:is(.qxfd-mcap,.qxfd-volume,.qxfd-move)::before{display:block!important;font:11px var(--qx-sans);color:var(--qx-muted);margin:0 0 2px;content:attr(data-label)}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-mcap::before{content:'MC'}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-volume::before{content:'Vol 24h'}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-move::before{content:attr(data-window)}
-.qxp-quick-host{margin-left:auto;display:flex;align-items:center}.qxp-quick-host .qxfd-quick-chip{margin:0;min-height:32px}
-@media(max-width:759px){.qxp-toolbar{gap:8px;flex-wrap:nowrap}.qxp-tabs{gap:10px}.qxp-tabs button{font-size:11px}.qxp-quick-host .qxfd-quick-chip{padding:0 6px;font-size:11px;min-height:36px;white-space:nowrap}.qxp-pause{font-size:0;min-width:32px;min-height:44px;padding:0}.qxp-pause::before{content:'Ⅱ';font:500 16px var(--qx-sans)}.qxp-pause[aria-pressed=true]::before{content:'▷'}}
-@media(max-width:759px){body.qa.qxt #qxt-discover .qxp-toolbar .qxp-pause{font-size:0!important;width:32px;min-width:32px;padding:0!important}body.qa.qxt #qxt-discover .qxp-toolbar .qxp-tabs{flex:1;min-width:145px}body.qa.qxt #qxt-discover .qxp-toolbar{padding:0 10px;gap:6px}body.qa.qxt #qxt-discover .qxp-quick-host{margin:0}body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody tr[data-key]{grid-template-rows:minmax(30px,auto) minmax(28px,auto) minmax(28px,auto)!important;padding:8px 12px!important}body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody .qxfd-holders{grid-area:3/3/4/4!important}body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-evidence{grid-area:3/1/4/3!important}body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-open{min-height:0!important;height:30px!important}}
+@media(max-width:1099px){
+ .qxp-grid{display:block;overflow:visible}.qxp-column{overflow:visible;border:0}
+ .qxp-tabs{display:flex;flex:1;gap:18px;min-width:0}.qxp-tabs button{min-height:32px;padding:0;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--qx-muted);font:600 12px var(--qx-sans);white-space:nowrap}
+ .qxp-tabs [aria-selected=true]{border-color:var(--qx-brass);color:var(--qx-brass)}
+ .qxp-toolbar{height:32px;min-height:32px;padding:0;gap:6px}
+ .qxp-paused{display:none}.qxp-head{position:static;height:22px;padding:0}.qxp-head h2{display:none}
+ .qxp-pause{font-size:0;min-width:28px;height:28px;padding:0}.qxp-pause::before{content:'Ⅱ';font:500 16px var(--qx-sans)}.qxp-pause[aria-pressed=true]::before{content:'▷'}
+ body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody tr[data-key]{height:88px;min-height:88px;grid-template-rows:30px 24px 25px!important;padding:4px 0!important;column-gap:6px!important}
+ body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-open{padding-left:0;grid-template-columns:28px minmax(0,1fr) auto!important;min-height:28px;height:28px!important}
+ body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-avatar{width:28px;height:28px}
+ body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-watch{display:none}
+ body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-chain-icon{left:20px;top:24px}
+ body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-identity{grid-area:1/2/2/3;align-self:center}
+ body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-age{grid-area:1/3/2/4;align-self:center}
+ body.qa.qxt #qxt-discover .qxfd-pulse button.qxfd-buy{height:28px!important;min-height:28px}
+ .qxp-skeleton,.qxp-skeleton td{height:88px;min-height:88px}
+}
+@media(prefers-reduced-motion:reduce){.qxp-skeleton span{animation:none}}
 /* One scrolling filter panel: nested advanced controls stay in its document flow. */
 body.qa.qxt #qxt-discover .qxfd-list-options-body .qxfd-filter-details[open]{position:static!important;inset:auto!important;width:100%;max-height:none;overflow:visible;margin:10px 0 0;padding:8px 0;border:0;border-top:1px solid var(--qx-line);box-shadow:none;background:transparent;box-sizing:border-box}
 body.qa.qxt #qxt-discover .qxfd-list-options-body .qxfd-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -58,19 +80,48 @@ body.qa.qxt #qxt-discover .qxfd-saved-views :is(select,input){width:100%;min-wid
 @media(max-width:759px){body.qa.qxt #qxt-discover .qxfd-list-options-body{max-height:calc(100dvh - 295px);overscroll-behavior:contain}body.qa.qxt #qxt-discover .qxfd-list-options-body .qxfd-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}body.qa.qxt #qxt-discover .qxfd-filter-actions button{min-height:44px}}
 @media(max-width:759px){body.qa.qxt #qxt-discover .qxp-paused{display:none!important}}
 @media(max-width:359px){body.qa.qxt #qxt-discover .qxp-toolbar{padding:0 4px;gap:6px}body.qa.qxt #qxt-discover .qxp-toolbar .qxp-tabs{min-width:137px;gap:6px}}
-body.qa.qxt #qxt-discover .qxfd-toolbar{flex-wrap:nowrap;min-width:0;gap:10px}body.qa.qxt #qxt-discover .qxfd-toolbar .qxfd-tabs{flex:1 1 0;min-width:0}body.qa.qxt #qxt-discover .qxfd-toolbar .qxfd-quick-chip{flex:none;margin:0;white-space:nowrap;min-height:36px}
-@media(max-width:759px){body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table tbody tr[data-key]{grid-template-rows:minmax(44px,auto) minmax(30px,auto)!important}body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table tbody td.qxfd-buy{grid-area:1/5/2/6!important;align-self:start}body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table tbody td.qxfd-evidence{grid-area:2/5/3/6!important;justify-self:end;align-self:center}body.qa.qxt #qxt-discover .qxfd-scroll .qxfd-table tbody td.qxfd-evidence:has(details[open]){grid-area:3/1/4/6!important;justify-self:stretch}}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody tr[data-key]{grid-template-rows:minmax(30px,auto) minmax(28px,auto) minmax(28px,auto)!important;padding:8px 12px!important}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-holders{grid-area:3/3/4/4!important}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-evidence{grid-area:3/1/4/3!important}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-open{min-height:0!important;height:30px!important}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-evidence:has(details[open]){grid-area:4/1/5/5!important}
-/* Discovery is a terminal surface even when a filter returns zero rows. */
-body.qxt-discover-mode>footer.qa-foot{display:none!important}
-body.qa.qxt #qxt-discover .qxfd-list-options-body .qxfd-quick-slot,body.qa.qxt #qxt-discover .qxfd-list-options-body .qxfd-chains,body.qa.qxt #qxt-discover .qxfd-list-options-body .qxfd-windows{display:none!important}
-body.qa.qxt #qxt-discover .qxfd-list-options-body .qxfd-filterbar{justify-content:flex-end;min-height:36px}
-body.qa.qxt #qxt-discover .qxfd-filter-grid{margin-top:14px}
-body.qa.qxt #qxt-discover .qxfd-filter-grid label{flex-direction:column}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-mcap::before{content:attr(data-label)!important}
-body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-cap-kind{display:none!important}
-body.qa.qxt #qxt-discover .qxfd-pulse td.qxfd-mcap[data-refreshing=true] .qxfd-cap-kind{display:block!important;margin:2px 0 0;font-size:11px}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table thead{display:block;position:sticky;top:30px;z-index:3;background:var(--qa-floor-2)}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table thead tr{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) 32px;gap:6px;height:20px;align-items:center;padding:0 8px;box-sizing:border-box}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table thead th{font-size:10px;font-weight:500;line-height:1.1;color:var(--qa-tx-3);text-align:left;padding:0;white-space:nowrap}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table thead th:last-child{grid-column:5/7;text-align:right}
+@media(min-width:1100px){.qxfd-pulse{position:relative}.qxp-toolbar{position:absolute;top:-36px;left:120px;z-index:3;border:0;padding:0;height:28px;min-height:28px}.qxp-grid{padding-top:0}}
+@media(max-width:1099px){body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table thead{position:static}body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table thead tr{padding-inline:0}}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table thead{clip:auto!important;clip-path:none!important;width:100%!important;height:auto!important;overflow:visible}
+body.qa.qxt #qxt-discover .qxfd-pulse button.qxfd-buy :is(.qxfd-buy-value,.qxfd-buy-unit){display:none}
+/* Pulse keeps the actual quick-buy amount and currency readable on touch, too. */
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody tr[data-key],
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table thead tr{grid-template-columns:repeat(5,minmax(0,1fr)) 64px!important}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table button.qxfd-buy{display:inline-flex!important;align-items:center;justify-content:center;gap:2px;width:64px!important;min-width:64px;padding:0 3px!important;font-size:10px!important;line-height:1.1!important;white-space:nowrap}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table button.qxfd-buy :is(.qxfd-buy-value,.qxfd-buy-unit){display:inline;font-size:10px;line-height:1.1;overflow-wrap:normal}
+body.qa.qxt #qxt-discover .qxfd-pulse .qxfd-table tbody td.qxfd-holders[data-known=false]{display:none!important}
+
+/* Each Pulse card keeps source age beside price, with its own full-width facts band. */
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-table tbody tr[data-key]{grid-template-columns:minmax(0,1.6fr) repeat(4,minmax(0,.9fr)) 64px!important;grid-template-rows:24px 18px 28px!important;padding-block:2px 3px!important}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-cap-kind{display:inline!important;font-size:11px;margin-left:3px}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse td.qxfd-token{display:grid!important;grid-template-columns:24px minmax(0,1fr);gap:2px;align-items:center}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-open{grid-column:2;grid-template-rows:24px!important;padding:0;position:relative}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-watch{position:static;display:grid!important;grid-column:1;grid-row:1;place-items:center;transform:none;width:24px;min-width:24px;height:24px;min-height:24px;padding:0;line-height:24px}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-chain-icon{top:auto!important;left:14px!important;bottom:1px!important}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-table tbody td:is(.qxfd-top10,.qxfd-dev,.qxfd-holders,.qxfd-price,.qxfd-evidence,.qxfd-buy){grid-area:3/1/4/-1!important;justify-self:start;box-sizing:border-box;overflow:visible}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-table tbody td.qxfd-top10{width:60px}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-table tbody td.qxfd-dev{margin-left:64px;width:46px}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-table tbody td.qxfd-holders{margin-left:114px;width:40px}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-table tbody td.qxfd-price{margin-left:158px;width:calc(100% - 254px);display:flex!important;align-items:center;gap:3px;white-space:nowrap}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-price-value{font-size:12px;line-height:17px}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-price-status{font-size:12px;line-height:17px;margin:0;white-space:nowrap}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-table tbody td.qxfd-evidence{justify-self:end;margin-right:68px;width:24px}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-table tbody td.qxfd-buy{justify-self:end;width:64px}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse button.qxfd-buy{height:28px!important;min-height:28px;font-size:11px!important;line-height:16px!important}
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse button.qxfd-buy :is(.qxfd-buy-value,.qxfd-buy-unit){font-size:11px;line-height:16px}
+@media(max-width:1099px){
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-table tbody tr[data-key]{grid-template-rows:28px 20px 32px!important;padding-block:3px 4px!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-open{grid-template-rows:28px!important;height:28px!important;min-height:28px!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-chain-icon{left:18px!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-table tbody td.qxfd-top10{width:34px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-table tbody td.qxfd-dev{margin-left:38px;width:34px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-table tbody td.qxfd-holders{margin-left:76px;width:34px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-table tbody td:is(.qxfd-top10,.qxfd-dev,.qxfd-holders){line-height:16px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-table tbody td:is(.qxfd-top10,.qxfd-dev,.qxfd-holders)::before{display:block!important;font-size:10px;line-height:12px}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-table tbody td.qxfd-price{margin-left:114px;width:calc(100% - 210px);display:block!important}
+ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-pulse .qxfd-price-status{font-size:10px;line-height:13px}
+}

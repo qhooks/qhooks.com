@@ -1,3 +1,10 @@
+import {kitTradeoff} from './qx-launch-kit-copy.mjs';
+import {createFeePresentation} from './qx-create-fee-presentation.mjs';
+import {evmModel,mountCreateModelPreview,mountChainModelLabels} from './qx-create-model-preview.mjs';
+import {validLaunchTicker,mountLaunchTickerInput} from './qx-launch-ticker.mjs';
+import {launchReadiness,paintLaunchReadiness} from './qx-quick-launch-readiness.mjs';
+import {launchIdentityDraft} from './qx-create-draft.mjs';
+import {editableTokenProfileDraft} from './qx-token-profile.mjs';
 import {paintQuickLaunchResult} from './qx-quick-launch-result.mjs';
 import {QUICK_LAUNCH_DEFAULTS,quickLaunchEntry} from './qx-quick-launch-defaults.mjs';
 import {quickSplitPreview,splitPreviewNode} from './qx-create-split-preview.mjs';
@@ -26,7 +33,7 @@ import {multiFactory,multiQuotes,primeMultiFactory,multiLive,alignTick,poolWeigh
 import {pairsFactory,pairQuotes,primePairsFactory,pairsLive,pairStartAtCall,readPairStartAt,usdFromSqrt} from './qx-quick-launch-core.mjs';
 import {mountAccountQuantum} from './qx-account-quantum-control.mjs';
 import {rangeKitReady,planRange,makeCall,pointCall,pointCallPq,checkPqMessage,payoutOf,sendBatch,RANGE_SHARES,DEFAULT_RANGE_BPS,RANGE_GAS} from './qx-range-kit.mjs';
-import {ideaCards,ideaCard,visibleGroups,quickFactory,encodeQuickLaunch,validateQuick,launchFeeWei,quickCost,ethText,launchedToken,randomSalt,PLANNING_GAS} from './qx-quick-launch-core.mjs';
+import {ideaCards,ideaCard,visibleGroups,quickFactory,encodeQuickLaunch,validateQuick,launchFeeWei,quickCost,ethText,launchedToken,randomSalt,PLANNING_GAS,QUICK_PRESET} from './qx-quick-launch-core.mjs';
 
 let banner='',bannerData='',bannerRevision=0,imageRevision=0,bannerSource='',lastImageFile=null;
 let simpleDefault=false;
@@ -56,36 +63,54 @@ async function primeRange(id){
 }
 let taken=null,tickerRun=0,tickerTimer=0;
 let costError='',chainId=null,group='all',pick=null,image='',cost=null,costRun=0,busy=false,usd=null,feeRead=new Map();
+let modelPreview=null,chainModelLabels=false,feeKey='';
+const feePresentation=createFeePresentation({onChange:()=>{if(pick&&chainId!=='solana')renderQuick();}});
+function retryFeePreview(){if(busy)return;clearTimeout(costTimer);costRun++;cost=null;costError='';feePresentation.retry(feeKey,costRun);renderQuick();void refreshCost();}
+function evmPreview(){if(!modelPreview){const fees=document.getElementById('cr5-fees');if(fees)modelPreview=mountCreateModelPreview({before:fees,feeDetails:fees,id:'qq-model-preview'});}return modelPreview;}
+
 const chainSelect=document.getElementById('qc-chainId');
 // One-tap has its own chain picker (2026-11-09): ?chain= wins over the wallet's network and over the guided form
 // (which an unfinished guided launch can lock to another chain). Launch asks the wallet to switch (adding the chain if needed).
 const urlChain=()=>new URLSearchParams(location.search).get('chain');
 let quickChain=null,solQuickPrevious=null;
+const identityDraft=launchIdentityDraft();let draftDiscord='';
+function keepDraft(){const saved=identityDraft.replace({...fields(),chain:String(currentChain()),bannerData,bannerSource,discord:draftDiscord});const n=document.getElementById('qq-draft-notice');if(n){n.hidden=saved;n.textContent=saved?'':'Your draft is only in this tab. Browser storage is unavailable; it will not survive a reload.';}return saved;}
+function restoreDraft(d){if(!d)return;draftDiscord=d.discord||d.links?.discord||'';for(const k of ['name','symbol','description','x','telegram','website'])if($(k))$(k).value=d[k]||'';image=d.image||'';banner=d.banner||'';bannerData=d.bannerData||'';bannerSource=d.bannerSource||'';if(image){$('preview').src=image;$('preview').hidden=false;$('image-status').textContent='Image ready.';}if(bannerData){$('banner-preview').src=bannerData;$('banner-preview').hidden=false;$('banner-status').textContent='Banner ready.';}}
+function chainPresentation(kind){mountLaunchTickerInput($('symbol')).paint();if(kind!=='evm'){modelPreview?.hide();feePresentation.hide();}const sol=kind==='solana',unavailable=kind==='unavailable';$('quick').hidden=false;$('quick').dataset.chainState=kind;$('launch').closest('.cr-go').hidden=sol;document.getElementById('cr5-fees').hidden=sol||unavailable;document.getElementById('cr5-defaults').hidden=sol||unavailable;$('need-banner').hidden=sol||unavailable;let n=document.getElementById('qq-unavailable');if(!n){n=el('p',{id:'qq-unavailable',class:'qxc-message',role:'status'});$('message').before(n);}n.hidden=!unavailable;if(unavailable){n.textContent='Quick Launch is not available on '+(chainById(chainId)?.name||'this chain')+'. Choose another chain; your draft is kept.';$('launch').disabled=true;$('launch').textContent='Choose another chain';paintLaunchReadiness(quickReadinessHost(),launchReadiness({available:false,hold:n.textContent,image,name:$('name').value,symbol:$('symbol').value,wallet:!!hub.snapshot().current}));}}
 const currentChain=()=>quickChain||chainSelect?.value||urlChain()||'4663';
 const quickChains=()=>[...visibleChains().filter(c=>ideaCards(c.id).length).sort((a,b)=>Number(b.id==='4663')-Number(a.id==='4663')),{id:'solana',name:'Solana',native:'SOL'}];
-function setQuickChain(id){const wasSol=quickChain==='solana';if(id!==currentChain()){extraPools=[];poolPrices=null;pairIdx=0;}quickChain=id;if(id==='solana'||wasSol)document.dispatchEvent(new CustomEvent('qhooks:sol-create',{detail:{chain:id}}));try{const u=new URL(location.href);u.searchParams.set('chain',id);history.replaceState(history.state,'',u);}catch{}
- renderIdeas();if(pick)openQuick(pick.id);if(id==='solana'){const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;}checkTickerSoon();costSoon();}
+function setQuickChain(id){if(busy)return;const wasSol=quickChain==='solana';if(id!==currentChain()){extraPools=[];poolPrices=null;pairIdx=0;}quickChain=id;try{const u=new URL(location.href);u.searchParams.set('chain',id);history.replaceState(history.state,'',u);}catch{}
+ renderIdeas();if(pick)openQuick(pick.id);else if(id!=='solana'&&ideaCards(id).length)openQuick(QUICK_LAUNCH_DEFAULTS.cardId);keepDraft();if(id==='solana'||wasSol)document.dispatchEvent(new CustomEvent('qhooks:sol-create',{detail:{chain:id,quick:true}}));checkTickerSoon();costSoon();}
+let draftBannerRecovery=null;
+function restoreBannerReference(){
+ if(chainId==='solana'||banner||!bannerData||draftBannerRecovery)return;
+ const data=bannerData,revision=bannerRevision;$('banner-status').textContent='Restoring your banner…';
+ draftBannerRecovery=uploadTokenBanner(data).then(hash=>{if(data!==bannerData||revision!==bannerRevision)return;banner=hash;$('banner-status').textContent='Banner ready.';$('banner-retry').hidden=true;keepDraft();renderQuick();costSoon();}).catch(e=>{if(data!==bannerData||revision!==bannerRevision)return;$('banner-status').textContent=e.message;$('need-banner').textContent='Your banner did not save. Retry under Customize launch.';$('banner-retry').hidden=false;}).finally(()=>{draftBannerRecovery=null;});
+}
 function renderPicker(){
  let sel=$('chain');
  if(!sel){const label=el('label',{class:'qq-chain'},el('span',{},'Chain'));sel=el('select',{id:'qq-chain','aria-label':'Chain for one-tap launch'});label.append(sel);$('chips').before(label);
   sel.addEventListener('change',()=>setQuickChain(sel.value));}
- const list=quickChains(),want=chainId;
+ const list=quickChains(),want=chainId;if(want&&!list.some(c=>c.id===want))list.push({id:want,name:chainById(want)?.name||'Unavailable chain',native:chainById(want)?.native||''});
  if(sel.options.length!==list.length||[...sel.options].some((o,i)=>o.value!==list[i].id))sel.replaceChildren(...list.map(c=>el('option',{value:c.id},c.name+' · '+c.native)));
  if(list.some(c=>c.id===want))sel.value=want;
+ if(!chainModelLabels&&document.getElementById('cr-chains')){mountChainModelLabels(document.getElementById('cr-chains'));chainModelLabels=true;}
 }
 const note=(text,error=false)=>{$('message').textContent=text;$('message').dataset.error=String(error);};
 // Anti-copycat ticker block: a ticker already launched through QHooks is refused before the wallet opens.
 const noteNodes=(nodes,error=true)=>{$('message').replaceChildren(...nodes);$('message').dataset.error=String(error);};
 function showTaken(r){taken=r;noteNodes(tickerBlockNodes(r));}
 function checkTickerSoon(){clearTimeout(tickerTimer);const run=++tickerRun;tickerTimer=setTimeout(async()=>{
- const symbol=$('symbol').value.trim(),owner=hub.snapshot().current?.owner||'';if(!pick||!symbol){taken=null;renderQuick();return;}
+ const symbol=$('symbol').value,owner=hub.snapshot().current?.owner||'';if(!pick||!validLaunchTicker(symbol)){taken=null;renderQuick();return;}
  const r=await checkTicker({symbol,chainId,creator:owner});if(run!==tickerRun)return;
  if(!r.available)showTaken(r);else if(taken){taken=null;note('');}renderQuick();},350);}
 
 // USD for the cost line in the chain's own coin (ETH, BNB, HYPE): the price of the selected chain, read again on change.
 let usdFor=null;function readUsd(){const id=currentChain(),sym=chainById(id)?.native||'ETH';if(usdFor===id)return;usdFor=id;usd=null;
  void readCreateNativeUSD(sym).then(v=>{if(usdFor===id){usd=v;renderQuick();}}).catch(()=>{});}
-function renderIdeas(){chainId=currentChain();renderPicker();if(chainId==='solana'){if(pick)solQuickPrevious=pick;pick=null;cost=null;costRun++;clearTimeout(costTimer);clearTimeout(tickerTimer);tickerRun++;$('chips').replaceChildren();$('cards').replaceChildren();$('none').hidden=true;$('quick').hidden=true;$('open').hidden=true;return;}if(!pick&&solQuickPrevious){pick=ideaCard(chainId,solQuickPrevious.id);solQuickPrevious=null;}readUsd();
+const kitDetailsOpen=new Map();
+function kitDetails(card,...nodes){return el('details',{class:'qq-kit-details',open:kitDetailsOpen.get(card.id)||false,'data-kit-details':card.id},el('summary',{},'Details'),...nodes);}
+function renderIdeas(){for(const n of $('cards').querySelectorAll('[data-kit-details]'))kitDetailsOpen.set(n.dataset.kitDetails,n.open);chainId=currentChain();renderPicker();if(chainId==='solana'){if(pick)solQuickPrevious=pick;pick=null;cost=null;costRun++;clearTimeout(costTimer);clearTimeout(tickerTimer);tickerRun++;$('chips').replaceChildren();$('cards').replaceChildren();$('none').hidden=true;$('open').hidden=true;chainPresentation('solana');return;}if(!pick&&solQuickPrevious){pick=ideaCard(chainId,solQuickPrevious.id);solQuickPrevious=null;}readUsd();
  // Clean-token launch contract: once it has code on this chain, new launches go to it (redraw once when it switches).
  {const id=chainId;primeClean(id).then(r=>{if(r.changed&&id===chainId){costRun++;cost=null;renderIdeas();if(pick)void refreshCost();}}).catch(()=>{});}
  // Pairs launch contract (Robinhood): the pair picker appears once it has code on this chain.
@@ -98,21 +123,22 @@ function renderIdeas(){chainId=currentChain();renderPicker();if(chainId==='solan
  $('chips').hidden=!cards.length;
  $('cards').replaceChildren(...cards.map(card=>{
   const off=card.kit==='range'&&!rangeOn(offChain?QUICK_CHAIN:chainId);
-  const btn=el('button',{type:'button',class:'qq-launch-card','data-launch':card.id,disabled:off},off?'Not on '+(c?.name||'this chain')+' yet':'Launch this');btn.addEventListener('click',()=>launchCard(card.id));
+  const btn=el('button',{type:'button',class:'qq-launch-card','data-launch':card.id,'aria-label':'Use kit: '+card.name,'aria-pressed':String(pick?.id===card.id),disabled:off},off?'Unavailable':'Use kit');btn.addEventListener('click',()=>launchCard(card.id));
   const blocks=card.blocks.length?el('div',{class:'qq-blocks'},...card.blocks.map(icon)):el('div',{class:'qq-blocks qq-blocks-none'},el('span',{},'No extra rules'));
   return tapCard(el('article',{class:'qq-card','data-card':card.id,'data-group':card.group,hidden:group!=='all'&&card.group!==group},
-   el('h3',{},card.name),card.chip?el('span',{class:'qq-chip'},card.chip):null,el('p',{class:'qq-what'},card.what),el('p',{class:'qq-why'},card.why),blocks,off?el('p',{class:'qq-why qq-off-note'},'Adaptive liquidity isn’t set up on '+(c?.name||'this chain')+' yet.'):null,btn),btn);
+   el('div',{class:'qq-kit-main'},el('h3',{},card.name),card.chip?el('span',{class:'qq-chip'},card.chip):null,el('p',{class:'qq-kit-tradeoff'},kitTradeoff(card)),kitDetails(card,el('p',{class:'qq-what'},card.what),el('p',{class:'qq-why'},card.why),blocks,off?el('p',{class:'qq-why qq-off-note'},'Adaptive liquidity isn’t set up on '+(c?.name||'this chain')+' yet.'):null)),btn),btn);
  }),...[saleKit(group)].filter(Boolean));
  // Off Robinhood Chain the cards stay visible (lead, 2026-11-08); "Launch this" switches the chain first.
  $('none').hidden=!offChain;$('use-robinhood').hidden=true;$('open').hidden=false;
  if(offChain)$('none-text').textContent='One-tap launches run on Robinhood Chain';
- if(pick&&!ideaCard(chainId,pick.id)){pick=null;$('quick').hidden=true;}
+ if(pick&&!ideaCard(chainId,pick.id))pick=null;
+ chainPresentation(offChain?'unavailable':'evm');if(!offChain)restoreBannerReference();
 }
 
 // A card picked while another chain is selected: switch the page to Robinhood Chain, then open that card.
 // Sale first as a kit: only on chains where the Sale first card (qx-sale-create.mjs) found QSaleLaunch code.
 // Tapping anywhere on an idea picks it, like its button (Randall 2026-11-12: the panel under the ideas has to follow the pick).
-function tapCard(card,btn){card.addEventListener('click',e=>{if(e.target.closest('button,a,input,select,label,textarea')||btn.disabled)return;btn.click();});return card;}
+function tapCard(card,btn){card.addEventListener('click',e=>{if(e.target.closest('button,a,input,select,label,textarea,summary,details')||btn.disabled)return;btn.click();});return card;}
 // One panel under the ideas follows the pick: Quick launch for an idea, the sale form (qx-sale-create.mjs) for Sale first.
 const announcePick=id=>document.dispatchEvent(new CustomEvent('qq:pick',{detail:{id}}));
 function saleKit(group){
@@ -120,8 +146,8 @@ function saleKit(group){
  const btn=el('button',{type:'button',class:'qq-launch-card','data-launch':'sale-first'},'Set up the sale');
  btn.addEventListener('click',()=>{pick=null;$('quick').hidden=true;announcePick('sale-first');for(const a of document.querySelectorAll('#qq-cards [data-launch]'))a.setAttribute('aria-pressed',String(a.dataset.launch==='sale-first'));const r=document.getElementById('qsf-root'),s=document.getElementById('qsf-chain');if(s&&[...s.options].some(o=>o.value===String(chainId))){s.value=String(chainId);s.dispatchEvent(new Event('change',{bubbles:true}));}r?.scrollIntoView({block:'start'});document.getElementById('qsf-name')?.focus({preventScroll:true});});
  return tapCard(el('article',{class:'qq-card','data-card':'sale-first','data-group':'kits',hidden:group!=='all'&&group!=='kits'},
-  el('h3',{},'Sale first'),el('p',{class:'qq-what'},'A fair sale before trading opens, at a fixed or falling price. Under the minimum, everyone gets a full refund.'),
-  el('p',{class:'qq-why'},'Everyone pays the same price, so there is nothing to snipe, and the pool opens with the money raised on both sides.'),el('div',{class:'qq-blocks qq-blocks-none'},el('span',{},'1 transaction to open')),btn),btn);
+  el('div',{class:'qq-kit-main'},el('h3',{},'Sale first'),el('p',{class:'qq-kit-tradeoff'},kitTradeoff({id:'sale-first'})),kitDetails({id:'sale-first'},el('p',{class:'qq-what'},'A fair sale before trading opens, at a fixed or falling price. Under the minimum, everyone gets a full refund.'),
+  el('p',{class:'qq-why'},'Everyone pays the same price, so there is nothing to snipe, and the pool opens with the money raised on both sides.'),el('div',{class:'qq-blocks qq-blocks-none'},el('span',{},'1 transaction to open')))),btn),btn);
 }
 document.addEventListener('qsf:ready',()=>{if(document.getElementById('qq-cards'))renderIdeas();});
 function launchCard(id){
@@ -327,11 +353,20 @@ function openQuick(id,{scroll=false}={}){
 
 const costKey=v=>JSON.stringify(v,(_k,value)=>typeof value==='bigint'?value.toString():value);
 function fields(){return {name:$('name').value,symbol:$('symbol').value,image,banner,description:$('description')?.value||'',x:$('x')?.value||'',telegram:$('telegram')?.value||'',website:$('website')?.value||''};}
+function quickReadinessHost(){let host=$('readiness');if(!host){host=el('div',{id:'qq-readiness',class:'qq-readiness',role:'status','aria-live':'polite','aria-atomic':'true'});$('launch').before(host);$('launch').setAttribute('aria-describedby','qq-readiness');}return host;}
 function renderQuick(){
+ mountLaunchTickerInput($('symbol')).paint();
  if(!pick)return;const c=chainById(chainId),conn=hub.snapshot().current;
- let ready=true;try{validateQuick(fields());}catch{ready=false;}
+ let validationError='';try{validateQuick(fields());}catch(e){validationError=e.message;}
  const box=$('cost');
- if(!cost)box.replaceChildren(el('p',{class:'qq-total'},'Loading…'),...(costError?[el('p',{class:'qxc-fine'},costError)]:[]));
+ const keyReady=!validationError&&!priceBlocked()&&!poolsBlocked()&&!pqBlocked();
+ const reviewKey=keyReady?costKey([fields(),pick.style,pick.snipe,startCapOn()?startSteps:0,pqOnChain()?pqKeyHex():null,launchFactory(),curPair()?.index||0,multiFields()]):null;
+ feeKey=costKey([chainId,pick.id,startSteps,pairIdx,extraPools,fields()]);
+ const expired=!!cost?.live&&Number(cost.quote?.expiresAt)<=Date.now(),bound=!!cost?.live&&cost.owner===conn?.owner&&cost.key===reviewKey&&!expired;
+ const displayCost=cost&&(!cost.live||bound)?cost:null;
+ const feeView=feePresentation.observe({key:feeKey,generation:costRun,available:!!displayCost,error:expired?'Fee estimate expired. Retry.':costError,errorCurrent:expired,expiresAt:displayCost?.live?Number(displayCost.quote.expiresAt):0,busy});
+ const preview=evmPreview();preview?.update(evmModel({chain:c,card:pick,baseFee:QUICK_PRESET.fee,antiSnipe:pick.blocks?.some(b=>b.id==='antiSnipe')}));preview?.setFeeStatus(feeView,retryFeePreview);
+ if(!displayCost)box.replaceChildren(el('p',{class:'qq-total'},feeView.message));
  else{const line=(k,v)=>el('div',{class:'qxc-summary-line'},el('span',{},k),el('b',{class:'qxc-number'},v));
   const rangeWei=isRangeKit()&&cost.gasPriceWei?BigInt(RANGE_GAS.make+(pqOnChain()&&pqKeyHex()?RANGE_GAS.pointPq:RANGE_GAS.point))*BigInt(cost.gasPriceWei):0n,totalWei=BigInt(cost.totalWei)+rangeWei;
   const dollars=usd?' · about $'+(Number(totalWei)/1e18*usd).toFixed(2):'';
@@ -342,11 +377,11 @@ function renderQuick(){
  box.append(splitPreviewNode(quickSplitPreview(isRangeKit()?rangeBps:0),{quick:true}));
  for(const id of ['name','symbol','image','banner','description','x','telegram','website'])if($(id))$(id).disabled=busy;
  const b=$('launch');
- b.textContent=busy?'Launching…':!conn?'Connect wallet to launch':conn.chainId!==chainId?'Switch to '+c.short+' and launch':priceBlocked()||poolsBlocked()?'Refreshing price…':pqBlocked()?'Unlock your quantum key to launch':document.querySelector('.cr5')?'Launch':'Launch for '+(cost?ethText(cost.totalWei)+' '+c.native:'…');
  // A token image is required (2026-11-10): no launch, or chain switch for one, until the image is ready.
  const needImage=!image,needBanner=!banner;$('need-image').hidden=true;$('need-banner').hidden=!image||!needBanner||busy;
- b.disabled=busy||!!taken||needImage||needBanner||!!conn&&(conn.chainId===chainId&&(!ready||!cost||priceBlocked()||poolsBlocked()||pqBlocked()||cost.live&&!cost.quote.funded));
- const total=document.getElementById('cr5-total');if(total)total.textContent=cost?(cost.live?'Total · ':'Estimate · ')+ethText(BigInt(cost.totalWei)+(isRangeKit()&&cost.gasPriceWei?BigInt(RANGE_GAS.make+(pqOnChain()&&pqKeyHex()?RANGE_GAS.pointPq:RANGE_GAS.point))*BigInt(cost.gasPriceWei):0n))+' '+c.native:'Refreshing fees…';
+ const readiness=launchReadiness({available:CREATE_EXECUTION_ENABLED&&!!quickFactory(chainId),hold:CREATE_EXECUTION_HOLD,busy,image,name:$('name').value,symbol:$('symbol').value,banner,bannerMessage:$('need-banner').textContent,validationError,taken:!!taken,wallet:!!conn,wrongChain:!!conn&&conn.chainId!==chainId,chainMessage:'Switch your wallet to '+c.name+' to review the launch cost.',chainLabel:'Switch to '+c.short+' and launch',priceBlocked:priceBlocked(),poolsBlocked:poolsBlocked(),keyBlocked:pqBlocked(),cost:bound,costError:feeView.phase==='unavailable'?feeView.message:costError,funded:cost?.live?cost.quote.funded:null,balanceMessage:box.querySelector('.qq-short')?.textContent});
+ b.disabled=readiness.disabled;b.textContent=readiness.label;paintLaunchReadiness(quickReadinessHost(),readiness);
+ const total=document.getElementById('cr5-total');if(total)total.textContent=displayCost?(cost.live?'Wallet estimate · ':'Planning estimate · ')+ethText(BigInt(cost.totalWei)+(isRangeKit()&&cost.gasPriceWei?BigInt(RANGE_GAS.make+(pqOnChain()&&pqKeyHex()?RANGE_GAS.pointPq:RANGE_GAS.point))*BigInt(cost.gasPriceWei):0n))+' '+c.native:feeView.phase==='reading'?'Reading fees…':'Fees unavailable · retry below';
  const defaults=document.getElementById('cr5-defaults');if(defaults)defaults.textContent=pick.name+' · '+(startSteps?'Custom start':'Standard start')+' · 100% in pool · LP locked';
  renderAdv();const adv=$('adv');if(!pqBlocked())advAuto=false;else if(adv&&!adv.hidden&&conn&&conn.chainId===chainId&&!advAuto){advAuto=true;adv.open=true;const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;}
 }
@@ -370,7 +405,7 @@ async function probeQuickChains(){
   const result=await primeMulti(c.id).catch(()=>null);if(!result?.changed||busy)return;
   if(requested===c.id&&urlChain()===requested){quickChain=c.id;pick=null;extraPools=[];poolPrices=null;pairIdx=0;}
   renderIdeas();
-  if(requested===c.id&&urlChain()===requested){const hash=/^#quick(?:-([a-z-]+))?$/.exec(location.hash||'');if(hash)openQuick(hash[1]||'fair',{scroll:true});}
+  if(requested===c.id&&urlChain()===requested){const hash=/^#quick(?:-([a-z-]+))?$/.exec(location.hash||'');if(hash)openQuick(hash[1]||'fair',{scroll:true});else if(!pick)openQuick(QUICK_LAUNCH_DEFAULTS.cardId);}
  }));
 }
 async function refreshCost(){
@@ -512,33 +547,35 @@ async function applyArtHandoff(){
  ++imageRevision;++bannerRevision;
  bannerSource='handoff';image=art.image;$('preview').src=image;$('preview').hidden=false;$('image-status').textContent='Image ready.';
  banner=art.banner;bannerData=art.bannerData;$('banner-preview').src=bannerData;$('banner-preview').hidden=false;$('banner-status').textContent='Banner ready.';
- cost=null;renderQuick();costSoon();
+ cost=null;renderQuick();costSoon();keepDraft();
 }
 async function generateBanner(file,imageRev){
  const rev=++bannerRevision;bannerSource='auto';banner='';bannerData='';cost=null;costRun++;$('banner-retry').hidden=true;$('banner-status').textContent='Making a banner from your image…';$('need-banner').textContent='Preparing your banner…';renderQuick();
  try{const data=await prepareTokenBanner(file,{blur:true});if(rev!==bannerRevision||imageRev!==imageRevision)return;const hash=await uploadTokenBanner(data);if(rev!==bannerRevision||imageRev!==imageRevision)return;banner=hash;bannerData=data;$('banner-preview').src=data;$('banner-preview').hidden=false;$('banner-status').textContent='Made from your image. Edit it here or on your token page.';}
  catch(e){if(rev!==bannerRevision||imageRev!==imageRevision)return;$('banner-status').textContent=e.message;$('need-banner').textContent='Your banner did not save. Retry under Customize launch.';$('banner-retry').hidden=false;}
- renderQuick();costSoon();
+ renderQuick();costSoon();keepDraft();
 }
 function mount(){
  if(!$('ideas'))return;
- const prefill=readLaunchPrefill(location),entry=quickLaunchEntry({chain:urlChain(),style:prefill?.style,start:URL_TIER,hash:location.hash});
+ const savedIdentity=identityDraft.get(),prefill=readLaunchPrefill(location),entry=quickLaunchEntry({chain:urlChain()||savedIdentity?.chain,style:prefill?.style,start:URL_TIER,hash:location.hash});
  simpleDefault=entry.simple;pqOptOut=simpleDefault;quickChain=entry.chain;
+ const draftNotice=el('p',{id:'qq-draft-notice',class:'qxc-message',role:'status',hidden:true});$('image-status').after(draftNotice);
+ if(savedIdentity)restoreDraft(savedIdentity);else if(entry.chain==='solana'){try{const old=JSON.parse(localStorage.getItem('qhooks:sol-launch:draft')||'null'),profile=editableTokenProfileDraft('solana');restoreDraft({name:old?.name||'',symbol:old?.symbol||'',...profile,banner:'',bannerData:profile.banner,bannerSource:profile.banner?'custom':'',x:profile.links?.x,telegram:profile.links?.telegram,website:profile.links?.website});}catch{}}
  renderIdeas();
- chainSelect?.addEventListener('change',()=>{renderIdeas();if(pick)openQuick(pick.id);checkTickerSoon();});
+ chainSelect?.addEventListener('change',()=>{if(!busy&&chainSelect.value!=='solana'&&chainSelect.value!==currentChain())setQuickChain(chainSelect.value);});
  $('use-robinhood')?.addEventListener('click',()=>setQuickChain('4663'));
  $('open').addEventListener('click',()=>launchCard(pick?.id||'fair'));
- for(const id of ['name','symbol'])$(id).addEventListener('input',()=>{if(id==='symbol'){$('symbol').value=$('symbol').value.toUpperCase();checkTickerSoon();}renderQuick();costSoon();});
+ for(const id of ['name','symbol'])$(id).addEventListener('input',()=>{if(id==='symbol'){$('symbol').value=$('symbol').value.toUpperCase();checkTickerSoon();}renderQuick();costSoon();keepDraft();});
  $('image').addEventListener('change',async()=>{const file=$('image').files?.[0];if(!file)return;lastImageFile=file;const rev=++imageRevision;image='';cost=null;costRun++;if(bannerSource!=='custom'&&bannerSource!=='handoff'){banner='';bannerData='';bannerRevision++;}renderQuick();
   try{const data=await thumbnail(file);if(rev!==imageRevision)return;image=data;$('preview').src=image;$('preview').hidden=false;$('image-status').textContent='Image ready.';if(bannerSource!=='custom'&&bannerSource!=='handoff')void generateBanner(file,rev);}
-  catch(e){if(rev!==imageRevision)return;image='';$('preview').hidden=true;$('image-status').textContent=e.message;}renderQuick();costSoon();});
- $('banner-retry')?.addEventListener('click',()=>{if(!busy&&lastImageFile)void generateBanner(lastImageFile,imageRevision);});
+  catch(e){if(rev!==imageRevision)return;image='';$('preview').hidden=true;$('image-status').textContent=e.message;}renderQuick();costSoon();keepDraft();});
+ $('banner-retry')?.addEventListener('click',()=>{if(!busy){if(lastImageFile)void generateBanner(lastImageFile,imageRevision);else restoreBannerReference();}});
  $('banner').addEventListener('change',async()=>{const file=$('banner').files?.[0];if(!file)return;const rev=++bannerRevision;bannerSource='custom';banner='';bannerData='';cost=null;costRun++;renderQuick();$('banner-status').textContent='Preparing your banner…';
   try{const data=await prepareTokenBanner(file);if(rev!==bannerRevision)return;$('banner-preview').src=data;$('banner-preview').hidden=false;const hash=await uploadTokenBanner(data);if(rev!==bannerRevision)return;banner=hash;bannerData=data;$('banner-status').textContent='Banner ready.';}
-  catch(e){if(rev!==bannerRevision)return;banner='';$('banner-preview').hidden=true;$('banner-status').textContent=e.message;}renderQuick();costSoon();});
+  catch(e){if(rev!==bannerRevision)return;banner='';$('banner-preview').hidden=true;$('banner-status').textContent=e.message;}renderQuick();costSoon();keepDraft();});
  $('launch').addEventListener('click',()=>void launch());
  $('change').addEventListener('click',()=>{const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;$('ideas').scrollIntoView({block:'start'});});
- for(const id of ['description','x','telegram','website'])$(id)?.addEventListener('input',()=>{renderQuick();costSoon();});
+ for(const id of ['description','x','telegram','website'])$(id)?.addEventListener('input',()=>{renderQuick();costSoon();keepDraft();});
  const idea=document.getElementById('cr5-idea');const ideaLink=()=>{if(idea){const f=fields(),q=['Help me design a token',f.name&&'called '+f.name,f.symbol&&'($'+f.symbol+')',f.description].filter(Boolean).join(' ');idea.href='/qcaster?q='+encodeURIComponent(q)+'#design';}};
  for(const id of ['name','symbol','description'])$(id)?.addEventListener('input',ideaLink);ideaLink();
  hub.subscribe(()=>{void pqControl?.refresh();renderQuick();if(pick)costSoon();checkTickerSoon();});
@@ -548,9 +585,10 @@ function mount(){
   if(prefill.name!==undefined)$('name').value=prefill.name;
   if(prefill.ticker!==undefined)$('symbol').value=prefill.ticker;
   openQuick(prefill.style,{scroll:true});checkTickerSoon();costSoon();
- }else{openQuick(entry.card);if(!simpleDefault){const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;}}
+ }else{openQuick(entry.card);if(!simpleDefault&&chainId!=='solana'){const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;}}
  ideaLink();
- if(!pick){const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;}
+ if(!pick&&chainId!=='solana')chainPresentation('unavailable');
+ keepDraft();if(chainId==='solana')document.dispatchEvent(new CustomEvent('qhooks:sol-create',{detail:{chain:'solana',quick:true}}));
  void applyArtHandoff();
  void probeQuickChains();
 }

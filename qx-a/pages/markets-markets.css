@@ -104,3 +104,15 @@
   .qm-outside-tokens a.qx-live-token { padding: 0 6px; }
 }
 @media (prefers-reduced-motion: reduce) { .mkm-band { overflow-x: auto; scrollbar-width: none; } .mkm-band__track { animation: none; } }
+
+/* Quote age is distinct from the contract observation; unavailable is neutral. */
+.mkm-quote-reading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;color:var(--qa-tx-3);font-size:12px;line-height:1.5}
+.mkm-quote-reading button{flex:none;min-height:32px;padding:4px 9px;border:1px solid var(--qa-rule);border-radius:3px;background:transparent;color:var(--qa-gold);font:inherit;cursor:pointer}
+.mkm-quote-reading button:disabled{opacity:.6;cursor:wait}
+.mk-card .mk-card__live,.mk-card:not(.has-live) .mk-card__live{display:grid}
+.mk-card .mk-card__age{display:block;font-size:12px;color:var(--qa-tx-3)}
+.mk-card:not(.has-live) .mk-card__px{color:var(--qa-tx-3)}
+.mk-card__id>.mk-card__status,.mk-card:not(.has-live) .mk-card__id>.mk-card__status{display:block;grid-area:auto;grid-column:1/-1;order:5;justify-self:start;margin:0;font-size:12px;color:var(--qa-tx-3);line-height:1.4}
+.mk-card.has-quote-error .mk-card__age{color:var(--qa-tx-3)}
+@media(min-width:1000px){.mk-card__live{grid-template-columns:140px 80px 110px 140px;column-gap:12px}}
+@media(max-width:600px){.mk-card__live{max-width:145px}.mk-card__px{font-size:14px;white-space:normal;overflow-wrap:anywhere}.mkm-quote-reading{align-items:flex-start}.mkm-quote-reading button{min-height:40px}}

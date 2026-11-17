@@ -71,12 +71,18 @@ function headerData(t,tf,token,chainId){
 export async function loadExternalHeader({chainId,address,tf,signal,fetcher=globalThis.fetch,retryMs=1200,dex,venue,curves}){
  const cm=curves||await import('./qx-curve-market.mjs').catch(()=>null);
  const readCurve=()=>cm?cm.readCurve(chainId,address,{fetcher,signal}).catch(()=>undefined):Promise.resolve(null);
+ if(signal?.aborted)throw signal.reason||Error('aborted');
  const curveP=readCurve();
- // A curve's price and Buy don't wait on the DexScreener header: it gets 250 ms more (for a logo), then the page opens;
- // the 15 s refresh picks it up later.
- const headerP=serverHeader(chainId,address,signal,fetcher);
+ // Robinhood Pons curves already supply their identity, price, progress and trading venue.
+ // Classify that existing read before requesting optional outside-market metadata.
+ // Other chains keep their parallel provider read; graduated pools still use enrichment.
+ let headerP=String(chainId)==='4663'?null:serverHeader(chainId,address,signal,fetcher);
  let curve=await curveP,got;
- if(curve===undefined&&cm){await new Promise(r=>setTimeout(r,800));if(signal?.aborted)throw Error('aborted');curve=await readCurve();}
+ if(curve===undefined&&cm){if(String(chainId)==='4663')headerP ||= serverHeader(chainId,address,signal,fetcher).catch(()=>({status:0}));await new Promise(r=>setTimeout(r,800));if(signal?.aborted)throw Error('aborted');curve=await readCurve();}
+ if(signal?.aborted)throw signal.reason||Error('aborted');
+ const at=curve?.observedAt,ownCurve=String(chainId)==='4663'&&String(curve?.chainId)==='4663'&&String(curve?.token||'').toLowerCase()===String(address).toLowerCase()&&curve?.kind==='pons-v2'&&curve?.venue?.id==='pons-v2'&&curve?.history==='events'&&['curve','graduating'].includes(curve?.phase)&&/^0x[0-9a-f]{40}$/i.test(curve?.curve||'')&&Number.isSafeInteger(at)&&at>0&&at<=Date.now()+5000&&Date.now()-at<=120000;
+ if(ownCurve)return curveHeaderData(cm.curveHeader(curve,null),tf,chainId);
+ headerP ||= serverHeader(chainId,address,signal,fetcher);
  if(curve){got=await Promise.race([headerP,new Promise(r=>setTimeout(()=>r({status:-2}),250))]);return curveHeaderData(cm.curveHeader(curve,got.t||null),tf,chainId);}
  got=await headerP;
  // Not a launchpad curve: on a launchpad chain the venue read (a graduated or rescued launch, a dust pool) starts now,

@@ -1,4 +1,5 @@
 import{fundFor}from'./qx-fund-catalog.mjs';
+import{quickBuyPlan}from'./qx-quick-buy-plan.mjs';
 import{createFeedPriceCache}from'./qx-feed-price-cache.mjs';
 import {assetPriceFields,priceState,priceObservation} from './qx-price-state.mjs';
 import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
@@ -89,30 +90,8 @@ export function safetyLabel(safety) {
   return { flag: safety.flag, label: labels[safety.flag], title: [labels[safety.flag], ...reasons].join(' · ') };
 }
 
-// These are the units ticket.quickBuy actually accepts for external tokens today. In particular,
-// its launch-native routing check falls back to the dollar quote on BNB and Solana.
-export function externalQuick(chainId, address, quick = {}) {
-  const chain = String(chainId);
-  // HYPE chains (Elysium): pools quote in (W)HYPE, so quick buy is in HYPE like the ticket's own presets (2026-11-09).
-  const cls = ['8453', '1', '42161', '4663'].includes(chain) ? 'eth' : chainById(chain)?.native === 'HYPE' ? 'hype' : 'usd';
-  const unit = cls === 'eth' ? 'ETH' : cls === 'hype' ? 'HYPE' : chain === '56' ? 'USDT' : 'USDC';
-  return {
-    cls, unit, value: String(quick[cls] ?? (cls === 'eth' ? '0.01' : cls === 'hype' ? '0.1' : '10')),
-    stock: !!stockPair(chain, address),
-      // Outside tokens buy through 0x; a chain without it (Elysium) has no proven route, so no quick buy there (2026-11-09).
-      // Elysium outside tokens go through the direct pool route (qx-elysium-direct.mjs); a token without an allowed pool gets
-      // the ticket's "coming" message and nothing is sent.
-      supported: CHAINS.some(([id]) => id !== 'all' && id === chain) && (chainById(chain)?.data?.zeroEx !== false || DIRECT_CHAINS.includes(chain)),
-  };
-}
-
-export function launchQuick(market, quick = {}) {
-  const q = market.quoteSymbol || chainById(market.chainId)?.quote?.symbol || '';
-  const cls = /^W?ETH$/.test(q) ? 'eth' : /^W?BNB$/.test(q) ? 'bnb' : /^W?HYPE$/.test(q) ? 'hype' : 'usd';
-  return { cls, value: String(quick[cls] ?? ({ eth: '0.01', bnb: '0.05', usd: '10', hype: '0.1' })[cls]),
-    unit: cls === 'eth' ? 'ETH' : cls === 'bnb' ? 'BNB' : cls === 'hype' ? 'HYPE' : market.quoteSymbol || 'USDC',
-    stock: !!stockPair(String(market.chainId), market.token), supported: true };
-}
+export const externalQuick=(chainId,address,quick={})=>quickBuyPlan({chainId,token:address,kind:'external'},quick);
+export const launchQuick=(market,quick={})=>quickBuyPlan({chainId:market.chainId,token:market.token,kind:'launch'},quick);
 
 export function launchRow(market) {
   const s = market.summary || {};
@@ -159,6 +138,7 @@ export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24'
   const quote = row.quoteAmounts;
   const displayMoney = (key, precise = false) => numeric[key] !== null ? money(numeric[key], { precise }) :
     quote?.unit && Number(quote[key]) > 0 ? money(quote[key], { unit: quote.unit, precise }) : DASH; // no "0 WETH" cap for an untraded launch (quoteusd)
+  const capValue=displayMoney('mcap'),capKind=known(row.marketCapUsd)===null&&known(row.fdvUsd)!==null?'FDV':'';
   const symbol = typeof token.symbol === 'string' && token.symbol.trim() ? token.symbol : '?';
   const address = typeof token.address === 'string' ? token.address : '';
   return {
@@ -167,8 +147,8 @@ export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24'
     avatarSources:tokenAvatarSources({...row.launch,...row,...token},[officialLogo(chainId,address)]),
     letter: symbol.replace(/^\$/, '').slice(0, 1).toUpperCase() || '?', age: age(row.createdAt, now),
     price: displayMoney('price', true), m5: percent(numeric.m5), h1: percent(numeric.h1), h6: percent(numeric.h6), h24: percent(numeric.h24),
-    holders:compact(numeric.holders),volume: displayMoney('volume'), liquidity: displayMoney('liquidity'), mcap: displayMoney('mcap'),
-    capKind: known(row.marketCapUsd) === null && known(row.fdvUsd) !== null ? 'FDV' : '',
+    holders:compact(numeric.holders),volume: displayMoney('volume'), liquidity: displayMoney('liquidity'), mcap: capValue,
+    capKind,capCaption:capValue===DASH?'syncing':capKind,
     buys: compact(buys), sells: compact(sells), makers: compact(numeric.makers), numeric,
     // A paid DexScreener boost says so (server/market-freshness.mjs stamps the boosts fallback's rows).
     boosted: !row.launch && (row.provenance?.discoverySource === 'dexscreener_token_boosts'||row.provenance?.promoted===true),

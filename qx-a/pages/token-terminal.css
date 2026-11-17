@@ -866,3 +866,98 @@ body.qa.qxt #qxt-candles-freshness { position: absolute; top: 8px; left: 10px; r
   body.qa.qxt .qxfd-table td.qxfd-liquidity[data-known="false"] { display: none; }
   body.qa.qxt .qxfd-table td:is(.qxfd-mcap, .qxfd-volume, .qxfd-liquidity) { font-size: 11px; }
 }
+
+/* SLICK token header: identity and source details remain, while the chart leads. */
+body.qa.qxt.ta-token{--qa-fs-price:32px;--qa-fs-stat:15px}
+body.qa.qxt.ta-token #qxt-main{padding-top:0!important;column-gap:16px}
+body.qa.qxt.ta-token #ta-top{margin:0;width:100%;min-height:44px}
+body.qa.qxt.ta-token #ta-top .ta-stage{height:44px;min-height:44px;overflow:visible;margin:0}
+body.qa.qxt.ta-token #ta-top .ta-stage .qa-stage__art{display:none!important}
+body.qa.qxt.ta-token #ta-top .ta-stage .qa-stage__copy{display:flex!important;position:relative;align-items:center;justify-content:space-between;gap:12px;inset:auto;width:100%;height:44px;min-height:44px;padding:0!important;transform:none}
+body.qa.qxt.ta-token #ta-top .ta-stage .qa-ident{display:grid;grid-template-columns:28px minmax(100px,auto) auto;grid-template-areas:"coin sym soc" "coin meta soc";grid-template-rows:21px 17px;align-items:center;gap:0 8px;flex:1;padding:0;min-width:0}
+body.qa.qxt.ta-token #ta-top .ta-stage .qa-coin{width:28px;height:28px;border-radius:2px;box-shadow:none;overflow:hidden;align-self:center}
+body.qa.qxt.ta-token #ta-top .ta-stage .qa-coin :is(img,.ta-coin-letter){border-radius:2px}
+body.qa.qxt.ta-token #ta-top .ta-stage :is(.qa-coin__ring,.qa-coin__pulse){display:none}
+body.qa.qxt.ta-token #ta-top .ta-stage .qa-sym{font-size:16px;line-height:1.1;gap:5px}
+body.qa.qxt.ta-token #ta-top .ta-stage .qa-seal svg{width:14px;height:14px}
+body.qa.qxt.ta-token #ta-top .ta-stage .ta-meta{margin:0;gap:7px;font-size:10px;line-height:1.1}
+body.qa.qxt.ta-token #ta-top .ta-stage .qa-quote{display:flex;align-items:center;gap:10px;max-width:none;padding:0!important;flex:none}
+body.qa.qxt.ta-token #ta-top .ta-stage .qa-price{font-size:32px!important;line-height:1.1;padding:0;white-space:nowrap}
+body.qa.qxt.ta-token #ta-top .ta-stage .qa-change-line{font-size:12px;line-height:1.1}
+body.qa.qxt.ta-token #ta-top .ta-stage .ta-back{display:none}
+body.qa.qxt.ta-token #ta-top .ta-stage .ta-soc{display:flex;align-items:center;gap:6px}
+body.qa.qxt.ta-token #ta-top .ta-stage .ta-socials{display:flex;gap:4px}
+body.qa.qxt.ta-token #ta-top .ta-stage .ta-socials a{width:24px;height:24px;min-height:24px;border-radius:2px}
+body.qa.qxt.ta-token .ta-detail-tools{display:flex;gap:4px;align-items:center}
+body.qa.qxt.ta-token .ta-detail-tools :is(#qxt-market-identity,#qxt-discovery-badges){display:block;position:relative;margin:0!important;padding:0!important}
+body.qa.qxt.ta-token .ta-detail-tools :is(.qxt-token-details,.qxd-checks){position:relative;border:0;margin:0;padding:0}
+body.qa.qxt.ta-token .ta-detail-tools :is(.qxt-token-details>summary,.qxd-checks>summary){display:grid;place-items:center;min-height:24px;height:24px;width:24px;min-width:24px;padding:0!important;box-sizing:border-box;border:1px solid var(--qa-rule)!important;border-radius:2px;background:none;font-size:0!important;line-height:1;list-style:none}
+body.qa.qxt.ta-token .ta-detail-tools .qxt-token-details>summary::before{content:'⌘';font-size:17px;color:var(--qa-tx-2)}
+body.qa.qxt.ta-token .ta-detail-tools .qxd-checks>summary::before{content:'◇';font-size:17px;color:var(--qa-tx-2)}
+body.qa.qxt.ta-token .ta-detail-tools :is(.qxt-token-details>summary,.qxd-checks>summary)::after{display:none}
+body.qa.qxt.ta-token .ta-detail-tools .qxt-token-details>summary>*{display:none}
+body.qa.qxt.ta-token .ta-detail-tools .qxd-badges{display:flex;gap:3px;margin:0}
+body.qa.qxt.ta-token .ta-detail-tools .qxd-badge{display:none}
+body.qa.qxt.ta-token .ta-detail-tools :is(.qxt-identity-context,.qxd-checks-panel){position:absolute;right:0;top:28px;z-index:50;display:flex;flex-wrap:wrap;width:300px;max-width:calc(100vw - 24px);padding:12px!important;background:var(--qa-slab)!important;border:1px solid var(--qa-rule)!important;box-sizing:border-box;box-shadow:0 10px 24px #0008}
+body.qa.qxt.ta-token #qxt-head{min-width:0;margin:0}
+body.qa.qxt.ta-token #qxt-stats{box-sizing:border-box;display:flex;flex-wrap:nowrap;gap:0;margin:0!important;padding:0!important;min-height:32px;height:32px;overflow-x:auto;overflow-y:hidden;box-shadow:0 1px 0 var(--qa-rule)}
+body.qa.qxt.ta-token #qxt-stats>div{flex:1 0 auto;display:flex;flex-direction:row;justify-content:flex-start;align-items:center;gap:5px;min-width:88px;margin:0;padding:0 12px!important;line-height:1.1;box-shadow:none!important;order:0!important}
+body.qa.qxt.ta-token #qxt-stats>div:first-of-type{padding-left:0!important}
+body.qa.qxt.ta-token #qxt-stats>.ta-mirrored{display:none}
+body.qa.qxt.ta-token #qxt-stats dt{font-size:10px;line-height:1.1;white-space:nowrap}
+body.qa.qxt.ta-token #qxt-stats dd{font-size:14px;line-height:1.1;white-space:nowrap}
+body.qa.qxt.ta-token #ta-chart{position:relative;margin:0!important;padding:0}
+body.qa.qxt.ta-token #ta-chart .ta-live{position:absolute;top:5px;left:8px;z-index:5;min-height:0;height:18px;padding:0;background:var(--qa-floor);pointer-events:none}
+body.qa.qxt.ta-token #ta-chart .ta-live .qa-live{height:18px;min-height:18px;padding:0;font-size:10px;line-height:1.1}
+body.qa.qxt.ta-token #ta-chart .qxt-chart-stage{margin:0;padding:0}
+body.qa.qxt.ta-token #ta-chart .qxt-chart{height:360px;min-height:300px;margin:0}
+body.qa.qxt.ta-token .qa-ambient{display:none}
+body.qa.qxt.ta-token .ta-data-nav{margin-top:0!important}
+@media(min-width:1100px){
+ body.qa.qxt.ta-token #qxt-main{grid-template-areas:"disc disc" "top side" "center side" "rail side";grid-template-columns:minmax(0,1fr) 340px}
+ body.qa.qxt.ta-token .qxt-side{top:56px;margin-top:8px}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-ident{grid-template-columns:28px minmax(110px,1fr) auto}
+ body.qa.qxt.ta-token #ta-top .ta-stage .ta-name{display:none}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-quote{gap:8px}
+ body.qa.qxt.ta-token #ta-top .ta-stage .ta-socials{display:none}
+ body.qa.qxt.ta-token #ta-top .ta-stage .ta-icon-btn{width:24px!important;height:24px!important}
+ body.qa.qxt.ta-token #ta-top .ta-stage .ta-meta .ta-copy{display:none}
+}
+@media(max-width:1099px){
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-ident{grid-template-columns:24px minmax(75px,1fr) auto;grid-template-rows:21px 17px;gap:0 6px}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-coin{width:24px;height:24px}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-sym{font-size:14px;max-width:115px}
+ body.qa.qxt.ta-token #ta-top .ta-stage .ta-meta{font-size:10px;gap:4px}
+ body.qa.qxt.ta-token #ta-top .ta-stage .ta-name{display:none}
+ body.qa.qxt.ta-token #ta-top .ta-stage .ta-soc{gap:3px}
+ body.qa.qxt.ta-token #ta-top .ta-stage .ta-socials{display:none}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-quote{display:block;text-align:right;max-width:43%;min-width:0;gap:0}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-price{font-size:28px!important}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-change-line{font-size:10px}
+ body.qa.qxt.ta-token #ta-top .ta-stage .ta-chain .qa-chain-dot{display:none}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-stage__copy{gap:6px}
+ body.qa.qxt.ta-token .ta-detail-tools :is(.qxt-identity-context,.qxd-checks-panel){position:fixed;top:100px;left:12px;right:12px;width:auto;max-width:none}
+ body.qa.qxt.ta-token #qxt-stats{height:36px;min-height:36px}
+ body.qa.qxt.ta-token #qxt-stats>div{flex:0 0 auto;min-width:90px;padding:0 10px!important}
+ body.qa.qxt.ta-token #qxt-stats dd{font-size:14px}
+ body.qa.qxt.ta-token #ta-chart .qxt-chart{height:300px;min-height:300px}
+}
+body.qa.qxt.ta-token .ta-detail-tools .qxt-token-details:not([open])>.qxt-identity-context,
+body.qa.qxt.ta-token .ta-detail-tools .qxd-checks:not([open])>.qxd-checks-panel{display:none!important}
+body.qa.qxt.ta-token .ta-detail-tools .qxt-identity-context{gap:8px;align-items:center}
+body.qa.qxt.ta-token .ta-detail-tools .qxt-identity-context :is(button,a){position:static;display:inline-flex;min-height:28px;align-items:center;width:auto;margin:0;padding:4px 7px;line-height:1.2}
+/* Keep the painted quote and complete stat cells inside a narrow token header. */
+@media(max-width:1099px){
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-price{display:block;max-width:100%;font-size:clamp(18px,5.6vw,28px)!important;white-space:normal;overflow-wrap:anywhere}
+ body.qa.qxt.ta-token #qxt-stats:not(:has(>.qxt-curve-cell)){scroll-snap-type:x mandatory}
+ body.qa.qxt.ta-token #qxt-stats:not(:has(>.qxt-curve-cell))>div{box-sizing:border-box;flex:0 0 calc(100% / 3);min-width:0;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;padding:0 8px!important;scroll-snap-align:start}
+ body.qa.qxt.ta-token #qxt-stats:not(:has(>.qxt-curve-cell))>div:first-of-type{padding-left:0!important}
+}
+@media(max-width:599px){
+ body.qa.qxt.ta-token #ta-top,body.qa.qxt.ta-token #ta-top .ta-stage{height:64px;min-height:64px}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-stage__copy{display:grid!important;grid-template-columns:minmax(0,1fr);grid-template-rows:38px 26px;height:64px;min-height:64px;gap:0}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-ident{width:100%;grid-template-columns:24px minmax(0,1fr) auto}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-sym{max-width:none;flex-wrap:nowrap;white-space:nowrap}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-quote{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;max-width:100%;text-align:left}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-price{font-size:clamp(20px,6vw,24px)!important}
+}

@@ -1,11 +1,12 @@
+import {requireLaunchTicker} from './qx-launch-ticker.mjs';
 import {SOL_LAUNCH_CONFIG as C,solLaunchReview} from './qx-sol-launch-config.mjs';
 import {normalizeTokenProfile} from './qx-token-profile-core.mjs';
 import {solWallet} from './qx-solana-identity.mjs';
 export function normalizeSolMetadata(value){
  if(!value||!solWallet(value.mint))throw Error('invalid_mint');
- const name=typeof value.name==='string'?value.name.trim():'',symbol=typeof value.symbol==='string'?value.symbol.trim().toUpperCase():'';
+ const name=typeof value.name==='string'?value.name.trim():'',symbol=typeof value.symbol==='string'?value.symbol.toUpperCase():'';
  if(!name||/[\p{C}<>]/u.test(name)||new TextEncoder().encode(name).length>32)throw Error('Use a name of 1–32 UTF-8 bytes, without angle brackets.');
- if(!/^[A-Z0-9]{1,10}$/.test(symbol))throw Error('Use 1–10 letters or digits for the ticker.');
+ requireLaunchTicker(symbol);
  const p=normalizeTokenProfile(value);if(!p.image)throw Error('Add a token image.');if(!p.banner)throw Error('Add a banner for your token.');
  return {mint:value.mint,name,symbol,description:p.description,image:p.image,banner:p.banner,links:p.links};
 }

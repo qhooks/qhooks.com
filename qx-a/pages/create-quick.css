@@ -15,3 +15,74 @@
 .cr5 #qq-quick:has(#qq-done:not([hidden]))>:not(#qq-done){display:none!important}.cr5 #qq-done{margin:0;border:0;padding:4px;background:none;box-shadow:none}.cr5 .cr5-share{padding:18px 0;border-top:1px solid var(--qa-rule);border-bottom:1px solid var(--qa-rule)}.cr5 #qq-open-market{min-height:48px;border-radius:4px}
 body:has(.cr5) footer.qa-foot{max-width:1000px;margin:0 auto;padding:16px 28px 36px}body:has(.cr5) .qa-foot__base{margin-top:14px;flex-wrap:wrap}body:has(.cr5) .cr5-explore>summary{min-height:44px;cursor:pointer;font-size:12px;color:var(--qa-tx-2);display:flex;align-items:center;justify-content:space-between;list-style:none}body:has(.cr5) .cr5-explore>summary::after{content:'+';color:var(--qa-gold)}body:has(.cr5) .cr5-explore[open]>summary::after{content:'−'}body:has(.cr5) .cr5-explore>summary::-webkit-details-marker{display:none}
 @media(max-width:700px){body:has(.cr5) footer.qa-foot{padding:0 16px 94px}body:has(.cr5) .qa-foot__base{gap:10px;font-size:12px}body:has(.cr5) .qa-foot__base .qa-brand{font-size:13px}}
+
+/* G12: one identity form; the canonical Solana review/actions sit inline. */
+.cr5 #qq-quick .qsc-inline{padding:0;margin:12px 0 0;border:0;background:none;min-width:0}
+.cr5 #qq-quick .qsc-inline>.qxc-key-actions{display:flex;flex-wrap:wrap;gap:8px}
+.cr5 #qq-quick .qsc-inline .qxc-actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.cr5 #qq-quick .qsc-inline .qxc-actions>button{flex:1;min-height:48px;margin:0;border-radius:4px}
+.cr5 #qq-quick .qsc-inline-options{border-block:1px solid var(--qa-rule);padding:10px 0;margin-block:10px;font-size:13px}
+.cr5 #qq-quick .qsc-inline-options summary{min-height:32px;cursor:pointer;font-weight:600}
+.cr5 #qq-quick .qxc-sol-rules{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(0,1.3fr);gap:8px 12px;font-size:12px}
+.cr5 #qq-quick .qxc-sol-rules dd{margin:0;overflow-wrap:anywhere}
+.cr5 #qq-quick .qsc-inline input{width:100%;box-sizing:border-box}
+.cr5 #qq-draft-notice,.cr5 #qq-unavailable{font-size:13px;line-height:1.5}
+.cr5 #qq-quick [hidden]{display:none!important}
+
+/* G13: a live reason beside every launch action. */
+.qq-readiness{margin:12px 0 0;font-size:12px;line-height:1.45;color:var(--qa-tx-2,#aaa)}
+.qq-readiness-checks{display:flex;flex-wrap:wrap;gap:6px 14px;list-style:none;padding:0;margin:0 0 5px}
+.qq-readiness-checks li{color:var(--qa-tx-3,#888)}.qq-readiness-checks li.is-complete{color:var(--qa-gold,#d2ad72)}
+.qq-readiness-reason{margin:0;font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+.cr5 #qq-quick .qq-readiness{display:block}.cr5 #qq-quick .qsc-inline .qq-readiness{margin-top:0}
+.cr5 .cr-go>.qq-readiness{margin:0 0 10px}
+
+/* G14: the rule stays beside the editable ticker, including restored invalid text. */
+.qq-ticker-hint{display:block;font-size:12px;line-height:1.4;color:var(--qa-tx-3,#888);font-weight:400;margin-top:4px}
+.qq-ticker-hint[data-invalid=true]{color:var(--qa-gold,#d2ad72)}
+.cr5 #qq-symbol[aria-invalid=true]{border-color:var(--qa-gold,#d2ad72)}
+
+/* G15/P7: model and cost stay together; full explanations remain optional. */
+.qq-model-preview{margin:12px 0;padding:12px;border:1px solid var(--qa-rule,#30342b);border-radius:4px;background:var(--qa-bg,#090b0a);min-width:0}
+.qq-model-preview>header{display:flex;justify-content:space-between;gap:10px;align-items:start;font-size:13px;line-height:1.35}
+.qq-model-preview>header>span{font-size:12px;color:var(--qa-tx-3,#888);text-align:right}
+.qq-model-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px;margin:12px 0;font-size:12px;line-height:1.35}
+.qq-model-facts>div{min-width:0}.qq-model-facts dt{color:var(--qa-tx-3,#888)}.qq-model-facts dd{margin:2px 0 0;color:var(--qa-tx,#eee);overflow-wrap:anywhere}
+.cr5 .qq-model-preview .cr5-fees{margin:0;padding-top:10px}.qq-model-explanation{border-top:1px solid var(--qa-rule);margin-top:10px;padding-top:6px;font-size:12px}
+.qq-model-explanation>summary{min-height:32px;cursor:pointer;display:flex;align-items:center;color:var(--qa-tx-2,#aaa)}.qq-model-explanation p{font-size:12px;line-height:1.5;margin:6px 0}
+.qq-model-fee{border-top:1px solid var(--qa-rule);padding-top:10px;font-size:12px}.qq-model-fee>strong{font-size:13px}.qq-model-fee>div{display:flex;justify-content:space-between;gap:12px;margin:6px 0}.qq-model-fee>div>b{text-align:right}.qq-model-fee p{font-size:12px;line-height:1.45;color:var(--qa-tx-3,#888);margin-bottom:0}
+.qq-fee-retry{min-height:44px;padding:8px 12px;border:1px solid var(--qa-gold);border-radius:3px;background:transparent;color:var(--qa-gold);font:600 12px var(--qa-sans)}
+.cr5 #cr-chains .cr-chain{display:grid;grid-template-columns:16px auto;gap:2px 7px}.cr5 #cr-chains .cr-chain>img{grid-column:1;grid-row:1}.cr5 #cr-chains .cr-chain>span{grid-column:2;grid-row:1}.cr5 #cr-chains .qq-chain-model{grid-column:1/-1;grid-row:2;font-size:12px;font-weight:400;color:var(--qa-tx-3,#888)}
+.qq-model-fee-actions{display:flex;justify-content:flex-end;margin-top:8px}
+
+.cr5 #qq-quick .qq-model-facts>div{display:block;border:0;padding:0;margin:0;min-width:0}
+.cr5 #qq-quick .qq-model-facts dt{display:block;width:auto;max-width:none;text-align:left;font-size:12px}
+.cr5 #qq-quick .qq-model-facts dd{display:block;width:auto;max-width:none;margin:3px 0 0;text-align:left;font-size:13px;line-height:1.35;word-break:normal}
+@media(min-width:760px){.qq-model-facts{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.cr5 #qq-quick .qq-model-preview .cr5-fees>summary,.cr5 #qq-quick .qq-model-preview .cr5-fees>summary>span:last-child{font-size:12px}
+.cr5 #cr-chains .cr-chain{font-size:12px}
+
+/* G17: compact kit choices; full canonical rules remain in native Details. */
+.cr5 #qq-cards.qq-kits-compact{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}
+.cr5 #qq-cards.qq-kits-compact .qq-card{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:10px;padding:12px;margin:0;min-height:0;height:auto;border:1px solid var(--qa-rule);border-radius:4px;background:var(--qa-bg);box-shadow:none;transform:none;overflow:visible}
+.cr5 #qq-cards.qq-kits-compact .qq-card.cr-picked{border-color:var(--qa-gold);background:rgba(210,173,114,.05)}
+.cr5 .qq-kit-main{min-width:0}.cr5 #qq-cards.qq-kits-compact h3{margin:0;font:600 14px/1.3 var(--qa-sans);letter-spacing:-.01em;color:var(--qa-tx,#eee)}
+.cr5 .qq-kit-tradeoff{margin:5px 0 3px;font-size:12px;line-height:1.4;color:var(--qa-tx-2,#aaa)}
+.cr5 #qq-cards.qq-kits-compact .qq-launch-card{position:static;align-self:start;margin:0;min-width:70px;min-height:44px;padding:8px;border:1px solid var(--qa-line);border-radius:3px;font:600 12px/1.3 var(--qa-sans);background:transparent;color:var(--qa-gold);white-space:normal}
+.cr5 #qq-cards.qq-kits-compact .qq-launch-card[aria-pressed=true]{border-color:var(--qa-gold)}
+.cr5 #qq-cards.qq-kits-compact .qq-launch-card:disabled{opacity:.5;cursor:default}
+.cr5 .qq-kit-details>summary{display:list-item;list-style:disclosure-closed inside;min-height:24px;padding:2px 0;font:500 12px/1.5 var(--qa-sans);cursor:pointer;color:var(--qa-gold)}
+.cr5 .qq-kit-details[open]>summary{list-style-type:disclosure-open}
+.cr5 #qq-cards.qq-kits-compact .qq-kit-details .qq-what,.cr5 #qq-cards.qq-kits-compact .qq-kit-details .qq-why{font-size:12px;line-height:1.5;margin:8px 0;color:var(--qa-tx-2,#aaa)}
+.cr5 #qq-cards.qq-kits-compact .qq-kit-details .qq-blocks{margin:8px 0 0;min-height:0}.cr5 #qq-cards.qq-kits-compact .qq-kit-details .qq-blocks-none{font-size:12px}
+.cr5 .cr5-more-tools{max-width:760px;margin:14px auto 0;border-top:1px solid var(--qa-rule);padding-top:8px}
+.cr5 .cr5-more-tools>summary{display:flex;align-items:center;justify-content:space-between;min-height:44px;cursor:pointer;font-size:13px;font-weight:600;list-style:none}
+.cr5 .cr5-more-tools>summary::-webkit-details-marker{display:none}.cr5 .cr5-more-tools>summary::after{content:'+';color:var(--qa-gold);font-size:20px;font-weight:400}.cr5 .cr5-more-tools[open]>summary::after{content:'−'}
+.cr5 .cr5-more-tools nav{display:grid;gap:14px;padding:10px 0 18px}.cr5 .cr5-more-tools a{display:inline-flex;align-items:center;min-height:28px;font-size:13px;font-weight:600;color:var(--qa-gold);text-decoration:none}.cr5 .cr5-more-tools p{margin:3px 0 0;font-size:12px;line-height:1.5;color:var(--qa-tx-2,#aaa)}
+.cr5 .qq-kit-details>summary:focus-visible,.cr5 .cr5-more-tools a:focus-visible,.cr5 .cr5-more-tools>summary:focus-visible{outline:2px solid var(--qa-gold);outline-offset:3px}
+@media(max-width:700px){.cr5 #qq-cards.qq-kits-compact{grid-template-columns:1fr}.cr5 #qq-cards.qq-kits-compact .qq-card{padding:10px}.cr5-idea{font-size:12px}.cr5 #qq-cards.qq-kits-compact .qq-launch-card{min-width:70px}}
+/* Retire the reel's negative gutters and full-card pseudo hit target in this list. */
+.cr5 #qq-cards.qq-kits-compact{margin:0;padding:0;scroll-snap-type:none}
+.cr5 #qq-cards.qq-kits-compact .qq-card{max-width:none;animation:none}
+.cr5 #qq-cards.qq-kits-compact .qq-launch-card::before{content:none;display:none}
+.cr5 #qq-cards.qq-kits-compact .qq-launch-card:focus-visible{outline:2px solid var(--qa-gold);outline-offset:3px}

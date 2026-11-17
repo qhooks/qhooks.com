@@ -1,3 +1,4 @@
+import {createReadablePrice} from '/qx-readable-price.mjs';
 import{fundFor}from'/qx-fund-catalog.mjs';
 import {QPROOF_CHECK_COUNT_MEANING} from '../../qproof-check-meanings.mjs';
 import{mountSimpleTokenView}from'/qx-token-simple-view.mjs';
@@ -53,6 +54,7 @@ const actions = hdr?.querySelector('[data-qa-slot="actions"]');
 /* ================= token art + identity (the stage) ================= */
 const top = $('ta-top');
 const P = { price: bigPrice(), change: changeLine(), live: liveLabel() };
+const priceDetail=createReadablePrice();
 P.price.el.setAttribute('aria-live', 'off');
 const stageImg = h('img', { class: 'qa-stage__img', alt: '', width: 1500, height: 500, decoding: 'async' });
 const coinImg = h('img', { class: 'qa-coin__img', alt: '', width: 96, height: 96, decoding: 'async' });
@@ -70,9 +72,25 @@ const proofChip = h('button', { type: 'button', class: 'qa-meta__proof ta-proof'
 const nameMeta = h('span', { class: 'ta-name', hidden: true });
 const meta = h('p', { class: 'qa-meta ta-meta' }, chainMeta, nameMeta, proofChip);
 const identTools = h('div', { class: 'ta-ident-tools' });
-const socWrap = h('div', { class: 'qa-socials ta-soc' }, socials, identTools);
+const detailTools=h('div',{class:'ta-detail-tools','aria-label':'Token details'});
+const socWrap = h('div', { class: 'qa-socials ta-soc' }, socials, detailTools, identTools);
+// Reuse the live identity and safety nodes; compact buttons open their full details.
+function placeDetailTools(){
+  for(const id of ['qxt-market-identity','qxt-discovery-badges']){const node=$(id);if(node&&node.parentElement!==detailTools)detailTools.append(node);}
+}
+function compactIdentityDetails(){
+  const target=$('qxt-market-identity'),context=target?.querySelector(':scope > .qxt-identity-context');
+  if(!context)return;
+  const details=h('details',{class:'qxt-token-details'}),summary=h('summary',{'aria-label':'Contract and links'},'Contract & links');
+  details.append(summary,context);target.replaceChildren(details);
+  details.addEventListener('keydown',event=>{if(event.key==='Escape'&&details.open){event.preventDefault();event.stopPropagation();details.open=false;summary.focus();}});
+}
+const identityObserver=new MutationObserver(compactIdentityDetails);
+identityObserver.observe($('qxt-market-identity'),{childList:true});compactIdentityDetails();
+const detailObserver=new MutationObserver(placeDetailTools);
+detailObserver.observe($('qxt-head'),{childList:true});placeDetailTools();
 const ident = h('div', { class: 'qa-ident' }, coinEl, symWrap, socWrap, meta);
-const quote = h('div', { class: 'qa-quote ta-quote' }, P.price.el, P.change.el);
+const quote = h('div', { class: 'qa-quote ta-quote' }, h('div',{class:'qx-readable-price-line'},P.price.el,priceDetail.el), P.change.el);
 const stage = h('section', { class: 'qa-stage qa-stage--wide ta-stage', 'aria-label': 'Token' },
   h('div', { class: 'qa-stage__art', 'aria-hidden': 'true' }, h('div', { class: 'qa-stage__glow' }), h('div', { class: 'qa-stage__frame' }, stageImg, h('span', { class: 'qa-stage__sheen' }))),
   h('div', { class: 'qa-stage__copy' }, ident, quote));
@@ -574,6 +592,7 @@ function paint() {
   if (live != null) { P.price.set(live, dir); P.price.el.classList.remove('ta-quote-unit'); }
   else if (q > 0) { P.price.el.textContent = fmt.price(q).slice(1) + ' ' + (m.quoteSymbol || ''); P.price.el.classList.add('ta-quote-unit'); }
   else { P.price.el.textContent = '—'; }
+  priceDetail.update({value:live!=null?live:q>0?q:null,unit:live!=null?'USD':m.quoteSymbol||''});
   ticketMeta=m;placeTicketIdentity();
   const ch = s.change24==null?NaN:Number(s.change24);
   if (Number.isFinite(ch)) { const delta = live != null && ch > -1 ? live - live / (1 + ch) : null; P.change.set(ch, { label: '24h', delta, words: 'past day', pulse: !!dir }); P.change.el.hidden = false; } else P.change.el.hidden = true;
