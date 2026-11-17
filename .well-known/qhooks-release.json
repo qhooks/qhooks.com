@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "087d11c6-804f-48f4-8166-bdfbcdf64180",
+  "releaseId": "34e4e4d8-2d4d-414d-b082-1eace6a65830",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -148121,8 +148121,8 @@
       "bytes": 24256
     },
     "qx-terminal-density.css": {
-      "sha256": "9b679347171407ea1d02c8d2ee578fa831d047dc4ac032b4d54a643f3c996764",
-      "bytes": 64174
+      "sha256": "394d9cc82987f6ab89d9240c0f93f45d3db0353c0c9520d65a269720b2985ae3",
+      "bytes": 65965
     },
     "qx-terminal-feed-core.mjs": {
       "sha256": "b087d01e2348121198f03077c3c46eaae036ce837ec511d761042427ca7e2931",
@@ -149221,7 +149221,7 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "23b19cb8be04db0c2914786c9648a94a42752f3bcafbe860a0c2347259e595c3",
-  "sourceWorkerSha256": "9cb250afca3f33ff592ae820172efad39bcadd31868ec2caa78aac83396aee6e",
-  "provenance": "Exact deployed 087d11c6-804f-48f4-8166-bdfbcdf64180 public/ source; full static immutable union retained. Proprietary TradingView paths excluded; exact Apache Lightweight Charts derivatives retain verified license and attribution. Private server/Worker and generated HTTP bodies require separate Root source/live receipts."
+  "contentDigest": "483193075430702945fdc94035d8f8c9cb4c0b7d9b5452ffe23db1d14cbf8b09",
+  "sourceWorkerSha256": "2c11eab6139ce2a8c00924733d142d522115fc0a401d82b9f092b42f0f9d0b41",
+  "provenance": "Exact deployed 34e4e4d8-2d4d-414d-b082-1eace6a65830 public/ source; only raw density CSS differs from087d11c6. The full static union and46exact Apache Lightweight Charts pins are retained; proprietary TradingView sources excluded. Private server metadata and Worker-generated HTTP bodies require separate Root source/live receipts."
 }
