@@ -1,0 +1,7 @@
+/* Empty-stage copy/actions only; filled rows and Pulse columns retain their owner geometry. */
+.qxfd-pulse .qxp-empty-view{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin:0;padding:12px 10px;text-align:left;font:12px/1.5 var(--qx-sans,var(--qa-sans,sans-serif));color:var(--qx-muted,var(--qa-tx-2,#a7aea3))}
+.qxfd-pulse .qxp-empty-view[hidden]{display:none!important}
+.qxfd-pulse .qxp-empty-message{flex:1 1 190px;min-width:0}
+.qxfd-pulse .qxp-empty-actions{display:inline-flex;align-items:center;flex-wrap:wrap;gap:10px}
+.qxfd-pulse .qxp-empty-actions :is(a,button){display:inline-flex;align-items:center;min-height:28px;margin:0;padding:0;border:0;background:none;color:var(--qx-brass,var(--qa-gold,#d2ad72));font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.qxfd-pulse .qxp-empty-actions :is(a,button):focus-visible{outline:2px solid currentColor;outline-offset:3px}

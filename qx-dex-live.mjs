@@ -1,4 +1,5 @@
 import{publicReadFetch}from'./qx-public-read.mjs';
+import {isQhooksPriceAsset} from './qx-price-state.mjs';
 // Live market numbers read by the visitor's own browser from DexScreener's public API (CORS *),
 // so the shared server egress rate limit never freezes a visible page. Read-only; no wallet calls.
 // The server copy stays the first paint and the fallback.
@@ -38,7 +39,7 @@ export function pickPair(pairs, chainId, token, pool) {
 export function headerPatch(pair, at = Date.now()) {
   if (!pair || num(pair.priceUsd) === null) return null;
   return { priceUsd: num(pair.priceUsd), priceNative: num(pair.priceNative), change24: frac(pair.priceChange?.h24), mcapUsd: num(pair.marketCap) ?? num(pair.fdv), fdvUsd: num(pair.fdv),
-    liquidityUsd: num(pair.liquidity?.usd), volume24Usd: num(pair.volume?.h24), buys24: num(pair.txns?.h24?.buys), sells24: num(pair.txns?.h24?.sells), observedAt: at, stale: false, source: 'DexScreener', live: true };
+    liquidityUsd: num(pair.liquidity?.usd), volume24Usd: num(pair.volume?.h24), buys24: num(pair.txns?.h24?.buys), sells24: num(pair.txns?.h24?.sells), priceAt:at,capAt:at,priceSource:'dexscreener',pricePoolId:pair.pairAddress??null,pricesRefreshing:false,observedAt: at, stale: false, source: 'DexScreener', live: true };
 }
 
 // Fields in the shape the token list (feed rows) uses.
@@ -47,12 +48,12 @@ export function rowPatch(pair, at = Date.now()) {
   const windows = ['m5', 'h1', 'h6', 'h24'];
   return { priceUsd: num(pair.priceUsd), liquidityUsd: num(pair.liquidity?.usd), marketCapUsd: num(pair.marketCap) ?? num(pair.fdv), fdvUsd: num(pair.fdv),
     change: Object.fromEntries(windows.map(w => [w, frac(pair.priceChange?.[w])])), volumeUsd: Object.fromEntries(windows.map(w => [w, num(pair.volume?.[w])])),
-    txns: Object.fromEntries(windows.map(w => [w, { buys: num(pair.txns?.[w]?.buys), sells: num(pair.txns?.[w]?.sells) }])), observedAt: at, stale: false, live: true };
+    txns: Object.fromEntries(windows.map(w => [w, { buys: num(pair.txns?.[w]?.buys), sells: num(pair.txns?.[w]?.sells) }])), priceAt:at,capAt:at,priceSource:'dexscreener',pricePoolId:pair.pairAddress??null,pricesRefreshing:false,observedAt: at, stale: false, live: true };
 }
 
 // Merge a row patch without dropping windows the server had and DexScreener lacks.
 export function applyRowPatch(row, patch) {
-  if (!patch) return row;
+  if (!patch||isQhooksPriceAsset(row?.chainId,row?.token?.address)) return row;
   const keep = (a, b) => Object.fromEntries(Object.keys({ ...a, ...b }).map(k => [k, b?.[k] ?? a?.[k] ?? null]));
   return { ...row, ...patch, change: keep(row.change, patch.change), volumeUsd: keep(row.volumeUsd, patch.volumeUsd), txns: { ...(row.txns || {}), ...Object.fromEntries(Object.entries(patch.txns).filter(([, v]) => v.buys !== null)) } };
 }

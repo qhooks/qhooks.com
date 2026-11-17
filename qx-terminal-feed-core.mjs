@@ -1,5 +1,6 @@
 import{fundFor}from'./qx-fund-catalog.mjs';
 import{quickBuyPlan}from'./qx-quick-buy-plan.mjs';
+import{priceLabel,observedAge}from'./qx-price-presentation.mjs';
 import{createFeedPriceCache}from'./qx-feed-price-cache.mjs';
 import {assetPriceFields,priceState,priceObservation} from './qx-price-state.mjs';
 import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
@@ -99,7 +100,7 @@ export function launchRow(market) {
     chainId: String(market.chainId), pool: market.controller, dex: 'QHooks', launch: market,
     token: { address: market.token, symbol: market.symbol, name: market.name, profileImage:market.profileImage,launchImage:market.launchImage,logo: tokenAvatar(market).src || officialLogo(market.chainId, market.token) },
     quote: { symbol: market.quoteSymbol }, createdAt: market.launchedAt,
-    priceUsd: s.priceUsd ?? null,priceAt:s.priceAt??market.priceAt??market.observedAt??(s.lastTradeAt?s.lastTradeAt*1000:null),priceSource:s.priceSource,pricePoolId:s.pricePoolId,pricesRefreshing:s.pricesRefreshing, volumeUsd: { h24: s.volume24Usd ?? null }, liquidityUsd: s.liquidityUsd ?? null,
+    priceUsd: s.priceUsd ?? null,priceAt:s.priceAt??market.priceAt??market.observedAt??(s.lastTradeAt?s.lastTradeAt*1000:null),priceSource:s.priceSource,pricePoolId:s.pricePoolId,priceSourceVersion:s.priceSourceVersion,pricesRefreshing:s.pricesRefreshing, volumeUsd: { h24: s.volume24Usd ?? null }, liquidityUsd: s.liquidityUsd ?? null,
     marketCapUsd: s.mcapUsd ?? null, fdvUsd: s.fdvUsd ?? null,
     quoteAmounts: { price: s.price, volume: s.volume24, liquidity: s.liquidity, mcap: s.mcap, unit: market.quoteSymbol },
     change: { m5: null, h1: null, h6: null, h24: s.change24 ?? null },
@@ -109,8 +110,8 @@ export function launchRow(market) {
 
 export function searchRow(hit) {
   return { chainId: String(hit.chainId), pool: '', token: hit, createdAt: hit.createdAt ?? null,
-    priceUsd: hit.priceUsd ?? null,priceAt:hit.priceAt??hit.observedAt,priceSource:hit.priceSource,pricePoolId:hit.pricePoolId, change: { h24: hit.change24 ?? null },
-    volumeUsd: { h24: hit.volume24Usd ?? null }, liquidityUsd: hit.liquidityUsd ?? null,
+    priceUsd: hit.priceUsd ?? null,priceAt:hit.priceAt??hit.observedAt,priceSource:hit.priceSource,pricePoolId:hit.pricePoolId,priceSourceVersion:hit.priceSourceVersion, change: { h24: hit.change24 ?? null },
+    holdersCount:hit.holdersCount??hit.holderCount,holdersAt:hit.holdersAt??hit.observedAt,holdersScope:hit.holdersScope,volumeUsd: { h24: hit.volume24Usd ?? null }, liquidityUsd: hit.liquidityUsd ?? null,
     marketCapUsd: hit.mcapUsd ?? null, fdvUsd: hit.fdvUsd ?? null, safety: null };
 }
 
@@ -122,8 +123,9 @@ export function rowKey(row) {
 export function knownHolderCount(row){const candidates=[row.holdersCount,row.holderCount,typeof row.holders==='number'?row.holders:null,row.launch?.summary?.holders];return candidates.find(n=>Number.isSafeInteger(n)&&n>=0)??null;}
 
 export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24' } = {}) {
-  const chainId = String(row.chainId), rawToken=row.token||{}, fund=fundFor(chainId,rawToken.address), token=fund?{...rawToken,...fund}:rawToken;
+  const original=row;const chainId = String(row.chainId), rawToken=row.token||{}, fund=fundFor(chainId,rawToken.address), token=fund?{...rawToken,...fund}:rawToken;
   row=assetPriceFields(row,{chainId,token:token.address,at:row.observedAt,now});
+  if(priceState(original.capAt,now).usable)row={...row,marketCapUsd:original.marketCapUsd,fdvUsd:original.fdvUsd};
   if(!priceState(row.priceAt,now).usable&&row.quoteAmounts)row={...row,quoteAmounts:{...row.quoteAmounts,price:null,mcap:null}};
   const chain = CHAINS.find(([id]) => id === chainId);
   // Zero means the provider doesn't know the cap: fall back to FDV (tagged), else a dash.
@@ -142,7 +144,7 @@ export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24'
   const symbol = typeof token.symbol === 'string' && token.symbol.trim() ? token.symbol : '?';
   const address = typeof token.address === 'string' ? token.address : '';
   return {
-    key: rowKey(row), row, fund, window, priceRefreshing:!!row.pricesRefreshing, chainId, chainName: chain?.[1] || chainId, chainIcon: chain?.[2], address,
+    key: rowKey(row), row, fund, window, capAt:row.capAt,capLabel:priceLabel(Object.hasOwn(row,'capAt')?row.capAt:row.observedAt,{now,refreshing:!!row.capsRefreshing,cached:!!row.capsCached}),capsRefreshing:!!row.capsRefreshing,priceAt:row.priceAt,priceLabel:priceLabel(row.priceAt,{now,refreshing:!!row.pricesRefreshing,cached:!!row.pricesCached}),holderAge:observedAge(Object.hasOwn(row,'holdersAt')?row.holdersAt:row.observedAt,now),priceRefreshing:!!row.pricesRefreshing, chainId, chainName: chain?.[1] || chainId, chainIcon: chain?.[2], address,
     lifecycle:lifecycle(row),move:percent(numeric.move),symbol, name: typeof token.name === 'string' ? token.name : '', logo: safeLogo(token.logo) || safeLogo(officialLogo(chainId, address)),
     avatarSources:tokenAvatarSources({...row.launch,...row,...token},[officialLogo(chainId,address)]),
     letter: symbol.replace(/^\$/, '').slice(0, 1).toUpperCase() || '?', age: age(row.createdAt, now),
@@ -271,12 +273,15 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
     if(mine!==generation)return;
     const controller = new AbortController();
     active = controller;
-    const retained = prices.reconcile(cache.get(key) || cacheRead?.(storage, key) || null);
+    const retainedData=cache.get(key)||cacheRead?.(storage,key)||null,retained=prices.reconcile(retainedData?{...retainedData,cached:true}:null);
     changed({ key, loading: true, data: retained, error: null });
     const timer = setTimeout(() => controller.abort(), timeout);
     let server = null, serverDone = false, own = null, ownRun = null, early, settled = false;
     const live = () => mine === generation && !settled;
-    const paintPartial = () => { const data = ranked(merged(server, own, tab, chain, window,filters), tab, window); if (live() && data?.rows.length) changed({ key, loading: true, data, error: null }); };
+    const partialKey=r=>String(r.chainId)+':'+(r.chainId==='solana'?r.token.address:r.token.address.toLowerCase());
+    const partialOrder=new Map((retained?.rows||[]).map((r,i)=>[partialKey(r),i]));
+    const stablePartial=data=>{if(!data?.rows)return data;for(const r of data.rows){const id=partialKey(r);if(!partialOrder.has(id))partialOrder.set(id,partialOrder.size);}return {...data,rows:[...data.rows].sort((a,b)=>partialOrder.get(partialKey(a))-partialOrder.get(partialKey(b)))};};
+    const paintPartial = () => { const data = stablePartial(ranked(merged(server, own, tab, chain, window,filters), tab, window)); if (live() && data?.rows.length) changed({ key, loading: true, data, error: null }); };
     const startOwn = () => {
       if (!browser) return Promise.resolve();
       return ownRun ||= browser({ tab, chain, window, filters, signal: controller.signal, onPartial: d => {
@@ -304,8 +309,12 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
         const seen = new Set(data.rows.map(r => String(r.chainId) + ':' + String(r.token.address).toLowerCase()));
         data = { ...data, rows: [...data.rows, ...retained.rows.filter(r => r?.token?.address && !seen.has(String(r.chainId) + ':' + String(r.token.address).toLowerCase()))], stale: true };
       }
+      // A valid 200-empty received set is not a fetch failure. Keep its partial
+      // coverage/refresh flags; existing fallback and retained rows still win.
+      const emptyRead=!data?.rows.length&&!retained?.rows?.length&&server?.rows.length===0&&!server.error&&server.status!=='unavailable';
+      if(emptyRead)data=server;
       // An empty server-filtered answer is the answer (nothing matches), not a failed read.
-      if (!data?.rows.length && data?.filtered !== true) {
+      if (!data?.rows.length && data?.filtered !== true && !emptyRead) {
         if (retained?.rows?.length) { changed({ key, loading: false, data: { ...retained, stale: true }, error: null }); return; }
         throw new Error(plainMarketError());
       }

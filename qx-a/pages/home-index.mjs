@@ -2,6 +2,7 @@ import { mountVisibleScene } from '/qx-scene-lifecycle.mjs';
 import{publicReadFetch}from'../../qx-public-read.mjs';
 import{homeTradeLink}from'/qx-home-trade-link.mjs';
 import{assetPriceFields,priceObservation}from'/qx-price-state.mjs';
+import{priceLabel}from'/qx-price-presentation.mjs';
 // QHooks System A: the home page runtime (2026-11-12, the scroll-driven 3D landing). One fixed WebGL stage behind the
 // page (qx-a/landing/scene.mjs, three self-hosted, the commercial's hook model) and six pinned chapters that scroll over
 // it: the brand line, then Builders, Callers, Holders, Traders, each with one hero object and its live data, then
@@ -155,7 +156,10 @@ const coinIndex = (chainId) => COIN_ORDER.indexOf(String(chainId));
 const H = {}, T = {};
 const S = { feed: null, markets: [], q: null, qSum: null, rate: null, qTrades: [], seenTrades: new Set(), holders: new Set(), burns: null, seenBurns: new Set(), calls: [], seenCalls: new Set(), seenLaunch: new Set(), other: new Map() };
 let calls = []; // the call posts on screen, each with update() for the live price
-const qPrice = () => num(S.qSum?.priceUsd) ?? num(S.markets.find((m) => lower(m.token) === QH)?.summary?.priceUsd);
+let qReadFailed=false;
+const qMarket=()=>S.markets.find(m=>String(m.chainId)===QCHAIN&&lower(m.token)===QH);
+const qSummary=()=>assetPriceFields((S.q?S.qSum:qMarket()?.summary)||{},{chainId:QCHAIN,token:QH});
+const qPrice=()=>{const p=num(qSummary().priceUsd);return p>0?p:null;};
 
 /* ================= pulse strip ================= */
 const Pm = { launches: null, trades: null, vol: null, burned: null, holders: null };
@@ -174,9 +178,27 @@ const tagPrice = bigPrice($('[data-hv-qp]') || h('span'));
 const tagChange = $('[data-hv-qc]');
 // The digits flash only when a newer market read moves the price, never when the first read replaces the feed's figure.
 function paintTag(sum, live = false) {
-  const p = num(sum?.priceUsd); if (p == null) return;
-  tagPrice.set(p, live && S.tagPrev != null ? Math.sign(p - S.tagPrev) : 0); S.tagPrev = p;
-  const c = num(sum?.change24); if (tagChange && c != null) { tagChange.textContent = fmt.pct(c); tagChange.dataset.dir = String(Math.sign(Math.round(c * 1000))); tagChange.setAttribute('aria-label', '24-hour change ' + fmt.pct(c)); }
+  const safe=assetPriceFields(sum||{},{chainId:QCHAIN,token:QH}),p=num(safe.priceUsd),available=p>0;
+  const label=priceLabel(safe.priceAt,{refreshing:qReadFailed||!!safe.pricesRefreshing});
+  if(available){if(p!==S.tagPrev)tagPrice.set(p,live&&S.tagPrev!=null?Math.sign(p-S.tagPrev):0);S.tagPrev=p;}
+  else{tagPrice.el.textContent='Price syncing';S.tagPrev=null;}
+  const c=num(safe.change24);if(tagChange){
+    const refreshing=available&&(qReadFailed||safe.pricesRefreshing);
+    tagChange.textContent=refreshing?label:available&&c!=null?fmt.pct(c):'';
+    tagChange.dataset.dir=String(!refreshing&&available&&c!=null?Math.sign(Math.round(c*1000)):0);
+    tagChange.title=label;tagChange.setAttribute('aria-label',refreshing?label:available&&c!=null?'24-hour change '+fmt.pct(c):'Price syncing');
+  }
+}
+function paintQPrices(previous=null){
+  for(const m of S.markets){if(String(m.chainId)!==QCHAIN||lower(m.token)!==QH)continue;const row=launchRows.get(key(m));if(row){row.v.textContent=homePrice(m);paintLaunchChange(m,row.ch);}}
+  const sum=qSummary(),p=num(sum.priceUsd),pr=num(sum.price),available=p>0;
+  S.rate=available&&pr>0?p/pr:null;
+  paintTag(sum,previous!=null);
+  if(T.price){if(available){if(T.priceValue!==p)T.price.set(p,previous!=null?Math.sign(p-previous):0);T.priceValue=p;}else{T.price.el.textContent='Price syncing';T.priceValue=null;}}
+  if(T.change){
+    const change=num(sum.change24);if(available&&change!=null)T.change.set(change,{label:'24h'});else{const value=T.change.el.querySelector('.qa-change');if(value)value.textContent='';}
+    const age=T.change.el.querySelector('.qa-range');if(age)age.textContent=available?priceLabel(sum.priceAt,{refreshing:qReadFailed||!!sum.pricesRefreshing}):'';
+  }
 }
 
 /* ================= Builders: the newest launches ================= */
@@ -184,9 +206,9 @@ const launchBox = $('[data-hm-launches]');
 launchBox?.append(skeletonRows(3));
 const launchRows = new Map();
 const key = (m) => String(m.chainId) + ':' + lower(m.controller || m.token);
-function launchHref(m) { return lower(m.token) === QH ? '/terminal#t=' + QCHAIN + ':' + QH : '/terminal#m=' + encodeURIComponent(String(m.chainId)) + ':' + encodeURIComponent(lower(m.controller)); }
+function launchHref(m) { return String(m.chainId)===QCHAIN&&lower(m.token)===QH ? '/terminal#t=' + QCHAIN + ':' + QH : '/terminal#m=' + encodeURIComponent(String(m.chainId)) + ':' + encodeURIComponent(lower(m.controller)); }
 function iconFor(m, cls = 'hm-icon') {
-  const src = logoOf(m.logo) || (lower(m.token) === QH ? QLOGO : null), el = h('span', { class: cls, 'aria-hidden': 'true' });
+  const src = logoOf(m.logo) || (String(m.chainId)===QCHAIN&&lower(m.token)===QH ? QLOGO : null), el = h('span', { class: cls, 'aria-hidden': 'true' });
   if (src) { const img = h('img', { src, alt: '', loading: 'lazy', decoding: 'async' }); img.addEventListener('error', () => { img.remove(); el.textContent = String(m.symbol || '?').slice(0, 1); }, { once: true }); el.append(img); }
   else el.textContent = String(m.symbol || '?').replace(/^\$/, '').slice(0, 1).toUpperCase();
   return el;
@@ -197,10 +219,22 @@ function launchSub(m) {
   const t = num(m.summary?.trades24); if (t != null) parts.push(t + (t === 1 ? ' trade' : ' trades'));
   return parts.join(' · ');
 }
-function homePrice(m){const s=assetPriceFields(m.summary||{},{chainId:m.chainId,token:m.token,at:priceObservation(m.summary, m.observedAt??null)});return Number.isFinite(s.priceUsd)&&s.priceUsd>0?fmt.price(s.priceUsd)+(s.pricesRefreshing?' · Refreshing':''):'Price refreshing';}
+function homePrice(m){
+  const canonical=String(m.chainId)===QCHAIN&&lower(m.token)===QH;
+  const s=canonical?qSummary():assetPriceFields(m.summary||{},{chainId:m.chainId,token:m.token,at:priceObservation(m.summary,m.observedAt??null)});
+  if(canonical)return Number.isFinite(s.priceUsd)&&s.priceUsd>0?fmt.price(s.priceUsd):'Price syncing';
+  return Number.isFinite(s.priceUsd)&&s.priceUsd>0?fmt.price(s.priceUsd)+(s.pricesRefreshing?' · Refreshing':''):'Price refreshing';
+}
+
+function paintLaunchChange(m,node){
+  const canonical=String(m.chainId)===QCHAIN&&lower(m.token)===QH,s=canonical?qSummary():m.summary||{},change=num(s.change24);
+  const refreshing=canonical&&num(s.priceUsd)>0&&(qReadFailed||s.pricesRefreshing);
+  node.className='hm-tick '+pctCls(refreshing?0:change??0);
+  flash(node,refreshing?priceLabel(s.priceAt,{refreshing:true}):(!canonical||num(s.priceUsd)>0)&&change!=null?fmt.pct(change):'');
+}
 function launchRow(m, enter) {
-  const s = m.summary || {}, v = h('span', { class: 'hm-tick' }, homePrice(m));
-  const ch = h('small', { class: 'hm-tick ' + pctCls(num(s.change24) ?? 0) }, num(s.change24) != null ? fmt.pct(s.change24) : '');
+  const v = h('span', { class: 'hm-tick' }, homePrice(m));
+  const ch=h('small',{class:'hm-tick'});paintLaunchChange(m,ch);
   const sub = h('span', { class: 'qa-row__s' }, launchSub(m));
   const el = h('a', { class: 'qa-row hm-launch-row' + (enter && !RM ? ' is-enter' : ''), href: launchHref(m), title: m.name || m.symbol },
     iconFor(m), h('span', { class: 'qa-row__main' }, h('span', { class: 'qa-row__t' }, m.symbol || m.name || 'Token'), sub), h('span', { class: 'qa-row__v' }, v, ch));
@@ -217,9 +251,9 @@ function drawLaunches(fresh = new Set()) {
     launchBox.dataset.drawn = '1'; return;
   }
   for (const m of rows) {
-    const r = launchRows.get(key(m)); if (!r) continue; const s = m.summary || {};
+    const r = launchRows.get(key(m)); if (!r) continue;
     flash(r.v, homePrice(m));
-    r.ch.className = 'hm-tick ' + pctCls(num(s.change24) ?? 0); flash(r.ch, num(s.change24) != null ? fmt.pct(s.change24) : '');
+    paintLaunchChange(m,r.ch);
     r.sub.textContent = launchSub(m);
   }
 }
@@ -240,7 +274,7 @@ async function loadFeed() {
   Pm.launches = live.length;
   Pm.trades = live.reduce((a, m) => a + (num(m.summary?.trades24) || 0), 0);
   Pm.vol = live.reduce((a, m) => a + (num(m.summary?.volume24Usd) || 0), 0);
-  const qm = markets.find((m) => lower(m.token) === QH); if (qm && Pm.holders == null) Pm.holders = num(qm.summary?.holders);
+  const qm = markets.find((m) => String(m.chainId)===QCHAIN&&lower(m.token) === QH); if (qm && Pm.holders == null) Pm.holders = num(qm.summary?.holders);
   pulse.update(!first); count('launches', live.length);
   calls.forEach((x) => x.paintChip?.()); // the feed brings the logos the call cards wait for
   drawLaunches(fresh);
@@ -290,17 +324,15 @@ function buildTraders() {
   if (!tradeBox || T.tape) return;
   T.tape = tape({ rows: 4 });
   tradeBox.replaceChildren(T.tape.el, h('a', { class: 'qa-link hm-call-go', href: '/terminal#t=' + QCHAIN + ':' + QH }, 'Trade QHOOKS →'));
-  if (priceBox && !T.price) { T.price = bigPrice(); T.change = changeLine(); priceBox.replaceChildren(h('span', { class: 'l3-price__k' }, 'QHOOKS · Robinhood Chain · live'), T.price.el, T.change.el); }
+  if (priceBox && !T.price) { T.price = bigPrice(); T.change = changeLine(); priceBox.replaceChildren(h('span', { class: 'l3-price__k' }, 'QHOOKS · Robinhood Chain'), T.price.el, T.change.el); }
 }
 const toRow = (t) => ({ ts: t.ts, b: t.buy ? 1 : 0, usd: num(t.valueUsd) || 0, tok: num(t.token) || 0, w: t.trader, id: t.id });
 function paintTraders(prev) {
-  buildTraders(); const sum = S.qSum; if (!sum) return;
-  const p = qPrice(); if (p != null && T.price) T.price.set(p, prev != null && p !== prev ? Math.sign(p - prev) : 0);
-  const c = num(sum.change24); if (c != null && T.change) T.change.set(c, { label: '24h' });
+  buildTraders(); const sum = qSummary();
+  paintQPrices(prev);
   count('traders', num(sum.traders24));
   count('holders', num(sum.holders));
   Pm.holders = num(sum.holders) ?? Pm.holders; pulse.update(prev != null);
-  paintTag(sum, prev != null);
   calls.forEach((x) => x.update());
   pushCall();
 }
@@ -311,11 +343,13 @@ function showTape() {
   T.tape.render(rows); T.tape.ages(nowS());
 }
 async function loadQ() {
+  paintQPrices();
+  try{
   const body = await getJSON(MARKET(QCHAIN, QH), 15000);
-  if (!body?.summary) throw Error('market');
+  if (!body?.summary||String(body.meta?.chainId??body.chainId)!==QCHAIN||lower(body.meta?.token??body.token??body.meta?.controller)!==QH){S.q=body||{};S.qSum=null;S.rate=null;throw Error('market identity or observation unavailable');}
   const first = !S.q, prev = first ? null : qPrice();
-  S.q = body; S.qSum = body.summary;
-  const pr = num(body.summary.price), pu = num(body.summary.priceUsd); if (pr && pu) S.rate = pu / pr;
+  S.q = body; S.qSum = body.summary;qReadFailed=false;
+  const canonical=qSummary(),pr=num(canonical.price),pu=num(canonical.priceUsd);S.rate=pr>0&&pu>0?pu/pr:null;
   const trades = (Array.isArray(body.trades) ? body.trades : []).filter((t) => t?.id && num(t.ts) && num(t.priceUsd));
   const shown = (t) => (num(t.valueUsd) || 0) >= .01; // dust (under a cent) stays off the tape and the ribbon
   if (first) {
@@ -335,6 +369,7 @@ async function loadQ() {
   fresh.forEach((t, i) => setTimeout(() => onTrade(t, prev, before), RM ? 0 : i * 420));
   if (!fresh.length) paintTraders(prev);
   drawHolders(true);
+  }catch(error){qReadFailed=true;throw error;}finally{paintQPrices();}
 }
 function onTrade(t, prev, before) {
   S.seenTrades.add(t.id);
@@ -422,8 +457,8 @@ function boardLogo(b) {
 // The feed's priceNow can be in the pool's quote unit while the call price is in USD (a WETH price against a USD call
 // reads as -100%). Show the outcome only for QHOOKS (live USD price) or when the two prices are plausibly the same unit.
 function callNow(c) {
-  const isQ = lower(c.board?.address) === QH, pn = num(c.call?.priceNow), sameUnit = pn != null && pn / c.call.price > 1e-3 && pn / c.call.price < 1e3;
-  return (isQ ? qPrice() : null) ?? (sameUnit ? pn : null);
+  const isQ = String(c.board?.chainId)===QCHAIN&&lower(c.board?.address) === QH, pn = num(c.call?.priceNow), sameUnit = pn != null && pn / c.call.price > 1e-3 && pn / c.call.price < 1e3;
+  return isQ ? qPrice() : sameUnit ? pn : null;
 }
 function callPost(c, enter) {
   const sym = c.board?.symbol || c.board?.name || 'token';

@@ -1,6 +1,7 @@
 import {createReadablePrice} from '/qx-readable-price.mjs';
 import{fundFor}from'/qx-fund-catalog.mjs';
 import {QPROOF_CHECK_COUNT_MEANING} from '../../qproof-check-meanings.mjs';
+import {priceLabel} from '/qx-price-presentation.mjs';
 import{mountSimpleTokenView}from'/qx-token-simple-view.mjs';
 // QHooks System A: the terminal and token page (token lane, 2026-11-11).
 // Presentation only. Every number here comes from what the terminal already loaded (window.qxTerminal.state /
@@ -92,7 +93,8 @@ identityObserver.observe($('qxt-market-identity'),{childList:true});compactIdent
 const detailObserver=new MutationObserver(placeDetailTools);
 detailObserver.observe($('qxt-head'),{childList:true});placeDetailTools();
 const ident = h('div', { class: 'qa-ident' }, coinEl, symWrap, socWrap, meta);
-const quote = h('div', { class: 'qa-quote ta-quote' }, h('div',{class:'qx-readable-price-line'},P.price.el,priceDetail.el), P.change.el);
+const priceAge=h('small',{class:'ta-price-age',hidden:true,style:{display:'none','font-size':'12px','line-height':'1.5',color:'var(--qa-muted)','white-space':'nowrap'}});
+const quote = h('div', { class: 'qa-quote ta-quote' }, h('div',{class:'qx-readable-price-line'},P.price.el,priceDetail.el), P.change.el,priceAge);
 const stage = h('section', { class: 'qa-stage qa-stage--wide ta-stage', 'aria-label': 'Token' },
   h('div', { class: 'qa-stage__art', 'aria-hidden': 'true' }, h('div', { class: 'qa-stage__glow' }), h('div', { class: 'qa-stage__frame' }, stageImg, h('span', { class: 'qa-stage__sheen' }))),
   h('div', { class: 'qa-stage__copy' }, ident, quote));
@@ -591,9 +593,12 @@ function paint() {
   else if (q > 0) { P.price.el.textContent = fmt.price(q).slice(1) + ' ' + (m.quoteSymbol || ''); P.price.el.classList.add('ta-quote-unit'); }
   else { P.price.el.textContent = '—'; }
   priceDetail.update({value:live!=null?live:q>0?q:null,unit:live!=null?'USD':m.quoteSymbol||''});
+  priceAge.textContent=priceLabel(s.priceAt,{refreshing:!!s.pricesRefreshing});P.price.el.style.opacity=s.pricesRefreshing?'.65':'1';
+  const showPriceAge=priceAge.textContent.startsWith('Refreshing')||priceAge.textContent==='Price syncing';
+  priceAge.hidden=!showPriceAge;priceAge.style.display=showPriceAge?'block':'none';
   ticketMeta=m;placeTicketIdentity();
   const ch = s.change24==null?NaN:Number(s.change24);
-  if (Number.isFinite(ch)) { const delta = live != null && ch > -1 ? live - live / (1 + ch) : null; P.change.set(ch, { label: '24h', delta, words: 'past day', pulse: !!dir }); P.change.el.hidden = false; } else P.change.el.hidden = true;
+  if (Number.isFinite(ch)) { const delta = live != null && ch > -1 ? live - live / (1 + ch) : null; P.change.set(ch, { label: '24h', delta, words: 'past day', pulse: !!dir }); P.change.el.hidden = showPriceAge; } else P.change.el.hidden = true;
   if (live != null) T.lastPrice = live;
   // pressure: buys vs sells, last 24h
   const b24 = Number(s.buys24), s24 = Number(s.sells24);
@@ -623,7 +628,7 @@ function paint() {
   T.trades = new Set(trades.map(tradeKey));
   // Arrival animations may discover old swaps. Restore the event clock after hit(), never the receipt clock.
   if (latest) P.live.setLast(Math.max(0, eventNow - latest * 1000));
-  P.live.refreshing(!latest||!!s.pricesRefreshing);
+  P.live.el.hidden=!latest;P.live.refreshing(false);
   if (!d.ext && d.holders?.length) T.holders = new Set(d.holders.map((x) => String(x.holder).toLowerCase()));
   // sections
   renderHolders(d); renderAbout(d); tickCalls(d); void loadBuybacks(m);

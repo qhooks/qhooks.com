@@ -5,6 +5,7 @@ import{publicReadFetch}from'./qx-public-read.mjs';
 import{fundFor}from'./qx-fund-catalog.mjs';
 import{quickBuyPlan}from'./qx-quick-buy-plan.mjs';
 import{openQuickBuyWallet}from'./qx-quick-buy-context.mjs';
+import {priceLabel,createPriceRefreshBurst,mainPricePatch} from './qx-price-presentation.mjs';
 import {discoveryEvidence,evidenceTime} from './qx-discovery-evidence.mjs';
 import {discoveryBadges} from './qx-discovery-badges.mjs';
 import {tokenCreatorTruth,creatorRiskView,executionRiskView} from './qx-token-creator.mjs';
@@ -285,7 +286,7 @@ async function refreshSelectedMarket() {
  if(!state.sel||!ticket.canSelect()){$('qxt-sync').textContent='Current trade retained. Refresh market data after the trade or funded recovery is resolved.';return false;}
  const selected=selectedContext();
  if(!state.data)return state.sel.ext?selectExternal(state.sel.chainId,state.sel.ext):select(state.sel.chainId,state.sel.controller);
- marketWorkspace.refreshing(selected);const result=await loadMarket();await refreshSelectedChecks();return result;
+ priceBurst.reset();marketWorkspace.refreshing(selected);const result=await loadMarket();await refreshSelectedChecks();return result;
 }
 
 
@@ -515,6 +516,17 @@ function applyChartTheme() {
   candles.applyOptions(ownCandleOptions(up,down));
 }
 new MutationObserver(() => { try { applyChartTheme(); if (state.data) renderChart(); } catch {} }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+// Presence-only, bounded cache reads; never refetch the full market in this burst.
+const priceBurst=createPriceRefreshBurst({
+ isActive:key=>!document.hidden&&!!state.data&&isQhooksPriceAsset(state.data.meta?.chainId,state.data.meta?.token)&&key===String(mseq),
+ read:async({signal})=>{const r=await fetch('/api/prices/qhooks?cached=1',{cache:'no-store',signal});if(!r.ok)throw Error('price_cache_unavailable');return r.json();},
+ apply:q=>{const d=state.data,p=mainPricePatch(q,{chainId:d?.meta?.chainId,token:d?.meta?.token,previousAt:d?.summary?.priceAt});if(!p)return false;
+  const supply=Number(d.summary?.supply??d.meta?.supply);d.summary={...d.summary,...p,price:d.ext?p.priceUsd:p.priceQuote,...(supply>0?{mcapUsd:supply*p.priceUsd,mcap:supply*(d.ext?p.priceUsd:p.priceQuote)}:{})};d.priceAt=p.priceAt;d.pricesRefreshing=p.pricesRefreshing;
+  if(d.token)Object.assign(d.token,p);ticket.setPriceUsd(p.priceUsd,selectionFlow.current()?.intent);renderHead();document.dispatchEvent(new CustomEvent('qxt:paint'));return !p.pricesRefreshing;
+ }
+});
+function startPriceBurst(){const d=state.data;if(d?.summary&&isQhooksPriceAsset(d.meta?.chainId,d.meta?.token)&&(!priceState(d.summary.priceAt).usable||d.summary.pricesRefreshing))priceBurst.start(String(mseq));}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)priceBurst.stop();else startPriceBurst();});
 let lastChartKey = '';
 function marketDisplay() {
  const raw=state.data;if(!raw)return null;
@@ -659,7 +671,7 @@ function renderHead() {
   const creatorKey=JSON.stringify([d.creatorTruth.state,d.creatorTruth.address,d.creatorTruth.reason,d.creatorTruth.reportId,d.creatorTruth.sale?.title]);
   if(creatorKey!==creatorPresentationKey){creatorPresentationKey=creatorKey;reprojectCreatorRisk();selectedProof?.repaint();}
   paintDiscoveryBadges(m);
-  renderedPriceAge=[s.priceAt,!!s.pricesRefreshing,s.priceUsd,s.price].join('|');
+  renderedPriceAge=[s.priceAt,!!s.pricesRefreshing,s.priceUsd,s.price,Math.floor(Date.now()/15000)].join('|');
   $('qxt-symbol').textContent = m.symbol; $('qxt-symbol').title=m.symbol; $('qxt-name').textContent = m.name; $('qxt-name').title=m.name;
   let fundLabel=$('qxt-fund-label');if(!fundLabel){fundLabel=h('span',{id:'qxt-fund-label',class:'qxt-trust'});$('qxt-name').after(fundLabel);}const fund=fundFor(m.chainId,m.token);fundLabel.hidden=!fund;fundLabel.textContent=fund?'Index fund token':'';fundLabel.title=fund?'Goldstein Group · '+fund.name:'';
   syncOfficial(m);
@@ -681,7 +693,7 @@ function renderHead() {
       ...curveStatCells(h,cv),
       ...cell('MCap', money(cs.mcap, 'USD')), ...cell(cv?.phase==='curve'?'In the curve':'Liquidity', money(cs.liquidity, 'USD')), ...cell('Vol 24h', money(cs.volume24, 'USD')),
       ...cell('Buys / sells · 24h', Number.isFinite(cs.buys24)&&Number.isFinite(cs.sells24)?cs.buys24+' / '+cs.sells24:'—'));
-    $('qxt-sync').textContent = s.pricesRefreshing?'Refreshing':cv ? curveSyncLine(cv) : 'Chart pool '+short(d.token?.pools?.[0]?.address)+' · execution via '+(m.chainId==='solana'?'Jupiter':hasDirectRoute(m.chainId)?'the pool · QHooks router':'0x');
+    $('qxt-sync').textContent = s.pricesRefreshing?priceLabel(s.priceAt,{refreshing:true}):cv ? curveSyncLine(cv) : 'Chart pool '+short(d.token?.pools?.[0]?.address)+' · execution via '+(m.chainId==='solana'?'Jupiter':hasDirectRoute(m.chainId)?'the pool · QHooks router':'0x');
     return;
   }
   headTrust();
@@ -691,7 +703,7 @@ function renderHead() {
     ...cell('MCap', usdFirst(s.mcapUsd, s.mcap, q)), ...cell('Vol 24h', usdFirst(s.volume24Usd, s.volume24, q)), ...cell('Buys / sells · 24h', Number.isFinite(s.buys24)&&Number.isFinite(s.sells24)?s.buys24+' / '+s.sells24:'—'),
     ...cell('Holder wallets', s.holders ?? '—'), ...cell('Top 10', pct(s.top10, false)), ...cell('Burned', s.supply!=null&&s.burned!=null&&s.supply+s.burned>0 ? pct(s.burned / (s.supply + s.burned), false) : '—'),
     ...cell('Team locked', s.supply!=null&&s.burned!=null&&s.locked!=null&&s.supply+s.burned>0 ? pct(s.locked / (s.supply + s.burned), false) : '—'));
-  $('qxt-sync').textContent = s.pricesRefreshing?'Refreshing':d.providerLive?'Refreshing · live price by DexScreener':'';
+  $('qxt-sync').textContent = priceLabel(s.priceAt,{refreshing:!!s.pricesRefreshing});
 }
 
 // ---- Bottom panes ----
@@ -917,11 +929,11 @@ async function loadMarket({signal,strict=false}={}) {
     const data=await fillNativeUsd(observation);if(mine!==mseq)return false;applyCachedPoolPrice(data);
     const selected=selectedContext();if(String(data?.meta?.chainId)!==chainId||data.meta?.controller?.toLowerCase()!==controller||(selected?.token&&data.meta?.token?.toLowerCase()!==selected.token.toLowerCase()))throw Error('Market data does not match the selected launch. Refresh to retry.');
     // Index catching up (> 300 blocks, or no sync for 3 min): live DexScreener price, read at most every 20 s.
-    if(ownIndexBehind(data)){data.providerLive=true;const hit=cachedPair(data);if(hit)applyProviderPrice(data,hit);
+    if(!isQhooksPriceAsset(data.meta?.chainId,data.meta?.token)&&ownIndexBehind(data)){data.providerLive=true;const hit=cachedPair(data);if(hit)applyProviderPrice(data,hit);
      void refreshPair(data).then(pair=>{if(!pair||mine!==mseq||state.data!==data||!applyProviderPrice(data,pair))return;ticket.setPriceUsd(data.summary.priceUsd,selectionFlow.current()?.intent);paintMarket();});}
     state.data=data;state.loading=false;state.loadError=null;
     ticket.setPriceUsd(data.summary?.priceUsd??(data.meta?.quoteSymbol==='USD'||/^(USDC|USDT)$/i.test(data.meta?.quoteSymbol||'')?data.summary?.price:null),selectionFlow.current()?.intent);
-    paintMarket();void fillPoolPrice(data,mine);
+    paintMarket();startPriceBurst();void fillPoolPrice(data,mine);
     if(!state.markets.find(m=>keyOf(m)===keyOf(state.sel))?.summary)loadFeed();return true;
   }catch(error){if(mine!==mseq)return false;if(strict)throw error;marketWorkspace?.failMarket(selectedContext(),error);$('qxt-sync').textContent=error.message||'Refreshing market data…';return false;}
 }
@@ -1073,7 +1085,7 @@ async function loadExternal({signal,strict=false}={}) {
     if((!data.token.curve||data.token.curve.phase==='pool')&&liveHeader&&liveHeader.key===chainId+':'+ext&&Date.now()-liveHeader.patch.observedAt<LIVE_WINS_MS)applyLiveHeader(data,liveHeader.patch);
     state.data=data;state.loading=false;state.loadError=null;
     ticket.setCurve(data.token.curve||null,selectionFlow.current()?.intent);
-    ticket.setPriceUsd(data.summary.price,selectionFlow.current()?.intent);paintMarket();
+    ticket.setPriceUsd(data.summary.price,selectionFlow.current()?.intent);paintMarket();startPriceBurst();
     const selection={chainId,token:ext,pool,quote:data.token.pools?.[0]?.quoteAddress,asset:data.meta.symbol,tf,revision:mine};
     const isCurrent=()=>mine===mseq&&read===externalRead&&state.tf===tf&&!signal?.aborted&&state.data?.token?.pools?.[0]?.address===pool;
     const fillOnchain=panels=>onchainEvm.fill({selection,panels,signal,isCurrent,getData:()=>state.data,onData:updated=>{state.data=updated;paintMarket();}}).catch(()=>{});
@@ -1095,12 +1107,13 @@ async function loadExternal({signal,strict=false}={}) {
 // server copy whose timestamp is newer than its numbers); past that the server copy takes over again.
 const LIVE_WINS_MS=60000;let liveHeader=null,liveBusy=false;
 function applyLiveHeader(data,patch){
+ if(isQhooksPriceAsset(data?.meta?.chainId,data?.meta?.token))return;
  Object.assign(data.token,patch);
- Object.assign(data.summary,{price:patch.priceUsd,change24:patch.change24??data.summary.change24,mcap:patch.mcapUsd??data.summary.mcap,fdv:patch.fdvUsd??data.summary.fdv,liquidity:patch.liquidityUsd??data.summary.liquidity,volume24:patch.volume24Usd??data.summary.volume24,buys24:patch.buys24??data.summary.buys24,sells24:patch.sells24??data.summary.sells24,trades24:patch.buys24!=null&&patch.sells24!=null?patch.buys24+patch.sells24:data.summary.trades24});
+ Object.assign(data.summary,{price:patch.priceUsd,priceUsd:patch.priceUsd,priceAt:patch.priceAt,priceSource:patch.priceSource,pricePoolId:patch.pricePoolId,pricesRefreshing:false,change24:patch.change24??data.summary.change24,mcap:patch.mcapUsd??data.summary.mcap,fdv:patch.fdvUsd??data.summary.fdv,liquidity:patch.liquidityUsd??data.summary.liquidity,volume24:patch.volume24Usd??data.summary.volume24,buys24:patch.buys24??data.summary.buys24,sells24:patch.sells24??data.summary.sells24,trades24:patch.buys24!=null&&patch.sells24!=null?patch.buys24+patch.sells24:data.summary.trades24});
 }
 async function refreshLiveHeader(){
  // curves: a launchpad token on its curve has no DexScreener pool of its own (only third-party ones), so its numbers stay the curve's.
- if(liveBusy||document.hidden||!state.sel?.ext||!state.data?.ext||state.data.resolution?.state==='unpriced'||(state.data.token?.curve&&state.data.token.curve.phase!=='pool'))return;
+ if(liveBusy||document.hidden||isQhooksPriceAsset(state.data?.meta?.chainId,state.data?.meta?.token)||!state.sel?.ext||!state.data?.ext||state.data.resolution?.state==='unpriced'||(state.data.token?.curve&&state.data.token.curve.phase!=='pool'))return;
  const run=selectionFlow.current(),mine=mseq,selection=state.sel,data=state.data;
  if(!run?.active()||run.controller.signal.aborted)return;
  const {chainId,ext}=selection,key=chainId+':'+ext,pool=data.token?.pools?.[0]?.address;liveBusy=true;
@@ -1296,7 +1309,7 @@ selectedProof=mountSelectedRepoProof($('qxt-repoproof'),{getSelection:selectedCo
 }});
 selectionFlow=createTerminalSelection({ticket,
  onBegin(target){
-  liveHeader=null;resolutionView.show({state:'loading',target});
+  priceBurst.reset();liveHeader=null;resolutionView.show({state:'loading',target});
   resetCreatorState();mseq++;onchainEvm.clear();clearInterval(poll);poll=null;clearConversation();state.openedAt=Date.now();state.data=null;state.pool=null;window.__qhooksPool=null;document.dispatchEvent(new CustomEvent('qhooks:pool',{detail:null}));state.loading=true;state.loadError=null;lastChartKey='';chosen=false;renderLaunchActions();
   state.sel=target.kind==='launch'?{chainId:target.chainId,controller:target.controller}:{chainId:target.chainId,controller:null,ext:target.address};selectedProof.sync();
   if(target.kind==='external'&&!['watch','wallets'].includes(state.feed)){state.feed='recent';store('feed',state.feed);pressGroup($('qxt-feed-tabs'),'feed','recent');}
@@ -1304,8 +1317,8 @@ selectionFlow=createTerminalSelection({ticket,
   document.dispatchEvent(new CustomEvent('qxt:token'));
   if(!target.quiet&&matchMedia('(max-width:760px)').matches)$('qxt-head').scrollIntoView({block:'start'});
  },
- onClear(){resolutionView.clear();resetCreatorState();if(matchMedia('(max-width:760px)').matches)requestAnimationFrame(()=>scrollTo({top:0,behavior:'auto'}));mseq++;onchainEvm.clear();clearInterval(poll);poll=null;selectedProof.clear();clearConversation();marketWorkspace.clear();state.sel=null;state.data=null;state.pool=null;window.__qhooksPool=null;document.dispatchEvent(new CustomEvent('qhooks:pool',{detail:null}));state.loading=false;state.loadError=null;clearMarketView();$('qxt-sync').textContent='';restoreSelectionURL();},
- onFailure(error,next){mseq++;onchainEvm.clear();clearInterval(poll);poll=null;state.pool=null;window.__qhooksPool=null;document.dispatchEvent(new CustomEvent('qhooks:pool',{detail:null}));state.loading=false;state.loadError=error.message||'Could not load this token. Choose it again to retry.';state.data=null;marketWorkspace.failMarket(selectedContext(),error);marketWorkspace.failRisk(selectedContext(),Error('Market metadata is unavailable; checks were not loaded.'));clearMarketView(error.view||'Token unavailable');$('qxt-sync').textContent=state.loadError;void marketPosition?.refresh({force:true}); /* walletchains: a token with no market still shows what the wallet holds */
+ onClear(){priceBurst.reset();resolutionView.clear();resetCreatorState();if(matchMedia('(max-width:760px)').matches)requestAnimationFrame(()=>scrollTo({top:0,behavior:'auto'}));mseq++;onchainEvm.clear();clearInterval(poll);poll=null;selectedProof.clear();clearConversation();marketWorkspace.clear();state.sel=null;state.data=null;state.pool=null;window.__qhooksPool=null;document.dispatchEvent(new CustomEvent('qhooks:pool',{detail:null}));state.loading=false;state.loadError=null;clearMarketView();$('qxt-sync').textContent='';restoreSelectionURL();},
+ onFailure(error,next){priceBurst.stop();mseq++;onchainEvm.clear();clearInterval(poll);poll=null;state.pool=null;window.__qhooksPool=null;document.dispatchEvent(new CustomEvent('qhooks:pool',{detail:null}));state.loading=false;state.loadError=error.message||'Could not load this token. Choose it again to retry.';state.data=null;marketWorkspace.failMarket(selectedContext(),error);marketWorkspace.failRisk(selectedContext(),Error('Market metadata is unavailable; checks were not loaded.'));clearMarketView(error.view||'Token unavailable');$('qxt-sync').textContent=state.loadError;void marketPosition?.refresh({force:true}); /* walletchains: a token with no market still shows what the wallet holds */
   if(error.resolution||!error.venue&&!/ is in its sale \(/.test(error.message||'')){state.sel=null;document.dispatchEvent(new CustomEvent('qxt:clear'));resolutionView.show({state:error.code==='not_found'?'not_found':'unavailable',target:next.target,retry:()=>next.target.kind==='launch'?select(next.target.chainId,next.target.controller):selectExternal(next.target.chainId,next.target.address)});}
   else resolutionView.clear();
   // mktsearch: a venue line (a launchpad curve, no pool yet) carries its link, painted after the failure settles.
@@ -1393,7 +1406,7 @@ try {
 
 await loadFeed();
 function refreshPriceClock(){
- if(!state.data?.summary||document.hidden)return;const s=marketDisplay()?.summary||{},key=[s.priceAt,!!s.pricesRefreshing,s.priceUsd,s.price].join('|');if(key!==renderedPriceAge){renderHead();document.dispatchEvent(new CustomEvent('qxt:paint'));}
+ if(!state.data?.summary||document.hidden)return;const s=marketDisplay()?.summary||{},key=[s.priceAt,!!s.pricesRefreshing,s.priceUsd,s.price,Math.floor(Date.now()/15000)].join('|');if(key!==renderedPriceAge){renderHead();document.dispatchEvent(new CustomEvent('qxt:paint'));}
 }
 function refreshHistoryClocks(){
  if(document.hidden)return;

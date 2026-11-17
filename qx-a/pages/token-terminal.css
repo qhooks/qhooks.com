@@ -960,4 +960,10 @@ body.qa.qxt.ta-token .ta-detail-tools .qxt-identity-context :is(button,a){positi
  body.qa.qxt.ta-token #ta-top .ta-stage .qa-sym{max-width:none;flex-wrap:nowrap;white-space:nowrap}
  body.qa.qxt.ta-token #ta-top .ta-stage .qa-quote{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;max-width:100%;text-align:left}
  body.qa.qxt.ta-token #ta-top .ta-stage .qa-price{font-size:clamp(20px,6vw,24px)!important}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-quote{height:26px;min-height:26px;min-width:0}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qx-readable-price-line{flex:1 1 auto;flex-wrap:nowrap;min-width:0;gap:5px}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qx-readable-price-line .qa-price{flex:0 1 auto;min-width:0;white-space:nowrap;overflow-wrap:normal;overflow:hidden;text-overflow:ellipsis;line-height:1.05}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-change-line{flex:none;flex-wrap:nowrap;margin:0;gap:4px;line-height:1.15;white-space:nowrap}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-change-line .qa-change{font-size:13px;line-height:1.15}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-change-line .qa-range{display:none}
 }

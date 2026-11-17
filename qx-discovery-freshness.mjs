@@ -18,7 +18,10 @@ export function capDiscoveryObservations(row,{fallbackAt=null,now=Date.now()}={}
  // The canonical flat-row overlay refreshes USD/native price, not flat MC/FDV
  // or provider window statistics. A new USD price cannot renew those values.
  if(!providerUsable){
-  clear(out,['marketCapUsd','mcapUsd','fdvUsd','valueUsd','liquidityUsd','volume24Usd','buys24','sells24','price','priceNative','mcap','fdv']);
+  // An independently observed capitalization keeps its own original clock.
+  // Legacy rows without that clock still expire with their provider snapshot.
+  if(!priceState(row.capAt,now).usable)clear(out,['marketCapUsd','mcapUsd','fdvUsd']);
+  clear(out,['valueUsd','liquidityUsd','volume24Usd','buys24','sells24','price','priceNative','mcap','fdv']);
   for(const key of ['volumeUsd','change','makers'])if(own(row,key))out[key]=blankValues(row[key]);
   if(own(row,'txns'))out.txns=row.txns&&typeof row.txns==='object'&&!Array.isArray(row.txns)?Object.fromEntries(Object.entries(row.txns).map(([window,counts])=>[window,counts&&typeof counts==='object'&&!Array.isArray(counts)?{...counts,...Object.fromEntries(['buys','sells'].filter(k=>own(counts,k)).map(k=>[k,null]))}:null])):null;
  }

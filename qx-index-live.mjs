@@ -1,3 +1,4 @@
+import {isQhooksPriceAsset} from './qx-price-state.mjs';
 // QHooks own-pool markets whose index is catching up (2026-11-11): the header price and chart come from the same
 // DexScreener pair read the terminal uses for outside tokens, until the index is within 300 blocks again.
 // Read-only. One DexScreener read per token per 20 s at most, and only while the market view is already polling.
@@ -28,7 +29,7 @@ export function ownProviderSelection(data) {
 // Header fields from the pair. The quote-token price is used only when the pair's quote is this launch's quote token.
 export function applyProviderPrice(data, pair) {
   const s = data?.summary, usd = num(pair?.priceUsd);
-  if (!s || !(usd > 0)) return false;
+  if (!s || !(usd > 0)||isQhooksPriceAsset(data?.meta?.chainId,data?.meta?.token)) return false;
   const pool = launchPool(data), quote = lower(pool?.quote || data.meta?.quote);
   const native = lower(pair.quoteToken?.address) === quote ? num(pair.priceNative) : null;
   const quoteUsd = num(data.nativeQuote?.usd);
@@ -57,7 +58,7 @@ export function refreshPair(data, { fetcher, now = Date.now } = {}) {
   if (hit && now() - hit.at < PAIR_TTL_MS) return Promise.resolve(null);
   if (inflight.has(key)) return inflight.get(key);
   const sel = ownProviderSelection(data);
-  if (!sel) return Promise.resolve(null);
+  if (!sel||isQhooksPriceAsset(sel.chainId,sel.token)) return Promise.resolve(null);
   const run = fetchDexPairs(sel.chainId, [sel.token], fetcher ? { fetcher } : {})
     .then(pairs => { const pair = pickPair(pairs, sel.chainId, sel.token, sel.pool); if (pair) cache.set(key, { pair, at: now() }); return pair; })
     .catch(() => null).finally(() => inflight.delete(key));

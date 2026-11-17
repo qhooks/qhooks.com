@@ -1,5 +1,5 @@
 import{publicReadFetch}from'./qx-public-read.mjs';
-import {priceObservation} from './qx-price-state.mjs';
+import {priceObservation,isQhooksPriceAsset,priceFields} from './qx-price-state.mjs';
 import {discoveryCandidate,rankDiscovery} from './qx-discovery-rank.mjs';
 // Token lists and search read by the visitor's own browser (2026-11-09). The server's copies of GeckoTerminal and
 // DexScreener share Cloudflare's egress and get rate limited (429/503 on every chain), which left the terminal's
@@ -244,13 +244,13 @@ export function readCachedFeed(storage, key, now = Date.now()) {
   try {
     const all = JSON.parse(storage?.getItem(CACHE_KEY) || '{}'), hit = all?.[key];
     if (!hit || !Array.isArray(hit.rows) || !hit.rows.length || !(now - hit.at < CACHE_MAX_AGE)) return null;
-    return { version: 1, ...hit.meta, rows: hit.rows, observedAt: hit.at, cached: true, stale: true };
+    return { version: 1, ...hit.meta, rows:hit.rows.map(r=>isQhooksPriceAsset(r.chainId,r.token?.address)&&r.priceSourceVersion!==2?priceFields({...r,priceAt:null,priceObservedAt:null,observedAt:null,capAt:null,marketCapUsd:null,fdvUsd:null},{now}):r), observedAt: hit.meta?.observedAt??null, cached: true, stale: true };
   } catch { return null; }
 }
 export function writeCachedFeed(storage, key, data, now = Date.now()) {
   try {
     if (!storage?.setItem || !data?.rows?.length) return;
-    const all = JSON.parse(storage.getItem(CACHE_KEY) || '{}'), next = { ...all, [key]: { at: now, rows: data.rows.slice(0, 60).map(r=>({...r,priceAt:priceObservation(r,data.observedAt??null)})), meta: { tab: data.tab, chain: data.chain, window: data.window, source: data.source || null } } };
+    const all = JSON.parse(storage.getItem(CACHE_KEY) || '{}'), next = { ...all, [key]: { at: now, rows: data.rows.slice(0, 60).map(r=>({...r,priceAt:priceObservation(r,data.observedAt??null)})), meta: { tab: data.tab, chain: data.chain, window: data.window, source: data.source || null, observedAt:data.observedAt??null } } };
     const keys = Object.keys(next).sort((a, b) => next[b].at - next[a].at).slice(0, 24);
     storage.setItem(CACHE_KEY, JSON.stringify(Object.fromEntries(keys.map(k => [k, next[k]]))));
   } catch {}

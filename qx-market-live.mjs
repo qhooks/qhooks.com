@@ -1,3 +1,4 @@
+import {assetPriceFields,isQhooksPriceAsset} from './qx-price-state.mjs';
 import{publicReadFetch}from'./qx-public-read.mjs';
 // Small read-only views over the terminal feed and the existing market directory.
 import {CHAINS,money,percent} from './qx-terminal-feed-core.mjs';
@@ -21,18 +22,21 @@ export function trendingTokens(body,limit=5){
 // Home strip (2026-11-10, walkthrough item 8): QHooks launches first, instead of boosted outside tokens.
 export const LAUNCH_FEED_URL='/api/terminal/feed?chain=all';
 const NATIVE_OF={WETH:'ETH',ETH:'ETH',WBNB:'BNB',BNB:'BNB',WHYPE:'HYPE',HYPE:'HYPE'};
-/// Live QHooks launches as strip rows, USD from DexScreener (browser) or the launch's own price × the native USD price.
+/// Live launches as strip rows. QHOOKS keeps its main-pool USD observation; other assets retain the existing tracker/native fallback.
 export async function launchTokens(body,{fetcher=globalThis.fetch,limit=5,dex}={}){
  if(!Array.isArray(body?.markets))throw Error('Invalid launch feed');
  const seen=new Set(),list=body.markets.filter(m=>{const chain=String(m?.chainId),k=chain+':'+String(m?.token||'').toLowerCase();if(!m?.live||!supported(chain)||!address(chain,m.token)||seen.has(k))return false;seen.add(k);return true;});
  const {fetchDexPairs,pickPair,rowPatch}=dex||await import('./qx-dex-live.mjs'),byChain=new Map();
- for(const m of list){const c=String(m.chainId);byChain.set(c,[...(byChain.get(c)||[]),m.token]);}
+ for(const m of list){const c=String(m.chainId);if(isQhooksPriceAsset(c,m.token))continue;byChain.set(c,[...(byChain.get(c)||[]),m.token]);}
  const pairs=new Map();await Promise.all([...byChain].map(async([c,tokens])=>{const got=await fetchDexPairs(c,tokens,{fetcher}).catch(()=>null);if(got)pairs.set(c,got);}));
  let natives=null;const nativeUsd=async sym=>{if(!NATIVE_OF[sym])return null;natives??=readPublicJSON('/api/funding/native-prices?symbols=ETH,BNB,HYPE',{fetcher}).then(b=>b.prices||{}).catch(()=>({}));return (await natives)[NATIVE_OF[sym]]??null;};
  const rows=await Promise.all(list.map(async m=>{
-  const c=String(m.chainId),patch=rowPatch(pickPair(pairs.get(c),c,m.token,null)),s=m.summary||{};
-  let usd=patch?.priceUsd??(typeof s.priceUsd==='number'&&s.priceUsd>0?s.priceUsd:null),chg=patch?.change?.h24??(typeof s.change24==='number'?s.change24:null),vol=patch?.volumeUsd?.h24??null;
-  if(usd==null&&typeof s.price==='number'&&s.price>0){const n=await nativeUsd(String(m.quoteSymbol||'').toUpperCase());if(n)usd=s.price*n;}
+  const c=String(m.chainId),canonical=isQhooksPriceAsset(c,m.token),s=canonical?assetPriceFields(m.summary||{},{chainId:c,token:m.token}):m.summary||{};
+  const patch=canonical?null:rowPatch(pickPair(pairs.get(c),c,m.token,null));
+  let usd=patch?.priceUsd??(typeof s.priceUsd==='number'&&s.priceUsd>0?s.priceUsd:null),chg=patch?.change?.h24??(typeof s.change24==='number'?s.change24:null),vol=canonical?s.volume24Usd??null:patch?.volumeUsd?.h24??null;
+  // QHOOKS USD is an observation of its main pool. A tracker or a derived
+  // native conversion cannot replace an unavailable/expired main observation.
+  if(!canonical&&usd==null&&typeof s.price==='number'&&s.price>0){const n=await nativeUsd(String(m.quoteSymbol||'').toUpperCase());if(n)usd=s.price*n;}
   return {symbol:m.symbol||m.name||'Token',name:m.name||'',address:m.token,chainId:c,href:'/terminal#m='+encodeURIComponent(c)+':'+encodeURIComponent(String(m.controller).toLowerCase()),
    logo:logoURL(m.logo)||logoURL(officialLogo(c,m.token)),price:usd!=null?money(usd,{precise:true}):'—',change:percent(chg),direction:typeof chg==='number'&&Number.isFinite(chg)?Math.sign(chg):0,
    _rank:(vol??0)+(Number(s.trades24)||0)};

@@ -3,6 +3,7 @@ import{defaultTrendingMode,projectTrendingContracts,discoveryContractKey}from'./
 import{publicReadFetch}from'./qx-public-read.mjs';
 import{quickBuyPlan}from'./qx-quick-buy-plan.mjs';
 import{FUND_TOKENS,fundRow}from'./qx-fund-catalog.mjs';
+import {isQhooksPriceAsset} from './qx-price-state.mjs';
 import {mountDiscoveryNext} from './qx-discovery-next.mjs';
 import {discoveryBadges} from './qx-discovery-badges.mjs';
 import {evidenceMetrics} from './qx-discovery-evidence.mjs';
@@ -361,6 +362,8 @@ function updateRow(node, vm) {
   node.cells.liquidity.dataset.known = String(vm.liquidity !== DASH);
   node.cells.holders.dataset.known=String(vm.numeric.holders!==null);
   node.cells.price.dataset.slickPrice='';node.cells.price.dataset.slickKey=vm.key;node.cells.price.dataset.slickValue=vm.numeric.price===null?'':String(vm.numeric.price);
+  node.cells.price.style.opacity=vm.priceRefreshing||vm.row.pricesCached?'.65':'1';node.cells.mcap.style.opacity=vm.capsRefreshing||vm.row.capsCached?'.65':'1';
+  node.cells.holders.title=vm.numeric.holders===null?'The source has not provided a global holder count.':('Global holder count'+(vm.holderAge?' · updated '+vm.holderAge+' ago':''));
   for (const key of ['move']) {
     node.cells[key].classList.toggle('up', vm.numeric[key] > 0);
     node.cells[key].classList.toggle('down', vm.numeric[key] < 0);
@@ -368,6 +371,7 @@ function updateRow(node, vm) {
   node.cells.move.setAttribute('data-label',(WINDOWS.find(([k])=>k===state.window)?.[1]||'24h')+' change');node.cells.move.setAttribute('data-window',WINDOWS.find(([k])=>k===state.window)?.[1]||'24h');
   const capUnit=priceView.capUnit&&priceView.capUnit!=='USD'?priceView.capUnit:null;const capNumber=capUnit&&priceView.cap.endsWith(' '+capUnit)?priceView.cap.slice(0,-capUnit.length-1):priceView.cap;text(node.capNumber,capNumber);text(node.capUnit,capUnit?' '+capUnit:'');text(node.capKind,priceView.cap===DASH?'syncing':priceView.capKind==='FDV'?'FDV':'');
   node.cells.mcap.setAttribute('data-label',priceView.capKind);node.cells.mcap.dataset.unit=priceView.capUnit||'';node.cells.mcap.removeAttribute('data-refreshing');node.cells.mcap.dataset.capState=priceView.cap===DASH?'syncing':'known';
+  node.cells.mcap.title=vm.capLabel;
   text(node.buys, vm.buys); text(node.sells, vm.sells);
   node.cells.txns.setAttribute('aria-label', `${vm.buys === DASH ? 'Unknown' : vm.buys} buys, ${vm.sells === DASH ? 'unknown' : vm.sells} sells in 24 hours`);
   node.cells.makers.title=vm.row.makersKind==='unique_wallets'?'Unique wallets in the received 24h swaps.':'Provider buyer and seller activity; a wallet may be counted on both sides.';
@@ -489,7 +493,7 @@ async function refreshLiveRows() {
   if (liveRowsBusy || discoveryUpdates.held || document.hidden || root.hidden || state.wallet || (state.tab !== 'launches' && !state.data?.rows?.length)) return;
   liveRowsBusy = true;
   try {
-    const shown = visibleRows().map(v => v?.row || v).filter(r => (!r.launch || r.priceUsd == null) && DEX_CHAINS[r.chainId] && r.token?.address).slice(0, 60), byChain = new Map();
+    const shown = visibleRows().map(v => v?.row || v).filter(r => !isQhooksPriceAsset(r.chainId,r.token?.address)&&(!r.launch || r.priceUsd == null) && DEX_CHAINS[r.chainId] && r.token?.address).slice(0, 60), byChain = new Map();
     for (const r of shown) { const list = byChain.get(r.chainId) || []; if (list.length < 30) list.push(r); byChain.set(r.chainId, list); }
     let changed = false;
     for (const [chainId, rows] of byChain) {

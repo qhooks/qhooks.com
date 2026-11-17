@@ -24,8 +24,8 @@ export function createPulseController({makeLoader,onChange=()=>{},visible=()=>tr
   const next={...records[asked.tab],...update};
   if(holds.size&&records[asked.tab].data?.rows?.length)pending.set(asked.tab,next);else{records[asked.tab]=next;publish();}
  }});
- async function run(tab){
-  if(!active||holds.size||!visible()||flight)return false;
+ async function run(tab,explicit=false){
+  if(!active||holds.has('manual')||holds.size&&!explicit||!visible()||flight)return false;
   const mine=epoch;lastStart=now();request={tab,epoch:mine};
   const work=Promise.resolve().then(()=>loader.load(tab,context.chain,context.window,context.filters));flight=work;
   try{await work;return active&&epoch===mine;}catch{return false;}
@@ -46,7 +46,7 @@ export function createPulseController({makeLoader,onChange=()=>{},visible=()=>tr
   setActive(value){if(!value){active=false;stop();for(const id of columns)records[id]={...records[id],loading:false};return;}if(!active){active=true;void fill();}},
   setHold(reason,value){if(value)holds.add(reason);else holds.delete(reason);if(!holds.size&&pending.size){for(const [id,next]of pending)records[id]=next;pending.clear();}publish();if(!holds.size&&active)void fill();},
   refreshNext(){if(!active||holds.size||!visible()||flight||now()-lastStart<minRefreshMs)return Promise.resolve(false);const tab=mobile?selected:columns[cursor++%columns.length];return run(tab);},
-  refreshColumn:tab=>columns.includes(tab)?run(tab):Promise.resolve(false),
+  refreshColumn:tab=>columns.includes(tab)?run(tab,true):Promise.resolve(false),
   snapshot:()=>({records,paused:holds.size>0,manual:holds.has('manual'),mobile,selected,context}),
   dispose(){active=false;stop();holds.clear();},
  };

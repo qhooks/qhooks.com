@@ -47,7 +47,8 @@
     "b/polish-curve-20261117/terminal/qx-terminal.6QI4TQEF.mjs": "c47a1b11192f1cc4baa4bd5db0c25ef0dee12c5b6e08ba8459f3fe4b7769b96f",
     "b/qproof-g18-p0-after-polish-20261117/terminal/qx-terminal.RN7ZUWMV.mjs": "e871c63ace8d4ce05a1edb5c7f0f216d999b06358ac9066a9757eaabcf6ddcdd",
     "b/qproof-phase1-after-polish-20261117/terminal/qx-terminal.GPFB5TLB.mjs": "9edc98de81e72687c4f2f0292bb26a21e2d6b5c9ce0c78e4943cbbad8a9fb100",
-    "b/portfolio-speed-after-qproof-20261117/terminal/qx-terminal.MYIKD4OR.mjs": "3b8756209c1ca2313d56ec9538da5afb17a1cc9f56189ce8ab87433148e5e520"
+    "b/portfolio-speed-after-qproof-20261117/terminal/qx-terminal.MYIKD4OR.mjs": "3b8756209c1ca2313d56ec9538da5afb17a1cc9f56189ce8ab87433148e5e520",
+    "b/polish-batch2-20261117/terminal/qx-terminal.SNYZKVDI.mjs": "fae89506641ad0ca225224879f4cac8095e726943f02fdb5082e8ea8bf63ade2"
   },
   "classificationSourceReleaseId": "df15e38a-fdcd-4fd2-af2c-5bed0051158b",
   "additionalReview": ".ci/lwc-f1-review.json",

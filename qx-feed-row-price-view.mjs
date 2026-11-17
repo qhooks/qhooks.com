@@ -13,7 +13,7 @@ export function feedRowPriceView(vm,{now=Date.now(),refreshing=false}={}){
  const usd=usdState.usable&&positive(row.priceUsd),native=!usd&&usdState.usable&&quoteState.usable&&positive(quote?.price)&&typeof quote.unit==='string'&&!!quote.unit.trim();
  const available=!!(usd||native),clock=usd?usdState:native?quoteState:usdState,value=usd?row.priceUsd:native?quote.price:null,unit=usd?'USD':native?quote.unit:null;
  const delayed=!!refreshing||!!row.pricesRefreshing||clock.refreshing;
- const status=available?(delayed?'Refreshing · '+ago(clock.age):'Live · '+ago(clock.age)+' ago'):clock.at?'No price · '+ago(clock.age):'Price unavailable';
+ const status=available?(delayed?'Refreshing · '+ago(clock.age)+' ago':'Live · '+ago(clock.age)+' ago'):'Price syncing';
  const capKnown=positive(row.marketCapUsd)||positive(row.fdvUsd)||positive(quote?.mcap)&&typeof quote?.unit==='string'&&!!quote.unit;
  return {text:available?(usd?'$'+priceDigits(value):priceDigits(value)+' '+unit):'—',status,available,refreshing:delayed,at:clock.at,unit,
   title:available?(usd?'$'+String(value):String(value)+' '+unit)+' · observed '+new Date(clock.at).toISOString():clock.at?'Price unavailable · last observation '+new Date(clock.at).toISOString():'Price unavailable · observation time unknown',

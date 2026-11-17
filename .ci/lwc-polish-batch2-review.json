@@ -1,0 +1,28 @@
+{
+  "sourceRelease": "4b35375f-fb36-4652-a1dd-9981d2a0e614",
+  "sourceWorkerSha256": "f987abd970ece56a10a12d26da5ed1715700de6a1c35a6497409f617aefbd385",
+  "rootConditionalApproval": "Root task2026-11-17 permits exact new ApacheLWC pin only with unchanged accepted vendor/license and retained two known attributions; no proprietary input allowance",
+  "path": "b/polish-batch2-20261117/terminal/qx-terminal.SNYZKVDI.mjs",
+  "sha256": "fae89506641ad0ca225224879f4cac8095e726943f02fdb5082e8ea8bf63ade2",
+  "bytes": 410378,
+  "terminalManifest": {
+    "path": "work/qhooks-polish-batch2-after-ops-current-codex-candidate-20261117/lead/perf/terminal.manifest.json",
+    "sha256": "1c020a9f539dfd1a9df6e927beb01cbdc89ce2d22200facaf4147ce3602e034f",
+    "inputs": 343
+  },
+  "vendor": {
+    "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+    "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+  },
+  "license": {
+    "path": "vendor/lightweight-charts/LICENSE",
+    "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+  },
+  "attributionReferencesExactly": 2,
+  "attributions": [
+    "https://www.tradingview.com/?utm_medium=lwc-link&utm_campaign=lwc-chart",
+    "Charting by TradingView"
+  ],
+  "proprietaryInputs": 0,
+  "prior41PinsAndAllOtherFieldsExact": true
+}
