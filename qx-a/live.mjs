@@ -1,3 +1,4 @@
+import{publicReadFetch}from'../qx-public-read.mjs';
 // QHooks System A: the ecosystem feed behind the shell's live ribbon and its token search.
 // Real public data only:
 //   /api/terminal/feed?chain=all   every QHooks launch with its 24h numbers; a new trade shows up as a change in a
@@ -18,7 +19,7 @@ const mem = {};
 const cached = (k) => read(k) || mem[k] || null;
 const inflight = {};
 async function getJSON(url) {
-  const r = await fetch(url, { credentials: 'omit', headers: { accept: 'application/json' } });
+  const r = await publicReadFetch(url, { credentials: 'omit', headers: { accept: 'application/json' } });
   if (!r.ok) throw Error(String(r.status));
   return r.json();
 }

@@ -1,3 +1,4 @@
+import{publicReadFetch}from'../../qx-public-read.mjs';
 // QHooks System A: /android. Draws the app's real home screen inside the phone: the hook, the brand line, the live
 // QHOOKS price and the newest launches, from one read of the public launch feed. No polling: this is a download page.
 import { h, icon, RM, fmt, coin, brandLine, inView } from '/qx-a/components.mjs';
@@ -30,7 +31,7 @@ if (app && screen) {
   inView(screen, () => line.run(), .4);
   if (RM) line.rest();
 
-  fetch('/api/terminal/feed?chain=all', { cache: 'no-store', credentials: 'omit' }).then((r) => (r.ok ? r.json() : null)).then((body) => {
+  publicReadFetch('/api/terminal/feed?chain=all', { cache: 'no-store', credentials: 'omit' }).then((r) => (r.ok ? r.json() : null)).then((body) => {
     const list = Array.isArray(body?.markets) ? body.markets.filter((m) => m?.live) : [];
     const q = list.find((m) => String(m.token).toLowerCase() === QH)?.summary;
     if (num(q?.priceUsd) != null) { price.textContent = fmt.price(q.priceUsd); if (num(q.change24) != null) { change.textContent = fmt.pct(q.change24); change.className = cls(q.change24); } }

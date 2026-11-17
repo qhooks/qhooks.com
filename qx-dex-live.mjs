@@ -1,3 +1,4 @@
+import{publicReadFetch}from'./qx-public-read.mjs';
 // Live market numbers read by the visitor's own browser from DexScreener's public API (CORS *),
 // so the shared server egress rate limit never freezes a visible page. Read-only; no wallet calls.
 // The server copy stays the first paint and the fallback.
@@ -17,7 +18,7 @@ export async function fetchDexPairs(chainId, addresses, { fetcher = globalThis.f
   if (!chain || !list.length || now() < blockedUntil) return null;
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 6000);
   try {
-    const r = await fetcher(API + chain + '/' + list.join(','), { headers: { accept: 'application/json' }, signal: controller.signal, credentials: 'omit', referrerPolicy: 'no-referrer' });
+    const r = await publicReadFetch(API + chain + '/' + list.join(','), { headers: { accept: 'application/json' }, signal: controller.signal, credentials: 'omit', referrerPolicy: 'no-referrer' },{fetcher});
     if (r.status === 429 || r.status >= 500) { backoffMs = Math.min(backoffMs ? backoffMs * 2 : 30000, 240000); blockedUntil = now() + backoffMs; return null; }
     if (!r.ok) return null;
     const body = await r.json();

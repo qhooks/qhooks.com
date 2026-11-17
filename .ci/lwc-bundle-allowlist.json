@@ -40,7 +40,8 @@
     "b/portfolio-refresh-p0-20261117/terminal/qx-terminal.7AOHPLRW.mjs": "afd2444816336eaca466508f5f9e6e285a14a245304e071d203bae89deb88da4",
     "b/g3-copycat-20261117/terminal/qx-terminal.XVGP6ZPT.mjs": "923b39620547d838ffb0100fb68b3dc03f01e00acdf37c6932c13a09686a088f",
     "b/p6-after-g3-20261117/terminal/qx-terminal.4VE2U3AY.mjs": "47585c418eeadbb4e3611425d580fdb45a2b7313b5bfad95cd26830ad68a3b7a",
-    "b/agents81-after-p6-20261117/terminal/qx-terminal.SKGA24FY.mjs": "049f37671e3fe2c7094a00fbad1851af4e6d633adfad540ae76874af404a66f3"
+    "b/agents81-after-p6-20261117/terminal/qx-terminal.SKGA24FY.mjs": "049f37671e3fe2c7094a00fbad1851af4e6d633adfad540ae76874af404a66f3",
+    "b/slick-reads-c2-20261117/terminal/qx-terminal.HAIPEZSV.mjs": "30e506e7469b01f931e769038e1ab2f45fa425aa7cdb45fc8049a4060ded8b3e"
   },
   "classificationSourceReleaseId": "df15e38a-fdcd-4fd2-af2c-5bed0051158b",
   "additionalReview": ".ci/lwc-f1-review.json",

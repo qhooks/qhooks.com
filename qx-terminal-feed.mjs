@@ -1,4 +1,5 @@
 import{defaultTrendingMode,projectTrendingContracts,discoveryContractKey}from'./qx-discovery-groups.mjs';
+import{publicReadFetch}from'./qx-public-read.mjs';
 import{FUND_TOKENS,fundRow}from'./qx-fund-catalog.mjs';
 import {mountDiscoveryNext} from './qx-discovery-next.mjs';
 import {discoveryBadges} from './qx-discovery-badges.mjs';
@@ -161,7 +162,7 @@ root.append(
     el('span', { class: 'qxfd-hint' }, '↑ ↓ Navigate · Enter Open · / Search · Esc Tokens')),
 );
 main.prepend(root);
-const loaderOptions=changed=>({fetcher:(...args)=>fetch(...args),timeout:25000,serverTimeout:12000,browserDelay:600,storage,browser:opts=>browserFeed(opts),cacheRead:readCachedFeed,cacheWrite:writeCachedFeed,priceCache:discoveryPrices,changed});
+const loaderOptions=changed=>({fetcher:publicReadFetch,timeout:25000,serverTimeout:12000,browserDelay:600,storage,browser:opts=>browserFeed(opts),cacheRead:readCachedFeed,cacheWrite:writeCachedFeed,priceCache:discoveryPrices,changed});
 pulse=mountPulseBoard({host:panel,el,storage,makeLoader:({changed})=>createFeedLoader(loaderOptions(changed)),makeRow,updateRow,
  onTrending:()=>showTrending(),context:()=>({chain:state.chain,window:state.window,filters:state.filters,factsOf:evidenceMetrics}),visible:()=>!document.hidden&&!root.hidden&&pulseMode(),
  viewModels:rows=>sortRows(rows.filter(discoveryCandidate).map(r=>rowViewModel(r,{quick:api?.quickForChain?.(r.chainId)||api?.state.quick||{},window:state.window})),state.sort),
@@ -176,7 +177,7 @@ document.getElementById('qxt-head').prepend(back);
 let allLaunches = null;
 async function loadLaunches() {
   try {
-    const r = await fetch('/api/terminal/feed?chain=all', { cache: 'no-store' });
+    const r = await publicReadFetch('/api/terminal/feed?chain=all', { cache: 'no-store' });
     const j = r.ok ? await r.json() : null;
     if (Array.isArray(j?.markets)) { allLaunches = j.markets; renderTabs(); renderRows(); setTimeout(() => { void refreshLiveRows(); }, 500); }
   } catch {}
@@ -347,7 +348,7 @@ function skeleton() {
 // Founding Launchers (2026-11-10): a pinned row to /founding on the QHooks launches tab, and "Founding #N" by name.
 const founding = {status: null, left: 0, slots: new Map(), launches: []}, foundingTr = el('tr', {class: 'qxfd-founding'});
 async function loadFounding() {
-  try { const r = await fetch('/api/founding', {cache: 'no-store'}), d = r.ok ? await r.json() : null; if (!d) return;
+  try { const r = await publicReadFetch('/api/founding', {cache: 'no-store'}), d = r.ok ? await r.json() : null; if (!d) return;
     founding.status = d.status; founding.left = d.spotsLeft; founding.launches=(d.launches||[]).filter(l=>l.chainId==='solana'); founding.slots = new Map((d.launches || []).map(l => [l.chainId+':'+(l.chainId==='solana'?String(l.token):String(l.token).toLowerCase()), l.slot])); renderTabs(); renderRows(); } catch {}
 }
 function pinFounding() {

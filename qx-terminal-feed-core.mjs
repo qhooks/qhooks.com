@@ -218,9 +218,9 @@ export const hasTokenHash = hash => /^#(?:t|m|pool)=/.test(hash || '');
 // whichever answers first paints. Server rows stay first once both are in (dedupe by chain + token). The last good
 // list per view is kept on the device, so a reload paints it at once and a failed refresh keeps it ("Refreshing…").
 export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTimeout = 12000, browserDelay = 2500, browser = null, storage = null, minRows = 12, cacheRead = null, cacheWrite = null, priceCache = null }) {
-  let generation = 0, active = null;
+  let generation = 0, active = null, pendingKey = null, pendingPromise = null;
   const cache = new Map(),prices=priceCache||createFeedPriceCache({storage});
-  function cancel() { generation++; active?.abort(); active = null; }
+  function cancel() { generation++; active?.abort(); active = null; pendingKey = pendingPromise = null; }
   const usable = rows => (Array.isArray(rows) ? rows : []).filter(r => r && r.token && typeof r.token.address === 'string' && CHAINS.some(([id]) => id !== 'all' && id === String(r.chainId)));
   // A server-filtered list (discofeed) is the whole answer for its filters, however short: never top it up or re-floor it.
   const full = (data,chain,filters) => {
@@ -280,10 +280,16 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
       source: [server?.rows.length ? feedSourceLabel(server.source) : null, ...String(own.source || '').split(' · ')].filter((v, i, all) => v && !all.slice(0, i).some(p => p && p.includes(v))).join(' · ') || null,
       observedAt: serverFresh ? server.observedAt : own.observedAt, stale: serverFresh ? !!server.stale : false };
   }
-  async function load(tab, chain,window='h24', filters = {}) {
-    cancel();
-    const fkey = filterParams(filters).map(([k, v]) => k + '=' + v).join('&');
-    const mine = generation, key = tab + ':' + chain + ':' + window + (fkey ? ':' + fkey : ''), controller = new AbortController();
+  function load(tab, chain,window='h24', filters = {}) {
+    const fkey = filterParams(filters).map(([k, v]) => k + '=' + v).join('&'),key=tab+':'+chain+':'+window+(fkey?':'+fkey:'');
+    if(pendingKey===key&&pendingPromise)return pendingPromise;
+    cancel();const mine=generation,snapshot=Object.fromEntries(filterParams(filters));pendingKey=key;
+    const task=Promise.resolve().then(()=>runLoad(tab,chain,window,snapshot,mine,key));pendingPromise=task;
+    void task.finally(()=>{if(pendingPromise===task){pendingKey=pendingPromise=null;}}).catch(()=>{});return task;
+  }
+  async function runLoad(tab,chain,window,filters,mine,key) {
+    if(mine!==generation)return;
+    const controller = new AbortController();
     active = controller;
     const retained = prices.reconcile(cache.get(key) || cacheRead?.(storage, key) || null);
     changed({ key, loading: true, data: retained, error: null });

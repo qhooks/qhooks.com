@@ -1,5 +1,7 @@
 import{createResolvedTokenLoader,validTokenTarget,hasTokenLinkIntent,resolutionError}from'./qx-token-resolution.mjs';
 import{createTerminalResolutionView}from'./qx-terminal-resolution-view.mjs';
+import {readMarket} from '/qx-market-transport.mjs';
+import{publicReadFetch}from'./qx-public-read.mjs';
 import{fundFor}from'./qx-fund-catalog.mjs';
 import {discoveryEvidence,evidenceTime} from './qx-discovery-evidence.mjs';
 import {discoveryBadges} from './qx-discovery-badges.mjs';
@@ -344,7 +346,7 @@ function feedRows() {
 // Founding Launchers (2026-11-10): a pinned row to /founding while spots are open, and a "Founding #N" badge.
 const founding = {status: null, left: 0, rows: new Map(), launches: []};
 async function loadFounding() {
-  try { const r = await fetch('/api/founding', {cache: 'no-store'}), d = r.ok ? await r.json() : null; if (!d) return;
+  try { const r = await publicReadFetch('/api/founding', {cache: 'no-store'}), d = r.ok ? await r.json() : null; if (!d) return;
     founding.status = d.status; founding.left = d.spotsLeft; founding.launches=(d.launches||[]).filter(l=>l.chainId==='solana'); founding.rows = new Map((d.launches || []).map(l => [l.chainId + ':' + l.token, l.slot])); renderFeed(); } catch {}
 }
 function foundingPin() {
@@ -445,7 +447,7 @@ loadFounding(); setInterval(loadFounding, 300000);
 async function loadFeed() {
   const chain=state.chain,revision=++feedRevision;
   try {
-    const r = await fetch('/api/terminal/feed?chain=' + chain, { cache: 'no-store' });
+    const r = await publicReadFetch('/api/terminal/feed?chain=' + chain, { cache: 'no-store' });
     const [j, trust] = await Promise.all([r.ok ? r.json() : null, trustList()]);
     if(revision!==feedRevision||chain!==state.chain)return;state.trust=trust;
     if (j) { state.markets = j.markets || [];for(const m of state.markets)if(!communityFollowing.persistent()&&state.watch.has(keyOf(m))&&!workspaceMemory.has({kind:'launch',chainId:m.chainId,controller:m.controller}))workspaceMemory.watch({kind:'launch',chainId:m.chainId,token:m.token,controller:m.controller,symbol:m.symbol,name:m.name},true);renderFeed(); for (const fn of marketListeners) { try { fn(state.markets); } catch {} } }
@@ -908,10 +910,9 @@ async function loadMarket({signal,strict=false}={}) {
   if(state.sel.ext)return loadExternal({signal,strict});
   const mine=mseq,{chainId,controller}=state.sel;
   try {
-    const r=await fetch(`/api/terminal/market/${chainId}/${controller}?tf=${state.tf}`,{cache:'no-store',signal});
+    const observation=await readMarket(`/api/terminal/market/${chainId}/${controller}?tf=${state.tf}`,{cache:'no-store',signal});
     if(mine!==mseq)return false;
-    if(!r.ok)throw Error(r.status===404?'This launch is not listed yet.':'Refreshing market data…');
-    const data=await fillNativeUsd(await r.json());if(mine!==mseq)return false;applyCachedPoolPrice(data);
+    const data=await fillNativeUsd(observation);if(mine!==mseq)return false;applyCachedPoolPrice(data);
     const selected=selectedContext();if(String(data?.meta?.chainId)!==chainId||data.meta?.controller?.toLowerCase()!==controller||(selected?.token&&data.meta?.token?.toLowerCase()!==selected.token.toLowerCase()))throw Error('Market data does not match the selected launch. Refresh to retry.');
     // Index catching up (> 300 blocks, or no sync for 3 min): live DexScreener price, read at most every 20 s.
     if(ownIndexBehind(data)){data.providerLive=true;const hit=cachedPair(data);if(hit)applyProviderPrice(data,hit);

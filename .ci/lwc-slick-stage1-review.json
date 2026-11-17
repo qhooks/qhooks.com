@@ -1,0 +1,26 @@
+{
+  "status": "ROOT_CONDITIONAL_EXACT_35TH_ARTIFACT_APPROVAL_CONDITIONS_PROVEN",
+  "sourceRelease": "130b3bfc-d6e2-47e8-94aa-ef308b06bb97",
+  "sourceWorkerSha256": "b5a15fcdd6b7c5505130c68851c0d883adfd3b2f94d2347cd6d77460d020c997",
+  "path": "b/slick-reads-c2-20261117/terminal/qx-terminal.HAIPEZSV.mjs",
+  "sha256": "30e506e7469b01f931e769038e1ab2f45fa425aa7cdb45fc8049a4060ded8b3e",
+  "bytes": 437596,
+  "graphInput": {
+    "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+    "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+  },
+  "existingApacheLicense": {
+    "path": "vendor/lightweight-charts/LICENSE",
+    "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+  },
+  "reviewedReferences": [
+    "https://www.tradingview.com/?utm_medium=lwc-link&utm_campaign=lwc-chart",
+    "Charting by TradingView"
+  ],
+  "referencesExactly": 2,
+  "closedAdvancedChartsInputs": 0,
+  "previous34AllowancesExact": true,
+  "allOtherPolicyFieldsExact": true,
+  "authority": "Root explicitly authorized the sole proven35th equivalent terminal artifact on actualLIVE130b3bfc. Same licensed source/license, two known attribution strings, zero proprietary inputs; no wildcard or guard changes.",
+  "actualNetworkCalls": 0
+}

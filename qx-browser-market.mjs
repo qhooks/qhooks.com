@@ -1,3 +1,4 @@
+import{publicReadFetch}from'./qx-public-read.mjs';
 import {priceObservation} from './qx-price-state.mjs';
 import {discoveryCandidate,rankDiscovery} from './qx-discovery-rank.mjs';
 // Token lists and search read by the visitor's own browser (2026-11-09). The server's copies of GeckoTerminal and
@@ -55,7 +56,7 @@ async function getJson(provider, url, { fetcher, now, signal, ttl = 45000 }) {
   if (signal?.aborted) return null;
   signal?.addEventListener?.('abort', abort, { once: true });
   try {
-    const r = await fetcher(url, { headers: { accept: 'application/json' }, signal: controller.signal, credentials: 'omit', referrerPolicy: 'no-referrer' });
+    const r = await publicReadFetch(url, { headers: { accept: 'application/json' }, signal: controller.signal, credentials: 'omit', referrerPolicy: 'no-referrer' },{fetcher});
     if (r.status === 429 || r.status >= 500) { backoff[provider] = Math.min(backoff[provider] ? backoff[provider] * 2 : 20000, 180000); blocked[provider] = now() + backoff[provider]; return lastGood(); }
     if (!r.ok) return lastGood();
     const body = await r.json();

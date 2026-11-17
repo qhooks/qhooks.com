@@ -1,3 +1,4 @@
+import{publicReadFetch}from'../../qx-public-read.mjs';
 import{homeTradeLink}from'/qx-home-trade-link.mjs';
 import{assetPriceFields,priceObservation}from'/qx-price-state.mjs';
 // QHooks System A: the home page runtime (2026-11-12, the scroll-driven 3D landing). One fixed WebGL stage behind the
@@ -104,7 +105,7 @@ if (!document.body.classList.contains('ux-home-simple') && glCanvas && !RM && !n
 /* ================= data helpers ================= */
 async function getJSON(url, ms = 12000) {
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms);
-  try { const r = await fetch(url, { cache: 'no-store', credentials: 'omit', signal: ctl.signal }); if (!r.ok) throw Error(String(r.status)); return await r.json(); }
+  try { const r = await publicReadFetch(url, { cache: 'no-store', credentials: 'omit', signal: ctl.signal }); if (!r.ok) throw Error(String(r.status)); return await r.json(); }
   finally { clearTimeout(t); }
 }
 // Runs fn now (when the tab is visible) and then every ms while it stays visible. A hidden tab makes no requests.

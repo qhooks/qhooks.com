@@ -1,3 +1,4 @@
+import{publicReadFetch}from'./qx-public-read.mjs';
 // Small read-only views over the terminal feed and the existing market directory.
 import {CHAINS,money,percent} from './qx-terminal-feed-core.mjs';
 import {officialLogo} from './qx-official.mjs';
@@ -50,7 +51,7 @@ export function newestLaunch(body){
  return row?{symbol:row.symbol||row.tokenName||'Token',name:row.tokenName||'',href:'/terminal#m='+row.chainId+':'+row.controller}:null;
 }
 export async function readPublicJSON(url,{fetcher=globalThis.fetch,signal}={}){
- const response=await fetcher(url,{cache:'no-store',credentials:'omit',signal});
+ const response=await publicReadFetch(url,{cache:'no-store',credentials:'omit',signal},{fetcher});
  if(!response.ok)throw Error('Public data unavailable');return response.json();
 }
 export function tokenRows(doc,rows,{className='qx-live-token',logos=false}={}){
