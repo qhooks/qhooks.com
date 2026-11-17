@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "4d81204d-c959-46a5-ab6f-128e12ad0bfc",
+  "releaseId": "6d328db5-dc81-4a02-a7d6-7a384d4c7be7",
   "sourceWorkerSha256": "bd8a9998ca3093be8f60a821265ad07ad2c0d595ed1ac0682cb09d0ba4327aeb",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
@@ -68770,8 +68770,8 @@
       "bytes": 153825
     },
     "qhooks-token.html": {
-      "sha256": "600b8531f7e0afba474ef3604b140905648e71710a79b23ab8e6f9a6852f39de",
-      "bytes": 45027
+      "sha256": "42b42956bbe9391a6670cef9a10b99f1f54f4ff758d6c599a35cf31b0411805b",
+      "bytes": 45938
     },
     "qlocks-setup.html": {
       "sha256": "d4d5a6156fb64896be266ced72bbb3fa6fb5ddff9954a65b1a1be9b09b819d7d",
@@ -73248,9 +73248,25 @@
     "x402-test.html": {
       "sha256": "c12280b145864dc27f5a108ac0cec73e73f291c9d52dba5b1b062565cb0c44fd",
       "bytes": 6499
+    },
+    "qx-lock-accounting-core.mjs": {
+      "sha256": "ee66b386c5be5d892f8d2a89a9e0e5b1b2752e6a1c2d40dbcb26ae02fa4c90e2",
+      "bytes": 5852
+    },
+    "qx-lock-accounting-read.mjs": {
+      "sha256": "47758b8591c1e3095ce2f4d4c5dd00552341f37c09c7252838cb6ff266ab052f",
+      "bytes": 4175
+    },
+    "qx-lock-accounting.css": {
+      "sha256": "93066faec7ae552e7a2daa8cdb21728e9465bf7a245c86d7e6c9c8bba62f750f",
+      "bytes": 3455
+    },
+    "qx-lock-accounting.mjs": {
+      "sha256": "e3de73c3320bad3e105ee4ee9b106c2a68109f5765068b67ac19906b5c8ffdc7",
+      "bytes": 5175
     }
   },
-  "contentDigest": "8ce823e2e7e4ac50fb7d32ede5312a6f8658b5d080c7cdb7f2d59e386b2e0948",
+  "contentDigest": "ab574f3a6c533241a25ef1226ec8ddcf8ae9c427f82ff9170cd98fcc9d1c1f21",
   "provenance": "Accepted G3 LIVE release public/ static source. Incremental hash map composed from published20e8 plus exactly32changed/new public files; Worker-generated HTTP bodies have separate root served-response acceptance.",
   "incrementalComposition": {
     "baseRelease": "20e87d90-40ca-4227-9fb1-e3c5f4ba584a",
