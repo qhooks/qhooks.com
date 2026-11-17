@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "releaseId": "a9a5cb60-bdb3-4587-bb7f-e553e2b5b813",
-  "sourceWorkerSha256": "19e217eac8c95c8eb032b271d58cc99aeb6dda45ff6752b5229806fa4ed31ced",
+  "releaseId": "02a0b95d-75cc-4285-9e77-611285d7e213",
+  "sourceWorkerSha256": "904e73dea66b6df647ca7f21c5027361d1e38bcea25ed0f58239e1b7a00e3d2a",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
