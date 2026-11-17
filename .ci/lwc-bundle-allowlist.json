@@ -36,7 +36,8 @@
     "b/terminal/qx-terminal.7OBMQYRS.mjs": "3aa066e96f8d55e31e8232f1402da092bc95c2bb6ccc8b4daea9ae60d7898dca",
     "b/terminal/qx-terminal.IHHK7G2D.mjs": "f8d46823b2ba13227e3e25400d16f0a8a691393cfd8bf18d77ad96072fd05dba",
     "b/terminal/qx-terminal.JOJS7YXE.mjs": "79e1d71757423baeacd7178554d08334cf5c8a7bb98dafb061b45fcbcb343448",
-    "b/terminal/qx-terminal.FHRZTV2Q.mjs": "659cdeea5831266ccc3868748f11a0e74b6bff305030ea8a26ac3eb286c22f7a"
+    "b/terminal/qx-terminal.FHRZTV2Q.mjs": "659cdeea5831266ccc3868748f11a0e74b6bff305030ea8a26ac3eb286c22f7a",
+    "b/portfolio-refresh-p0-20261117/terminal/qx-terminal.7AOHPLRW.mjs": "afd2444816336eaca466508f5f9e6e285a14a245304e071d203bae89deb88da4"
   },
   "classificationSourceReleaseId": "df15e38a-fdcd-4fd2-af2c-5bed0051158b",
   "additionalReview": ".ci/lwc-f1-review.json",

@@ -6,20 +6,22 @@ const registry=Symbol.for('qhooks.portfolio.read.v1'),copy=x=>structuredClone(x)
 const known=n=>typeof n==='number'&&Number.isFinite(n),address=(family,w)=>family==='solana'?String(w||''):String(w||'').toLowerCase();
 const validOwner=(family,w)=>family==='solana'?/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(w):/^0x[0-9a-f]{40}$/.test(w);
 export function chainReadState(c){
- const assets=[c.native,...(c.tokens||[])],missing=assets.some(a=>!a||a.balance==null&&a.units==null);
- return {balances:missing||c.error==='balances_unavailable'||!!c.balancesRefreshing,prices:assets.some(a=>(Number(a.units)>0||Number(a.balance)>0)&&!known(a.valueUsd))||!!c.pricesRefreshing};
+ const assets=[c.native,...(c.tokens||[])],missing=assets.some(a=>!a||a.balance==null&&a.units==null||a.balanceRefreshing);
+ return {balances:missing||c.error==='balances_unavailable'||!!c.balancesRefreshing,positions:!!c.positionsRefreshing||c.source==='index-only',prices:assets.some(a=>(Number(a.units)>0||Number(a.balance)>0)&&!known(a.valueUsd))||!!c.pricesRefreshing};
 }
-export function portfolioNeedsRefresh(report){return !!report?.refreshing||(report?.chains||[]).some(c=>chainReadState(c).balances||[c.native,...(c.tokens||[]).filter(t=>!t.spam)].some(a=>(Number(a?.units)>0||Number(a?.balance)>0)&&!known(a?.valueUsd)));}
+export function portfolioNeedsRefresh(report){return !!report?.refreshing||(report?.chains||[]).some(c=>{const s=chainReadState(c);return s.balances||s.positions||[c.native,...(c.tokens||[]).filter(t=>!t.spam)].some(a=>(Number(a?.units)>0||Number(a?.balance)>0)&&!known(a?.valueUsd));});}
 function valid(report,family,w){return report?.version===1&&address(family,report.address)===w&&Array.isArray(report.chains)&&report.totals&&report.chains.every(c=>c&&c.native&&Array.isArray(c.tokens))&&new Set(report.chains.map(c=>String(c.chainId))).size===report.chains.length;}
 function priced(asset,at,now,chainId){
  return assetPriceFields(asset,{chainId,token:asset.address,at,now});
 }
+// Acquisition time is distinct from a cache write or a later partial report.
+function balanceClock(asset,at){return {...asset,balanceAt:Object.hasOwn(asset,'balanceAt')?asset.balanceAt:asset.balance!=null||asset.units!=null?at??null:null};}
 function assetMerge(input,old,now,at,oldAt,chainId){
- const next=priced(input,at,now,chainId),prior=old?priced(old,oldAt,now,chainId):null;
+ const next=balanceClock(priced(input,at,now,chainId),at),prior=old?balanceClock(priced(old,oldAt,now,chainId),oldAt):null;
  if(!prior)return next;
  if(next.balance==null&&next.units==null)return {...prior,...next,balance:prior.balance,units:prior.units,
   priceUsd:known(next.priceUsd)?next.priceUsd:prior.priceUsd,priceAt:known(next.priceUsd)?next.priceAt:prior.priceAt,
-  valueUsd:known(next.priceUsd)&&known(prior.units)?next.priceUsd*prior.units:prior.valueUsd,balanceRefreshing:true,
+  valueUsd:known(next.priceUsd)&&known(prior.units)?next.priceUsd*prior.units:prior.valueUsd,balanceRefreshing:true,balanceAt:prior.balanceAt,
   pricesRefreshing:!!next.pricesRefreshing||!!prior.pricesRefreshing};
  if(!known(next.priceUsd)&&known(prior.priceUsd)){
   const units=known(next.units)?next.units:next.balance!=null&&Number.isInteger(next.decimals)?Number(next.balance)/10**next.decimals:null;
@@ -28,18 +30,39 @@ function assetMerge(input,old,now,at,oldAt,chainId){
  return next;
 }
 export function reconcilePortfolio(report,previous,now=known(report?.at)?report.at:Date.now()){
+ if(previous&&address(/^0x/i.test(report.address)?'evm':'solana',report.address)!==address(/^0x/i.test(report.address)?'evm':'solana',previous.address))previous=null;
  const next=copy(report),prior=new Map((previous?.chains||[]).map(c=>[String(c.chainId),c]));
  next.chains=next.chains.map(c=>{
   const old=prior.get(String(c.chainId));prior.delete(String(c.chainId));
-  const failed=chainReadState(c).balances,byToken=new Map((old?.tokens||[]).map(t=>[(String(c.chainId)==='solana'?String(t.address):String(t.address).toLowerCase()),t]));
+  const state=chainReadState(c),failed=state.balances,byToken=new Map((old?.tokens||[]).map(t=>[(String(c.chainId)==='solana'?String(t.address):String(t.address).toLowerCase()),t]));
   const tokens=c.tokens.map(t=>{const key=String(c.chainId)==='solana'?String(t.address):String(t.address).toLowerCase(),oldToken=byToken.get(key);byToken.delete(key);return assetMerge(t,oldToken,now,report.at,previous?.at,c.chainId);});
-  if(failed)for(const t of byToken.values())tokens.push({...priced(t,previous?.at,now,c.chainId),balanceRefreshing:true});
+  if(failed||state.positions)for(const t of byToken.values())tokens.push({...balanceClock(priced(t,previous?.at,now,c.chainId),previous?.at),balanceRefreshing:true});
   const native=assetMerge(c.native,old?.native,now,report.at,previous?.at,c.chainId);
-  return {...c,native,tokens,balancesRefreshing:failed,pricesRefreshing:!!native.pricesRefreshing||tokens.some(t=>t.pricesRefreshing)};
+  return {...c,native,tokens,balancesRefreshing:failed||!!native.balanceRefreshing||tokens.some(t=>t.balanceRefreshing),pricesRefreshing:!!native.pricesRefreshing||tokens.some(t=>t.pricesRefreshing)};
  });
- for(const c of prior.values())next.chains.push({...c,native:priced(c.native,previous?.at,now,c.chainId),tokens:c.tokens.map(t=>priced(t,previous?.at,now,c.chainId)),balancesRefreshing:true,error:c.error||'balances_unavailable'});
- next.partial=!!report.partial||next.chains.some(c=>{const s=chainReadState(c);return s.balances||s.prices;});
+ for(const c of prior.values())next.chains.push({...c,native:{...balanceClock(priced(c.native,previous?.at,now,c.chainId),previous?.at),balanceRefreshing:true},tokens:c.tokens.map(t=>({...balanceClock(priced(t,previous?.at,now,c.chainId),previous?.at),balanceRefreshing:true})),balancesRefreshing:true,error:c.error||'balances_unavailable'});
+ next.partial=!!report.partial||next.chains.some(c=>{const s=chainReadState(c);return s.balances||s.positions||s.prices;});
  allocatePortfolioBasis(next);next.totals=portfolioTotals(next.chains);return next;
+}
+// Local cost/price completion is a patch, never a new balance enumeration. A
+// captured callback cannot remove assets, undo a zero balance, or renew its age.
+function derivedReport(report,previous){
+ if(!previous)return report;
+ const next=copy(previous),chains=new Map(report.chains.map(c=>[String(c.chainId),c]));
+ const costs=['cost','costState'],prices=['priceUsd','priceAt','priceSource','pricePoolId','pricesRefreshing','valueUsd','liquidityUsd','priceLabel','spam','spamReason','venue'];
+ const merge=(asset,patch)=>{
+  if(!patch||asset.balance!==patch.balance||asset.units!==patch.units)return asset;
+  // Cost PnL is calculated at the patch price too. Reject the whole stale
+  // valuation patch; keeping only the newer displayed price would mix clocks.
+  if(known(asset.priceUsd)&&(!known(patch.priceUsd)||known(asset.priceAt)&&(!known(patch.priceAt)||patch.priceAt<asset.priceAt)))return asset;
+  const fields=costs.concat(prices),out={...asset};
+  for(const key of fields)if(Object.hasOwn(patch,key))out[key]=copy(patch[key]);return out;
+ };
+ for(const chain of next.chains){const patch=chains.get(String(chain.chainId));if(!patch)continue;
+  const key=t=>String(chain.chainId)==='solana'?String(t.address):String(t.address).toLowerCase(),tokens=new Map(patch.tokens.map(t=>[key(t),t]));
+  chain.native=merge(chain.native,patch.native);chain.tokens=chain.tokens.map(t=>merge(t,tokens.get(key(t))));
+ }
+ return next;
 }
 export function createPortfolioReader({fetchImpl=globalThis.fetch,storage,now=Date.now,eventTarget=globalThis,timeoutMs=20000}={}){
  const reports=new Map(),flights=new Map(),listeners=new Set();
@@ -52,7 +75,8 @@ export function createPortfolioReader({fetchImpl=globalThis.fetch,storage,now=Da
  function accept(family,owner,report,{derived=false,refreshing=false}={}){
   const w=address(family,owner);if(!valid(report,family,w))throw Error('Invalid portfolio report');
   const prior=cached(family,w);if(known(prior?.report?.at)&&known(report.at)&&report.at<prior.report.at)return copy(prior.report);
-  const next=reconcilePortfolio(report,derived?null:prior?.report,now()),item={at:derived&&prior?prior.at:now(),report:{...next,refreshing}};
+  if(derived&&prior&&report.at!==prior.report.at)return copy(prior.report);
+  const next=reconcilePortfolio(derived?derivedReport(report,prior?.report):report,derived?null:prior?.report,now()),item={at:derived&&prior?prior.at:now(),report:{...next,refreshing:derived&&prior?!!prior.report.refreshing||refreshing:refreshing}};
   reports.set(key(family,w),copy(item));try{storage?.setItem(KEY+key(family,w),JSON.stringify(item));}catch{}
   const detail={family,owner:w,report:copy(item.report)};
   for(const listener of listeners)try{listener(detail);}catch{}

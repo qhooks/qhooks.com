@@ -1,0 +1,1 @@
+var t=Object.freeze(["8453:0xe319336506857ed9293eb06014d79026c9aedf13","99901:0x6d082feb98559525f3999751c3289f398b33cbc7","4663:0xc8d3d74eeec942d1a11d8f6e19de5e75e0c12951"]),d=Object.freeze(["4663:0xb844df3293222fb1460be1c7ce753eede2d1fcf5"]),f=new Set([...t,...d]);function n(e,c){return f.has(String(e)+":"+String(c||"").toLowerCase())}export{n as a};
