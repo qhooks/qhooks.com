@@ -1,18 +1,23 @@
 import {COMPETE_BOARDS,WEEK,weekId} from './compete-core.mjs';
-export const PRIZE_COPY='Prizes in USD, paid in QHOOKS locked 30 days';
+import {REWARDS_BUDGET_ID,FIXED_BOARD_QHOOKS} from './rewards-budget.mjs';
+export const PRIZE_COPY='Fixed QHOOKS allocations. QDrops claims have no post-claim token lock.';
 export const PRIZE_POOL=Object.freeze({chainId:'4663',token:'0x20429af7ca3b0ce4d99edbaa0693f26c5df05195',poolId:'0x007d77e43164a5d7d1251457f47f556c2be7f865942c7ec7a91c3cbbf50e53fe',quote:'ETH',decimals:18});
 export const QUOTE_MAX_AGE=300000;
 const E18=10n**18n,E36=E18*E18;
-const cents=v=>typeof v==='number'&&Number.isFinite(v)&&v>0&&v<=100000&&Math.abs(v*100-Math.round(v*100))<1e-7?Math.round(v*100):null;
-// Confirmed weekly schedules stay pinned. Proposed amounts can be replaced by approved runtime config.
+// USD configuration is deliberately rejected; it cannot approve the replacement plan.
 export function prizeSchedule(env={}){
- const fallback={version:1,confirmed:false,currency:'USD',lockDays:30,boards:{},source:'configuration_required'};
- if(!env.QHOOKS_COMPETE_PRIZE_USD)return {...fallback,invalid:true};
- try{const raw=JSON.parse(env.QHOOKS_COMPETE_PRIZE_USD);if(Object.keys(raw).length!==3||!COMPETE_BOARDS.every(b=>Array.isArray(raw[b.id])&&raw[b.id].length===3&&raw[b.id].every(v=>cents(v)!==null)))throw Error();
-  return {...fallback,confirmed:env.QHOOKS_COMPETE_PRIZES_CONFIRMED==='on',source:'configured',boards:Object.fromEntries(COMPETE_BOARDS.map(b=>[b.id,raw[b.id].map(cents)]))};
- }catch{return {...fallback,invalid:true,source:'invalid_configuration',boards:{}};}
+ const fallback={version:2,policyId:REWARDS_BUDGET_ID,budgetId:REWARDS_BUDGET_ID,confirmed:false,currency:'QHOOKS',decimals:18,lockDays:0,lockSupported:false,distributionMode:'qdrops',lockStatus:'unsupported_in_qdrops',boards:{},source:'configuration_required'};
+ if(env.QHOOKS_COMPETE_PRIZE_USD)return {...fallback,invalid:true,source:'superseded_usd_configuration'};
+ if(!env.QHOOKS_COMPETE_PRIZE_QHOOKS)return {...fallback,invalid:true};
+ try{const raw=JSON.parse(env.QHOOKS_COMPETE_PRIZE_QHOOKS);if(!raw||Object.keys(raw).length!==3||!COMPETE_BOARDS.every(b=>Array.isArray(raw[b.id])&&raw[b.id].length===3&&raw[b.id].every((v,i)=>v===FIXED_BOARD_QHOOKS[i])))throw Error();
+  return {...fallback,confirmed:env.QHOOKS_COMPETE_PRIZES_CONFIRMED==='on',source:'configured_fixed_qhooks',boards:Object.fromEntries(COMPETE_BOARDS.map(b=>[b.id,[...raw[b.id]]]))};
+ }catch{return {...fallback,invalid:true,source:'invalid_configuration'};}
 }
-export function validSchedule(s){return s?.version===1&&s.currency==='USD'&&s.lockDays===30&&!s.invalid&&COMPETE_BOARDS.every(b=>s.boards?.[b.id]?.length===3&&s.boards[b.id].every(c=>Number.isSafeInteger(c)&&c>0&&c<=10000000));}
+export function validSchedule(s){return s?.version===2&&s.policyId===REWARDS_BUDGET_ID&&s.budgetId===REWARDS_BUDGET_ID&&s.currency==='QHOOKS'&&s.decimals===18&&s.lockDays===0&&s.lockSupported===false&&s.distributionMode==='qdrops'&&s.lockStatus==='unsupported_in_qdrops'&&!s.invalid&&COMPETE_BOARDS.every(b=>Array.isArray(s.boards?.[b.id])&&s.boards[b.id].length===3&&s.boards[b.id].every((n,i)=>n===FIXED_BOARD_QHOOKS[i]));}
+export function rankQhooksRaw(schedule,board,rank,{share=1}={}){
+ if(!validSchedule(schedule)||!COMPETE_BOARDS.some(b=>b.id===board)||!Number.isInteger(rank)||rank<1||rank>3||!Number.isSafeInteger(share)||share<1)return null;
+ return (BigInt(schedule.boards[board][rank-1])*E18/BigInt(share)).toString();
+}
 // Preserve decimal/scientific notation from stored REAL values without floating-point summation.
 export function decimal18(value){
  if(typeof value!=='number'||!Number.isFinite(value)||value<=0)throw Error('invalid_price');
@@ -45,8 +50,7 @@ export function prizeQhooksRaw(usdCents,twap,{from=twap?.from,to=twap?.to,share=
  // Divide the USD rank prize equally first; only the final atomic-token result is floored.
  return (BigInt(usdCents)*E18*E36*BigInt(twap.durationMs)/(100n*BigInt(share)*BigInt(twap.areaUsdE36Ms))).toString();
 }
-export function prizeView(plan,board,{now=Date.now()}={}){
- const schedule=plan?.schedule,twap=plan?.twap,from=plan?.from,to=plan?.to;
- const usable=validSchedule(schedule)&&validPrizeTwap(twap,{from,to})&&(twap.fullWeek||Number.isSafeInteger(plan.computedAt)&&now>=plan.computedAt&&now-plan.computedAt<=75*60000);
- return {schedule,twap,usable,ranks:(schedule?.boards?.[board]||[]).map((usdCents,i)=>({rank:i+1,usdCents,qhooksRaw:usable?prizeQhooksRaw(usdCents,twap):null}))};
+export function prizeView(plan,board){
+ const schedule=plan?.schedule,usable=validSchedule(schedule);
+ return {schedule,usable,twap:null,ranks:usable?schedule.boards[board]?.map((qhooks,i)=>({rank:i+1,qhooks,qhooksRaw:rankQhooksRaw(schedule,board,i+1)}))||[]:[]};
 }

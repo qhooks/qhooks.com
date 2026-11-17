@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "policyId": "qhooks-fixed-qhooks-20261117-v2",
+  "weekStart": "2026-11-16",
+  "chainId": "4663",
+  "safe": "0x2b1cf7c4071a98a59709166dfa73c7acb7e83e71",
+  "token": "0x20429af7ca3b0ce4d99edbaa0693f26c5df05195",
+  "drops": "0x89eb481a2ea221e62647c113c88de67e7b9a5a70",
+  "amountRaw": "750000000000000000000000",
+  "safeNonce": "17",
+  "fundedBeforeRaw": "1000000000000000000000000",
+  "source": "safe-existing-balance",
+  "lockFundingStatus": "not-collected",
+  "sourceBlockNumber": "116675281",
+  "sourceBlockHash": "0xc4d28f7256b3732d0d33041843c70274eb622e4cdf3c18fda6d503c4b3400c99",
+  "createdAt": "2026-11-17T15:15:22.120Z",
+  "allocations": {
+    "competitions": "300000000000000000000000",
+    "holdersAndStakers": "250000000000000000000000",
+    "foundingLaunchersReserve": "100000000000000000000000",
+    "agents": "100000000000000000000000"
+  }
+}

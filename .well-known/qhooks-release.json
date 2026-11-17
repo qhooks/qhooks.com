@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "releaseId": "4b35375f-fb36-4652-a1dd-9981d2a0e614",
-  "sourceWorkerSha256": "f987abd970ece56a10a12d26da5ed1715700de6a1c35a6497409f617aefbd385",
+  "releaseId": "4754a3c6-a6dc-4fae-848a-f3f4b6366435",
+  "sourceWorkerSha256": "5310e0a55074feaa032fdabe76d68cfee731f95d7437a723210cb61f448ab098",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -120630,32 +120630,32 @@
       "bytes": 1484
     },
     "compete-core.mjs": {
-      "sha256": "fe3343c799774001711a5759d50a9cbd1462dc13dae9824bc360daa7c8b35f54",
-      "bytes": 4213
+      "sha256": "4061f23f98a5e30a7eabfc1eab7900c13f4291efb314ebb0e8e4f302980d57dc",
+      "bytes": 4387
     },
     "compete-hero.mjs": {
-      "sha256": "c728a0cdcd9da93f6919550f0c6526974efbe26ba66044f5912f0acf51c4a2dd",
-      "bytes": 2364
+      "sha256": "a96b8d9a1129f4eb9aaaf091ae97ab35561eadc7b388803d0003e02d13fc7419",
+      "bytes": 2533
     },
     "compete-payout.mjs": {
-      "sha256": "8eac7e69d8a792dd0dad50525fabd7e9d7a54eb3ef7892e9919340b1fb423004",
-      "bytes": 3430
+      "sha256": "3de525aaf001ec2955fe88a4a2b72a9323973238aa527a4ebbfde7a5084707a5",
+      "bytes": 4093
     },
     "compete-perps-copy.mjs": {
       "sha256": "53f5e9c45b41af9d192611fd1be161bbcf426096456f7f143674ec8f8585ecf1",
       "bytes": 522
     },
     "compete-prize-card.mjs": {
-      "sha256": "9282cd6972d6c49e4d8692bd5808de8acf0527f7e31334b54975216986460d07",
-      "bytes": 1804
+      "sha256": "75a0ec5068244644c4141f867568b601a718d6c198d6c3a0eb2e6ca876593186",
+      "bytes": 1615
     },
     "compete-prizes.mjs": {
-      "sha256": "55306a9c14e28e697ba7df7563a4031a404cb5128f343c03dee3c50ed869e1f0",
-      "bytes": 5216
+      "sha256": "a57f9dfcbe79a1da56d8ada35468c2f13f65f04917dfcc5d6308a7f8ff389269",
+      "bytes": 5733
     },
     "compete-season-core.mjs": {
-      "sha256": "35abfec23eed43c2c1a4eb8abf469aa3fa0774de2110c2779ee17ca807920cc3",
-      "bytes": 679
+      "sha256": "f8079b31ac38422611d286ce15a09a9318ca6503a6f09ccfa077a92321746d1e",
+      "bytes": 760
     },
     "compete-season.mjs": {
       "sha256": "b73c27fba003e40bc5db2f5d263865a028f3b7811b15e3392e979eec3a6f0c56",
@@ -120666,12 +120666,12 @@
       "bytes": 19499
     },
     "compete.html": {
-      "sha256": "235645a22b76cb45643c750d400d12d8287d1cdc162d68d2cc8aed4091979811",
-      "bytes": 7866
+      "sha256": "03b2cbfc51ea193f7254881c12aec15d4bd5f6737bde46a634613e67c2f53107",
+      "bytes": 7926
     },
     "compete.mjs": {
-      "sha256": "ba4ec08ab49653837f5203d72399e56223af12cf313e3a32bb5615ffbf0c56ea",
-      "bytes": 24202
+      "sha256": "219a88fe7e8d3677e6d8b695751849a9fb4ac308ff98313d5ca506f167bd493f",
+      "bytes": 24168
     },
     "compile-session.mjs": {
       "sha256": "c5afb627caac55162d4415e36829e72f8f7e042ea0078d2ef70435267cba0a51",
@@ -121620,6 +121620,10 @@
     "full-launch/relaunch-v1.json": {
       "sha256": "8819d609ceda9b1e6d04926747720c0034f5e80c65d61ba97a3c4c131d20998f",
       "bytes": 1158
+    },
+    "full-launch/rewards-funding-week-2026-11-16.json": {
+      "sha256": "cf4ccb756dd47daabd578def87145ae7dbc89c01cc2016421b405a214322cf7e",
+      "bytes": 875
     },
     "full-launch/stake-lock-setup-v1.json": {
       "sha256": "e4bf5525fa6ffd670f18ec1f25fdb48db122bb3a2e4b57a16774049ed4e7e6e3",
@@ -132901,6 +132905,14 @@
       "sha256": "721b7dcf4896a62ac334326522a397514c3737c7fe7348917d89c98be0b63fa5",
       "bytes": 6323
     },
+    "rewards-budget.mjs": {
+      "sha256": "a8922f26ab82d23757f3f153844527623485271a877c8b5a8e6d0c6a03dc0aee",
+      "bytes": 2115
+    },
+    "rewards-funding-core.mjs": {
+      "sha256": "894b2a0d26f87f0db3eea6d78139b668393cf2abb13a93dc1cb820734854b711",
+      "bytes": 8108
+    },
     "roadmap.html": {
       "sha256": "15675565bbe515ff2533e9e1024c06e694d939b97d07640f0f34260038bdfca2",
       "bytes": 11512
@@ -132972,6 +132984,18 @@
     "safe-lock4-drops.html": {
       "sha256": "00773a5d1a019ddcb4a83c4a71782d8b76f3b089b989df81a7f012e20a01346f",
       "bytes": 16218
+    },
+    "safe-rewards-fund.css": {
+      "sha256": "41d3d84c13e7b89b43c85b8815f6897ff5e94c4df22febd9be509edfb0d871b3",
+      "bytes": 4131
+    },
+    "safe-rewards-fund.html": {
+      "sha256": "0bccdbe34a7f64148f99f8648995943473c51be94cc2892d8954b63e82a4b0c8",
+      "bytes": 6961
+    },
+    "safe-rewards-fund.mjs": {
+      "sha256": "79f58edb74fe84ee35f7182a4b5a37a07f35e5df877aedee8d979b970ab54cfc",
+      "bytes": 20836
     },
     "safe-treasury-cliff.html": {
       "sha256": "8ac965fdc6a46400d57022a1997ba72e35d316304cb4dd98019cba76813c3846",
@@ -133478,6 +133502,6 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "604f066a75290e2bb6ffa76bce3c844293d88c10090f545afc95897e5dd22098",
-  "provenance": "Frozen accepted 4b35375f-fb36-4652-a1dd-9981d2a0e614 release public/ source; static bytes only. Worker-generated HTTP bodies require a separate Root served-response receipt."
+  "contentDigest": "f26fcdf4e6449e965fb7b4df7236da803fc0628a9fc1f08370ddc657c202a989",
+  "provenance": "Frozen accepted 4754a3c6-a6dc-4fae-848a-f3f4b6366435 release public/ source; static bytes only. Worker-generated HTTP bodies require a separate Root served-response receipt."
 }
