@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "releaseId": "16928458-5cfb-4be4-a3f7-c5c90ac9a625",
-  "sourceWorkerSha256": "9be9c635459e2bd6484702330eb2d3fb9ebe80f3ead1dd5c9ef94c7d4dcff66a",
+  "releaseId": "7ec2851a-b564-49b4-a521-7c1d94b61792",
+  "sourceWorkerSha256": "2b23d3b95a9c291e1b6255328151c1ccdbd9197eac840e052ee46433814a083d",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -133511,5 +133511,5 @@
     }
   },
   "contentDigest": "6bced29e946595d684e5015e31bdd5dade738f26f0224b2e740b3fb1932213c2",
-  "provenance": "Frozen deployed 16928458-5cfb-4be4-a3f7-c5c90ac9a625 public/ source; static bytes only. Worker-generated HTTP bodies require separate Root served-response evidence. New paid products remain OFF in this release."
+  "provenance": "Frozen deployed 7ec2851a-b564-49b4-a521-7c1d94b61792 public/ source, byte-identical to16928458; static bytes only. Worker-generated HTTP bodies and five server-only projection changes require separate Root served-response/source receipts. New paid products remain OFF."
 }
