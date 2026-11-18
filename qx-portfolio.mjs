@@ -3,7 +3,9 @@ import * as portfolioSol from './qx-solana.mjs';
 import {mountPortfolioSelling,rowCanSell} from './qx-portfolio-row-trade.mjs';
 import {assetPriceFields,priceState} from './qx-price-state.mjs';
 import {allocatePortfolioValuation as allocatePortfolioBasis,portfolioPriceFields,portfolioPriceQuarantined,pricingCoverage,PORTFOLIO_PRICE_MAX_MS} from './qx-portfolio-pricing.mjs';
-import {bindTokenAvatar,tokenAvatar} from './qx-token-avatar.mjs';
+import {bindTokenAvatar,bindWhenPlaced,srcWhenPlaced,tokenAvatar,tokenAvatarSources} from './qx-token-avatar.mjs';
+import {tokenMeta} from './qx-token-meta-cache.mjs';
+import {keyedReplace} from './qx-keyed-rows.mjs';
 import {portfolioReader,chainReadState,portfolioNeedsRefresh,portfolioBalanceAt} from './qx-portfolio-read.mjs';
 import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
 import {profileUrl} from './qx-profile-address.mjs';
@@ -215,19 +217,29 @@ const COLS = {holding: ['Token', 'Price · 24h', 'Value', 'Your PnL', ''], close
  created: ['Your launch', 'Pool', 'Creator fees waiting', '', ''], staked: ['Position', 'Unlock', 'Value', '', '']};
 const retry = async (fn, tries = 2, wait = 700) => { let e; for (let i = 0; i < tries; i++) { try { return await fn(); } catch (x) { e = x; if (i < tries - 1) await new Promise(r => setTimeout(r, wait)); } } throw e; };
 
+// G2: the art is a static part of a keyed row. Its symbol/sources come from the session token-metadata cache (only a
+// newer server metaVersion replaces them), and its signature lets a keyed update carry the same element (img + src) over.
+export function staticIdentity(r, {meta = tokenMeta} = {}) {
+  const sources = r?.native || !r?.address ? [] : tokenAvatarSources(r);
+  if (!meta || r?.native || !r?.address) return {symbol: r?.symbol, name: r?.name, sources};
+  const m = meta.settle(r.chainId, r.address, {symbol: r.symbol, name: r.name, chain: r.chainId, sources, metaVersion: r.metaVersion ?? r.metadataVersion});
+  return {symbol: m.symbol || r.symbol, name: m.name || r.name, sources: m.sources?.length ? m.sources : sources};
+}
 export function holdingArt(h, r, size = '') {
-  const letter = String(r.symbol || '').trim().charAt(0).toUpperCase();
-  const coin = h('span', {class: 'qp-art' + (size ? ' qp-art--' + size : '') + (r.wallet ? ' qp-art--wallet' : ''), 'data-letter': letter, 'aria-hidden': 'true'});
+  const id = staticIdentity(r);
+  const letter = String(id.symbol || '').trim().charAt(0).toUpperCase();
+  const coin = h('span', {class: 'qp-art' + (size ? ' qp-art--' + size : '') + (r.wallet ? ' qp-art--wallet' : ''), 'data-letter': letter, 'aria-hidden': 'true',
+   'data-static-part': 'art:' + marketKey(r.chainId, r.address || r.symbol || ''), 'data-static-sig': JSON.stringify([letter, size, !!r.wallet, !!r.native, cashRow(r), String(r.chainId), id.sources])});
   const a = String(r.address || ''), x = parseInt(a.slice(2, 6), 16) || 7, y = parseInt(a.slice(6, 10), 16) || 3, hue = x % 360;
   const pal = [['#e8c88c','#2a1d0e'],['#d2ad72','#14110c'],['#f1e7d0','#4a3418'],['#b98d4e','#0d0c0a'],['#9a7a4a','#1b1a17'],['#ece2cc','#2b241a']][(hue + y) % 6]; coin.style?.setProperty?.('--a1', pal[0]); coin.style?.setProperty?.('--a2', pal[1]);
   // Fixed chain marks are local SVGs; token-profile image validation intentionally excludes those.
   const nativeIcon = cashRow(r) ? chainIcon(r.chainId) : null;
-  if (nativeIcon) coin.append(h('img', {src: nativeIcon, alt: '', decoding: 'async', onerror: e => e.currentTarget.remove()}));
-  else if (!r.native && tokenAvatar(r).src) {
+  if (nativeIcon) coin.append(srcWhenPlaced(h('img', {alt: '', decoding: 'async', onerror: e => e.currentTarget.remove()}), nativeIcon));
+  else if (!r.native && id.sources.length) {
    const img = h('img', {alt: '', decoding: 'async', hidden: ''});
-   coin.append(img); bindTokenAvatar(img, r);
+   coin.append(img); bindWhenPlaced(img, {}, id.sources);
   }
-  if (!cashRow(r) && !r.wallet && chainIcon(r.chainId)) coin.append(h('img', {class: 'qp-art__chain', src: chainIcon(r.chainId), alt: ''}));
+  if (!cashRow(r) && !r.wallet && chainIcon(r.chainId)) coin.append(srcWhenPlaced(h('img', {class: 'qp-art__chain', alt: ''}), chainIcon(r.chainId)));
   return coin;
  }
 
@@ -243,7 +255,7 @@ export function renderHoldingRows(rows,options={}) { // ux-pricemc: every holdin
 function holdingRowNodes(rows,options={}) {
  return groupNativeEther(rows,options).map(item=>{
   if(item.row)return renderHoldingRow(item.row,options);
-  const {h}=options,details=h('details',{class:'pf-eth-group',role:'listitem'}),summary=h('summary',{class:'pf-holding pf-eth-summary'},
+  const {h}=options,details=h('details',{class:'pf-eth-group',role:'listitem','data-key':'group:native-eth'}),summary=h('summary',{class:'pf-holding pf-eth-summary'},
    holdingArt(h,{native:true,symbol:'ETH',chainId:'1'}),h('div',{class:'pf-holding__name'},h('b',{},'ETH'),h('span',{},'all chains')),
    h('div',{class:'pf-holding__value'},money(item.valueUsd),h('small',{},item.partial?'Partial value':quantity(item.units)+' ETH')),
    h('span',{class:'pf-holding__basis'},item.rows.length+' chains'),h('span',{class:'pf-holding__actions'},'Expand ⌄'));
@@ -356,6 +368,8 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
  function paintTotal(value, dir) {
   const el = $('qp-total'), text = money(value), cut = text.lastIndexOf('.');
   if (cut > 0 && /^\.\d{2}$/.test(text.slice(cut))) el.replaceChildren(text.slice(0, cut), h('small', {}, text.slice(cut))); else el.textContent = text;
+  // Batch G: RUM mark (no-op until qx-rum.mjs defines window.qxMark), once, at the first non-placeholder total.
+  if (!paintTotal.marked && Number.isFinite(value) && /\d/.test(text)) { paintTotal.marked = true; try { globalThis.qxMark?.('first-total'); } catch {} }
   if (dir && el.classList) { el.classList.remove('is-up', 'is-down'); el.classList.add(dir > 0 ? 'is-up' : 'is-down'); setTimeout(() => el.classList.remove('is-up', 'is-down'), 1100); }
  }
  function paintAllocation() {
@@ -433,7 +447,8 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   if (!current) return;
   const rows = T.filterRows(current.rows, prefs), nat = natives(), owner = me(), mine = own();
   $('qp-count').textContent = tab === 'holding' ? rows.length + (rows.length === 1 ? ' holding shown' : ' holdings shown') : '';
-  $('qp-holdings').replaceChildren(...(rows.length ? watch.rows(rows,list=>renderHoldingRows(list,{h,natives:nat,owner,mine,readonly:!!savedPreview,chain:prefs.chain,onSell:(row,p,trigger)=>seller.begin(row,p,trigger)}),{natives:nat}) : [h('p', {class: 'qa-empty'}, current.rows.length ? 'No holdings match these filters.' : 'No holdings found in this reading.')]));
+  // G2: keyed update; on-screen rows (and their logo img) are kept, only their values change.
+  keyedReplace($('qp-holdings'), (rows.length ? watch.rows(rows,list=>renderHoldingRows(list,{h,natives:nat,owner,mine,readonly:!!savedPreview,chain:prefs.chain,onSell:(row,p,trigger)=>seller.begin(row,p,trigger)}),{natives:nat}) : [h('p', {class: 'qa-empty'}, current.rows.length ? 'No holdings match these filters.' : 'No holdings found in this reading.')]));
   if(!savedPreview)seller.attach($('qp-holdings'));
  }
  function paintClosed() {

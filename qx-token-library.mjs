@@ -1,6 +1,8 @@
 // Fast access to saved and recently searched/opened tokens. Trading stays in the existing selection flow.
 import {officialLogo} from './qx-official.mjs';
-import {bindTokenAvatar} from './qx-token-avatar.mjs';
+import {bindWhenPlaced,tokenAvatarSources} from './qx-token-avatar.mjs';
+import {tokenMeta} from './qx-token-meta-cache.mjs';
+import {keyedReplace} from './qx-keyed-rows.mjs';
 import {chainById} from './chains.mjs';
 import {createTokenListPrices,tokenListQuoteText} from './qx-token-list-prices.mjs';
 const nameOf = row => row.symbol || row.name || short(row.token || row.controller);
@@ -58,18 +60,23 @@ export function mountTokenLibrary(api, {document:doc=globalThis.document, discov
   const all=mode==='watch'?s.watched:s.recent,ids=[...new Set(all.map(r=>r.chainId))];
   const currentChain=chain.value;if(JSON.stringify([...chain.options].map(o=>o.value))!==JSON.stringify(['all',...ids])){chain.replaceChildren(el('option',{value:'all'},'All chains'),...ids.map(id=>el('option',{value:id},chainOf({chainId:id}))));chain.value=ids.includes(currentChain)?currentChain:'all';}
   const q=query.value.trim().toLowerCase(),rows=all.filter(r=>(chain.value==='all'||r.chainId===chain.value)&&(!q||[r.symbol,r.name,r.token,r.controller,chainOf(r)].some(v=>String(v||'').toLowerCase().includes(q))));
+  // G2: name/symbol/logo per chain:address come from the session metadata cache (a newer metaVersion only), so a refresh
+  // never changes the signature or the art; the list is keyed and an on-screen art (img + src) is kept as is.
+  for(const [i,r] of rows.entries()){const address=r.token||r.controller;if(!tokenMeta||!address)continue;const profile=/^\d+$/.test(r.chainId)&&/^0x[0-9a-f]{40}$/i.test(address)?['/api/token-profiles/'+r.chainId+'/'+address.toLowerCase()+'/image']:[];
+   const m=tokenMeta.settle(r.chainId,address,{name:r.name,symbol:r.symbol,chain:r.chainId,sources:tokenAvatarSources(r,[...(r.avatarSources||[]),officialLogo(r.chainId,address),...profile]),metaVersion:r.metaVersion??r.metadataVersion});
+   rows[i]={...r,name:m.name||r.name,symbol:m.symbol||r.symbol,avatarSources:m.sources?.length?m.sources:r.avatarSources};}
   const signature=JSON.stringify([mode,q,chain.value,rows.map(r=>[r.key,r.name,r.symbol,r.openedAt,r.source,r.avatarSources,library.has(r)])]);
   if(signature===last)return;last=signature;
   const focused=doc.activeElement,focusedKey=focused?.closest('.qtl-row')?.dataset.key,focusedAction=focused?.dataset.action;
-  avatars.forEach(dispose=>dispose());avatars=[];quoteNodes.clear();
-  list.replaceChildren(...rows.map(row=>{
+  const priorAvatars=avatars;avatars=[];quoteNodes.clear();
+  keyedReplace(list,rows.map(row=>{
    const address=row.token||row.controller,label=nameOf(row),li=el('li',{class:'qtl-row','data-key':row.key});
    const openButton=button('',{class:'qtl-open-token','data-action':'open','aria-label':'Open '+label+' on '+chainOf(row)+' '+address});
    const info=el('span',{class:'qtl-token-info'},el('b',{},label),el('code',{title:address},short(address)),el('span',{class:'qtl-token-chain'},chainOf(row)));
    const price=el('b',{class:'qtl-price'}),change=el('span',{class:'qtl-change'}),detail=el('small',{class:'qtl-price-state'}),quote=el('span',{class:'qtl-quote','aria-label':'Price and 24 hour change'},price,change,detail);quoteNodes.set(row.key,{row,price,change,detail});
-   const art=el('span',{class:'qtl-token-art','aria-hidden':'true'},label.slice(0,1).toUpperCase()),img=el('img',{alt:'',decoding:'async',width:'38',height:'38'});art.append(img);
+   const art=el('span',{class:'qtl-token-art','aria-hidden':'true','data-static-part':'art','data-static-sig':JSON.stringify([label.slice(0,1).toUpperCase(),row.avatarSources||[]])},label.slice(0,1).toUpperCase()),img=el('img',{alt:'',decoding:'async',width:'38',height:'38'});art.append(img);
    const profile=/^\d+$/.test(row.chainId)&&/^0x[0-9a-f]{40}$/i.test(address)?['/api/token-profiles/'+row.chainId+'/'+address.toLowerCase()+'/image']:[];
-   avatars.push(bindTokenAvatar(img,row,[...(row.avatarSources||[]),officialLogo(row.chainId,address),...profile]));openButton.append(art,info,quote);
+   avatars.push({img,dispose:bindWhenPlaced(img,row,[...(row.avatarSources||[]),officialLogo(row.chainId,address),...profile])});openButton.append(art,info,quote);
    openButton.addEventListener('click',async()=>{if(pending)return;pending=true;openButton.disabled=true;status.textContent='Opening '+label+'…';try{const result=row.kind==='launch'?await api.select(row.chainId,row.controller):await api.selectExternal(row.chainId,row.token);if(result===false){status.textContent='Could not open this token. If a trade is active, finish it first, then try again.';}else dialog.close();}catch{status.textContent='Could not open this token. Try again.';}finally{pending=false;openButton.disabled=false;}});
    const watched=library.has(row),watch=button(watched?'★':'☆',{class:'qtl-row-action','data-action':'watch','aria-pressed':String(watched),'aria-label':(watched?'Remove ':'Add ')+label+(watched?' from':' to')+' watchlist'});
    watch.addEventListener('click',async()=>{watch.disabled=true;try{await library.watch(row,!library.has(row));status.textContent='';last='';render();}catch(e){status.textContent=e.message||'Could not save this token.';}finally{watch.disabled=false;}});
@@ -78,6 +85,8 @@ export function mountTokenLibrary(api, {document:doc=globalThis.document, discov
    if(mode==='recent'&&row.openedAt){const seconds=Math.max(0,Math.floor((Date.now()-row.openedAt)/1000)),ago=seconds<60?'just now':seconds<3600?Math.floor(seconds/60)+'m ago':seconds<86400?Math.floor(seconds/3600)+'h ago':Math.floor(seconds/86400)+'d ago';info.append(el('small',{class:'qtl-seen'},(row.source==='searched'?'Searched ':'Viewed ')+ago));}
    return li;
   }));
+  // Keep the bindings of art carried over by the keyed update; release the rest.
+  for(const a of priorAvatars){if(a.img.isConnected)avatars.push(a);else a.dispose();}
   paintQuotes();queuePrices();
   empty.hidden=!!rows.length;empty.textContent=q||chain.value!=='all'?'No saved tokens match these filters.':mode==='watch'?'Star a token in the feed or token view to keep it here.':'Search for tokens or open a token to build your recent list.';
   if(focusedKey&&!focused.isConnected){const row=[...list.children].find(r=>r.dataset.key===focusedKey);(row?.querySelector('[data-action="'+focusedAction+'"]')||list.querySelector('button')||query).focus({preventScroll:true});}

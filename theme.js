@@ -18,11 +18,15 @@
   let preference = valid(read(A_KEY)) ? read(A_KEY) : valid(read(KEY)) ? read(KEY) : null;
   if (preference) { if (read(A_KEY) !== preference) write(A_KEY, preference); if (read(KEY) !== preference) write(KEY, preference); }
   let buttons = [];
+  // Batch G (2026-11-18): light theme hidden until every page passes WCAG AA in it. LOCK pins dark, hides the toggles and
+  // leaves the stored choice untouched (it comes back when LOCK is null). Same constant as THEME_LOCK in qx-a/components.mjs.
+  const LOCK = 'dark';
+  if (LOCK) root.dataset.themeLocked = LOCK;
 
   function paint(theme) {
     const dark = theme === 'dark';
     buttons.forEach((button) => {
-      button.hidden = false;
+      button.hidden = !!LOCK;
       button.setAttribute('aria-pressed', String(dark));
       button.title = `Switch to ${dark ? 'light' : 'dark'} mode`;
       button.setAttribute('aria-label', button.title);
@@ -31,6 +35,7 @@
     if (meta) meta.setAttribute('content', dark ? '#090B0A' : '#F2F3F1');
   }
   function apply(theme, persist) {
+    if (LOCK) { theme = LOCK; persist = false; }
     const before = root.dataset.theme;
     root.dataset.theme = theme;
     if (persist) { preference = theme; write(KEY, theme); write(A_KEY, theme); }
@@ -47,6 +52,7 @@
   // System A pages may call components.mjs setTheme(), which sets data-theme itself and fires qa:theme.
   window.addEventListener('qa:theme', (e) => {
     const t = e.detail;
+    if (LOCK) return;
     if (valid(t) && root.dataset.theme === t && t !== preference) { preference = t; write(KEY, t); write(A_KEY, t); paint(t); }
   });
   // Another tab switched: follow it.

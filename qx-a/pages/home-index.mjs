@@ -1,6 +1,7 @@
 import { mountVisibleScene } from '/qx-scene-lifecycle.mjs';
 import{publicReadFetch}from'../../qx-public-read.mjs';
 import{homeTradeLink}from'/qx-home-trade-link.mjs';
+import{listPriceText}from'/qx-list-buy.mjs';
 import{assetPriceFields,priceObservation}from'/qx-price-state.mjs';
 import{priceLabel}from'/qx-price-presentation.mjs';
 import{fetchDexPairs,pickPair,rowPatch}from'/qx-dex-live.mjs';
@@ -239,25 +240,27 @@ async function readLastPrices(markets){
 function homePrice(m){
   const canonical=String(m.chainId)===QCHAIN&&lower(m.token)===QH;
   const s=canonical?qSummary():assetPriceFields(m.summary||{},{chainId:m.chainId,token:m.token,at:priceObservation(m.summary,m.observedAt??null)});
-  if(canonical)return Number.isFinite(s.priceUsd)&&s.priceUsd>0?fmt.price(s.priceUsd):'Price syncing';
-  if(Number.isFinite(s.priceUsd)&&s.priceUsd>0)return fmt.price(s.priceUsd);
-  const last=lastPrice(m);return last?fmt.price(last.priceUsd):'—';
+  // Batch G: a row shows its price when known, otherwise a quiet en dash (muted); never a status word per row.
+  if(canonical)return listPriceText(s.priceUsd,fmt.price);
+  if(Number.isFinite(s.priceUsd)&&s.priceUsd>0)return listPriceText(s.priceUsd,fmt.price);
+  return listPriceText(lastPrice(m)?.priceUsd,fmt.price);
 }
+function paintLaunchPrice(m,node,first){const p=homePrice(m);node.classList.toggle('is-placeholder',!p.known);if(first)node.textContent=p.text;else flash(node,p.text);}
 
 function paintLaunchChange(m,node){
   const canonical=String(m.chainId)===QCHAIN&&lower(m.token)===QH,s=canonical?qSummary():m.summary||{},change=num(s.change24);
-  if(!canonical&&!(num(assetPriceFields(m.summary||{},{chainId:m.chainId,token:m.token,at:priceObservation(m.summary,m.observedAt??null)}).priceUsd)>0)){node.className='hm-tick';flash(node,noTradesLabel(m));return;}
+  if(!canonical&&!(num(assetPriceFields(m.summary||{},{chainId:m.chainId,token:m.token,at:priceObservation(m.summary,m.observedAt??null)}).priceUsd)>0)){node.className='hm-tick hm-quiet';flash(node,noTradesLabel(m));return;}
   const refreshing=canonical&&num(s.priceUsd)>0&&(qReadFailed||s.pricesRefreshing);
   node.className='hm-tick '+pctCls(refreshing?0:change??0);
   flash(node,refreshing?priceLabel(s.priceAt,{refreshing:true}):(!canonical||num(s.priceUsd)>0)&&change!=null?fmt.pct(change):'');
 }
 function launchRow(m, enter) {
-  const v = h('span', { class: 'hm-tick' }, homePrice(m));
+  const v = h('span', { class: 'hm-tick hm-price' }); paintLaunchPrice(m, v, true);
   const ch=h('small',{class:'hm-tick'});paintLaunchChange(m,ch);
   const sub = h('span', { class: 'qa-row__s' }, launchSub(m));
   const el = h('a', { class: 'qa-row hm-launch-row' + (enter && !RM ? ' is-enter' : ''), href: launchHref(m), title: m.name || m.symbol },
     iconFor(m), h('span', { class: 'qa-row__main' }, h('span', { class: 'qa-row__t' }, m.symbol || m.name || 'Token'), sub), h('span', { class: 'qa-row__v' }, v, ch));
-  const buy=homeTradeLink(m,{storage:localStorage}),card=h('article',{class:'hm-launch-card'},el);if(buy)card.append(h('a',{class:'hm-home-buy',href:buy.href,title:buy.amount+' '+buy.unit},buy.label));return { el:card, v, ch, sub };
+  const buy=homeTradeLink(m,{storage:localStorage}),card=h('article',{class:'hm-launch-card'},el);if(buy)card.append(h('a',{class:'hm-home-buy qa-list-buy',href:buy.href,title:buy.amount?buy.ariaLabel+' with '+buy.amount+' '+buy.unit:buy.ariaLabel,'aria-label':buy.ariaLabel},buy.label));return { el:card, v, ch, sub };
 }
 function drawLaunches(fresh = new Set()) {
   if (!launchBox) return;
@@ -271,7 +274,7 @@ function drawLaunches(fresh = new Set()) {
   }
   for (const m of rows) {
     const r = launchRows.get(key(m)); if (!r) continue;
-    flash(r.v, homePrice(m));
+    paintLaunchPrice(m, r.v, false);
     paintLaunchChange(m,r.ch);
     r.sub.textContent = launchSub(m);
   }

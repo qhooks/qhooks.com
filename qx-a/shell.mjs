@@ -9,7 +9,7 @@
 // What the old chrome did and this keeps: wallet connect + account menu (#qhc-trigger / #qhc-dialog and their modules),
 // the theme switch (theme.js), every section link, Edit profile, search, the Android "Get the app" bar (never inside the
 // app), Telegram mini-app mode (no tab bar), the launch-week drop line (in the ribbon) and the "Refreshing" note.
-import { h, icon, RM, fmt, avatar, keeperAvatar, brandLine, setTheme as storeTheme, ensureSprite } from './components.mjs';
+import { h, icon, RM, fmt, avatar, keeperAvatar, brandLine, setTheme as storeTheme, ensureSprite, THEME_LOCK } from './components.mjs';
 import { QCASTER } from '../qcaster-name.mjs';
 
 /* ---------- places ---------- */
@@ -133,7 +133,8 @@ export function mountShell(o = {}) {
   // The site wallet dialog's System A sheet (its connect/account state rules included), on every page.
   if (!doc.querySelector('link[href$="/qx-a/wallet.css"]')) doc.head.append(h('link', { rel: 'stylesheet', href: new URL('./wallet.css', import.meta.url).pathname }));
   // theme.js sets the theme before the first paint; a page without it still gets the stored choice (dark otherwise).
-  if (!/^(dark|light)$/.test(root.dataset.theme || '')) root.dataset.theme = [store('qa-theme'), store('qhooks.theme')].find((t) => t === 'light' || t === 'dark') || 'dark';
+  if (THEME_LOCK) root.dataset.theme = THEME_LOCK;
+  else if (!/^(dark|light)$/.test(root.dataset.theme || '')) root.dataset.theme = [store('qa-theme'), store('qhooks.theme')].find((t) => t === 'light' || t === 'dark') || 'dark';
   const body = doc.body;
   const bridge = !!o.bridge, adopt = o.adopt || null;
   const cls = (c, on) => body.classList.toggle(c, !!on);
@@ -152,7 +153,7 @@ export function mountShell(o = {}) {
   const menuBtn = h('button', { class: 'qa-btn qa-btn--icon qa-menu-btn', type: 'button', 'aria-label': 'Menu', 'aria-haspopup': 'dialog', 'aria-controls': 'qa-menu', 'aria-expanded': 'false', onclick: () => openMenu() }, ico('menu'));
   const moreBtn = h('button', { class: 'qa-nav-more', type: 'button', 'aria-haspopup': 'dialog', 'aria-controls': 'qa-menu', 'aria-expanded': 'false', onclick: () => openMenu() }, 'More');
   const navLinks = h('nav', { class: 'qa-nav-links', 'aria-label': 'Main' }, NAV.map((n) => h('a', { href: n.href, dataset: { id: n.id } }, n.label)), moreBtn);
-  const themeBtn = h('button', { class: 'qa-btn qa-btn--icon qa-theme-btn', type: 'button', onclick: switchTheme });
+  const themeBtn = h('button', { class: 'qa-btn qa-btn--icon qa-theme-btn', type: 'button', onclick: switchTheme, hidden: !!THEME_LOCK });
   const paintTheme = () => { const light = theme() === 'light'; themeBtn.replaceChildren(ico(light ? 'moon' : 'sun')); themeBtn.setAttribute('aria-label', light ? 'Switch to dark mode' : 'Switch to light mode'); themeBtn.title = themeBtn.getAttribute('aria-label'); };
   paintTheme(); addEventListener('qa:theme', paintTheme);
   const search = makeSearch('hdr');
@@ -357,7 +358,7 @@ const WALLET_DIALOG = `<dialog id="qhc-dialog" class="qhc-dialog" aria-labelledb
 function makeMenu() {
   const msearch = makeSearch('menu');
   const me = h('div', { class: 'qa-menu__me' });
-  const themeRow = h('button', { class: 'qa-menu__row', type: 'button', onclick: () => switchTheme() });
+  const themeRow = h('button', { class: 'qa-menu__row', type: 'button', onclick: () => switchTheme(), hidden: !!THEME_LOCK });
   const paintRow = () => themeRow.replaceChildren(ico(theme() === 'light' ? 'moon' : 'sun'), h('span', null, theme() === 'light' ? 'Dark mode' : 'Light mode'));
   paintRow(); addEventListener('qa:theme', paintRow);
   const appRow = !inApp() ? h('a', { class: 'qa-menu__row', href: '/android' }, ico('phone'), h('span', null, 'Get the app')) : null;

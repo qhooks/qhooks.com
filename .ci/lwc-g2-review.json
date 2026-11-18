@@ -1,0 +1,95 @@
+{
+  "status": "ROOT_APPROVED_EXACT_TWO_APACHE_DERIVATIVES",
+  "sourceRelease": "07610b18-e3e8-4491-ac9c-76d00e2e08dd",
+  "sourceWorkerSha256": "6eb17ae7dad843bf9c8f56b9e240ab09d664eb53a2bdc41fb8d31eac652f7a91",
+  "existingPins": 61,
+  "candidatePins": 63,
+  "newPinCount": 2,
+  "allPriorPolicyRowsAndMetadataUnchanged": true,
+  "actualHeldMirrorUnmodified": true,
+  "unconditionalAdvancedChartsPathBansUnchanged": true,
+  "guardSha256": "68e9e8885b8478d85f2b126f189ccb7e32a6efc2b2eb2e6e97a71b7133159289",
+  "helperSha256": "03285eca548709d395d82680b71adb767037b235cfc08b1fc343f8d6a04fc64a",
+  "priorPolicySha256": "a942cd0e24db7303d05e2401f98820baab388b89af4a72b8eac1bb96865ab7d8",
+  "candidatePolicySha256": "23ce710540cb07c7afb3cb112d95c90b76cc2359ccb06864746aaa771c7d9915",
+  "license": {
+    "path": "vendor/lightweight-charts/LICENSE",
+    "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+  },
+  "licenseMatchesPrior": true,
+  "bundles": [
+    {
+      "path": "b/ux-g2-20261118/terminal/qx-terminal.O5VEIGJQ.mjs",
+      "sha256": "dde8cfd0ad734009a910823a5cf3d2b41e3c70cb3bdb2a4ed7ded4ccfbcf4964",
+      "bytes": 407768,
+      "attributionReferences": 2,
+      "allAttributionMatchesExistingRules": true,
+      "proprietaryInputs": 0,
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768",
+        "version": "4.2.3",
+        "license": "Apache-2.0"
+      },
+      "ownerManifest": {
+        "path": "lead/perf/terminal.manifest.json",
+        "sha256": "a8c15ae131be4e4ce96db6a484e48fc28b66f232f643a5ba1116b37509a05b6e"
+      },
+      "byteIdenticalApprovedPaths": [],
+      "priorApprovedBundle": {
+        "path": "b/ux-e-seal2-20261118/terminal/qx-terminal.6XASBC2W.mjs",
+        "sha256": "e7f3167e53b96f07c0a47c8bff66f8f45d1a90e90531ec0b335ac9ec9b519cf7",
+        "bytes": 407768
+      },
+      "onlyCodeDifferences": "Two static ESM import target names; all other bytes equal after normalizing static module specifiers.",
+      "changedImportSpecifiers": [
+        [
+          "./c.ZORMNX5M.mjs",
+          "./c.PE4DPLPA.mjs"
+        ],
+        [
+          "./c.7RETBBKG.mjs",
+          "./c.CSJWBINM.mjs"
+        ]
+      ],
+      "normalizedCodeSha256": "116716b2407eac87170ad29b6e1a2d876057c4f1a78f0cfed0b7bc7032e7658c"
+    },
+    {
+      "path": "b/ux-g2-20261118/x-tracker/c.3JSX6SCP.mjs",
+      "sha256": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+      "bytes": 161341,
+      "attributionReferences": 2,
+      "allAttributionMatchesExistingRules": true,
+      "proprietaryInputs": 0,
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768",
+        "version": "4.2.3",
+        "license": "Apache-2.0"
+      },
+      "ownerManifest": {
+        "path": "lead/perf/x-tracker.manifest.json",
+        "sha256": "481bbda324de00394e3989da5af5ff8f61ea8e65db0fd8b374758abd85f847ae"
+      },
+      "byteIdenticalApprovedPaths": [
+        "b/compact-onboarding-r2-current-20261117/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-recurrence-20261117/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-prices-complete-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-prices-recovery-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-complete-unpriced-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-qproof-combined2-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/qproof-public-compat-root-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-cold-market-r2-root-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-e-seal2-20261118/x-tracker/c.3JSX6SCP.mjs"
+      ]
+    }
+  ],
+  "existingRootPolicyAuthority": "baseline/lwc-ux-e-review.json: ROOT_APPROVED_EXACT_TWO_APACHE_DERIVATIVES; same vendor/license and attribution rules, no wildcard/proprietary exception.",
+  "candidateChecks": {
+    "unchangedGuardOnExactTwoFixture": "PASS",
+    "modifiedHashRefused": true
+  },
+  "limitations": "This is a separate proposed allowlist diff, not applied to the held full mirror. Full unchanged precommit/prepush must pass after Root review and any application. No commit/push/network/secret/key/account action.",
+  "rootReviewedAt": "2026-11-18T23:22:15.357330+00:00",
+  "rootVerification": "Exact previous terminal plus only two import substitutions equals deployed G2 bytes; x-tracker equals existing approved bytes; vendor/license and old61 policy rows exact; guard/helper unchanged. No proprietary inputs or exclusion added."
+}

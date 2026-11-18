@@ -1,4 +1,5 @@
 import {mountPortfolioSelling} from './qx-portfolio-row-trade.mjs';
+import {keyedReplace} from './qx-keyed-rows.mjs';
 import {portfolioReader} from './qx-portfolio-read.mjs';
 import {mergePortfolios,renderHoldingRows,money,liveFeed,applyLive,portfolioReadLabel} from './qx-portfolio.mjs';
 import {allocatePortfolioBasis} from './qx-holding-basis.mjs';
@@ -14,7 +15,7 @@ export function mountAccountHoldings({h,owner,connected,root,total,fetchImpl=glo
  const tests=h('button',{type:'button',class:'pf6-chip','aria-pressed':'true',onclick:()=>{hideTests=!hideTests;tests.setAttribute('aria-pressed',String(hideTests));paint();}},'Hide tests');
  const refresh=h('button',{type:'button',class:'qa-btn',onclick:()=>void load(true)},'Refresh');filters.append(dust,tests,refresh);root.replaceChildren(filters,status,list);
  function paint(){if(!current)return;const natives=Object.fromEntries(current.chains.map(c=>[c.chainId,c.native])),rows=current.rows.filter(r=>r.units>0&&!r.spam&&(!hideDust||r.valueUsd==null||r.valueUsd>=1)&&(!hideTests||!isTestRow(r)));
-  list.replaceChildren(...(rows.length?renderHoldingRows(rows,{h,natives,owner:owner(),mine:connected()===owner(),chain:'all',onSell:(row,p,trigger)=>seller.begin(row,p,trigger)}):[h('p',{class:'qa-empty'},'No holdings match these filters.')]));
+  keyedReplace(list,(rows.length?renderHoldingRows(rows,{h,natives,owner:owner(),mine:connected()===owner(),chain:'all',onSell:(row,p,trigger)=>seller.begin(row,p,trigger)}):[h('p',{class:'qa-empty'},'No holdings match these filters.')])); // G2: keyed rows, logos kept
   seller.attach(list);total.textContent=money(current.valueUsd)+' · all chains';status.textContent=portfolioReadLabel(current.at)+(current.partial?' · Partial reading: some balances or prices are unavailable.':'');
  }
  const stopReports=reader.subscribe(({family,owner:who,report})=>{if(disposed||activeOwner!==owner()||activeSol!==solAddress()||!targetsNow.some(([f,a])=>f===family&&a===who))return;

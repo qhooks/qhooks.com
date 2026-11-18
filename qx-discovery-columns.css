@@ -34,4 +34,4 @@ body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd
 #qxt-discover tr.qxfd-first-trade-pending>td.qxfd-price>:not(.qxfd-pending-note){display:none!important}
 #qxt-discover .qxfd-pending-note{display:inline-block;white-space:nowrap;font-size:11px;color:var(--qa-tx-3,var(--qx-muted));text-align:left}
 #qxt-discover .qxfd-pending-note[hidden]{display:none!important}
-#qxt-discover .qxfd-boost[data-kind=paid]{opacity:.75;border-style:dashed}
+#qxt-discover .qxfd-boost[data-kind=paid]{border-style:dashed}

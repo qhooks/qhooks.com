@@ -67,7 +67,9 @@
     "b/portfolio-cold-market-r2-root-20261118/terminal/qx-terminal.RMZMLRSU.mjs": "19572782cbf4ac9c1f51817003d65af6b29d424743d0ad8774237be8e820f741",
     "b/portfolio-cold-market-r2-root-20261118/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
     "b/ux-e-seal2-20261118/terminal/qx-terminal.6XASBC2W.mjs": "e7f3167e53b96f07c0a47c8bff66f8f45d1a90e90531ec0b335ac9ec9b519cf7",
-    "b/ux-e-seal2-20261118/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1"
+    "b/ux-e-seal2-20261118/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+    "b/ux-g2-20261118/terminal/qx-terminal.O5VEIGJQ.mjs": "dde8cfd0ad734009a910823a5cf3d2b41e3c70cb3bdb2a4ed7ded4ccfbcf4964",
+    "b/ux-g2-20261118/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1"
   },
   "classificationSourceReleaseId": "df15e38a-fdcd-4fd2-af2c-5bed0051158b",
   "additionalReview": ".ci/lwc-f1-review.json",

@@ -1,5 +1,6 @@
 import{chainById}from'./chains.mjs';
 import{launchQuick}from'./qx-terminal-feed-core.mjs';
+import{listBuyLabel}from'./qx-list-buy.mjs';
 export function homeTradeLink(m,{storage}={}){
  let quick={};try{quick=JSON.parse(storage?.getItem('qhooks:terminal:quick')||'{}')}catch{}
  const q=launchQuick(m,quick),chain=String(m.chainId),token=chain==='solana'?m.token:String(m.controller||m.token||'').toLowerCase();
@@ -9,5 +10,7 @@ export function homeTradeLink(m,{storage}={}){
  // The existing legacy amt contract always selects native payment. A dollar quick
  // amount must never be reinterpreted as ETH/SOL. Other quotes open their own ticket.
  const route={[chain==='solana'?'t':'m']:chain+':'+token,...matchingNative?{side:'buy',amt:amount}:{}};
- return {href:'/terminal#'+new URLSearchParams(route).toString(),label:(matchingNative?'Buy ':'Trade ')+(m.symbol||'token'),amount:matchingNative?amount:null,unit:q.unit};
+ // Batch G: one short verb on the button (the row already names the token); the accessible name keeps the token.
+ const verb=listBuyLabel(m.symbol,{verb:matchingNative?'Buy':'Trade',fallback:'token'});
+ return {href:'/terminal#'+new URLSearchParams(route).toString(),label:verb.text,ariaLabel:verb.ariaLabel,amount:matchingNative?amount:null,unit:q.unit};
 }

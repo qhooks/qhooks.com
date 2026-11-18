@@ -969,3 +969,21 @@ body.qa.qxt.ta-token .ta-detail-tools .qxt-identity-context :is(button,a){positi
  body.qa.qxt.ta-token #ta-top .ta-stage .qa-change-line .qa-change{font-size:13px;line-height:1.15}
  body.qa.qxt.ta-token #ta-top .ta-stage .qa-change-line .qa-range{display:none}
 }
+
+/* Keep the phone identity on two lines, including enlarged text. */
+@media(max-width:599px){
+ body.qa.qxt.ta-token #ta-top,
+ body.qa.qxt.ta-token #ta-top .ta-stage{height:auto;min-height:82px}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-stage__copy{height:auto;min-height:82px;grid-template-rows:minmax(52px,auto) minmax(26px,auto);gap:4px}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-ident{grid-template-columns:52px minmax(0,1fr) auto;grid-template-areas:"coin sym soc" "coin meta soc";grid-template-rows:auto auto;align-items:center;align-content:center;min-height:52px;gap:2px 8px}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-coin{width:52px;height:52px;align-self:center}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-sym{min-width:0;max-width:none;margin:0;align-self:center;flex-wrap:nowrap;font-size:16px;line-height:1.25}
+ body.qa.qxt.ta-token #ta-top .ta-stage #qxt-symbol{display:block;flex:1 1 auto;min-width:0;max-width:100%;font-size:inherit!important;line-height:inherit!important;white-space:nowrap!important;overflow-wrap:normal!important;overflow:hidden;text-overflow:ellipsis!important}
+ body.qa.qxt.ta-token #ta-top .ta-stage .qa-sym .qa-seal{flex:none}
+ body.qa.qxt.ta-token #ta-top .ta-stage .ta-meta{min-width:0;min-height:24px;margin:0;align-self:center;flex-wrap:nowrap;font-size:12px;line-height:1.2;gap:4px}
+ body.qa.qxt.ta-token #ta-top .ta-stage .ta-chain{flex:none;padding:0;white-space:nowrap}
+ body.qa.qxt.ta-token #ta-top .ta-stage .ta-proof{flex:0 1 auto;min-width:24px;min-height:24px;height:24px;box-sizing:border-box;padding:0;font-size:inherit;line-height:inherit;gap:4px}
+ body.qa.qxt.ta-token #ta-top .ta-stage .ta-proof>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ body.qa.qxt.ta-token #ta-top .ta-stage .ta-proof>.qa-i{flex:none}
+ body.qa.qxt.ta-token #ta-top .ta-stage .ta-soc{grid-area:soc;align-self:center;margin:0}
+}

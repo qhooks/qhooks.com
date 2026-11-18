@@ -595,6 +595,8 @@ function paint() {
   if (live != null) { P.price.set(live, dir); P.price.el.classList.remove('ta-quote-unit'); }
   else if (q > 0) { P.price.el.textContent = fmt.price(q).slice(1) + ' ' + (m.quoteSymbol || ''); P.price.el.classList.add('ta-quote-unit'); }
   else { P.price.el.textContent = '—'; }
+  // Batch G: RUM mark (no-op until qx-rum.mjs defines window.qxMark), once, at the header price's first real paint.
+  if ((live != null || q > 0) && !P.firstPriceMarked) { P.firstPriceMarked = true; try { globalThis.qxMark?.('first-price'); } catch {} }
   // ux-pricemc: in MC mode the main figure is the chart's MC (same multiplier, same formatter as the chart's last value)
   const capK=$('qxt-chart')?.dataset.unit==='mcap'?capSupply(A.state.data?.summary):null,capBase=live??(q>0?q:null);
   if(capK&&capBase){P.price.el.textContent=capLabel(capBase*capK,live!=null?'USD':m.quoteSymbol||'');P.price.el.classList.remove('ta-quote-unit');}

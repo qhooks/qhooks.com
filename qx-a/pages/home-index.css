@@ -341,7 +341,7 @@ body.qa.ux-home-simple .hm-launch-row .qa-row__t{font-size:13px;line-height:16px
 body.qa.ux-home-simple .hm-launch-row .qa-row__s{font-size:12px;line-height:14px}
 body.qa.ux-home-simple .hm-launch-row .qa-row__v{grid-column:auto!important;display:flex;flex-direction:column;align-items:flex-end;gap:0;margin:0;padding:0!important;font-size:13px;line-height:15px}
 body.qa.ux-home-simple .hm-launch-row .qa-row__v small{font-size:12px;line-height:14px}
-body.qa.ux-home-simple .hm-live-strip .hm-home-buy{min-height:28px;height:28px;padding:0 8px;font-size:12px;border-radius:2px}
+
 @media(max-width:759px){
  body.qa.ux-home-simple .l3-brand{font-size:28px;max-width:12em}
  body.qa.ux-home-simple .l3-ch--hero .l3-ch__in{padding:16px 18px!important}
@@ -351,5 +351,15 @@ body.qa.ux-home-simple .hm-live-strip .hm-home-buy{min-height:28px;height:28px;p
  body.qa.ux-home-simple .hm-launch-row .qa-row__v{font-size:12px}
  body.qa.ux-home-simple .hm-launch-card:nth-child(n+6){display:none}
 }
-body.qa.ux-home-simple .hm-live-strip .hm-home-buy{white-space:nowrap;line-height:16px}
+
 @media(max-width:759px){body.qa.ux-home-simple .hm-launch-card{grid-template-columns:minmax(0,1fr) 106px}}
+
+/* Batch G: an unknown row price is a quiet en dash in the muted colour, never a status word */
+.hm-live-strip .hm-price.is-placeholder{color:var(--qa-tx-3);font-weight:500}
+/* Batch G: an unpriced row's "No trades in 5h" note is quiet too (muted, regular weight) */
+.hm-live-strip .hm-quiet{color:var(--qa-tx-3);font-weight:500}
+/* Batch G: chapter action rows (shared .l3-ch__foot / .l3-do) start flush with the chapter's words and every item in the
+   row shares one 44px box, so the pill and its links centre and baseline together (TRADERS sat 98px right at 1440). */
+body.qa.ux-home-simple .l3-ch__foot{grid-column:1/-1;justify-self:start;width:100%;max-width:none;margin-left:0;margin-right:0}
+body.qa.ux-home-simple .l3-do{justify-content:flex-start;align-items:center}
+body.qa.ux-home-simple .l3-do>:is(.qa-btn,.qa-link){align-items:center;min-height:44px;line-height:1}

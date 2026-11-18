@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#090B0A"><script>
 /* Offline page: no shell (it needs the network). Only the stored day/night choice, read the way theme.js reads it. */
-(function(){var t=null;try{t=localStorage.getItem('qa-theme')||localStorage.getItem('qhooks.theme');}catch(e){}document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');})();
+(function(){var t=null;try{t=localStorage.getItem('qa-theme')||localStorage.getItem('qhooks.theme');}catch(e){}var LOCK='dark';/* Batch G: same as THEME_LOCK in qx-a/components.mjs */document.documentElement.setAttribute('data-theme',LOCK||(t==='light'?'light':'dark'));if(LOCK)document.documentElement.setAttribute('data-theme-locked',LOCK);})();
 </script><title>Offline | QHooks</title>
 <style>
 /* The installed app's offline page. The service worker caches only this page and the app icon, so everything it needs

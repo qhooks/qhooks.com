@@ -598,3 +598,13 @@ html #qj-success-heading, html .qst-ws #qh-trade-panel h2 {
   background: none; -webkit-background-clip: border-box; background-clip: border-box;
   -webkit-text-fill-color: currentColor; color: var(--qa-tx);
 }
+
+/* Batch G (2026-11-18): one list "Buy" button sitewide (home live tokens, community call cards). Fixed width so
+   "Buy" lines up row to row; the row names the token and aria-label keeps it. Design-system buy kind: wash fill,
+   1px buy border, buy text, all theme tokens. 32px on a mouse, 44px tap target on touch/phones. */
+.qa-list-buy { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; justify-self: end; flex: none;
+  width: 64px; min-width: 64px; max-width: 64px; height: 32px; min-height: 32px; padding: 0 6px; border: 1px solid var(--qa-buy); border-radius: var(--qa-r-s);
+  background: var(--qa-buy-wash); color: var(--qa-buy); font-size: 13px; font-weight: 760; line-height: 1; white-space: nowrap; text-decoration: none; box-shadow: none; }
+.qa-list-buy:hover { background: var(--qa-buy); color: var(--qa-tx-on-buy); }
+.qa-list-buy:focus-visible { outline: 2px solid var(--qa-buy); outline-offset: 2px; }
+@media (pointer: coarse), (max-width: 759px) { .qa-list-buy { height: 44px; min-height: 44px; } }

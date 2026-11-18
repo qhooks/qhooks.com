@@ -5,6 +5,7 @@ import{createFeedPriceCache}from'./qx-feed-price-cache.mjs';
 import {assetPriceFields,priceState,priceObservation,isQhooksPriceAsset,QHOOKS_PRICE_IDENTITY} from './qx-price-state.mjs';
 import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
 import {tokenAvatar,tokenAvatarSources,avatarImage} from './qx-token-avatar.mjs';
+import {tokenMeta} from './qx-token-meta-cache.mjs';
 // Discover's data contract and presentation helpers. No DOM, wallet calls or currency estimates.
 import {WINDOWS,DISCOVERY_TABS,lifecycle,filterDiscovery,mergeLifecycle} from './qx-discovery-model.mjs';
 import { stockPair } from './full-launch/packages/multichain-launch/stock-pairs.mjs';
@@ -132,7 +133,7 @@ export function rowKey(row) {
 
 export function knownHolderCount(row){const candidates=[row.holdersCount,row.holderCount,typeof row.holders==='number'?row.holders:null,row.launch?.summary?.holders];return candidates.find(n=>Number.isSafeInteger(n)&&n>=0)??null;}
 
-export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24' } = {}) {
+export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24', meta = tokenMeta } = {}) {
   const original=row;const chainId = String(row.chainId), rawToken=row.token||{}, fund=fundFor(chainId,rawToken.address), token=fund?{...rawToken,...fund}:rawToken;
   row=assetPriceFields(row,{chainId,token:token.address,at:row.observedAt,now});
   const canonicalCap=!isQhooksPriceAsset(chainId,token.address)||(original.priceSource==='qhooks-main-pool'&&original.pricePoolId===QHOOKS_PRICE_IDENTITY.poolId);
@@ -152,12 +153,17 @@ export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24'
   const displayMoney = (key, precise = false) => numeric[key] !== null ? money(numeric[key], { precise }) :
     quote?.unit && Number(quote[key]) > 0 ? money(quote[key], { unit: quote.unit, precise }) : DASH; // no "0 WETH" cap for an untraded launch (quoteusd)
   const capValue=displayMoney('mcap'),capKind=known(row.marketCapUsd)===null&&known(row.fdvUsd)!==null?'FDV':'';
-  const symbol = typeof token.symbol === 'string' && token.symbol.trim() ? token.symbol : '?';
   const address = typeof token.address === 'string' ? token.address : '';
+  // G2: name/symbol/logo sources are static per chain:address for the session (only a newer metaVersion replaces them),
+  // so a tick never re-renders the identity or swaps the logo src. Browser only; node callers pass meta:null implicitly.
+  const liveSources = tokenAvatarSources({...row.launch,...row,...token},[officialLogo(chainId,address)]);
+  const id = meta && address ? meta.settle(chainId, address, {name: token.name, symbol: token.symbol, chain: chainId, sources: liveSources, metaVersion: original.metaVersion ?? original.metadataVersion ?? token.metaVersion}) : null;
+  const symbol = typeof id?.symbol === 'string' && id.symbol.trim() ? id.symbol : typeof token.symbol === 'string' && token.symbol.trim() ? token.symbol : '?';
+  const staticName = typeof id?.name === 'string' && id.name ? id.name : typeof token.name === 'string' ? token.name : '';
   return {
     key: rowKey(row), row, fund, window, capAt:row.capAt,capLabel:priceLabel(Object.hasOwn(row,'capAt')?row.capAt:row.observedAt,{now,refreshing:!!row.capsRefreshing,cached:!!row.capsCached}),capsRefreshing:!!row.capsRefreshing,priceAt:row.priceAt,priceLabel:priceLabel(row.priceAt,{now,refreshing:!!row.pricesRefreshing,cached:!!row.pricesCached}),holderAge:observedAge(Object.hasOwn(row,'holdersAt')?row.holdersAt:row.observedAt,now),priceRefreshing:!!row.pricesRefreshing, chainId, chainName: chain?.[1] || chainId, chainIcon: chain?.[2], address,
-    lifecycle:lifecycle(row),move:percent(numeric.move),symbol, name: typeof token.name === 'string' ? token.name : '', logo: safeLogo(token.logo) || safeLogo(officialLogo(chainId, address)),
-    avatarSources:tokenAvatarSources({...row.launch,...row,...token},[officialLogo(chainId,address)]),
+    lifecycle:lifecycle(row),move:percent(numeric.move),symbol, name: staticName, logo: safeLogo(token.logo) || safeLogo(officialLogo(chainId, address)),
+    avatarSources:id?.sources?.length ? id.sources : liveSources,
     letter: symbol.replace(/^\$/, '').slice(0, 1).toUpperCase() || '?', age: age(row.createdAt, now),
     price: displayMoney('price', true), m5: percent(numeric.m5), h1: percent(numeric.h1), h6: percent(numeric.h6), h24: percent(numeric.h24),
     holders:compact(numeric.holders),volume: displayMoney('volume'), liquidity: displayMoney('liquidity'), mcap: capValue,

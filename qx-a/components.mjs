@@ -548,5 +548,16 @@ export function liveChart(canvas, { series, getLive, marks = () => [], pins = ()
 }
 
 /* ================= theme ================= */
-export function setTheme(t) { document.documentElement.dataset.theme = t; try { localStorage.setItem('qa-theme', t); } catch {} dispatchEvent(new CustomEvent('qa:theme', { detail: t })); }
-export function initTheme(def = 'dark') { let t = def; try { t = localStorage.getItem('qa-theme') || def; } catch {} document.documentElement.dataset.theme = t; return t; }
+// Batch G (2026-11-18): the light theme is hidden until every page passes WCAG AA in it (lead/ux-g/HANDOFF.md has the
+// sweep numbers). THEME_LOCK pins the site to dark: the toggles are hidden, any attempt to set light is turned back, and a
+// visitor's stored choice is kept untouched so it returns when the lock is set to null. theme.js, agent-theme.js and
+// offline.html carry the same constant (classic scripts); lead/ux-g/tests checks they agree.
+export const THEME_LOCK = 'dark';
+const lockedTheme = (t) => THEME_LOCK || (t === 'light' ? 'light' : 'dark');
+if (THEME_LOCK) {
+  const root = document.documentElement; root.dataset.themeLocked = THEME_LOCK;
+  if (root.dataset.theme !== THEME_LOCK) root.dataset.theme = THEME_LOCK;
+  new MutationObserver(() => { if (root.dataset.theme !== THEME_LOCK) root.dataset.theme = THEME_LOCK; }).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+}
+export function setTheme(t) { t = lockedTheme(t); document.documentElement.dataset.theme = t; if (!THEME_LOCK) { try { localStorage.setItem('qa-theme', t); } catch {} } dispatchEvent(new CustomEvent('qa:theme', { detail: t })); }
+export function initTheme(def = 'dark') { let t = def; try { t = localStorage.getItem('qa-theme') || def; } catch {} t = lockedTheme(t); document.documentElement.dataset.theme = t; return t; }

@@ -2,6 +2,7 @@ import{hasVisibleTerminalDialog}from'./qx-terminal-selection.mjs';
 import {reportHotEvent, createHotLoader} from './qx-hot-client.mjs';
 import {HOT_WINDOWS} from './qx-hot-core.mjs';
 import{feedRowPriceView}from'./qx-feed-row-price-view.mjs';
+let firstRowPriceMarked=false;
 import {createDiscoveryLivenessView} from './qx-discovery-liveness-view.mjs';
 import{defaultTrendingMode,projectTrendingContracts,discoveryContractKey}from'./qx-discovery-groups.mjs';
 import{publicReadFetch}from'./qx-public-read.mjs';
@@ -404,11 +405,14 @@ function updateRow(node, vm, {refreshing=!!(state.loading||state.data?.stale||st
   if(JSON.stringify(old?.avatarSources)!==JSON.stringify(vm.avatarSources)){node.unbindAvatar?.();node.unbindAvatar=bindTokenAvatar(node.logo,{},vm.avatarSources);}
   for (const key of ['move', 'volume', 'liquidity', 'makers','holders']) text(node.cells[key], vm[key]);
   const priceView=feedRowPriceView(vm,{refreshing});
-  text(node.priceValue,priceView.text);text(node.priceStatus,priceView.status);node.cells.price.title=priceView.title;node.cells.price.dataset.priceAt=priceView.at??'';node.cells.price.dataset.unit=priceView.unit||'';node.cells.price.dataset.refreshing=String(priceView.refreshing);
+  text(node.priceValue,priceView.text);text(node.priceStatus,priceView.status);
+  // Batch G: RUM mark (no-op until qx-rum.mjs defines window.qxMark), once per page load, at the first painted row price.
+  if(priceView.available&&!firstRowPriceMarked){firstRowPriceMarked=true;try{globalThis.qxMark?.('first-price');}catch{}}node.cells.price.title=priceView.title;node.cells.price.dataset.priceAt=priceView.at??'';node.cells.price.dataset.unit=priceView.unit||'';node.cells.price.dataset.refreshing=String(priceView.refreshing);
   node.cells.liquidity.dataset.known = String(vm.liquidity !== DASH);
   node.cells.holders.dataset.known=String(vm.numeric.holders!==null);
   node.cells.price.dataset.slickPrice='';node.cells.price.dataset.slickKey=vm.key;node.cells.price.dataset.slickValue=vm.numeric.price===null?'':String(vm.numeric.price);
-  node.cells.price.style.opacity=vm.priceRefreshing||vm.row.pricesCached?'.65':'1';node.cells.mcap.style.opacity=vm.capsRefreshing||vm.row.capsCached?'.65':'1';
+  // Batch G: a refreshing/cached value is shown in the muted text token (AA on the row), never dimmed by opacity (2.79:1).
+  node.cells.price.style.opacity='';node.cells.mcap.style.opacity='';node.cells.price.dataset.dim=String(!!(vm.priceRefreshing||vm.row.pricesCached));node.cells.mcap.dataset.dim=String(!!(vm.capsRefreshing||vm.row.capsCached));
   node.cells.holders.title=vm.numeric.holders===null?'The source has not provided a global holder count.':('Global holder count'+(vm.holderAge?' · updated '+vm.holderAge+' ago':''));
   for (const key of ['move']) {
     node.cells[key].classList.toggle('up', vm.numeric[key] > 0);

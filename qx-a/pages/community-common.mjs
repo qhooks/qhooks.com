@@ -1,5 +1,6 @@
 import {bindCallPending,clearCallPending} from '/qx-call-pending.mjs';
 import {xAttachment} from '/qx-x-attachment.mjs';
+import {listBuyLabel} from '/qx-list-buy.mjs';
 // Community lane (System A): the shared pieces of community, board, profile, creator and call pages.
 // Presentation only. Every read and write goes through the endpoints and modules the site already runs:
 // /api/community/* (boards, reactions), /api/community/post/<id>/thanks (via qx-community-thanks.mjs),
@@ -253,7 +254,8 @@ export function reactRow(post, { replies = 0, replyHref, call, links, buyLabel }
   }
   // Thank caller reads its count only once the card is on screen (a feed of 20 calls used to start 20 reads at load).
   if (call && post?.id && post.author) { const t = h('span', { class: 'cx-thanks' }); row.append(t); const mount = () => void mountBoardCallThanks(t, { id: post.id, author: post.author }); try { inView(t, mount, 0); } catch { mount(); } }
-  if (links?.trade && buyLabel) row.append(h('a', { class: 'qa-react qa-react--buy', href: links.trade, title: 'Trades through this link credit the caller as referrer where eligible.' }, buyLabel));
+  // Batch G: buyLabel is { text, ariaLabel } (one fixed-width "Buy"; the accessible name keeps the token). A plain string still works.
+  if (links?.trade && buyLabel) { const l = typeof buyLabel === 'string' ? { text: buyLabel, ariaLabel: buyLabel } : buyLabel; row.append(h('a', { class: 'qa-react qa-react--buy qa-list-buy', href: links.trade, 'aria-label': l.ariaLabel, title: 'Trades through this link credit the caller as referrer where eligible.' }, l.text)); }
   row.setReactions = (p) => { if (!p) return; state = { reactions: p.reactions || {}, mine: p.mine || [] }; btns.forEach((x) => x.paint()); };
   return h('div', { class: 'cx-actions' }, row, status);
 }
@@ -281,7 +283,7 @@ export function callPost(c, { enter = false, onBoard = false, showToken = true }
   const live = livePrice(b, k.quoteSymbol);
   const out = outcome(k, { live,pendingKey:c.id+':now' });
   const media = [out, checkpoints(k), positionBars(c.position, k.at || c.createdAt)].filter(Boolean);
-  const actions = reactRow(c, { call: true, links, replyHref: links?.board || links?.path, buyLabel: b.symbol ? 'Buy ' + sym : 'Buy on this call' });
+  const actions = reactRow(c, { call: true, links, replyHref: links?.board || links?.path, buyLabel: listBuyLabel(b.symbol || '', { fallback: 'on this call' }) });
   const body = h('div', { class: 'qa-post__body' },
     h('div', { class: 'qa-post__head' }, nameTag(c.author), agentBadge(c), age, holdingTag(c.position), what),
     c.folded ? folded(c, text) : text,xAttachment(c.text,{hidden:!!c.hidden||!!c.folded}),

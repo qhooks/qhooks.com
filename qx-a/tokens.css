@@ -191,3 +191,6 @@
 /* daylight: older modules colour text with --qx-ink / --ink and an ivory fallback; pages that don't load bridge.css never define them,
    so in day mode they fell back to ivory on the light floor. Map them to the theme (pages that define their own still win). */
 [data-theme="light"] { --qx-ink: var(--qa-tx); --ink: var(--qa-tx); --qx-muted: var(--qa-tx-2); --qx-faint: var(--qa-tx-3); --qx-line: var(--qa-rule); --qx-line-2: var(--qa-rule-2); --line: var(--qa-rule-2); }
+
+/* Batch G (2026-11-18): while the theme is locked (THEME_LOCK in components.mjs / LOCK in theme.js) every theme toggle is hidden */
+html[data-theme-locked] :is(.qa-theme-btn, [data-theme-toggle], #ag-theme, .qa-menu__row[hidden]) { display: none !important; }
