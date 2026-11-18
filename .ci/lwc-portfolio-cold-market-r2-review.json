@@ -1,0 +1,46 @@
+{
+  "sourceRelease": "60469dea-4995-4e94-b127-2f180692448e",
+  "status": "SOURCE_LIVE_MIRROR_PENDING_PUBLICATION",
+  "sourceWorkerSha256": "26cfe7e0e962168f86e59be8ced1244b476326505e5f35f432631dedcd065a92",
+  "bundles": [
+    {
+      "path": "b/portfolio-cold-market-r2-root-20261118/terminal/qx-terminal.RMZMLRSU.mjs",
+      "sha256": "19572782cbf4ac9c1f51817003d65af6b29d424743d0ad8774237be8e820f741",
+      "bytes": 406547,
+      "attributionReferencesExactly": 2,
+      "proprietaryInputs": 0,
+      "ownerManifest": {
+        "path": "work/qhooks-portfolio-cold-market-r2-root-rel-20261118/lead/perf/terminal.manifest.json",
+        "sha256": "f4f21c736f3c36ce46026f86335f30c3fc6d982f450f1861407da6faa8a6c4eb"
+      },
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      }
+    },
+    {
+      "path": "b/portfolio-cold-market-r2-root-20261118/x-tracker/c.3JSX6SCP.mjs",
+      "sha256": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+      "bytes": 161341,
+      "attributionReferencesExactly": 2,
+      "proprietaryInputs": 0,
+      "ownerManifest": {
+        "path": "work/qhooks-portfolio-cold-market-r2-root-rel-20261118/lead/perf/x-tracker.manifest.json",
+        "sha256": "b6d8293e633b94e4e676c1b4de8178a99663ab5355ad2b4143c9bc34a5f4641c"
+      },
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      }
+    }
+  ],
+  "allPriorPinsExact": true
+}

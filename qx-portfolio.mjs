@@ -51,11 +51,8 @@ export function portfolioReadLabel(at,now=Date.now()) {
  return (now-at<30000?'Live · ':'Read · ')+age+' ago';
 }
 export function portfolioValuationLabel(state,now=Date.now()) {
- if(!known(state?.at)||state.at<=0||state.at>now)return 'Time unavailable';
- const coverage=pricingCoverage(state,{now});
- const at=known(state?.at)&&known(coverage.observedAt)?Math.min(state.at,coverage.observedAt):state?.at;
- const label=portfolioReadLabel(at,now);
- return state?.partial||coverage.unpriced||coverage.cachedPrices||coverage.balancesPending?label.replace(/^Live · /,'Read · '):label;
+ if(!state)return 'Time unavailable';
+ return pricingCoverage(state,{now}).priceLabel;
 }
 export function savedPortfolioSnapshot({reader,owner,now=Date.now()}={}) {
  if(!/^0x[\da-f]{40}$/.test(owner||''))return null;
@@ -391,9 +388,9 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
  function paintNotes(failed = []) {
   const m = current, notes = [...failed];
   for (const c of m.chains) {
-   const state=chainReadState(c),code=c.error,name=chainName(c);
+   const state=chainReadState(c),code=c.error,name=chainName(c),chainCoverage=pricingCoverage({chains:[c],progress:m.progress});
    if(c.balancesRefreshing&&!code)notes.push(name+': balance coverage incomplete');
-   if(c.pricesRefreshing&&!code)notes.push(name+': using available dated prices');
+   if(c.pricesRefreshing&&!code&&chainCoverage.pricedCount&&!chainCoverage.priceLive)notes.push(name+': using available dated prices');
    if (code) notes.push(name + ': ' + ({balances_unavailable: 'balance coverage incomplete', prices_unavailable: 'some prices unavailable', prices_refreshing: 'price coverage incomplete', index_unavailable: 'indexed positions unavailable', metadata_unavailable: 'some token details unavailable', token_limit: 'more tokens may be held than this reading includes', metadata_limit: 'some token balances have unknown units'}[code] || 'some data unavailable'));
    if (c.source === 'index-only' && c.chainId !== 'solana') notes.push(name + ': native balance and indexed QHooks tokens only');
   }
@@ -406,7 +403,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   $('qp-notes').replaceChildren(...[...[...grouped].map(([k, who]) => h('p', {}, k.startsWith('\u0000') ? k.slice(1) : who.join(', ') + ': ' + k)),renderUnpricedHoldings(h,unpriced)].filter(Boolean));
   // one status line: the per-chain detail folds behind "Some chains refreshing" (partial reading said there, not in the label)
   const more = $('qp-more'), sep = $('qp-more-sep'), busy = m.chains.some(c => c.error) || failed.length;
-  if (more) { more.hidden = !notes.length&&!unpriced.length; more.textContent = unpriced.length?'Partial · '+unpriced.length+' unpriced holding'+(unpriced.length===1?'':'s'):coverage.unpriced||coverage.cachedPrices?coverage.label:m.partial||failed.length?'Partial · details':'Details'; }
+  if (more) { more.hidden = !notes.length&&!unpriced.length; more.textContent = coverage.liquidUnpriced?coverage.label:unpriced.length?unpriced.length+' other unpriced holding'+(unpriced.length===1?'':'s')+' · Details':coverage.balanceError||coverage.transportTimedOut||failed.length?'Partial · details':'Details'; }
   if (sep) sep.hidden = !notes.length&&!unpriced.length;
   if (!notes.length&&!unpriced.length) { const box = $('qp-notes'); if (box) box.hidden = true; more?.setAttribute('aria-expanded', 'false'); }
  }
@@ -589,7 +586,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   } else if (logos) paintList();
   paintAge();
  }
- function paintReadAge() { $('qp-at').textContent=portfolioValuationLabel(current); }
+ function paintReadAge() { const at=$('qp-at');at.textContent=portfolioValuationLabel(current);at.title='Oldest price in the shown total. Individual holdings keep their own observation times.'; }
 
  function paintAge() {
   if(current?.rows.some(r=>priceState(r.priceAt).refreshing&&!r.pricesRefreshing||known(r.priceUsd)&&(!known(r.priceAt)||r.priceAt>Date.now()||Date.now()-r.priceAt>PORTFOLIO_PRICE_MAX_MS))){

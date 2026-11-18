@@ -25,18 +25,15 @@ export const fmtUsd = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDi
 
 
 // Presentation only; the portfolio reader supplies values and original clocks.
-export function portfolioHeaderStatus(report,{fresh=true,now=Date.now()}={}) {
+export function portfolioHeaderStatus(report,{now=Date.now()}={}) {
   const coverage=pricingCoverage(report,{now});
-  const partial=!report||!!report.partial||!!report.refreshing||!fresh||!coverage.settled||coverage.balancesPending||coverage.unpriced>0||coverage.cachedPrices>0;
-  let note='all chains';
-  if(!report)note='all chains · Reading balances';
-  else if(!coverage.settled)note='Partial · balances';
-  else if(coverage.unpriced||coverage.cachedPrices)note=coverage.label+(coverage.balancesPending?' · balances incomplete':'');
-  else if(coverage.balancesPending)note='Partial · balances';
-  else if(report.partial)note=coverage.label;
-  else if(!fresh||report.refreshing)note='Partial · saved reading';
+  // Price status follows the priced share's evidence, not a sticky aggregate
+  // partial/refresh flag. Actual balance errors remain a separate disclosure.
+  const partial=!report||!coverage.settled||coverage.transportTimedOut||coverage.balanceError||coverage.liquidUnpriced>0||!coverage.priceLive;
+  const note=report?coverage.label:'all chains · Reading balances';
   const age=Number.isSafeInteger(coverage.observedAt)&&coverage.observedAt>0&&coverage.observedAt<=now?'Prices observed '+new Date(coverage.observedAt).toISOString():null;
-  return {partial:!!partial,note,age,coverage};
+  const details=coverage.otherUnpriced>0?coverage.otherUnpriced+' other unpriced holding'+(coverage.otherUnpriced===1?' remains':'s remain')+' listed in Portfolio':null;
+  return {partial:!!partial,note,age,details,coverage};
 }
 
 function remembered() {
@@ -57,9 +54,9 @@ export function mountBalance(end, before) {
   function paint() {
     if (!who) { btn.hidden = true; return; }
     const saved=portfolioReader().cached('evm',who.owner),report=saved?.report,value=report?.totals?.valueUsd;
-    const {partial,note,age}=portfolioHeaderStatus(report,{fresh:!!saved?.fresh}),known=typeof value==='number'&&Number.isFinite(value);
+    const {partial,note,age,details}=portfolioHeaderStatus(report,{fresh:!!saved?.fresh}),known=typeof value==='number'&&Number.isFinite(value);
     const main=known?fmtUsd(value):'$—';
-    amt.textContent=main;sub.textContent=note;btn.title=main+' · '+note+(age?' · '+age:'')+' · Open Portfolio';btn.setAttribute('aria-label',btn.title);
+    amt.textContent=main;sub.textContent=note;btn.title=main+' · '+note+(age?' · '+age:'')+(details?' · '+details:'')+' · Open Portfolio';btn.setAttribute('aria-label',btn.title);
     btn.dataset.mode='usd';btn.hidden=false;if(partial)btn.dataset.partial='1';else delete btn.dataset.partial;
   }
 
