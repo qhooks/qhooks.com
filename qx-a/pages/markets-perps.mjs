@@ -3,6 +3,7 @@
 // real book update, a real trade or the real funding clock. Trading itself stays in /qx-perps.mjs, untouched in its flows.
 import { laneShell } from './markets-shell.mjs';
 import { RM, toast, liveLabel } from '/qx-a/components.mjs';
+import { createBookFeed } from '/qx-perps-book-feed.mjs';
 
 laneShell({ active: 'trade', mode: 'detail', title: 'Perps', back: '/terminal' });
 const $ = (id) => document.getElementById(id);
@@ -51,71 +52,67 @@ const fmtPx = (v) => { const n = Number(v); if (!Number.isFinite(n)) return '—
 const usdShort = (v) => v >= 1e6 ? '$' + (v / 1e6).toFixed(2) + 'M' : v >= 1e3 ? '$' + (v / 1e3).toFixed(1) + 'K' : '$' + v.toFixed(0);
 const clock = (ms) => new Date(ms).toLocaleTimeString('en-GB', { hour12: false });
 
-let coin = null, ws = null, lastMsg = 0, pending = null, raf = 0, prevSizes = new Map(), lastMid = 0, seen = new Set(), lastWhale = 0, gotTrades = false;
+let coin = null, prevSizes = new Map(), lastMid = 0, seen = new Set(), lastWhale = 0, gotTrades = false;
 const ROWS = 12, TRADES = 40;
 
-function send(method, c) {
-  if (ws?.readyState !== 1 || !c) return;
-  ws.send(JSON.stringify({ method, subscription: { type: 'l2Book', coin: c } }));
-  ws.send(JSON.stringify({ method, subscription: { type: 'trades', coin: c } }));
-}
-function connect() {
-  try { ws = new WebSocket('wss://api.hyperliquid.xyz/ws'); } catch { note('Refreshing'); return; }
-  note('Refreshing');
-  ws.onopen = () => { lastMsg = Date.now(); send('subscribe', coin); };
-  ws.onmessage = (e) => {
-    lastMsg = Date.now();
-    let p; try { p = JSON.parse(e.data); } catch { return; }
-    if (p.channel === 'l2Book' && p.data?.coin === coin) { pending = p.data; if (!raf) raf = requestAnimationFrame(paintBook); note('Live'); }
-    else if (p.channel === 'trades' && Array.isArray(p.data)) onTrades(p.data.filter((t) => t.coin === coin));
-  };
-  ws.onclose = () => { ws = null; note('Refreshing'); last.refreshing(true); };
-  ws.onerror = () => note('Refreshing');
-}
-setInterval(() => {
-  if (ws?.readyState === 1) { if (Date.now() - lastMsg > 45e3) ws.close(); else ws.send(JSON.stringify({ method: 'ping' })); }
-  else if (!ws && coin && !document.hidden) connect();
-}, 15e3);
+// One socket for the open market's book and trades (fast l2Book, coalesced to <= 4 paints a second, paused while the
+// tab is hidden, polling fallback after two drops in 30 s): /qx-perps-book-feed.mjs.
+const feed = createBookFeed({
+  onStatus: (s) => { note(s); if (s !== 'Live' && !gotTrades) last.refreshing(true); },
+  onRender: ({ coin: c, book, trades }) => { if (c !== coin) return; if (book) paintBook(book); if (trades.length) onTrades(trades.filter((t) => t.coin === coin)); },
+});
+window.__qxPerpsBook = feed; // read-only handle for the browser gate (stats, mode)
 
 function setCoin(next) {
   if (!next || next === coin) return;
-  if (coin) send('unsubscribe', coin);
-  coin = next; pending = null; prevSizes = new Map(); lastMid = 0; seen = new Set(); gotTrades = false;
+  coin = next; prevSizes = new Map(); lastMid = 0; seen = new Set(); gotTrades = false;
   $('pp-asks').replaceChildren(); $('pp-bids').replaceChildren(); $('pp-trades-list').replaceChildren(); $('pp-mid').textContent = '—'; $('pp-spread').textContent = '—';
   last.refreshing(true);
-  if (!ws) connect(); else send('subscribe', coin);
+  feed.setCoin(coin);
 }
 addEventListener('qx:perps-market', (e) => setCoin(e.detail?.coin));
 
-let lastPaint = 0;
-function paintBook(now) {
-  raf = 0;
-  if (now - lastPaint < 220) { raf = requestAnimationFrame(paintBook); return; } // a calm 4–5 repaints a second
-  lastPaint = now;
-  const data = pending; if (!data?.levels) return;
+// Rows are created once per side and patched in place (text, depth bar, flash), so the list never rebuilds or jumps.
+function levelRow(side) {
+  const li = make('li', 'pp-lvl is-' + side);
+  li.append(make('span', 'pp-lvl__px'), make('span', 'pp-lvl__sz'), make('span', 'pp-lvl__tot'));
+  return li;
+}
+const setText = (n, t) => { if (n.textContent !== t) n.textContent = t; };
+// Always ROWS slots once a book has painted: a level the live data does not cover this frame is a blank row, so the
+// lists keep their height instead of jumping.
+function patchSide(box, list, cum, top, side, sizes, flashes) {
+  while (box.children.length < ROWS) box.append(levelRow(side));
+  for (let i = list.length; i < ROWS; i++) { const li = box.children[i]; if (li.classList.contains('is-empty')) continue; li.classList.add('is-empty'); li.classList.remove('is-grow', 'is-shrink'); li.style.setProperty('--d', '0%'); for (const c of li.children) c.textContent = '\u00a0'; }
+  list.forEach((l, i) => {
+    const li0 = box.children[i]; li0.classList.remove('is-empty');
+    const li = box.children[i], key = side + l.px, sz = Number(l.sz), was = prevSizes.get(key), d = (cum[i] / top * 100).toFixed(1) + '%';
+    if (li.style.getPropertyValue('--d') !== d) li.style.setProperty('--d', d);
+    setText(li.children[0], fmtPx(l.px)); setText(li.children[1], fmtSz(l.sz)); setText(li.children[2], fmtSz(cum[i]));
+    li.classList.remove('is-grow', 'is-shrink');
+    if (!RM && was != null && was !== sz) flashes.push([li, sz > was ? 'is-grow' : 'is-shrink']);
+    sizes.set(key, sz);
+  });
+}
+function paintBook(data) {
+  if (!data?.levels) return;
   const [bids = [], asks = []] = data.levels, b = bids.slice(0, ROWS), a = asks.slice(0, ROWS);
   let cb = 0, ca = 0; const cumB = b.map((l) => (cb += Number(l.sz))), cumA = a.map((l) => (ca += Number(l.sz)));
-  const top = Math.max(cb, ca) || 1, sizes = new Map();
-  const rows = (list, cum, side) => list.map((l, i) => {
-    const li = make('li', 'pp-lvl is-' + side), key = side + l.px, sz = Number(l.sz), was = prevSizes.get(key);
-    li.style.setProperty('--d', (cum[i] / top * 100).toFixed(1) + '%');
-    li.append(make('span', 'pp-lvl__px', fmtPx(l.px)), make('span', 'pp-lvl__sz', fmtSz(l.sz)), make('span', 'pp-lvl__tot', fmtSz(cum[i])));
-    if (!RM && was != null && was !== sz) li.classList.add(sz > was ? 'is-grow' : 'is-shrink');
-    sizes.set(key, sz); return li;
-  });
-  $('pp-asks').replaceChildren(...rows(a, cumA, 'ask'));
-  $('pp-bids').replaceChildren(...rows(b, cumB, 'bid'));
+  const top = Math.max(cb, ca) || 1, sizes = new Map(), flashes = [];
+  patchSide($('pp-asks'), a, cumA, top, 'ask', sizes, flashes);
+  patchSide($('pp-bids'), b, cumB, top, 'bid', sizes, flashes);
   prevSizes = sizes;
+  if (flashes.length) { void $('pp-book').offsetWidth; for (const [li, c] of flashes) li.classList.add(c); } // one reflow restarts every flash
   if (b[0] && a[0]) {
     const bb = Number(b[0].px), ba = Number(a[0].px), mid = (bb + ba) / 2, midEl = $('pp-mid');
-    midEl.textContent = fmtPx(mid);
+    setText(midEl, fmtPx(mid));
     midEl.className = mid > lastMid && lastMid ? 'qa-up' : mid < lastMid ? 'qa-down' : midEl.className;
     lastMid = mid;
-    $('pp-spread').textContent = fmtPx(ba - bb) + ' · ' + ((ba - bb) / mid * 100).toFixed(3) + '%';
+    setText($('pp-spread'), fmtPx(ba - bb) + ' · ' + ((ba - bb) / mid * 100).toFixed(3) + '%');
   }
   const share = cb / ((cb + ca) || 1);
   $('pp-lean-b').style.flexGrow = share.toFixed(3); $('pp-lean-a').style.flexGrow = (1 - share).toFixed(3);
-  $('pp-lean-bl').textContent = 'Bids ' + Math.round(share * 100) + '%'; $('pp-lean-al').textContent = Math.round((1 - share) * 100) + '% Asks';
+  setText($('pp-lean-bl'), 'Bids ' + Math.round(share * 100) + '%'); setText($('pp-lean-al'), Math.round((1 - share) * 100) + '% Asks');
 }
 
 function tradeRow(t, enter) {
@@ -157,4 +154,4 @@ new ResizeObserver(fitFlow).observe(document.querySelector('.pp-chart')); wide.a
 
 /* the coin read before qx-perps announces (it starts on BTC) */
 setCoin(($('coin')?.textContent || 'BTC').trim());
-document.addEventListener('visibilitychange', () => { if (!document.hidden && !ws && coin) connect(); });
+addEventListener('pagehide', () => feed.dispose(), { once: true });

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "b0fb43e1-5c66-4d17-abc0-30b1f798b6fe",
+  "releaseId": "22ea11d8-9fcc-4ab9-8b2e-a5b11fde4d3f",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -201305,8 +201305,8 @@
       "bytes": 29513
     },
     "qx-a/pages/markets-perps.mjs": {
-      "sha256": "2c48aee80edc5594d13e0a5c2f2e1b0f25cda77a3fb0c65e76a45188521b5583",
-      "bytes": 9699
+      "sha256": "1585ad96f4cf46c184c92d48ed8363071c903b889e40bd930dcb37b1f34c9b39",
+      "bytes": 10029
     },
     "qx-a/pages/markets-shell.mjs": {
       "sha256": "a804e77ce73715a3c7c9f98af383837da684aaae327690f90422e450af94e539",
@@ -203428,6 +203428,10 @@
       "sha256": "f7aa46d6085d449bbf98a39fd6a20c3cf93085b03cb41b1de11875004450fad1",
       "bytes": 6868
     },
+    "qx-perps-book-feed.mjs": {
+      "sha256": "0fe3a238d6d01be8ef3cae664c80ce9be80cef6d07f9229238f9ab2aac447450",
+      "bytes": 12686
+    },
     "qx-perps-builder-flow.mjs": {
       "sha256": "e234c967bbc666355be774182a16b64883a9695c8c00c629695b1094e1aeb7e4",
       "bytes": 3921
@@ -205281,9 +205285,9 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "12ca4ab60102227479268949ef51f41282c9b3de2d348c599d43d2168f4ea264",
-  "sourceTree": "work/qhooks-qproof-public5-after-e-off-root-rel-20261118",
+  "contentDigest": "25e130f3b2cecd86394350d31cf41130e18eda3c2ff974057b44dfba52d1f578",
+  "sourceTree": "work/qhooks-perps-fast-book-r2-root-rel-20261118",
   "sourceWorkerSha256": "555bc1d4e5f67c2390d819f04abc1be17727218af4e496c4905c45a40ecb314f",
-  "sourceFreezeSha256": "fea3dee7f8c616f787121a12746ae92cd562ff50c46019541bf0114b1d47893f",
-  "provenance": "Root-accepted deployed PUBLIC5 on E-registry-OFF. Exact full static public assets only; server/Worker/private and proprietary charting_library/datafeeds/download excluded; no Worker-generated HTTP body claim."
+  "sourceFreezeSha256": "1f79589691e8bdefe15bcf220efe3d9e935bb91ba96b77a947a773e1087e1e7b",
+  "provenance": "Root-accepted deployed perps fast-book R2 on PUBLIC5/E-registry-OFF. Exact full static public map; no Worker-generated HTTP body claim. Server/Worker/private and proprietary charting_library/datafeeds/download excluded."
 }
