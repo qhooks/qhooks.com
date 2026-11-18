@@ -6,9 +6,18 @@ const known=n=>typeof n==='number'&&Number.isFinite(n),positive=n=>known(n)&&n>0
 const units=a=>known(a?.units)?a.units:typeof a?.balance==='string'&&/^\d+$/.test(a.balance)&&Number.isInteger(a.decimals)&&a.decimals>=0&&a.decimals<=36?Number(a.balance)/10**a.decimals:null;
 const clock=(at,now)=>Number.isSafeInteger(at)&&at>0&&at<=now&&now-at<=PORTFOLIO_PRICE_MAX_MS;
 export const portfolioAssetKey=(chainId,asset,{native=false}={})=>String(chainId)+':'+(native?'native':String(chainId)==='solana'?String(asset||''):String(asset||'').toLowerCase());
+// Portfolio-only identity quarantine requested for RH USDG look-alikes. A symbol is not a stablecoin identity.
+export function portfolioPriceQuarantined(asset,{chainId,token=asset?.address}={}){
+ return String(chainId)==='4663'&&/^0x[0-9a-f]{40}$/i.test(String(token||''))&&String(token).toLowerCase()!=='0x5fc5360d0400a0fd4f2af552add042d716f1d168'&&String(asset?.symbol||'').trim().toUpperCase()==='USDG';
+}
 export function portfolioPriceFields(asset,{chainId,token=asset?.address,at=null,now=Date.now()}={}){
  const sourceAt=Object.hasOwn(asset||{},'priceAt')?asset.priceAt:Object.hasOwn(asset||{},'priceObservedAt')?asset.priceObservedAt:asset?.observedAt??null;
  const out=assetPriceFields({...asset,priceAt:sourceAt},{chainId,token,at:null,now});
+ if(portfolioPriceQuarantined(asset,{chainId,token}))return {...out,priceUsd:null,priceAt:null,priceSource:null,pricePoolId:null,
+  lastKnownPriceUsd:null,lastKnownPriceAt:null,lastKnownPriceSource:null,lastKnownPricePoolId:null,
+  valueUsd:units(asset)===0?0:null,change24:null,changeAt:null,priceStatus:'unpriced',pricesRefreshing:false,
+  spam:true,spamReason:'Unrecognized stablecoin contract',unpricedReason:'Not an official USDG contract',
+  ...(out.cost?{cost:{...out.cost,pnlUsd:null,pnlQuote:null,unrealizedQuote:null,quoteUsd:null}}:{})};
  // Explicit last-good evidence and old known evidence both keep their own clock.
  // A failed response's at / balanceAt / cache write can never date that evidence.
  const candidates=[{price:asset?.priceUsd,at:sourceAt,source:asset?.priceSource,pool:asset?.pricePoolId},
@@ -44,7 +53,7 @@ export function pricingCoverage(report,{now=Date.now(),pending=false}={}){
   const price=portfolioPriceFields(row,{chainId:row.chainId,now});
   // Legacy price failures were labelled as spam. They still need to be counted
   // as unpriced holdings; actual liquidity/security exclusions remain separate.
-  if(price.spam&&price.spamReason!=='No price available')continue;
+  if(price.spam&&price.spamReason!=='No price available'&&!portfolioPriceQuarantined(price,{chainId:row.chainId,token:row.address}))continue;
   if(!positive(price.priceUsd)||!clock(price.priceAt,now)){unpriced++;continue;}
   clocks.push(price.priceAt);if(price.priceStatus==='last-known'||now-price.priceAt>PRICE_REFRESH_MS)cachedPrices++;
  }

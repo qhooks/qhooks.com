@@ -1,0 +1,48 @@
+{
+  "sourceRelease": "f0e34600-c8d7-4c1f-8ae6-31dd1a72fc76",
+  "sourceWorkerSha256": "235363b347b95d3a8e16d4ee4f8a99fdc3a9f38554e02c77d343d2452cc959b7",
+  "scope": "Exact new Apache derivative paths only; prior51pins/all other policy fields unchanged. Actual accepted source/license pipeline, no proprietary input allowance.",
+  "bundles": [
+    {
+      "path": "b/portfolio-complete-unpriced-20261118/terminal/qx-terminal.733FQVPD.mjs",
+      "sha256": "5868b1ed7049758812be984dfb48cf2dabb58b68fe9eb2a97505e94d657f7972",
+      "bytes": 405584,
+      "ownerManifest": {
+        "path": "work/qhooks-portfolio-complete-root-current-rel-20261118/lead/perf/terminal.manifest.json",
+        "sha256": "f635371bfe3a0d4349052e4894a4e50d5f5ee72d0fe352e8e665f2c609250178",
+        "inputs": 355
+      },
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      },
+      "attributionReferencesExactly": 2,
+      "proprietaryInputs": 0
+    },
+    {
+      "path": "b/portfolio-complete-unpriced-20261118/x-tracker/c.3JSX6SCP.mjs",
+      "sha256": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+      "bytes": 161341,
+      "ownerManifest": {
+        "path": "work/qhooks-portfolio-complete-root-current-rel-20261118/lead/perf/x-tracker.manifest.json",
+        "sha256": "3fb8c606a55b388b9c373bb814f45367c69c1f306bb95a334645fe8227e9d087",
+        "inputs": 206
+      },
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      },
+      "attributionReferencesExactly": 2,
+      "proprietaryInputs": 0
+    }
+  ],
+  "prior51PinsAndAllOtherFieldsExact": true
+}

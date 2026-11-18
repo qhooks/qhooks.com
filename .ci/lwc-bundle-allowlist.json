@@ -57,7 +57,9 @@
     "b/portfolio-prices-complete-20261118/terminal/qx-terminal.2Q7UZVRJ.mjs": "3d3b0f26d1c78f7d2434ecc218496f923cc31a4a6c2ac8a3a374de2cc60d2d99",
     "b/portfolio-prices-complete-20261118/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
     "b/portfolio-prices-recovery-20261118/terminal/qx-terminal.NOWMIKEI.mjs": "054ec9212fdcc6c7fb44ba37168c70e8c6bb554fd1c980af7cb3e2c777ac06d6",
-    "b/portfolio-prices-recovery-20261118/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1"
+    "b/portfolio-prices-recovery-20261118/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+    "b/portfolio-complete-unpriced-20261118/terminal/qx-terminal.733FQVPD.mjs": "5868b1ed7049758812be984dfb48cf2dabb58b68fe9eb2a97505e94d657f7972",
+    "b/portfolio-complete-unpriced-20261118/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1"
   },
   "classificationSourceReleaseId": "df15e38a-fdcd-4fd2-af2c-5bed0051158b",
   "additionalReview": ".ci/lwc-f1-review.json",

@@ -2,7 +2,7 @@ import * as portfolioContext from './qx-portfolio-context.mjs';
 import * as portfolioSol from './qx-solana.mjs';
 import {mountPortfolioSelling,rowCanSell} from './qx-portfolio-row-trade.mjs';
 import {assetPriceFields,priceState} from './qx-price-state.mjs';
-import {allocatePortfolioValuation as allocatePortfolioBasis,portfolioPriceFields,pricingCoverage,PORTFOLIO_PRICE_MAX_MS} from './qx-portfolio-pricing.mjs';
+import {allocatePortfolioValuation as allocatePortfolioBasis,portfolioPriceFields,portfolioPriceQuarantined,pricingCoverage,PORTFOLIO_PRICE_MAX_MS} from './qx-portfolio-pricing.mjs';
 import {bindTokenAvatar,tokenAvatar} from './qx-token-avatar.mjs';
 import {portfolioReader,chainReadState,portfolioNeedsRefresh,portfolioBalanceAt} from './qx-portfolio-read.mjs';
 import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
@@ -98,6 +98,35 @@ export function filterHoldings(rows, {search = '', chain = 'all', hideSmall = tr
   && (!hideSmall || r.valueUsd === null || r.valueUsd >= 1)
   && (!query || [r.symbol, r.name, r.address, r.chainName].some(v => String(v || '').toLowerCase().includes(query))));
 }
+// Read-only disclosure: names/identities remain inspectable even when the holdings filters hide a row.
+// This does not reprice, include, unflag or enable actions for any holding.
+export function unpricedHoldingDetails(rows,{now=Date.now()}={}) {
+ const result=[],seen=new Set();
+ for(const [index,row]of (rows||[]).entries()){
+  if(!(Number(row?.units)>0||typeof row?.balance==='string'&&/^\d+$/.test(row.balance)&&/[1-9]/.test(row.balance)))continue;
+  const chainId=String(row.chainId??'unknown'),address=String(row.address||''),key=chainId+':'+(row.native===true?'native':chainId==='solana'?address:address.toLowerCase()||'unknown-'+index);
+  if(seen.has(key))continue;seen.add(key);
+  const price=portfolioPriceFields(row,{chainId,now});
+  if(known(price.priceUsd)&&price.priceUsd>0&&known(price.priceAt)&&price.priceAt>0&&price.priceAt<=now&&now-price.priceAt<=PORTFOLIO_PRICE_MAX_MS)continue;
+  const explicit=String(price.unpricedReason||row.unpricedReason||'').trim();
+  const reason=explicit||(!known(row.priceAt)||row.priceAt<=0?'No usable price observation':row.priceAt>now?'Price observation is in the future':now-row.priceAt>PORTFOLIO_PRICE_MAX_MS?'Price observation has expired':'Price unavailable');
+  result.push({key,chainId,address,native:row.native===true,name:String(price.displayName||row.displayName||row.symbol||row.name||'Unnamed token').trim()||'Unnamed token',chainName:names[chainId]||row.chainName||chainId,reason,priceAt:row.priceAt??null,
+   flags:[...(T.isTestRow(row)?['Test token · subject to Hide tests']:[]),...(price.spam?[String(price.spamReason||'Flagged as spam')]:[])]});
+ }
+ return result;
+}
+export function renderUnpricedHoldings(h,items) {
+ if(!items?.length)return null;
+ const list=items.map(item=>h('li',{'data-unpriced-key':item.key},
+  h('strong',{'data-unpriced-name':''},item.name),' · '+item.chainName+' — ',h('span',{'data-unpriced-reason':''},item.reason),
+  h('div',{},h('code',{style:'overflow-wrap:anywhere;word-break:break-word'},item.native?'Native asset':item.address||'Identity unavailable')),
+  ...item.flags.map(flag=>h('div',{'data-unpriced-flag':''},flag))));
+ return h('section',{'data-unpriced-inventory':'','aria-label':'Unpriced holdings',style:'overflow-wrap:anywhere;min-width:0'},
+  h('p',{},h('strong',{},items.length+' unpriced holding'+(items.length===1?'':'s'))),
+  h('p',{},'Prices unavailable. Holdings hidden by your filters are named here too.'),
+  h('ul',{style:'margin:6px 0;padding-left:18px;display:grid;gap:8px'},...list));
+}
+
 export function readPreferences(storage) {
  try { const p = JSON.parse(storage.getItem('qhooks:portfolio') || '{}'); return {hideSmall: p.hideSmall !== false, showSpam: p.showSpam === true}; }
  catch { return {hideSmall: true, showSpam: false}; }
@@ -131,7 +160,7 @@ export function applyLive(state, feed) {
  const moved = [], covered = {out: 0, in: 0, priorOut: 0, priorIn: 0}; let delta = 0, logos = false;
  if (!state || !feed) return {moved, delta, logos};
  for (const r of state.rows) {
-  if (!(r.units > 0) || r.native) continue;
+  if (!(r.units > 0) || r.native || portfolioPriceQuarantined(r,{chainId:r.chainId,token:r.address})) continue;
   const m = feed.get(marketKey(r.qhooks?.chainId || r.chainId, r.qhooks?.controller || r.address)) || feed.get(marketKey(r.chainId, r.address));
   if (!m || m.token&&marketKey(r.chainId,m.token)!==marketKey(r.chainId,r.address)||m.chainId&&String(m.chainId)!==String(r.chainId)) continue;
   if (m.logo && r.logo !== m.logo) { r.logo = m.logo; logos = true; }
@@ -358,18 +387,18 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
    if (code) notes.push(name + ': ' + ({balances_unavailable: 'balance coverage incomplete', prices_unavailable: 'some prices unavailable', prices_refreshing: 'price coverage incomplete', index_unavailable: 'indexed positions unavailable', metadata_unavailable: 'some token details unavailable', token_limit: 'more tokens may be held than this reading includes', metadata_limit: 'some token balances have unknown units'}[code] || 'some data unavailable'));
    if (c.source === 'index-only' && c.chainId !== 'solana') notes.push(name + ': native balance and indexed QHooks tokens only');
   }
-  const coverage=pricingCoverage(m);
+  const coverage=pricingCoverage(m),unpriced=unpricedHoldingDetails(m.rows);
   if(coverage.unpriced)notes.push(coverage.unpriced+' unpriced token'+(coverage.unpriced===1?'':'s')+' excluded from the total.');
   if(coverage.cachedPrices)notes.push('Cached prices for '+coverage.cachedPrices+' token'+(coverage.cachedPrices===1?'':'s')+' · '+portfolioReadLabel(coverage.observedAt)+'.');
   // one line per message: "Base, Robinhood: Refreshing prices" instead of a line per chain
   const grouped = new Map();
   for (const t of notes) { const i = t.indexOf(': '), k = i > 0 ? t.slice(i + 2) : '\u0000' + t; if (!grouped.has(k)) grouped.set(k, []); if (i > 0) grouped.get(k).push(t.slice(0, i)); }
-  $('qp-notes').replaceChildren(...[...grouped].map(([k, who]) => h('p', {}, k.startsWith('\u0000') ? k.slice(1) : who.join(', ') + ': ' + k)));
+  $('qp-notes').replaceChildren(...[...[...grouped].map(([k, who]) => h('p', {}, k.startsWith('\u0000') ? k.slice(1) : who.join(', ') + ': ' + k)),renderUnpricedHoldings(h,unpriced)].filter(Boolean));
   // one status line: the per-chain detail folds behind "Some chains refreshing" (partial reading said there, not in the label)
   const more = $('qp-more'), sep = $('qp-more-sep'), busy = m.chains.some(c => c.error) || failed.length;
-  if (more) { more.hidden = !notes.length; more.textContent = coverage.unpriced||coverage.cachedPrices?coverage.label:m.partial||failed.length?'Partial · details':'Details'; }
-  if (sep) sep.hidden = !notes.length;
-  if (!notes.length) { const box = $('qp-notes'); if (box) box.hidden = true; more?.setAttribute('aria-expanded', 'false'); }
+  if (more) { more.hidden = !notes.length&&!unpriced.length; more.textContent = unpriced.length?'Partial · '+unpriced.length+' unpriced holding'+(unpriced.length===1?'':'s'):coverage.unpriced||coverage.cachedPrices?coverage.label:m.partial||failed.length?'Partial · details':'Details'; }
+  if (sep) sep.hidden = !notes.length&&!unpriced.length;
+  if (!notes.length&&!unpriced.length) { const box = $('qp-notes'); if (box) box.hidden = true; more?.setAttribute('aria-expanded', 'false'); }
  }
  function paintOverview(failed = []) {
   $('qp-total').classList.remove('qp-skeleton'); paintHeroValue(0, failed);
