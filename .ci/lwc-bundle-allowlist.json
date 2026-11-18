@@ -61,7 +61,9 @@
     "b/portfolio-complete-unpriced-20261118/terminal/qx-terminal.733FQVPD.mjs": "5868b1ed7049758812be984dfb48cf2dabb58b68fe9eb2a97505e94d657f7972",
     "b/portfolio-complete-unpriced-20261118/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
     "b/ux-qproof-combined2-20261118/terminal/qx-terminal.QFAXUVGB.mjs": "1a720cc3ae1e401353b8469064dd34e348a4b4cd007c728dd9883a818782c594",
-    "b/ux-qproof-combined2-20261118/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1"
+    "b/ux-qproof-combined2-20261118/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+    "b/qproof-public-compat-root-20261118/terminal/qx-terminal.W27TEMWM.mjs": "93fd15cc03bb383cb209c818037cfa35d998de5ea9cb550f0cf422afd0f2e75c",
+    "b/qproof-public-compat-root-20261118/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1"
   },
   "classificationSourceReleaseId": "df15e38a-fdcd-4fd2-af2c-5bed0051158b",
   "additionalReview": ".ci/lwc-f1-review.json",
@@ -69,5 +71,6 @@
   "g4Review": ".ci/lwc-g4-9cd5b130-review.json",
   "g3Review": ".ci/lwc-g3-review.json",
   "discoveryD0Review": ".ci/lwc-discovery-d0-review.json",
-  "uxQproofCombined3Review": ".ci/lwc-ux-qproof-combined3-review.json"
+  "uxQproofCombined3Review": ".ci/lwc-ux-qproof-combined3-review.json",
+  "qproofPublicCompatReview": ".ci/lwc-qproof-public-compat-review.json"
 }

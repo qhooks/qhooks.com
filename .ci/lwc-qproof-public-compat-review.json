@@ -1,0 +1,46 @@
+{
+  "sourceRelease": "7cd09330-15c6-4a23-bc4d-69fc1f78844e",
+  "status": "SOURCE_LIVE_MIRROR_PENDING_PUBLICATION",
+  "sourceWorkerSha256": "11ef3af9ca7860957908fe3b8a4a4037f5bd19a953f70ae8297b69703367fdc4",
+  "bundles": [
+    {
+      "path": "b/qproof-public-compat-root-20261118/terminal/qx-terminal.W27TEMWM.mjs",
+      "sha256": "93fd15cc03bb383cb209c818037cfa35d998de5ea9cb550f0cf422afd0f2e75c",
+      "bytes": 406547,
+      "attributionReferencesExactly": 2,
+      "proprietaryInputs": 0,
+      "ownerManifest": {
+        "path": "work/qhooks-qproof-public-compat-root-rel-20261118/lead/perf/terminal.manifest.json",
+        "sha256": "d42e756aa11b805a325d86b42e772e8027ca951a822477fe33415ec5d7ed34ba"
+      },
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      }
+    },
+    {
+      "path": "b/qproof-public-compat-root-20261118/x-tracker/c.3JSX6SCP.mjs",
+      "sha256": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+      "bytes": 161341,
+      "attributionReferencesExactly": 2,
+      "proprietaryInputs": 0,
+      "ownerManifest": {
+        "path": "work/qhooks-qproof-public-compat-root-rel-20261118/lead/perf/x-tracker.manifest.json",
+        "sha256": "b34d6dc1fbf49e30f326455777be4dfb20dc81be498e337aafc6faaf42afaac6"
+      },
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      }
+    }
+  ],
+  "allPriorPinsExact": true
+}

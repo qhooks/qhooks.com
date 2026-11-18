@@ -11,7 +11,7 @@ function words(value){
  let s=value
   // Follow-up 3: machine provider-kind prefixes of skipped-read reasons ("goplus: ...") and the remaining
   // dynamic read/capacity phrases that still named a provider.
-  .replace(/\b(?:goplus|dexscreener|dexcdn|jupiter|helius-general|helius|sourcify|rh-blockscout|base-blockscout|robinhood-alchemy|elysium-testnet-alchemy|elysium-alchemy|hyperevm-testnet-alchemy|hyperevm-alchemy|solana-raven|rugcheck|birdeye): (?=[A-Z])/g,'')
+  .replace(/\b(?:goplus|dexscreener|dexcdn|jupiter|helius-general|helius|sourcify|rh-blockscout|base-blockscout|robinhood-alchemy|elysium-testnet-alchemy|elysium-alchemy|hyperevm-testnet-alchemy|hyperevm-alchemy|solana-[a-z]+|rugcheck|birdeye): (?=[A-Z])/g,'')
   .replace(/\bGoPlus headroom\b/gi,'Token-security headroom')
   .replace(/\bPublicNode log reads\b/gi,'Public chain log reads')
   .replace(/\bBlockscout credits\b/gi,'Explorer credits')
@@ -19,7 +19,7 @@ function words(value){
   .replace(/\bDexScreener images read unavailable\b/gi,'Token image read unavailable')
   .replace(/\bDexScreener read unavailable\b/gi,'Market index read unavailable')
   .replace(/\bJupiter read unavailable\b/gi,'Swap-route read unavailable')
-  .replace(/\b(?:Helius(?: \(Constant-K fallback\))?|Raven \/ Constant-K RPC) read unavailable\b/gi,'Solana chain read unavailable')
+  .replace(/\b(?:Helius(?: \(Constant-K fallback\))?|[A-Z][a-z]+ \/ Constant-K RPC) read unavailable\b/gi,'Solana chain read unavailable')
   .replace(/\bGoPlus reports\s+/gi,'Reported: ')
   .replace(/\bGoPlus flags a honeypot\b/gi,'Reported: honeypot')
   .replace(/\bFrom GoPlus[’']s list of LP holders\b/gi,'Reported: LP holder list')
