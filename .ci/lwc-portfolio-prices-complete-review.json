@@ -1,0 +1,88 @@
+{
+  "sourceRelease": "bfac55ff-384d-4629-9996-e810fa9f9af1",
+  "sourceWorkerSha256": "96a96ca9413b2674a164994194a899e70dca047c7b464a513146d66be1c44dec",
+  "scope": "Exact new Apache derivative paths only; prior47pins/all other policy fields unchanged. Actual accepted source/license pipeline, no proprietary input allowance.",
+  "bundles": [
+    {
+      "path": "b/portfolio-prices-complete-20261118/terminal/qx-terminal.2Q7UZVRJ.mjs",
+      "sha256": "3d3b0f26d1c78f7d2434ecc218496f923cc31a4a6c2ac8a3a374de2cc60d2d99",
+      "bytes": 405584,
+      "ownerManifest": {
+        "path": "work/qhooks-portfolio-prices-complete-root-current-rel-20261118/lead/perf/terminal.manifest.json",
+        "sha256": "543abcd0d60cd18b271bf216c09e2ca756b997a07d0eea0201a75b81a2e6457d",
+        "inputs": 355
+      },
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      },
+      "attributionReferencesExactly": 2,
+      "proprietaryInputs": 0
+    },
+    {
+      "path": "b/portfolio-prices-complete-20261118/x-tracker/c.3JSX6SCP.mjs",
+      "sha256": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+      "bytes": 161341,
+      "ownerManifest": {
+        "path": "work/qhooks-portfolio-prices-complete-root-current-rel-20261118/lead/perf/x-tracker.manifest.json",
+        "sha256": "65d04694d1c9c1b3cbacfa5893210fdc74acba4d78da35a4613d4fca78dfbe6c",
+        "inputs": 206
+      },
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      },
+      "attributionReferencesExactly": 2,
+      "proprietaryInputs": 0
+    },
+    {
+      "path": "b/portfolio-prices-recovery-20261118/terminal/qx-terminal.NOWMIKEI.mjs",
+      "sha256": "054ec9212fdcc6c7fb44ba37168c70e8c6bb554fd1c980af7cb3e2c777ac06d6",
+      "bytes": 405584,
+      "ownerManifest": {
+        "path": "work/qhooks-portfolio-prices-recovery-root-current-rel-20261118/lead/perf/terminal.manifest.json",
+        "sha256": "fa21d0726793fda92b8b70487e7d66ed0f2196316cc98ad9916592fdb768b645",
+        "inputs": 355
+      },
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      },
+      "attributionReferencesExactly": 2,
+      "proprietaryInputs": 0
+    },
+    {
+      "path": "b/portfolio-prices-recovery-20261118/x-tracker/c.3JSX6SCP.mjs",
+      "sha256": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+      "bytes": 161341,
+      "ownerManifest": {
+        "path": "work/qhooks-portfolio-prices-recovery-root-current-rel-20261118/lead/perf/x-tracker.manifest.json",
+        "sha256": "4d2585b8447dbc0d6b64034d6d534d7ab0096b2a628df97c70a2ebe4b7dc3196",
+        "inputs": 206
+      },
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      },
+      "attributionReferencesExactly": 2,
+      "proprietaryInputs": 0
+    }
+  ],
+  "prior47PinsAndAllOtherFieldsExact": true
+}

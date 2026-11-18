@@ -2,7 +2,7 @@ import * as portfolioContext from './qx-portfolio-context.mjs';
 import * as portfolioSol from './qx-solana.mjs';
 import {mountPortfolioSelling,rowCanSell} from './qx-portfolio-row-trade.mjs';
 import {assetPriceFields,priceState} from './qx-price-state.mjs';
-import {allocatePortfolioBasis} from './qx-holding-basis.mjs';
+import {allocatePortfolioValuation as allocatePortfolioBasis,portfolioPriceFields,pricingCoverage,PORTFOLIO_PRICE_MAX_MS} from './qx-portfolio-pricing.mjs';
 import {bindTokenAvatar,tokenAvatar} from './qx-token-avatar.mjs';
 import {portfolioReader,chainReadState,portfolioNeedsRefresh,portfolioBalanceAt} from './qx-portfolio-read.mjs';
 import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
@@ -42,9 +42,16 @@ export function holdingRowView(row) {
   value:money(row.valueUsd),cash:cashRow(row)};
 }
 export function portfolioReadLabel(at,now=Date.now()) {
- if(!known(at)||at<=0||at>now+5000)return 'Time unavailable';
- const seconds=Math.max(0,Math.round((now-at)/1000)),age=seconds<60?seconds+'s':seconds<3600?Math.floor(seconds/60)+'m':Math.floor(seconds/3600)+'h';
- return 'Live · '+age+' ago';
+ if(!known(at)||at<=0||at>now)return 'Time unavailable';
+ const seconds=Math.max(0,Math.floor((now-at)/1000)),age=seconds<60?seconds+'s':seconds<3600?Math.floor(seconds/60)+'m':Math.floor(seconds/3600)+'h';
+ return (now-at<30000?'Live · ':'Read · ')+age+' ago';
+}
+export function portfolioValuationLabel(state,now=Date.now()) {
+ if(!known(state?.at)||state.at<=0||state.at>now)return 'Time unavailable';
+ const coverage=pricingCoverage(state,{now});
+ const at=known(state?.at)&&known(coverage.observedAt)?Math.min(state.at,coverage.observedAt):state?.at;
+ const label=portfolioReadLabel(at,now);
+ return state?.partial||coverage.unpriced||coverage.cachedPrices||coverage.balancesPending?label.replace(/^Live · /,'Read · '):label;
 }
 export function savedPortfolioSnapshot({reader,owner,now=Date.now()}={}) {
  if(!/^0x[\da-f]{40}$/.test(owner||''))return null;
@@ -58,6 +65,10 @@ export function savedPortfolioSnapshot({reader,owner,now=Date.now()}={}) {
  // price expires; acquisition history itself remains intact.
  for(const chain of report.chains)for(const asset of [chain.native,...chain.tokens])if(asset.cost&&!priceState(asset.priceAt,now).usable)asset.cost={...asset.cost,pnlUsd:null,pnlQuote:null,unrealizedQuote:null,quoteUsd:null};
  return report;
+}
+const pnlNativeQuote=(native,now=Date.now())=>priceState(native?.priceAt,now).usable&&native.priceAt<=now?native:{...native,priceUsd:null};
+export function pnlNativeQuotes(chains,{now=Date.now()}={}) {
+ return Object.fromEntries((chains||[]).map(c=>[c.chainId,pnlNativeQuote(c.native,now)]));
 }
 export function mergePortfolios(reports) {
  reports=reports.map(r=>allocatePortfolioBasis(structuredClone(r)));
@@ -97,7 +108,7 @@ export function savePreferences(storage, value) { try { storage.setItem('qhooks:
 // everything else a lettered coin tinted from its address. Every coin wears its chain as a small badge.
 const CHAIN_ICON = {'8453': 'base', '4663': 'robinhood', '1': 'ethereum', '42161': 'arbitrum', '56': 'bnb', '5042': 'arc', '99901': 'elysium', '143': 'monad', solana: 'solana'};
 export const chainIcon = id => CHAIN_ICON[id] ? '/chain-symbol-icons/' + CHAIN_ICON[id] + '.svg' : null;
-export const marketKey = (chainId, address) => String(chainId) + ':' + String(address || '').toLowerCase();
+export const marketKey = (chainId, address) => String(chainId) + ':' + (String(chainId)==='solana'?String(address||''):String(address||'').toLowerCase());
 // Feed logos may be absolute on qhooks.com; the page reads them from its own origin.
 export const sameOrigin = url => typeof url === 'string' && url ? url.replace(/^https:\/\/qhooks\.com(?=\/)/, '') : null;
 const SUB = '₀₁₂₃₄₅₆₇₈₉';
@@ -106,13 +117,12 @@ export const priceText = n => {
  if (!known(n) || n <= 0) return money(n);
  return '$' + priceDigits(n); // the site's one price format (qx-price.mjs)
 };
-export function liveFeed(markets) {
- const map = new Map();
+export function liveFeed(markets,{previous,now=Date.now()}={}) {
+ const map = new Map([...(previous||[])].filter(([,v])=>known(v.priceAt)&&v.priceAt<=now&&now-v.priceAt<=PORTFOLIO_PRICE_MAX_MS));
  for (const m of Array.isArray(markets) ? markets : []) {
   if (!m || !m.chainId || !m.controller) continue;
-  const s = assetPriceFields(m.summary||{},{chainId:m.chainId,token:m.token||m.controller,at:m.priceAt??m.observedAt??(m.summary?.lastTradeAt?m.summary.lastTradeAt*1000:null)}), entry = {priceAt:s.priceAt,priceSource:s.priceSource,pricePoolId:s.pricePoolId,pricesRefreshing:s.pricesRefreshing,priceUsd: known(s.priceUsd) && s.priceUsd > 0 ? s.priceUsd : null, change24: known(s.change24) ? s.change24 : null, logo: sameOrigin(tokenAvatar(m).src)};
-  map.set(marketKey(m.chainId, m.controller), entry);
-  if (m.token) map.set(marketKey(m.chainId, m.token), entry);
+  const s = portfolioPriceFields(m.summary||{},{chainId:m.chainId,token:m.token||m.controller,at:m.priceAt??m.observedAt??(m.summary?.lastTradeAt?m.summary.lastTradeAt*1000:null),now}), entry = {token:m.token||m.controller,chainId:String(m.chainId),controller:m.controller,priceAt:s.priceAt,priceSource:s.priceSource,pricePoolId:s.pricePoolId,pricesRefreshing:s.pricesRefreshing,priceUsd: known(s.priceUsd) && s.priceUsd > 0 ? s.priceUsd : null, change24: known(s.change24) ? s.change24 : null, logo: sameOrigin(tokenAvatar(m).src)};
+  for(const id of [m.controller,m.token].filter(Boolean)){const key=marketKey(m.chainId,id),prior=map.get(key);if(!prior||known(entry.priceUsd)&&(!known(prior.priceUsd)||(entry.priceAt||0)>=(prior.priceAt||0)))map.set(key,entry);}
  }
  return map;
 }
@@ -121,17 +131,20 @@ export function applyLive(state, feed) {
  const moved = [], covered = {out: 0, in: 0, priorOut: 0, priorIn: 0}; let delta = 0, logos = false;
  if (!state || !feed) return {moved, delta, logos};
  for (const r of state.rows) {
-  if (!(r.units > 0)) continue;
+  if (!(r.units > 0) || r.native) continue;
   const m = feed.get(marketKey(r.qhooks?.chainId || r.chainId, r.qhooks?.controller || r.address)) || feed.get(marketKey(r.chainId, r.address));
-  if (!m) continue;
+  if (!m || m.token&&marketKey(r.chainId,m.token)!==marketKey(r.chainId,r.address)||m.chainId&&String(m.chainId)!==String(r.chainId)) continue;
   if (m.logo && r.logo !== m.logo) { r.logo = m.logo; logos = true; }
-  if(!known(m.priceUsd)||!priceState(m.priceAt).usable||(r.priceAt||0)>(m.priceAt||0))continue;
-  Object.assign(r,{priceAt:m.priceAt,priceSource:m.priceSource,pricePoolId:m.pricePoolId,pricesRefreshing:!!m.pricesRefreshing});
+  if(!known(m.priceUsd)||!known(m.priceAt)||m.priceAt>Date.now()||Date.now()-m.priceAt>PORTFOLIO_PRICE_MAX_MS||(r.priceAt||0)>(m.priceAt||0))continue;
+  const fresh=priceState(m.priceAt).usable;
+  Object.assign(r,{priceAt:m.priceAt,priceSource:m.priceSource,pricePoolId:m.pricePoolId,pricesRefreshing:priceState(m.priceAt).refreshing||!!m.pricesRefreshing,...(!fresh?{priceStatus:'last-known',lastKnownPriceUsd:m.priceUsd,lastKnownPriceAt:m.priceAt,lastKnownPriceSource:m.priceSource,lastKnownPricePoolId:m.pricePoolId}:{})});
+  if(!fresh){r.change24=null;r.changeAt=null;}
+  if(!fresh&&r.cost)r.cost={...r.cost,pnlUsd:null,pnlQuote:null,unrealizedQuote:null,quoteUsd:null};
   if(m.priceUsd===r.priceUsd)continue;
   const had = known(r.valueUsd), before = had ? r.valueUsd : 0, after = r.units * m.priceUsd, d = after - before;
-  const oldChg = had && known(r.change24) ? r.change24 : null, newChg = known(m.change24) ? m.change24 : oldChg;
+  const oldChg = had && known(r.change24) ? r.change24 : null, newChg = !fresh?null:known(m.change24) ? m.change24 : oldChg;
   r.dir = known(r.priceUsd) ? Math.sign(m.priceUsd - r.priceUsd) : 0; r.priceUsd = m.priceUsd; r.valueUsd = after; r.change24 = newChg;
-  if (had && r.cost && known(r.cost.pnlUsd)) {
+  if (fresh && had && r.cost && known(r.cost.pnlUsd)) {
    const quoteUsd = r.cost.quoteUsd > 0 ? r.cost.quoteUsd : known(r.cost.pnlQuote) && r.cost.pnlQuote !== 0 ? r.cost.pnlUsd / r.cost.pnlQuote : null;
    r.cost = {...r.cost, pnlUsd: r.cost.pnlUsd + d, pnlQuote: quoteUsd ? r.cost.pnlQuote + d / quoteUsd : r.cost.pnlQuote, unrealizedQuote: quoteUsd && known(r.cost.unrealizedQuote) ? r.cost.unrealizedQuote + d / quoteUsd : r.cost.unrealizedQuote};
   }
@@ -205,11 +218,11 @@ export function renderHoldingRows(rows,options={}) {
  });
 }
 export function renderHoldingRow(r,{h,natives={},owner=null,mine=false,readonly=false,chain='all',onSell}={}) {
- const v=holdingRowView(r),split=T.rowCost(r,natives[r.chainId]||null),canSell=!readonly&&mine&&!v.cash&&rowCanSell(r,owner),pnlCls=v.pnlDirection>0?' qp-positive':v.pnlDirection<0?' qp-negative':'';
- const metadata=h('details',{class:'pf-holding__details'},h('summary',{},r.priceLabel==='on curve'?'on curve':r.chainName||names[r.chainId]||r.chainId),h('p',{},priceText(r.priceUsd)+' · '+percent(r.change24)+' 24h · '+(r.chainName||r.chainId)+(r.pricesRefreshing?' · Refreshing':'')));
+ const v=holdingRowView(r),split=T.rowCost(r,pnlNativeQuote(natives[r.chainId])),canSell=!readonly&&mine&&!v.cash&&rowCanSell(r,owner),pnlCls=v.pnlDirection>0?' qp-positive':v.pnlDirection<0?' qp-negative':'';
+ const metadata=h('details',{class:'pf-holding__details'},h('summary',{},r.priceLabel==='on curve'?'on curve':r.chainName||names[r.chainId]||r.chainId),h('p',{},priceText(r.priceUsd)+' · '+percent(r.change24)+' 24h · '+(r.chainName||r.chainId)+(r.priceStatus==='last-known'?' · Cached · '+portfolioReadLabel(r.priceAt).replace(/^(Live|Read) · /,''):r.pricesRefreshing?' · Price update pending':'')));
  return h('article',{class:'pf6-row pf-holding'+(v.cash?' is-cash':'')+(r.spam?' is-spam':''),role:'listitem','data-key':marketKey(r.chainId,r.address)},holdingArt(h,r),
   h('div',{class:'pf-holding__name'},h('a',{href:tradeHref(r),'aria-label':'Open '+(r.symbol||'token')},h('b',{},r.symbol||'unknown')),h('span',{title:quantity(r.units)},units(r.units))),
-  h('div',{class:'pf-holding__value'},known(r.valueUsd)?v.value:h('span',{class:'pf-holding__refreshing'},'Price refreshing'),h('small',{class:pnlCls,title:pnlText(r.cost,r)},v.cash?'':rowPnl(r,v)+(known(split.pnlPct)?' · '+rowPct(split.pnlPct):''))),
+  h('div',{class:'pf-holding__value'},known(r.valueUsd)?v.value:h('span',{class:'pf-holding__refreshing'},'Price unavailable'),h('small',{class:pnlCls,title:pnlText(r.cost,r)},v.cash?'':rowPnl(r,v)+(known(split.pnlPct)?' · '+rowPct(split.pnlPct):''))),
   h('div',{class:'pf-holding__basis'},known(split.avgEntryUsd)?h('span',{title:'Approximate average entry; quote valued at its current USD price'},'avg ≈ '+T.smallPrice(split.avgEntryUsd)):null,metadata),
   h('div',{class:'pf-holding__actions'},...(canSell?[25,50,100].map(percent=>h('button',{type:'button',class:'pf-holding__sell','aria-label':'Sell '+percent+'% '+r.symbol,onclick:event=>onSell?.(r,percent,event.currentTarget)},String(percent))):!readonly&&(v.cash||mine)?[h('a',{href:tradeHref(r),class:'pf-holding__trade'},'Trade')]:[])));
 }
@@ -218,7 +231,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
  loadChain = () => Promise.resolve(portfolioContext), loadWallet = () => import('/qx-account-wallet.mjs'),
  loadSol = () => Promise.resolve(portfolioSol), loadEarningsModule = () => import('/qx-earnings.mjs'),
  storage = (() => { try { return globalThis.localStorage; } catch { return null; } })(), clipboard = globalThis.navigator?.clipboard,
- loadFeed = () => fetchImpl('/api/terminal/feed?chain=all', {cache: 'no-store'}).then(r => r.ok ? r.json() : null), liveMs = 15000,
+ loadFeed = ({signal}={}) => fetchImpl('/api/terminal/feed?chain=all', {cache: 'no-store',signal}).then(r => r.ok ? r.json() : null), liveMs = 25000,
  costs = outsideCosts(), view = T.viewWallet(globalThis.location?.search),
  loadStakeLocks = defaultStakeLocks, initialTab = (() => { try { return new URLSearchParams(globalThis.location?.search || '').get('tab'); } catch { return null; } })()} = {}) {
  const $ = id => document.getElementById(id);
@@ -289,7 +302,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   $('qp-notes').replaceChildren(); $('qp-count').textContent = '';
   paintPnl();
  }
- const natives = () => Object.fromEntries((current?.chains || []).map(c => [c.chainId, c.native]));
+ const natives = () => pnlNativeQuotes(current?.chains);
  // ---------- header ----------
  function shownValue() {
   if (!current || prefs.chain === 'all') return current?.valueUsd ?? null;
@@ -301,7 +314,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   $('qp-value-label').textContent = pick ? 'Value on ' + pick.name : 'Total value · all chains'; // "partial" lives in the one status line
   // headertotal (held in its own tree): the header follows this list's own total while it's on screen; EVM wallet only.
   const me = !view && connectedAddress?.(); // (shadows the page's me(): the header follows the connected wallet only)
-  if (me && !sol.solAddress() && Number.isFinite(current?.valueUsd)) globalThis.dispatchEvent?.(new CustomEvent('qhooks:portfolio-total', {detail: {owner: me, valueUsd: current.valueUsd, partial: !!current.partial}}));
+  if (me && !sol.solAddress() && Number.isFinite(current?.valueUsd)) globalThis.dispatchEvent?.(new CustomEvent('qhooks:portfolio-total', {detail: {owner: me, valueUsd: current.valueUsd, partial: !!current.partial,pricingCoverage:pricingCoverage(current)}}));
  }
  // The balance: whole dollars large, cents small; a live price move flashes it green or red once.
  function paintTotal(value, dir) {
@@ -340,19 +353,21 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   const m = current, notes = [...failed];
   for (const c of m.chains) {
    const state=chainReadState(c),code=c.error,name=chainName(c);
-   if(c.balancesRefreshing&&!code)notes.push(name+': Refreshing balances');
-   if(c.pricesRefreshing&&!code)notes.push(name+': Refreshing prices');
-   if (code) notes.push(name + ': ' + ({balances_unavailable: 'Refreshing balances', prices_unavailable: 'Refreshing prices', prices_refreshing: 'Refreshing', index_unavailable: 'Refreshing QHooks positions', metadata_unavailable: 'Refreshing token details', token_limit: 'more tokens may be held than this reading includes', metadata_limit: 'some token balances have unknown units'}[code] || 'Refreshing data'));
+   if(c.balancesRefreshing&&!code)notes.push(name+': balance coverage incomplete');
+   if(c.pricesRefreshing&&!code)notes.push(name+': using available dated prices');
+   if (code) notes.push(name + ': ' + ({balances_unavailable: 'balance coverage incomplete', prices_unavailable: 'some prices unavailable', prices_refreshing: 'price coverage incomplete', index_unavailable: 'indexed positions unavailable', metadata_unavailable: 'some token details unavailable', token_limit: 'more tokens may be held than this reading includes', metadata_limit: 'some token balances have unknown units'}[code] || 'some data unavailable'));
    if (c.source === 'index-only' && c.chainId !== 'solana') notes.push(name + ': native balance and indexed QHooks tokens only');
   }
-  if (m.rows.some(r => !r.spam && r.valueUsd === null)) notes.push('Unpriced holdings are not included in the total.');
+  const coverage=pricingCoverage(m);
+  if(coverage.unpriced)notes.push(coverage.unpriced+' unpriced token'+(coverage.unpriced===1?'':'s')+' excluded from the total.');
+  if(coverage.cachedPrices)notes.push('Cached prices for '+coverage.cachedPrices+' token'+(coverage.cachedPrices===1?'':'s')+' · '+portfolioReadLabel(coverage.observedAt)+'.');
   // one line per message: "Base, Robinhood: Refreshing prices" instead of a line per chain
   const grouped = new Map();
   for (const t of notes) { const i = t.indexOf(': '), k = i > 0 ? t.slice(i + 2) : '\u0000' + t; if (!grouped.has(k)) grouped.set(k, []); if (i > 0) grouped.get(k).push(t.slice(0, i)); }
   $('qp-notes').replaceChildren(...[...grouped].map(([k, who]) => h('p', {}, k.startsWith('\u0000') ? k.slice(1) : who.join(', ') + ': ' + k)));
   // one status line: the per-chain detail folds behind "Some chains refreshing" (partial reading said there, not in the label)
   const more = $('qp-more'), sep = $('qp-more-sep'), busy = m.chains.some(c => c.error) || failed.length;
-  if (more) { more.hidden = !notes.length; more.textContent = m.partial || failed.length ? 'Partial: ' + (busy ? 'some chains refreshing' : 'details') : busy ? 'Some chains refreshing' : 'Details'; }
+  if (more) { more.hidden = !notes.length; more.textContent = coverage.unpriced||coverage.cachedPrices?coverage.label:m.partial||failed.length?'Partial · details':'Details'; }
   if (sep) sep.hidden = !notes.length;
   if (!notes.length) { const box = $('qp-notes'); if (box) box.hidden = true; more?.setAttribute('aria-expanded', 'false'); }
  }
@@ -520,13 +535,14 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
  }
  // Live: QHooks launch holdings reprice from the terminal's trade feed while the page is in view, so the balance and
  // PnL move with real trades. Nothing is re-read from the wallet's chains; the next Refresh reads balances again.
- let feed = null, liveTimer = 0, liveAt = 0, ageTimer = 0, balanceTimer = 0;
+ let feed = null, liveTimer = 0, liveAt = 0, ageTimer = 0, balanceTimer = 0,feedAbort=null;
  const canLive = typeof document.visibilityState === 'string' && typeof setInterval === 'function';
  async function liveTick() {
-  if (disposed || !current || document.visibilityState !== 'visible') return;
-  let data = null; try { data = await loadFeed(); } catch { data = null; }
-  if (disposed || !current || !data || !Array.isArray(data.markets)) return;
-  feed = liveFeed(data.markets); liveAt = Date.now();
+  if (disposed || !current || feedAbort || document.visibilityState !== 'visible') return;
+  const owner=walletKey,controller=new AbortController();feedAbort=controller;
+  let data = null; try { data = await loadFeed({signal:controller.signal}); } catch { data = null; } finally {if(feedAbort===controller)feedAbort=null;}
+  if (disposed || controller.signal.aborted || owner!==walletKey || document.visibilityState!=='visible' || !current || !data || !Array.isArray(data.markets)) return;
+  feed = liveFeed(data.markets,{previous:feed}); liveAt = Date.now();
   const before = current.valueUsd, {moved, logos} = applyLive(current, feed);
   if (moved.length) {
    paintHeroValue(Math.sign((current.valueUsd ?? 0) - (before ?? 0))); paintAllocation(); paintPnl(); paintHoldings();
@@ -534,22 +550,23 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   } else if (logos) paintList();
   paintAge();
  }
- function paintReadAge() { $('qp-at').textContent=portfolioReadLabel(current?.at); }
+ function paintReadAge() { $('qp-at').textContent=portfolioValuationLabel(current); }
 
  function paintAge() {
-  if(current?.rows.some(r=>priceState(r.priceAt).refreshing&&!r.pricesRefreshing||!priceState(r.priceAt).usable&&known(r.priceUsd))){
+  if(current?.rows.some(r=>priceState(r.priceAt).refreshing&&!r.pricesRefreshing||known(r.priceUsd)&&(!known(r.priceAt)||r.priceAt>Date.now()||Date.now()-r.priceAt>PORTFOLIO_PRICE_MAX_MS))){
    const reports=[kept('evm',me()),view?null:kept('solana',sol.solAddress())].filter(Boolean);
    if(reports.length){current=mergePortfolios(reports);if(feed)applyLive(current,feed);paintAll();}
   }
   paintReadAge();
  }
  function startLive() {
-  if (canLive && !balanceTimer) balanceTimer = setInterval(() => { if (current && document.visibilityState === 'visible' && !$('qp-refresh').disabled) void load(true); }, 60000);
+  if(disposed||savedPreview||document.visibilityState!=='visible')return;
+  if (canLive && !balanceTimer) balanceTimer = setInterval(() => { if (current && document.visibilityState === 'visible' && !$('qp-refresh').disabled) void load(true); }, 25000);
   if(canLive&&!ageTimer)ageTimer=setInterval(paintAge,1000);
   if (!canLive || liveTimer || !current?.rows.some(r => r.qhooks)) return;
   void liveTick(); liveTimer = setInterval(() => void liveTick(), liveMs);
  }
- function stopLive() { clearInterval(liveTimer); clearInterval(ageTimer); clearInterval(balanceTimer); liveTimer = ageTimer = balanceTimer = 0; liveAt = 0; }
+ function stopLive() { feedAbort?.abort();feedAbort=null;clearInterval(liveTimer); clearInterval(ageTimer); clearInterval(balanceTimer); liveTimer = ageTimer = balanceTimer = 0; liveAt = 0; }
  async function read(family,address,signal){
   let report=await reader.read(family,address,{signal,force:true});
   if(family==='evm'&&costs?.apply(report))report=reader.accept(family,address,report,{derived:true,refreshing:!!report.refreshing});
@@ -563,15 +580,15 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   stopLive();savedPreview=owner;root.dataset.readonlySnapshot='true';root.hidden=false;$('qp-connect').hidden=true;
   addresses(owner,null,{saved:true});current=mergePortfolios([report]);paintAll();$('qp-refresh').disabled=true;
   $('qp-status').textContent='Saved wallet snapshot · connect to update.';
-  ageTimer=setInterval(()=>{if(!savedPreview||disposed)return;
-   if(current?.rows.some(r=>known(r.priceUsd)&&!priceState(r.priceAt).usable)){const next=savedPortfolioSnapshot({reader,owner:savedPreview});if(next){current=mergePortfolios([next]);paintAll();}else{stopLive();clearSavedDisplay();$('qp-connect').hidden=false;root.hidden=true;return;}}
+  if(document.visibilityState==='visible')ageTimer=setInterval(()=>{if(!savedPreview||disposed)return;
+   if(current?.rows.some(r=>known(r.priceUsd)&&(!known(r.priceAt)||r.priceAt>Date.now()||Date.now()-r.priceAt>PORTFOLIO_PRICE_MAX_MS))){const next=savedPortfolioSnapshot({reader,owner:savedPreview});if(next){current=mergePortfolios([next]);paintAll();}else{stopLive();clearSavedDisplay();$('qp-connect').hidden=false;root.hidden=true;return;}}
    paintReadAge();
   },1000);
   return true;
  }
  let follow = 0, followTimer = 0;
  let activeLoad=null,activeWallet=null;
- function load(quiet=false){const key=[me(),view?null:sol.solAddress()].join(':');if(activeLoad&&activeWallet===key)return activeLoad;activeWallet=key;const task=runLoad(quiet);activeLoad=task;void task.finally(()=>{if(activeLoad===task)activeLoad=null;}).catch(()=>{});return task;}
+ function load(quiet=false){const key=[me(),view?null:sol.solAddress()].join(':');if(activeLoad&&activeWallet===key&&!aborter?.signal.aborted)return activeLoad;activeWallet=key;const task=runLoad(quiet);activeLoad=task;void task.finally(()=>{if(activeLoad===task)activeLoad=null;}).catch(()=>{});return task;}
  async function runLoad(quiet = false) {
   if (disposed) return;
   const owner = me(), solana = view ? null : sol.solAddress(), mine = ++sequence;
@@ -581,7 +598,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   if (!owner && !solana) { stopLive();earningsSequence++;if(paintSavedSnapshot())return;clearSavedDisplay();$('qp-connect').hidden=false;root.hidden=true;return; }
   if(savedPreview){stopLive();clearSavedDisplay();$('qp-status').textContent='Updating holdings…';}
   addresses(owner, solana);
-  if (changed) { current = null; stopLive(); $('qp-chains')?.replaceChildren(); }
+  if (changed) { current = null; stopLive();feed=null; $('qp-chains')?.replaceChildren(); }
   const jobs = [...(owner ? [['evm', owner, 'EVM chains']] : []), ...(solana ? [['solana', solana, 'Solana']] : [])];
   if (!quiet) { follow = 0; clearTimeout(followTimer); }
   const last=jobs.map(([family,address])=>kept(family,address)).filter(Boolean);
@@ -592,6 +609,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
    current = mergePortfolios(last); if (feed) applyLive(current, feed);
    paintAll();
   } else if (changed || !quiet || !current) skeleton();
+  if(canLive&&document.visibilityState!=='visible'){$('qp-refresh').disabled=false;return;}
   $('qp-refresh').disabled = true;
   const timer = setTimeout(() => controller.abort(), 45000);
   // Accept each chain as it arrives on the same request, including a single EVM
@@ -612,8 +630,8 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
     if(waiting.length)current.partial=true;if(feed)applyLive(current,feed);paintAll(waiting);startLive();return report;
    }));
    if (mine !== sequence || disposed) return;
-   const reports=[...liveReports.values()], failed = results.flatMap((r, i) => r.status === 'rejected' ? [jobs[i][2] + ': Refreshing balances'] : []);
-   if (!reports.length && shownKept) { $('qp-status').textContent = 'Refreshing portfolio. Refresh to try again.'; return; } // keep the kept reading
+   const reports=[...liveReports.values()], failed = results.flatMap((r, i) => r.status === 'rejected' ? [jobs[i][2] + ': balance coverage unavailable'] : []);
+   if (!reports.length && shownKept) { $('qp-status').textContent = pricingCoverage(current).label; return; } // keep the kept reading
    current = mergePortfolios(reports);
    if (failed.length) { current.partial = true; current.change24 = null; current.change24Usd = null; }
    if (feed) applyLive(current, feed);
@@ -621,10 +639,10 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
    const refreshing = reports.some(r => portfolioNeedsRefresh(r));
    paintReadAge();
    const balancePartial=current.chains.some(c=>{const s=chainReadState(c);return s.balances||s.positions;});
-   $('qp-status').textContent = !reports.length?'Holdings could not be read. Refresh to try again.':balancePartial||failed.length?'Some chains are still refreshing.':refreshing?'Holdings loaded · some prices refreshing.':'Portfolio updated.';
+   $('qp-status').textContent = !reports.length?'Holdings could not be read. Refresh to try again.':pricingCoverage(current).label;
    if (reports.length) startLive();
    clearTimeout(followTimer);
-   if (refreshing && follow < 2) followTimer = setTimeout(() => { follow++; void load(true); }, follow ? 7000 : 3500);
+   if (balancePartial && follow < 2 && document.visibilityState==='visible') followTimer = setTimeout(() => { follow++; void load(true); }, follow ? 7000 : 3500);
    // outside tokens' cost basis and chain prices: one pass of reads from this device, then a quiet repaint
    const evm = reports.find(r => r.address === owner);
    if (evm && costs) void costs.refresh(evm).then(changedCost => {
@@ -645,12 +663,15 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
  const walletChanged = () => { seller.changed();if (extra.owner !== me()) resetExtras(); void load();if(savedPreview)return; void loadClosed(); void earnings(me()); if (tab === 'staked') void loadStaked(); };
  const refreshBalances = () => { if (!disposed && current && document.visibilityState === 'visible' && !$('qp-refresh').disabled) return load(true); };
  document.addEventListener?.('qhooks:traded', refreshBalances);
- document.addEventListener?.('visibilitychange', refreshBalances);
+ const visibilityChanged=()=>{if(document.visibilityState!=='visible'){stopLive();clearTimeout(followTimer);aborter?.abort();sequence++;$('qp-refresh').disabled=false;}else if(savedPreview){paintSavedSnapshot();}else{startLive();void refreshBalances();}};
+ document.addEventListener?.('visibilitychange', visibilityChanged);
+ const lifecycle=document.defaultView||globalThis,hidePage=()=>{stopLive();clearTimeout(followTimer);aborter?.abort();sequence++;$('qp-refresh').disabled=false;},showPage=()=>{if(document.visibilityState==='visible')visibilityChanged();};
+ lifecycle.addEventListener?.('pagehide',hidePage);lifecycle.addEventListener?.('pageshow',showPage);
  const stopWallet=onWalletChange(!view?walletChanged:() => { paintList(); },{storage}); // viewing: a wallet change only toggles the own-wallet buttons
  const stopSol = view ? null : sol.onSolChange(() => { solPicker(); if (walletKey !== [me(), sol.solAddress()].join(':')) walletChanged(); });
  const stopReports=reader.subscribe(({family,owner:who})=>{if(disposed||activeLoad||!current||who!==(family==='evm'?me():sol.solAddress()))return;const reports=[kept('evm',me()),view?null:kept('solana',sol.solAddress())].filter(Boolean);if(!reports.length)return;current=mergePortfolios(reports);if(feed)applyLive(current,feed);paintAll();});
  solPicker(); paintTabs(); walletChanged();
- return {refresh: () => load(true), dispose() { seller.dispose();disposed = true;document.removeEventListener('click',earlyConnect,true);stopWallet?.(); stopReports(); sequence++; earningsSequence++; aborter?.abort(); stopSol?.(); stopLive(); clearTimeout(followTimer); document.removeEventListener?.('qhooks:traded', refreshBalances); document.removeEventListener?.('visibilitychange', refreshBalances); }};
+ return {refresh: () => load(true), dispose() { seller.dispose();disposed = true;lifecycle.removeEventListener?.('pagehide',hidePage);lifecycle.removeEventListener?.('pageshow',showPage);document.removeEventListener('click',earlyConnect,true);stopWallet?.(); stopReports(); sequence++; earningsSequence++; aborter?.abort(); stopSol?.(); stopLive(); clearTimeout(followTimer); document.removeEventListener?.('qhooks:traded', refreshBalances); document.removeEventListener?.('visibilitychange', visibilityChanged); }};
 }
 const QHOOKS_TOKEN = '0x20429af7ca3b0ce4d99edbaa0693f26c5df05195';
 function readHideTest(storage) { try { return JSON.parse(storage?.getItem('qhooks:portfolio:v6') || '{}').hideTest !== false; } catch { return true; } }

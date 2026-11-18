@@ -1,0 +1,55 @@
+// Portfolio-only retained valuations. Global trading/price expiry is unchanged.
+import {assetPriceFields,isQhooksPriceAsset,QHOOKS_PRICE_IDENTITY,priceState,PRICE_REFRESH_MS} from './qx-price-state.mjs';
+import {allocatePortfolioBasis} from './qx-holding-basis.mjs';
+export const PORTFOLIO_PRICE_MAX_MS=7*86400000;
+const known=n=>typeof n==='number'&&Number.isFinite(n),positive=n=>known(n)&&n>0;
+const units=a=>known(a?.units)?a.units:typeof a?.balance==='string'&&/^\d+$/.test(a.balance)&&Number.isInteger(a.decimals)&&a.decimals>=0&&a.decimals<=36?Number(a.balance)/10**a.decimals:null;
+const clock=(at,now)=>Number.isSafeInteger(at)&&at>0&&at<=now&&now-at<=PORTFOLIO_PRICE_MAX_MS;
+export const portfolioAssetKey=(chainId,asset,{native=false}={})=>String(chainId)+':'+(native?'native':String(chainId)==='solana'?String(asset||''):String(asset||'').toLowerCase());
+export function portfolioPriceFields(asset,{chainId,token=asset?.address,at=null,now=Date.now()}={}){
+ const sourceAt=Object.hasOwn(asset||{},'priceAt')?asset.priceAt:Object.hasOwn(asset||{},'priceObservedAt')?asset.priceObservedAt:asset?.observedAt??null;
+ const out=assetPriceFields({...asset,priceAt:sourceAt},{chainId,token,at:null,now});
+ // Explicit last-good evidence and old known evidence both keep their own clock.
+ // A failed response's at / balanceAt / cache write can never date that evidence.
+ const candidates=[{price:asset?.priceUsd,at:sourceAt,source:asset?.priceSource,pool:asset?.pricePoolId},
+  {price:asset?.lastKnownPriceUsd,at:asset?.lastKnownPriceAt,source:asset?.lastKnownPriceSource,pool:asset?.lastKnownPricePoolId}]
+  .filter(v=>positive(v.price)&&clock(v.at,now)&&(!isQhooksPriceAsset(chainId,token)||v.source==='qhooks-main-pool'&&v.pool===QHOOKS_PRICE_IDENTITY.poolId)).sort((a,b)=>b.at-a.at);
+ const retained=candidates[0];
+ if(!clock(sourceAt,now)&&!retained){out.priceUsd=null;out.priceAt=null;out.valueUsd=units(asset)===0?0:null;out.pricesRefreshing=true;}
+ if(retained&&(!positive(out.priceUsd)||!clock(out.priceAt,now)||retained.at>out.priceAt)){
+  Object.assign(out,{priceUsd:retained.price,priceAt:retained.at,priceSource:retained.source,pricePoolId:retained.pool,
+   valueUsd:units(asset)===0?0:known(units(asset))?units(asset)*retained.price:null,
+   pricesRefreshing:true,priceStatus:'last-known',lastKnownPriceUsd:retained.price,lastKnownPriceAt:retained.at,
+   lastKnownPriceSource:retained.source,lastKnownPricePoolId:retained.pool,change24:null,changeAt:null});
+ }
+ if(known(out.priceAt)&&out.priceAt>now){out.priceUsd=null;out.valueUsd=asset?.units===0||asset?.balance==='0'?0:null;out.priceAt=null;out.pricesRefreshing=true;}
+ if(out.spam===true&&out.spamReason==='No price available'&&positive(out.priceUsd)&&clock(out.priceAt,now)){out.spam=false;out.spamReason=null;}
+ if(!priceState(out.priceAt,now).usable&&out.cost)out.cost={...out.cost,pnlUsd:null,pnlQuote:null,unrealizedQuote:null,quoteUsd:null};
+ return out;
+}
+// Reuse existing basis math with *only fresh* prices, then restore dated values.
+// A seven-day valuation is never an input to PnL or the quote conversion.
+export function allocatePortfolioValuation(report,{now=Date.now()}={}){
+ const held=[];
+ for(const c of report.chains||[])for(const [index,a]of [[-1,c.native],...(c.tokens||[]).map((a,i)=>[i,a])])if(a&&!priceState(a.priceAt,now).usable){held.push({chain:c,index,price:a.priceUsd,value:a.valueUsd});a.priceUsd=null;a.valueUsd=units(a)===0?0:null;}
+ allocatePortfolioBasis(report);
+ for(const {chain,index,price,value}of held){const a=index===-1?chain.native:chain.tokens[index];a.priceUsd=price;a.valueUsd=value;if(a.cost)a.cost={...a.cost,pnlUsd:null,pnlQuote:null,unrealizedQuote:null,quoteUsd:null};}
+ return report;
+}
+export function pricingCoverage(report,{now=Date.now(),pending=false}={}){
+ const chains=report?.chains||[],rows=Array.isArray(report?.rows)?report.rows:chains.flatMap(c=>[...(c.native?[{...c.native,chainId:c.chainId,native:true}]:[]),...(c.tokens||[]).map(t=>({...t,chainId:c.chainId}))]);
+ let unpriced=0,cachedPrices=0;const clocks=[],seen=new Set();
+ for(const row of rows){if(!(Number(row.units)>0||Number(row.balance)>0))continue;
+  const key=portfolioAssetKey(row.chainId,row.address,{native:row.native===true});if(seen.has(key))continue;seen.add(key);
+  const price=portfolioPriceFields(row,{chainId:row.chainId,now});
+  // Legacy price failures were labelled as spam. They still need to be counted
+  // as unpriced holdings; actual liquidity/security exclusions remain separate.
+  if(price.spam&&price.spamReason!=='No price available')continue;
+  if(!positive(price.priceUsd)||!clock(price.priceAt,now)){unpriced++;continue;}
+  clocks.push(price.priceAt);if(price.priceStatus==='last-known'||now-price.priceAt>PRICE_REFRESH_MS)cachedPrices++;
+ }
+ const balancesPending=chains.some(c=>c.balancesRefreshing||c.positionsRefreshing||c.error==='balances_unavailable'),progress=report?.progress;
+ const settled=!pending&&(!progress||progress.phase==='settled'||progress.transportTimedOut);
+ const label=!settled?'Updating holdings…':unpriced?'Partial · prices for '+unpriced+' token'+(unpriced===1?'':'s'):cachedPrices?'Partial · cached prices for '+cachedPrices+' token'+(cachedPrices===1?'':'s'):balancesPending||report?.partial?'Partial · holdings coverage':'Portfolio updated.';
+ return {settled,balancesPending,unpriced,cachedPrices,observedAt:clocks.length?Math.min(...clocks):null,label};
+}

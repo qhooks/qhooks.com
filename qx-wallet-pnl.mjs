@@ -195,6 +195,9 @@ async function paced(url, gapMs) {
   if (at > now) await new Promise(res => setTimeout(res, at - now));
 }
 function rpcClient(url, fetchImpl, deadline, gapMs = 0) {
+  // Browser-only RH display reads use the existing public alternate with a single CORS origin header.
+  // Keep the shared chain configuration and this client's public-only admission unchanged.
+  if (url === PNL_CHAINS['4663'].rpc) url = 'https://robinhood.rpc.pinax.network';
   let id = 0;
   const post = async part => {
     for (let attempt = 0; ; attempt++) {

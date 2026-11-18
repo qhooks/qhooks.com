@@ -1,11 +1,11 @@
+import {pricingCoverage} from '../qx-portfolio-pricing.mjs';
 import {portfolioReader} from '../qx-portfolio-read.mjs';
 // The connected wallet's balance in the header, on every page (Randall, 2026-11-12: "My balances take 20 seconds to
 // load and need to show total available funds or available funds on selected chain w/symbol at all times at the top").
 //  - Every page shows the all-chain dollar total. An old saved native-chain display choice cannot override it.
-//  - Last-known dollars paint immediately; while unknown the pill says $— / all chains · Refreshing.
+//  - Last-known dollars paint immediately. Settled price gaps are Partial; active balance reads say so.
 //  - Opens Portfolio. Existing balance/portfolio caches and read cadence are retained; no new provider requests.
 import { chainById } from '/chains.mjs';
-const EXCLUDES = 'Total excludes some tokens · Refreshing'; // same words as qx-header-total.mjs
 
 const doc = document, PREF = 'qhooks:wallet-connection:v1', KEY = 'qa-bal:v1:', MIN_GAP = 4000;
 const get = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
@@ -22,6 +22,22 @@ export function fmtAmount(n) {
   return '<0.0001';
 }
 export const fmtUsd = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: n >= 1000 ? 0 : 2, maximumFractionDigits: n >= 1000 ? 0 : 2 });
+
+
+// Presentation only; the portfolio reader supplies values and original clocks.
+export function portfolioHeaderStatus(report,{fresh=true,now=Date.now()}={}) {
+  const coverage=pricingCoverage(report,{now});
+  const partial=!report||!!report.partial||!!report.refreshing||!fresh||!coverage.settled||coverage.balancesPending||coverage.unpriced>0||coverage.cachedPrices>0;
+  let note='all chains';
+  if(!report)note='all chains · Reading balances';
+  else if(!coverage.settled)note='Partial · balances';
+  else if(coverage.unpriced||coverage.cachedPrices)note=coverage.label+(coverage.balancesPending?' · balances incomplete':'');
+  else if(coverage.balancesPending)note='Partial · balances';
+  else if(report.partial)note=coverage.label;
+  else if(!fresh||report.refreshing)note='Partial · saved reading';
+  const age=Number.isSafeInteger(coverage.observedAt)&&coverage.observedAt>0&&coverage.observedAt<=now?'Prices observed '+new Date(coverage.observedAt).toISOString():null;
+  return {partial:!!partial,note,age,coverage};
+}
 
 function remembered() {
   try { const p = JSON.parse(get(PREF) || 'null'); return p && isAddr(p.owner) && /^\d+$/.test(String(p.chainId)) ? { owner: p.owner.toLowerCase(), chainId: String(p.chainId) } : null; } catch { return null; }
@@ -41,9 +57,9 @@ export function mountBalance(end, before) {
   function paint() {
     if (!who) { btn.hidden = true; return; }
     const saved=portfolioReader().cached('evm',who.owner),report=saved?.report,value=report?.totals?.valueUsd;
-    const partial=!report||report.partial||report.refreshing||!saved.fresh,known=typeof value==='number'&&Number.isFinite(value);
-    const main=known?fmtUsd(value):'$—',note=partial?'all chains · Refreshing':'all chains';
-    amt.textContent=main;sub.textContent=note;btn.title=main+' · '+note+' · Open Portfolio';btn.setAttribute('aria-label',btn.title);
+    const {partial,note,age}=portfolioHeaderStatus(report,{fresh:!!saved?.fresh}),known=typeof value==='number'&&Number.isFinite(value);
+    const main=known?fmtUsd(value):'$—';
+    amt.textContent=main;sub.textContent=note;btn.title=main+' · '+note+(age?' · '+age:'')+' · Open Portfolio';btn.setAttribute('aria-label',btn.title);
     btn.dataset.mode='usd';btn.hidden=false;if(partial)btn.dataset.partial='1';else delete btn.dataset.partial;
   }
 

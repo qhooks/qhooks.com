@@ -1,5 +1,4 @@
-import {assetPriceFields,PRICE_VALUE_MS,priceState} from './qx-price-state.mjs';
-import {allocatePortfolioBasis} from './qx-holding-basis.mjs';
+import {portfolioPriceFields,allocatePortfolioValuation} from './qx-portfolio-pricing.mjs';
 import {portfolioTotals} from './qx-wallet-pnl.mjs';
 const KEY='qhooks:portfolio:last:v1:',MAX_AGE=7*86400000,FRESH=60000;
 const registry=Symbol.for('qhooks.portfolio.read.v1'),copy=x=>structuredClone(x);
@@ -26,10 +25,15 @@ export function chainReadState(c,{partial=false}={}){
 export function portfolioNeedsRefresh(report){return !!report?.refreshing||(report?.chains||[]).some(c=>{const s=chainReadState(c,{partial:!!report.partial});return s.balances||s.positions||[c.native,...(c.tokens||[]).filter(t=>!t.spam)].some(a=>(Number(a?.units)>0||Number(a?.balance)>0)&&!known(a?.valueUsd));});}
 function valid(report,family,w){return report?.version===1&&address(family,report.address)===w&&Array.isArray(report.chains)&&report.totals&&report.chains.every(c=>c&&c.native&&Array.isArray(c.tokens))&&new Set(report.chains.map(c=>String(c.chainId))).size===report.chains.length;}
 function priced(asset,at,now,chainId){
- return assetPriceFields(asset,{chainId,token:asset.address,at,now});
+ return portfolioPriceFields(asset,{chainId,token:asset.address,at,now});
 }
 // Acquisition time is distinct from a cache write or a later partial report.
 function balanceClock(asset,at){return {...asset,balanceAt:Object.hasOwn(asset,'balanceAt')?asset.balanceAt:asset.balance!=null||asset.units!=null?at??null:null};}
+function priceOwnerMatches(next,prior,chainId){
+ const key=v=>String(chainId)==='solana'?String(v||''):String(v||'').toLowerCase();
+ for(const a of [next,prior]){const q=a.qhooks;if(q&&(q.chainId!=null&&String(q.chainId)!==String(chainId)||q.token&&key(q.token)!==key(a.address)))return false;}
+ return !(next.qhooks?.controller&&prior.qhooks?.controller&&key(next.qhooks.controller)!==key(prior.qhooks.controller));
+}
 function assetMerge(input,old,now,at,oldAt,chainId){
  const next=balanceClock(priced(input,at,now,chainId),at),prior=old?balanceClock(priced(old,oldAt,now,chainId),oldAt):null;
  if(!prior)return next;
@@ -38,13 +42,14 @@ function assetMerge(input,old,now,at,oldAt,chainId){
  if(next.balance===prior.balance&&next.units===prior.units){
   for(const field of ['cost','costState','qhooks','symbol','name','logo'])if(!Object.hasOwn(input,field)&&Object.hasOwn(prior,field))next[field]=copy(prior[field]);
  }
+ const samePriceOwner=priceOwnerMatches(next,prior,chainId);
  if(next.balance==null&&next.units==null)return {...prior,...next,balance:prior.balance,units:prior.units,
-  priceUsd:known(next.priceUsd)?next.priceUsd:prior.priceUsd,priceAt:known(next.priceUsd)?next.priceAt:prior.priceAt,
-  valueUsd:known(next.priceUsd)&&known(prior.units)?next.priceUsd*prior.units:prior.valueUsd,balanceRefreshing:true,balanceAt:prior.balanceAt,
+  priceUsd:known(next.priceUsd)?next.priceUsd:samePriceOwner?prior.priceUsd:null,priceAt:known(next.priceUsd)?next.priceAt:samePriceOwner?prior.priceAt:null,priceSource:known(next.priceUsd)?next.priceSource:samePriceOwner?prior.priceSource:null,pricePoolId:known(next.priceUsd)?next.pricePoolId:samePriceOwner?prior.pricePoolId:null,
+  valueUsd:known(next.priceUsd)&&known(prior.units)?next.priceUsd*prior.units:samePriceOwner?prior.valueUsd:null,balanceRefreshing:true,balanceAt:prior.balanceAt,
   pricesRefreshing:!!next.pricesRefreshing||!!prior.pricesRefreshing};
- if(!known(next.priceUsd)&&known(prior.priceUsd)){
+ if(samePriceOwner&&!known(next.priceUsd)&&known(prior.priceUsd)){
   const units=known(next.units)?next.units:next.balance!=null&&Number.isInteger(next.decimals)?Number(next.balance)/10**next.decimals:null;
-  return {...next,priceUsd:prior.priceUsd,priceAt:prior.priceAt,valueUsd:known(units)?units*prior.priceUsd:next.valueUsd,pricesRefreshing:true};
+  return {...next,priceUsd:prior.priceUsd,priceAt:prior.priceAt,priceSource:prior.priceSource,pricePoolId:prior.pricePoolId,priceStatus:'last-known',lastKnownPriceUsd:prior.priceUsd,lastKnownPriceAt:prior.priceAt,lastKnownPriceSource:prior.priceSource,lastKnownPricePoolId:prior.pricePoolId,valueUsd:known(units)?units*prior.priceUsd:next.valueUsd,pricesRefreshing:true};
  }
  return next;
 }
@@ -54,17 +59,17 @@ export function reconcilePortfolio(report,previous,now=known(report?.at)?report.
  next.chains=next.chains.map(c=>{
   const old=prior.get(String(c.chainId));prior.delete(String(c.chainId));
   const state=chainReadState(c,{partial:!!report.partial||inventoryPending}),byToken=new Map((old?.tokens||[]).map(t=>[(String(c.chainId)==='solana'?String(t.address):String(t.address).toLowerCase()),t]));
-  const tokens=c.tokens.map(t=>{const key=String(c.chainId)==='solana'?String(t.address):String(t.address).toLowerCase(),oldToken=byToken.get(key);byToken.delete(key);return assetMerge(t,oldToken,now,report.at,previous?.at,c.chainId);});
+  const tokens=c.tokens.map(t=>{const key=String(c.chainId)==='solana'?String(t.address):String(t.address).toLowerCase(),oldToken=byToken.get(key);byToken.delete(key);return priced(assetMerge(t,oldToken,now,report.at,previous?.at,c.chainId),report.at,now,c.chainId);});
   for(const t of byToken.values()){
    const priorAt=Object.hasOwn(t,'balanceAt')?t.balanceAt:previous?.at;
    if(state.positions||!known(report.at)||!known(priorAt)||report.at<priorAt)tokens.push({...balanceClock(priced(t,previous?.at,now,c.chainId),previous?.at),balanceRefreshing:true});
   }
-  const native=assetMerge(c.native,old?.native,now,report.at,previous?.at,c.chainId);
+  const native=priced(assetMerge(c.native,old?.native,now,report.at,previous?.at,c.chainId),report.at,now,c.chainId);
   return {...c,native,tokens,positionsRefreshing:state.positions,balancesRefreshing:state.balances||!!native.balanceRefreshing||tokens.some(t=>t.balanceRefreshing),pricesRefreshing:!!native.pricesRefreshing||tokens.some(t=>t.pricesRefreshing)};
  });
  for(const c of prior.values())next.chains.push({...c,native:{...balanceClock(priced(c.native,previous?.at,now,c.chainId),previous?.at),balanceRefreshing:true},tokens:c.tokens.map(t=>({...balanceClock(priced(t,previous?.at,now,c.chainId),previous?.at),balanceRefreshing:true})),balancesRefreshing:true,error:c.error||'balances_unavailable'});
  next.partial=!!report.partial||inventoryPending||next.chains.some(c=>{const s=chainReadState(c);return s.balances||s.positions||s.prices;});
- allocatePortfolioBasis(next);next.totals=portfolioTotals(next.chains);return next;
+ allocatePortfolioValuation(next,{now});next.totals=portfolioTotals(next.chains);return next;
 }
 // Local cost/price completion is a patch, never a new balance enumeration. A
 // captured callback cannot remove assets, undo a zero balance, or renew its age.
