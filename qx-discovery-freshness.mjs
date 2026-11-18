@@ -22,7 +22,7 @@ export function capDiscoveryObservations(row,{fallbackAt=null,now=Date.now()}={}
   // Legacy rows without that clock still expire with their provider snapshot.
   if(!priceState(row.capAt,now).usable)clear(out,['marketCapUsd','mcapUsd','fdvUsd']);
   clear(out,['valueUsd','liquidityUsd','volume24Usd','buys24','sells24','price','priceNative','mcap','fdv']);
-  for(const key of ['volumeUsd','change','makers'])if(own(row,key))out[key]=blankValues(row[key]);
+  for(const key of ['volumeUsd','change','makers','buyers','sellers'])if(own(row,key))out[key]=blankValues(row[key]);
   if(own(row,'txns'))out.txns=row.txns&&typeof row.txns==='object'&&!Array.isArray(row.txns)?Object.fromEntries(Object.entries(row.txns).map(([window,counts])=>[window,counts&&typeof counts==='object'&&!Array.isArray(counts)?{...counts,...Object.fromEntries(['buys','sells'].filter(k=>own(counts,k)).map(k=>[k,null]))}:null])):null;
  }
  if(own(row,'change24')&&!priceState(own(row,'changeAt')?row.changeAt:providerAt,now).usable)out.change24=null;

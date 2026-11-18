@@ -22,7 +22,7 @@ export async function serverBars({chainId, controller, pool, token, quote, tf, f
     if (!r.ok) return null;
     const b = await r.json();
     const stamp = Number(r.headers.get('x-qhooks-observed-at') || b?.observedAt);
-    return b?.version === 1 && Array.isArray(b.bars) ? {bars: clean(b.bars), unit: b.unit || null, source: b.source || 'QHooks', earliest: b.earliest ?? null,
+    return b?.version === 1 && Array.isArray(b.bars) ? {bars: clean(b.bars), unit: b.unit || null, source: b.source || 'QHooks', origin: 'server', earliest: b.earliest ?? null,
       observedAt: Number.isSafeInteger(stamp) && stamp > 0 ? stamp : null, stale: r.headers.get('x-qhooks-stale') === '1' || b.stale === true} : null;
   } catch (e) { if (signal?.aborted) throw e; return null; }
 }
@@ -35,7 +35,7 @@ export async function browserBars({chainId, pool, tf, signal, fetcher = globalTh
     const r = await readGecko(`https://api.geckoterminal.com/api/v2/networks/${net}/pools/${chainId === 'solana' ? pool : String(pool).toLowerCase()}/ohlcv/${unit}?aggregate=${aggregate}&limit=300&currency=usd&token=base`, {fetcher, signal});
     const list = r?.body?.data?.attributes?.ohlcv_list;
     if (!Array.isArray(list)) return null;
-    return {bars: clean(list.map(([t, o, h, l, c, v]) => ({time: Number(t), open: Number(o), high: Number(h), low: Number(l), close: Number(c), volume: Number(v) || 0}))), unit: 'USD', source: 'GeckoTerminal', observedAt:r.observedAt, stale:r.stale};
+    return {bars: clean(list.map(([t, o, h, l, c, v]) => ({time: Number(t), open: Number(o), high: Number(h), low: Number(l), close: Number(c), volume: Number(v) || 0}))), unit: 'USD', source: 'GeckoTerminal', origin: 'browser', observedAt:r.observedAt, stale:r.stale};
   } catch (e) { if (signal?.aborted) throw e; return null; }
 }
 

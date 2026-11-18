@@ -4,7 +4,7 @@
 // except the holder step of "Run it".
 import '/qx-a/pages/hooks-lane.mjs';
 import { connectedAddress, onWalletChange, signMessage } from '/qx-chain.mjs';
-import {readQProofPresentation,renderQProofSummary,safeQProofUrl,ensureQProofStyles,qproofReadParams,qproofReportLocation} from '/qproof-view.mjs';
+import {readQProofPresentation,renderQProofSummary,renderQProofHolders,renderQProofHooks,safeQProofUrl,ensureQProofStyles,qproofReadParams,qproofReportLocation} from '/qproof-view.mjs';
 ensureQProofStyles();
 
 const $ = (id) => document.getElementById(id);
@@ -147,9 +147,12 @@ function render(r,opts={}){
   h('p',{class:'qp-refresh-note',role:'status'},p.freshness.refreshQueued?'A refresh is queued. Showing the last report.':p.freshness.nextRefreshAt?'Next scheduled refresh window after '+new Date(p.freshness.nextRefreshAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'.':''),
   h('div',{class:'qp-actions'},copy,trade?h('a',{class:'qa-btn qa-btn--primary',href:trade},'Trade on QHooks'):null),
   p.links.reportVersion?h('a',{class:'qp-version-link',href:p.links.reportVersion},'This report version'):null);
- const sections=[sellSection(o,chain,r),supplySection(o,s),holdersSection(o,chain),creatorSection(r,o,s,chain),marketSection(o,r),repoSection(s),readsSection(r)].filter(Boolean);
+ // Same hook answers and native holder ranking as the token-page sheet; the older observation-based
+ // holder section shows only when the report has no native ranking, so Holders appears once.
+ const hooks=renderQProofHooks(h,p),ranking=renderQProofHolders(h,p);
+ const sections=[sellSection(o,chain,r),supplySection(o,s),ranking?null:holdersSection(o,chain),creatorSection(r,o,s,chain),marketSection(o,r),repoSection(s),readsSection(r)].filter(Boolean);
  const details=sections.map(section=>{const title=section.querySelector('h3')?.textContent||'Evidence',first=section.querySelector('p')?.textContent||'',node=h('details',{class:'qp-report-section'},h('summary',null,h('b',null,title),first?h('span',null,first.length>120?first.slice(0,117)+'…':first):null),section);if(title==='Audit trail')node.id='qp-audit-trail';return node;});
- const main=h('div',{class:'qp-report-sections'},checksSection(r,chain),...details);
+ const main=h('div',{class:'qp-report-sections'},checksSection(r,chain),hooks,ranking,...details);
  out.hidden=false;out.replaceChildren(h('div',{class:'qp-report-layout'},aside,main));reveal([aside,main]);
 }
 function sec(title, ...body) { return h('section', { class: 'qp-sec' }, h('h3', { class: 'qp-sec__h' }, title), ...body); }

@@ -1,0 +1,9 @@
+/* ux-tradingview 2026-11-18: the TradingView layer over the native chart (which stays underneath as the fallback). */
+.qx-tv-layer{position:absolute;inset:0;z-index:6;background:var(--qa-floor,#090B0A);overflow:hidden}
+.qx-tv-layer[data-state="loading"]{visibility:hidden;pointer-events:none}
+.qx-tv-layer[hidden]{display:none}
+.qx-tv-layer iframe{display:block;border:0}
+/* While TradingView draws the chart, the native chart's own readout/tools that sit on it are not shown on top. */
+.qxt-chart.qx-tv-on>.qxt-chart-ohlc,.qxt-chart.qx-tv-on>.qxt-entry-label,.qxt-chart.qx-tv-on>.ta-overlay{visibility:hidden}
+/* The "Refreshing · last candle …" notice stays readable over TradingView: a small strip above the time axis. */
+body.qxt .qxt-chart.qx-tv-on>#qxt-candles-freshness,.qxt-chart.qx-tv-on>.qxt-panel-freshness{top:auto;right:auto;bottom:30px;left:50%;transform:translateX(-50%);z-index:7;max-width:70%;padding:1px 8px;background:var(--qa-floor,#090B0A);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

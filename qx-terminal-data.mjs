@@ -201,13 +201,13 @@ export async function loadExternalHistory({chainId,pool,tf,signal,fetcher=global
   try{
    const response=await fetcher(`/api/terminal/x/${kind}/${chainId}/${pool}`+(kind==='candles'?'?tf='+tf:''),{cache:'no-store',signal:controller.signal});
    if(!response.ok)return null;const body=await response.json();if(!Array.isArray(body?.[kind]))return null;
-   return {body,observedAt:time(Number(response.headers.get('x-qhooks-observed-at')))||time(body.observedAt),stale:response.headers.get('x-qhooks-stale')==='1'||body.stale===true};
+   return {body,sameOrigin:true,observedAt:time(Number(response.headers.get('x-qhooks-observed-at')))||time(body.observedAt),stale:response.headers.get('x-qhooks-stale')==='1'||body.stale===true};
   }catch{return null;}finally{clearTimeout(timer);parentSignal?.removeEventListener('abort',abort);}
  }
  // Quick server responses win without another provider call. When they stall,
  // existing fallback paths start after a short grace; each panel can paint alone.
  const candleFallback=async fallbackSignal=>{try{const {loadBars}=await import('./qx-candles.mjs');const got=await loadBars({chainId,pool,token,quote,tf,signal:fallbackSignal,fetcher});
-   return got?.bars?.length?{body:{candles:got.bars,source:got.source,unit:got.unit},observedAt:got.observedAt||null,stale:!!got.stale||!got.observedAt}:null;}catch{return null;}};
+   return got?.bars?.length?{body:{candles:got.bars,source:got.source,unit:got.unit},sameOrigin:got.origin==='server',observedAt:got.observedAt||null,stale:!!got.stale||!got.observedAt}:null;}catch{return null;}};
  const tradeFallback=async fallbackSignal=>{
    // A fresh per-visitor public tape avoids an RPC scan and its shared-provider budget.
    const publicTape=await browserTrades({chainId,pool,signal:fallbackSignal,fetcher});
@@ -221,7 +221,7 @@ export async function loadExternalHistory({chainId,pool,tf,signal,fetcher=global
      useful:value=>Array.isArray(value?.body?.[kind])&&(kind==='trades'?!value.stale||value.body[kind].length>0:value.body[kind].length>0)}).then(value=>value||retained);
  };
  const notify=patch=>{if(typeof onData==='function'&&!signal?.aborted)onData(patch);};
- const cP=panel('candles',candleFallback).then(c=>{if(c){const h=historyData(c,null,chainId,tf);notify({candles:h.candles,marketCoverage:{candles:h.marketCoverage.candles},historyFreshness:{candles:h.historyFreshness.candles}});}return c;});
+ const cP=panel('candles',candleFallback).then(c=>{if(c){const h=historyData(c,null,chainId,tf);notify({candles:h.candles,serverCandles:h.serverCandles,marketCoverage:{candles:h.marketCoverage.candles},historyFreshness:{candles:h.historyFreshness.candles}});}return c;});
  const tP=panel('trades',tradeFallback).then(t=>{if(t){const h=historyData(null,t,chainId,tf);notify({trades:h.trades,tradeCoverage:h.tradeCoverage,marketCoverage:{trades:h.marketCoverage.trades},historyFreshness:{trades:h.historyFreshness.trades}});}return t;});
  const [c,t]=await Promise.all([cP,tP]);
  if(signal?.aborted)throw signal.reason||new DOMException('Aborted','AbortError');
@@ -232,7 +232,8 @@ function historyData(c,t,chainId,tf){
  const indexed=swapCandles(rawTrades.map(x=>({ts:Math.floor(x.ts/1000),price:x.priceUsd,quote:x.valueUsd})),tf);
  const candles=mergeSwapCandles(indexed,c?.body?.candles||[]),deep=candles.length>0;
  const newest=values=>values.filter(v=>Number.isFinite(v)&&v>0).reduce((a,b)=>Math.max(a,b),0)||null;
- return {candles,tradeCoverage:t?.body.coverage||null,
+ // ux-tradingview: bars our own server routes answered (never browser/third-party reads), for the licensed chart.
+ return {candles,serverCandles:c?.sameOrigin&&Array.isArray(c.body?.candles)?c.body.candles:null,tradeCoverage:t?.body.coverage||null,
   trades:rawTrades.map(x=>({id:x.tx+':'+(x.index??x.logIndex??'')+':'+(x.wallet||'')+':'+x.ts,logIndex:x.index??x.logIndex,ts:Math.floor(x.ts/1000),buy:x.side==='buy',price:x.priceUsd,token:x.amountToken,quote:x.valueUsd,trader:chainId==='solana'?(x.wallet||''):(x.wallet||'').toLowerCase(),tx:x.tx,pool:0})),
   marketCoverage:{candles:deep?'available':!c?'provider':'unavailable',trades:t?'available':'unavailable'},
   historyFreshness:{candles:{available:deep,observedAt:(c?c.observedAt:t?.observedAt)||null,stale:c?!!c.stale||!c.observedAt:!!t?.stale||!!t&&!t.observedAt,lastEventAt:newest(candles.map(x=>x.time*1000))},trades:{available:!!t,observedAt:t?.observedAt||null,stale:!!t?.stale,lastEventAt:newest(rawTrades.map(x=>x.ts))}}};

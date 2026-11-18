@@ -1,0 +1,25 @@
+/* Loaded inside the TradingView widget (custom_css_url), ux-tradingview 2026-11-18: noir/gold to match qhooks.com.
+   Colours only; TradingView's attribution/logo is never hidden or restyled. No italics anywhere. */
+@font-face{font-family:"Mona Sans";src:url("/qx-a/fonts/mona-sans-latin.woff2") format("woff2");font-weight:200 900;font-stretch:75% 125%;font-display:swap}
+.theme-dark:root{
+ --tv-color-platform-background:#090B0A;--tv-color-pane-background:#090B0A;--tv-color-pane-background-secondary:#0D100F;
+ --tv-color-toolbar-button-background-hover:rgba(255,255,255,.06);--tv-color-toolbar-button-background-expanded:rgba(255,255,255,.08);
+ --tv-color-toolbar-button-background-active:rgba(210,173,114,.14);--tv-color-toolbar-button-background-active-hover:rgba(210,173,114,.2);
+ --tv-color-toolbar-button-text:rgba(244,241,233,.70);--tv-color-toolbar-button-text-hover:#F4F1E9;
+ --tv-color-toolbar-button-text-active:#D2AD72;--tv-color-toolbar-button-text-active-hover:#F0DAAE;
+ --tv-color-item-active-text:#D2AD72;--tv-color-toolbar-toggle-button-background-active:#D2AD72;--tv-color-toolbar-toggle-button-background-active-hover:#F0DAAE;
+ --tv-color-toolbar-divider-background:rgba(255,255,255,.07);--tv-color-popup-background:#0F1311;--tv-color-popup-element-text:rgba(244,241,233,.82);
+ --tv-color-popup-element-text-hover:#F4F1E9;--tv-color-popup-element-background-hover:rgba(255,255,255,.06);
+ --tv-color-popup-element-text-active:#D2AD72;--tv-color-popup-element-background-active:rgba(210,173,114,.14);
+ --tv-color-popup-element-toolbox-text:rgba(244,241,233,.6);--tv-color-popup-element-toolbox-text-hover:#F4F1E9;
+ --tv-color-popup-element-toolbox-text-active-hover:#F0DAAE;--tv-color-popup-element-toolbox-background-hover:rgba(255,255,255,.06);
+ --tv-color-popup-element-toolbox-background-active-hover:rgba(210,173,114,.2);
+}
+:root:not(.theme-dark){
+ --tv-color-platform-background:#F2F3F1;--tv-color-pane-background:#F2F3F1;--tv-color-pane-background-secondary:#E9EBE8;
+ --tv-color-toolbar-button-text-active:#8B6631;--tv-color-toolbar-button-text-active-hover:#7A5726;--tv-color-item-active-text:#8B6631;
+ --tv-color-toolbar-button-background-active:rgba(139,102,49,.1);--tv-color-toolbar-toggle-button-background-active:#8B6631;
+ --tv-color-toolbar-toggle-button-background-active-hover:#7A5726;--tv-color-popup-element-text-active:#8B6631;
+ --tv-color-popup-element-background-active:rgba(139,102,49,.1);
+}
+*,*::before,*::after{font-style:normal!important}

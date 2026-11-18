@@ -1,0 +1,11 @@
+{
+  "status": "ROOT_APPROVED_ONE_EXACT_AUTHORED_SOURCE",
+  "path": "qx-terminal.mjs",
+  "sha256": "44917480c2f0ac8192d47bd7f6be6306e80fa5be89763ec9bd0c3f46849b92db",
+  "bytes": 142771,
+  "sourceRelease": "07a8e318-fe25-4bfb-8adc-2169dc513d9c",
+  "brandMentions": 2,
+  "mentionScope": "integration comments on line465 only",
+  "opaqueInputs": 0,
+  "approval": "Root reviewed owned source lines458\u2013470 and approved only this exact path/hash/size; unconditional proprietary directory/path/standalone bans remain; no extension, glob or word-wide exemption."
+}

@@ -6,6 +6,10 @@ def allowed(root,name):
  root=Path(root).resolve();raw=root/name
  if raw.is_symlink():return False
  file=raw.resolve();relative=file.relative_to(root).as_posix()
+ # Root-approved own integration source: two brand mentions are comments, not bundled opaque code.
+ # This one exact artifact is separate from the Apache bundle pin policy; path bans remain unconditional.
+ if relative=='qx-terminal.mjs':
+  return file.stat().st_size==142771 and hashlib.sha256(file.read_bytes()).hexdigest()=='44917480c2f0ac8192d47bd7f6be6306e80fa5be89763ec9bd0c3f46849b92db'
  if not relative.startswith('b/'):return False
  policy=json.loads((root/'.ci/lwc-bundle-allowlist.json').read_text())
  expected=policy['bundles'].get(relative)

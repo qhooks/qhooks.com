@@ -462,6 +462,19 @@ async function loadFeed() {
 }
 
 // ---- Chart ----
+// ux-tradingview (2026-11-18): TradingView Advanced Charts, loaded on demand, covers the native chart below once it has
+// drawn. It gets the same bars, MC multiplier and formatter as the native chart, so header and chart agree. Our own index
+// only (QHooks launches); outside tokens keep the native chart. Any failure falls back to the native chart for this visit.
+let tvLayer=null,tvLoad=null,tvView=null,tvFallback=(()=>{try{return new URLSearchParams(location.search).get('chart')==='native'?'opt_out':null;}catch{return null;}})();
+function tvChart(view){
+  tvView=view;if(tvFallback)return;
+  if(tvLayer){tvLayer.update(view);return;}
+  tvLoad??=import('/qx-tv-chart.mjs').then(m=>(tvLayer=m.createTvLayer({host:$('qxt-chart'),
+    onFallback:why=>{tvFallback=why;tvLayer=null;$('qxt-chart').dataset.tv='fallback';$('qxt-chart').dataset.tvReason=why;},
+    onReady:()=>{$('qxt-chart').dataset.tv='ready';}}))).catch(()=>{tvFallback='module';$('qxt-chart').dataset.tv='fallback';return null;});
+  tvLoad.then(layer=>{if(layer&&tvView&&!tvFallback)layer.update(tvView);});
+}
+function tvHide(){tvView=null;tvLayer?.hide();}
 let chart, candles, volume,chartTools,entryLine,entryLabel,chartEntryPrice=null;
 let chartOhlc,chartReadoutBars=new Map(),chartLatest=null,chartHoverTime=null,chartReadoutPrice=chartPrice,chartReadoutVolume=compact;
 const providerChart=createProviderChartRenderer({nativeElement:$('qxt-chart')}),chartUnits=document.querySelector('[aria-label="Chart units"]');
@@ -558,8 +571,8 @@ function renderChart() {
   // Our candles first: no provider embed while the history read is still running (2026-11-10, chart switch).
   // QHooks launches whose index is catching up: the live provider chart until it is within 300 blocks again.
   const ownLive=!d.ext&&d.providerLive?ownProviderSelection(d):null;
-  if(ownLive&&providerChart.render(directProviderChart(ownLive,Date.now(),'refreshing'),ownLive)){chartUnits.hidden=true;const status=$('qxt-candles-freshness');if(status)status.hidden=true;return;}
-  if(!d.candles?.length&&d.marketCoverage?.candles!=='loading'&&providerChart.render(d.chartSurface||directProviderChart(embedSelection),embedSelection)){chartUnits.hidden=true;const status=$('qxt-candles-freshness');if(status)status.hidden=true;return;}
+  if(ownLive&&providerChart.render(directProviderChart(ownLive,Date.now(),'refreshing'),ownLive)){tvHide();chartUnits.hidden=true;const status=$('qxt-candles-freshness');if(status)status.hidden=true;return;}
+  if(!d.candles?.length&&d.marketCoverage?.candles!=='loading'&&providerChart.render(d.chartSurface||directProviderChart(embedSelection),embedSelection)){tvHide();chartUnits.hidden=true;const status=$('qxt-candles-freshness');if(status)status.hidden=true;return;}
   providerChart.clear();chartUnits.hidden=false;
   renderHistoryStatus('candles',d);
   ensureChart();
@@ -595,6 +608,12 @@ function renderChart() {
     chartEntryPrice=personal.entry;entryLabel.textContent='Avg entry $'+chartPrice(myPosition.averageEntryUsd);
     placeEntryLabel();requestAnimationFrame(placeEntryLabel);
   }
+  // Launches: our index. Outside tokens: only bars our own server routes served (d.serverCandles); otherwise native.
+  const tvBars=!d.ext?bars:Array.isArray(d.serverCandles)&&d.serverCandles.length?shapeCandles(d.serverCandles):null;
+  if(tvBars)tvChart({sel:d.ext?{chainId:d.meta.chainId,token:d.meta.token,outside:true}:{chainId:d.meta.chainId,controller:d.meta.controller||state.sel?.controller},unit,tf:d.tf,bars:tvBars,k:capK||null,label:d.meta.symbol||'Token',priceUnit,
+    format:(value,u)=>u==='mcap'?capLabel(value,priceUnit):chartAxisPrice(value,priceUnit),
+    overlay:{entry:chartEntryPrice,entryText:entryLabel.hidden?'':entryLabel.textContent,markers:overlay.youEnabled?personal.markers.map(m=>{const b=tvBars.find(x=>x.time===m.time);return {time:m.time,side:m.text==='Buy'?'buy':'sell',price:b?(m.text==='Buy'?b.low:b.high)*k:null};}).filter(m=>m.price>0):[]}});
+  else tvHide();
   // Semantic render receipt used by the offline browser acceptance runner.
   $('qxt-chart').dataset.candleCount=String(bars.length);
   $('qxt-chart').dataset.buyMarkers=String(personal.markers.filter(m=>m.text==='Buy').length);
@@ -906,7 +925,7 @@ function clearMarketView(message='Choose a token') {
   // Keep the chart area visible while the first market read is in flight.
   $('qxt-chart').hidden=!(state.loading&&state.sel&&!state.sel.ext);
   marketPosition?.clear();
-  chartLayers?.clear();
+  chartLayers?.clear();tvHide();
   try{if(entryLine){candles?.removePriceLine(entryLine);entryLine=null;}candles?.setData([]);volume?.setData([]);candles?.setMarkers([]);}catch{}
   $('qxt-chart-empty').hidden=false;$('qxt-chart-empty').textContent=state.loading?(state.sel&&!state.sel.ext?COLD_CHART_MESSAGE:'Loading this token’s chart…'):'Choose a token to see its chart.';
   renderPane();renderWorkspace();
@@ -920,7 +939,7 @@ function paintMarket() {
   workspaceMemory.remember({...selected,receivedAt:Date.now(),observedAt:state.data.token?.observedAt??state.data.synced?.at??null,stale:!!state.data.token?.stale,openedAt:state.openedAt});renderFeed();syncConversation();positionsPanel?.render();
   renderHead();renderLaunchActions();if(state.pane!=='positions')renderPane();
   // A chart failure must not strand the correct trades or actionable token view.
-  try{$('qxt-chart').hidden=false;renderChart();}catch{providerChart.clear();chartUnits.hidden=false;$('qxt-chart').hidden=true;$('qxt-chart-empty').hidden=false;$('qxt-chart-empty').textContent='Refreshing chart…';}
+  try{$('qxt-chart').hidden=false;renderChart();}catch{tvHide();providerChart.clear();chartUnits.hidden=false;$('qxt-chart').hidden=true;$('qxt-chart-empty').hidden=false;$('qxt-chart-empty').textContent='Refreshing chart…';}
   // System A page layer (qx-a/pages/token-terminal.mjs) repaints its art, price, stats and tape from the same data.
   document.dispatchEvent(new CustomEvent('qxt:paint'));
 }
@@ -1083,7 +1102,7 @@ async function loadExternal({signal,strict=false}={}) {
     if(prior?.ext&&prior.meta.token===ext&&prior.meta.chainId===chainId){
       data.safety=prior.safety;
       if(prior.tf===tf&&prior.token.pools?.[0]?.address===pool){
-        for(const key of ['candles','trades','tradeCoverage','marketCoverage','historyFreshness','holders','holderSample','chartSurface'])data[key]=prior[key];
+        for(const key of ['candles','serverCandles','trades','tradeCoverage','marketCoverage','historyFreshness','holders','holderSample','chartSurface'])data[key]=prior[key];
         data.historyFreshness=retainHistoryFreshness(prior.historyFreshness);
         data.marketCoverage={...prior.marketCoverage,candles:'loading',trades:'loading'};
       }

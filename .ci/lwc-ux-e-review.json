@@ -1,0 +1,53 @@
+{
+  "status": "ROOT_APPROVED_EXACT_TWO_APACHE_DERIVATIVES",
+  "sourceRelease": "07a8e318-fe25-4bfb-8adc-2169dc513d9c",
+  "existingPins": 59,
+  "newPinCount": 2,
+  "allPriorPolicyBytesUnchanged": true,
+  "bundles": [
+    {
+      "path": "b/ux-e-seal2-20261118/terminal/qx-terminal.6XASBC2W.mjs",
+      "sha256": "e7f3167e53b96f07c0a47c8bff66f8f45d1a90e90531ec0b335ac9ec9b519cf7",
+      "bytes": 407768,
+      "attributionReferences": 2,
+      "proprietaryInputs": 0,
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      },
+      "ownerManifest": {
+        "path": "work/qhooks-ux-e-root-rel-20261118/lead/perf/terminal.manifest.json",
+        "sha256": "b96f41efc8088b715d24b59f99a9782b458391245d5bc2beaa2a64460af51c26"
+      },
+      "existingExactPin": false
+    },
+    {
+      "path": "b/ux-e-seal2-20261118/x-tracker/c.3JSX6SCP.mjs",
+      "sha256": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+      "bytes": 161341,
+      "attributionReferences": 2,
+      "proprietaryInputs": 0,
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      },
+      "ownerManifest": {
+        "path": "work/qhooks-ux-e-root-rel-20261118/lead/perf/x-tracker.manifest.json",
+        "sha256": "b519e7e7feb3f2b2bca11c36f16ee2f842dc838981acbe617a98952baccda41f"
+      },
+      "existingExactPin": false
+    }
+  ],
+  "sourceWorkerSha256": "555bc1d4e5f67c2390d819f04abc1be17727218af4e496c4905c45a40ecb314f",
+  "sourceFreezeSha256": "69c57d337ab344d7d11edb870199923a2f5a65bf3c1575fb2008ccafbf30ef74",
+  "priorPolicySha256": "dee0f59cf1246279653c6e7acbd0e6bd3c1c74f4a2c8bdc5fba3890e6b53af6d",
+  "approval": "Root approved ONLY these two exact path/SHA rows, unchanged existing Apache vendor/license and attribution. No wildcard/proprietary exception."
+}
