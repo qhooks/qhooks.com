@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "37844828-04f7-4e75-a85f-dff2b8ba4d5c",
+  "releaseId": "7ecec2c8-61b8-4f57-8d8e-d3217987741d",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -149954,6 +149954,6 @@
     }
   },
   "contentDigest": "7ae5ef278405d86df1883c6fe9f4eb9d2fbc5f2ed1a5e412b2e95ad722111f31",
-  "sourceWorkerSha256": "eec54c1f011d5cf68945c311faf6f59cbdfbb8e319eed8a20da0f421d68051be",
+  "sourceWorkerSha256": "283576d80bca42beb103317c16f3cadfc53efc18f680db34249e098aa8c3b2b2",
   "provenance": "Exact deployed 04e189cc-beb5-4208-a9cc-d85fd4c6bd61 public/ source. Six D0 source modules, terminal HTML and the new immutable bundle namespace only; all historical immutable assets and prior46Apache pins retained. One new exact Apache Lightweight Charts derivative is separately reviewed. Private server metadata80e and Worker-generated responses are excluded."
 }
