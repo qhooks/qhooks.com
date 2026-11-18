@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "baa83a05-ad01-4885-a0f5-c84d2be9a566",
+  "releaseId": "35b85680-fe86-4d28-bc6c-01de3db4bdab",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -173382,7 +173382,7 @@
     }
   },
   "contentDigest": "bf39fd9c93b3c3a403abc64618cac6d1bd52cb7df6c886055cf43a76c0fb8857",
-  "sourceWorkerSha256": "4f83aee9fc2d8cb52d44c86cdc056e852c953161349b7da474d4e8fe8a3a348e",
+  "sourceWorkerSha256": "35e8e56d71f81d7627f2d22966681f62a896a5ac34551e02b97a3e1395c5529b",
   "provenance": "Exact accepted baa83a05-ad01-4885-a0f5-c84d2be9a566 public static source; byte-identical public map/assets to published eb422ed49. Only private cold-discovery logic changed. Full immutable union/exclusions preserved; generated HTTP bodies and private server/Worker source are excluded. Fullcurrentprice2% and Nyraa-identity acceptance remain separately qualified in Root receipt.",
   "sourceTree": "work/qhooks-portfolio-cold-curve-root-current-rel-20261118",
   "sourceFreezeSha256": "e1577b42f7a7d6921652d9f783b23234c133d50e934183c14e1e2f5ba9ff1596"
