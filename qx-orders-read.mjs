@@ -1,4 +1,6 @@
+import {createReadFetch} from './qx-community-retry.mjs';
 export async function readOwnedOrders(me, {required=false,fetcher=globalThis.fetch}={}) {
+ fetcher=createReadFetch(fetcher);
   try {
     if(!/^0x[0-9a-f]{40}$/i.test(me||'')){if(required)throw Error('Connect to read your orders.');return [];}
     const r=await fetcher('/api/orders?trader='+me,{cache:'no-store'});

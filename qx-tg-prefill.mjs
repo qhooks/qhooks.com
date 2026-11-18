@@ -171,19 +171,27 @@ export async function applyTradePrefill(card, trade, { active = () => true, time
   return true;
 }
 
+// view: ?view=orders|rewards, or a token link's #t=<chain>:<token>&tab=stake (opens that token's Staking tool tab).
+const TOOL_TABS = Object.freeze({ orders: 'qts', stake: 'qtz' });
+export function terminalViewFrom(search, hash) {
+  const view = new URLSearchParams(String(search || '')).get('view');
+  if (view) return view;
+  const tab = new URLSearchParams(String(hash || '').replace(/^#/, '')).get('tab');
+  return tab === 'stake' || tab === 'staking' ? 'stake' : null;
+}
 export function openTerminalView(view, doc) {
-  if (!['orders', 'rewards'].includes(view)) return () => {};
-  const sync = doc.querySelector('#qxt-sync');
-  const find = () => doc.querySelector(view === 'orders' ? '#qxt-tool-tabs [data-tool="qts"]' : '#qxt-rewards');
+  if (!['orders', 'rewards', 'stake'].includes(view)) return () => {};
+  const sync = doc.querySelector('#qxt-sync'), tool = TOOL_TABS[view];
+  const find = () => doc.querySelector(tool ? '#qxt-tool-tabs [data-tool="' + tool + '"]' : '#qxt-rewards');
   const open = () => {
     const button = find();
     if (!button || button.hidden || button.disabled) return false;
-    if (view === 'orders' || button.getAttribute('aria-expanded') !== 'true') button.click();
+    if (tool || button.getAttribute('aria-expanded') !== 'true') button.click(); // the Staking tab scrolls to itself on click
     if (view === 'orders') doc.querySelector('#qxt-trade')?.scrollIntoView({ block: 'start' });
     return true;
   };
   if (open()) return () => {};
-  if (sync) sync.textContent = view === 'orders' ? 'Choose a launch to see its TP/SL orders.' : 'Connect your wallet to see rewards.';
+  if (sync && view !== 'stake') sync.textContent = view === 'orders' ? 'Choose a launch to see its TP/SL orders.' : 'Connect your wallet to see rewards.';
   if (typeof MutationObserver === 'undefined') return () => {};
   const observer = new MutationObserver(() => { if (open()) observer.disconnect(); });
   observer.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });

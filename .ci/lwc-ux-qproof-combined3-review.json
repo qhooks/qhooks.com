@@ -1,0 +1,49 @@
+{
+  "sourceRelease": "f07c7586-24e8-47e1-ab66-fcfaf332c3ac",
+  "status": "SOURCE_LIVE_MIRROR_PENDING_PUBLICATION",
+  "sourceWorkerSha256": "cbbd3b237307102ad655baac5298585a58b789c2f854afe20ebcc1a2c209f622",
+  "scope": "Only exact Apache Lightweight Charts derivative hashes; original attribution and license verified. No proprietary library allowance.",
+  "bundles": [
+    {
+      "path": "b/ux-qproof-combined2-20261118/terminal/qx-terminal.QFAXUVGB.mjs",
+      "sha256": "1a720cc3ae1e401353b8469064dd34e348a4b4cd007c728dd9883a818782c594",
+      "bytes": 406547,
+      "attributionReferencesExactly": 2,
+      "proprietaryInputs": 0,
+      "ownerManifest": {
+        "path": "work/qhooks-ux-qproof-combined3-claude-20261118/lead/perf/terminal.manifest.json",
+        "sha256": "6fe7521dae5bf7776e1b38d2fdfa23ede9bd6aa086cc5f58e5bb720c004c9fe4",
+        "inputs": 368
+      },
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      }
+    },
+    {
+      "path": "b/ux-qproof-combined2-20261118/x-tracker/c.3JSX6SCP.mjs",
+      "sha256": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+      "bytes": 161341,
+      "attributionReferencesExactly": 2,
+      "proprietaryInputs": 0,
+      "ownerManifest": {
+        "path": "work/qhooks-ux-qproof-combined3-claude-20261118/lead/perf/x-tracker.manifest.json",
+        "sha256": "929c2ddac03039c48a2ef1a044f1bfee82cfd8b0bb12ee2b4a55f017b30c5cee",
+        "inputs": 211
+      },
+      "vendor": {
+        "path": "vendor/lightweight-charts/lightweight-charts.standalone.production.mjs",
+        "sha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768"
+      },
+      "license": {
+        "path": "vendor/lightweight-charts/LICENSE",
+        "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+      }
+    }
+  ],
+  "allPriorPinsAndOtherPolicyFieldsExact": true
+}

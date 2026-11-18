@@ -1,3 +1,4 @@
+import {contextFromBlockConfig,setGlossaryContext} from './qx-glossary-context.mjs';
 import {guidedSplitPreview,splitPreviewNode} from './qx-create-split-preview.mjs';
 import {mountCreateTrends,mountTrendDraftApply} from './qx-news-trends.mjs';
 import {profileImage} from './qx-token-profile-core.mjs';
@@ -112,16 +113,20 @@ function costNode(){const box=el('div'),view=createCostView(config,cost,usdPrice
  if(cost&&!chainById(config.chainId).quote.wrapNative&&chainById(config.chainId).family!=='arc')box.append(el('p',{class:'qxc-fine'},'Plus '+cost.liquidity+' '+cost.liquidityUnit+' from your token balance.'));
  box.append(el('p',{class:'qxc-fine'},'Gas uses planning estimates for each step, with fresh network fees. Each transaction is estimated again before sending. Any wrapped balance you already hold reduces the native amount needed.'));return box;
 }
+function paintRuleText(host,text){
+ const parts=String(text).split(/(sandwich guard|volatility fee)/gi);
+ host.replaceChildren(...parts.map(part=>{const term={'sandwich guard':'sandwich-guard','volatility fee':'storm-fee'}[part.toLowerCase()];return term?el('span',{'data-glossary-term':term,'data-glossary-owned':''},part):document.createTextNode(part);}));
+}
 function renderStyle(){for(const b of $('styles').children)b.setAttribute('aria-pressed',String(b.dataset.style===config.style));
  const p=CREATE_STYLES.find(p=>p.id===config.style);if(!p)return;
- let line=p.line;
- try{const b=JSON.parse(makeBlocks(config,hub.snapshot().current?.owner||'0x'+'1'.repeat(40)));line=p.on.length?p.on.map(id=>({antiSnipe:'Falling launch tax',walletCap:'wallet cap',cooldown:'buy cooldown',sandwich:'sandwich guard',tax:'buy/sell tax',autoBurn:'buy burns',king:'largest-buy pot',clockPot:'last-buyer pot',referrals:'referral rewards',points:'volume points',exitClock:'falling sell fee',buyback:'buyback and burn',sessionFee:'market-hours fees',stormFee:'volatility fee'}[id]||id)).join(', ')+'.':'Open trading with no extra buy/sell tax, wallet limits or launch games.';
+ let line=p.line,blockContext=null;
+ try{const b=JSON.parse(makeBlocks(config,hub.snapshot().current?.owner||'0x'+'1'.repeat(40)));blockContext=contextFromBlockConfig(b,{kind:'draft'});line=p.on.length?p.on.map(id=>({antiSnipe:'Falling launch tax',walletCap:'wallet cap',cooldown:'buy cooldown',sandwich:'sandwich guard',tax:'buy/sell tax',autoBurn:'buy burns',king:'largest-buy pot',clockPot:'last-buyer pot',referrals:'referral rewards',points:'volume points',exitClock:'falling sell fee',buyback:'buyback and burn',sessionFee:'market-hours fees',stormFee:'volatility fee'}[id]||id)).join(', ')+'.':'Open trading with no extra buy/sell tax, wallet limits or launch games.';
   if(p.on.includes('tax'))line+=' Buy/sell tax '+Number(b.buyTaxBps)/100+'% / '+Number(b.sellTaxBps)/100+'%.';
   if(p.on.includes('buyback'))line+=' '+Number(b.buybackShareBps)/100+'% of charges fund buybacks, with a '+Number(b.buybackCooldown)/60+' minute cooldown; someone must run them.';
   if(Number(config.referrals))line+=' Referrers receive '+config.referrals+'% of charges.';if(Number(config.stakers))line+=' Stakers receive '+config.stakers+'% of the creator block income, streamed over a day.';
   if(p.on.includes('antiSnipe'))line+=' Launch guards last '+config.antiSnipe+' minutes.';
  }catch{line+=' Check the shares and guard length below.';}
- $('style-summary').textContent=line;
+ paintRuleText($('style-summary'),line);setGlossaryContext($('style-summary'),blockContext);setGlossaryContext($('current-rules'),blockContext);
 }
 function renderProgress(){const label=walletStepLabel(record,record?plan(record.config):[]);$('step-label').textContent=label;$('step-label').hidden=!label;if(!record){$('running').hidden=true;$('done').hidden=true;launchReadiness?.dispose();launchReadiness=null;lastProgressStatus=null;return;}
  $('running').hidden=false;if(lastProgressStatus!==record.status){$('running').open=record.status!=='done';lastProgressStatus=record.status;}$('launch-id').textContent=record.id.slice(0,8);$('steps').replaceChildren(...plan(record.config).map(step=>{
@@ -165,7 +170,7 @@ function render(){startControl?.refresh();if(solCreate?.active){solCreate.render
  $('launch').disabled=!CREATE_EXECUTION_ENABLED||!record&&!GUIDED_NEW_LAUNCHES||busy||!c||!record&&guidedOff()||!signer?.backupVerified||signer.locked||!quantumReady||!cost||!valid||!!record&&record.owner!==c?.owner||!record&&liquidity.blocked;
  $('launch').title=!record&&liquidity.blocked?liquidity.message:'';
  quantumControl?.render();
- renderStyle();$('current-rules').textContent='Current draft: '+(CREATE_STYLES.find(p=>p.id===config.style)?.name||config.style)+'. '+$('style-summary').textContent;assistedPanel?.refresh();
+ renderStyle();paintRuleText($('current-rules'),'Current draft: '+(CREATE_STYLES.find(p=>p.id===config.style)?.name||config.style)+'. '+$('style-summary').textContent);assistedPanel?.refresh();
  if(screen===3){try{$('summary').replaceChildren(summaryNode());}catch{$('summary').textContent='Check the token and allocation values.';}$('cost').replaceChildren(costNode());$('gas-steps').replaceChildren(...(cost?.steps||[]).map(step=>el('li',{},step.label+' · '+(BigInt(step.estimatedGas)>0n?Number(step.estimatedGas).toLocaleString('en-US')+' gas · estimate':'no transaction'))));$('confirmations').textContent=c?.entry.rdns===EMBEDDED_RDNS?'Email wallet: one review.':cost?'Studio: the full guided setup for custom launches, in '+cost.txCount+' transactions and 2 signatures, plus a network switch if needed. For most launches, one-tap above is all you need.':'Connect your wallet to see confirmation details.';}
  renderProgress();
  for(const id of ['confirm','retry','recover'])if(!CREATE_EXECUTION_ENABLED)$(id).disabled=true;

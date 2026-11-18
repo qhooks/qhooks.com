@@ -2,7 +2,7 @@
 // same feed the terminal and home use; USD price, market cap, 24h change and the last trade come from its summaries.
 // Prices tick (flash up or down) only when the feed reports a new price.
 import { fmt, RM } from '/qx-a/components.mjs';
-import {marketQuoteState} from '/qx-market-quote-state.mjs';
+import {createMarketQuoteLookup, marketQuoteState} from '/qx-market-quote-state.mjs';
 import {priceState} from '/qx-price-state.mjs';
 
 const ADDR = /^0x[0-9a-f]{40}$/;
@@ -15,12 +15,16 @@ export function artURL(v) {
   try { const u = new URL(v); if (u.protocol !== 'https:' || u.username || u.password) return null; return u.hostname === 'qhooks.com' || u.host === location.host ? u.pathname + u.search : u.href; } catch { return null; }
 }
 export async function launchFeed({ fetcher = fetch } = {}) {
-  const r = await fetcher('/api/terminal/feed?chain=all', { cache: 'no-store', headers: { accept: 'application/json' } });
+  const r = await fetcher('/api/terminal/feed?chain=all', { signal: AbortSignal.timeout(8000), cache: 'no-store', headers: { accept: 'application/json' } });
   if (!r.ok) throw Error('feed ' + r.status);
   const j = await r.json();
   if (!Array.isArray(j?.markets)) throw Error('feed shape');
+  const lookup = createMarketQuoteLookup({fetcher}); lookup.seed(j.markets);
+  const missing = j.markets.filter(m => !marketQuoteState(m)?.usable).slice(0,24);
+  const filled = missing.length ? await lookup.read(missing) : {rows: []};
+  const quotes = new Map(filled.rows.map(r => [String(r.chainId) + ':' + String(r.controller).toLowerCase(), r]));
   return j.markets.filter((m) => /^\d+$/.test(String(m?.chainId)) && ADDR.test(String(m?.controller).toLowerCase())).map((m) => {
-    const s = m.summary || {}, quote=marketQuoteState(m);
+    const s = m.summary || {}, cached = quotes.get(String(m.chainId) + ':' + String(m.controller).toLowerCase()), quote=marketQuoteState(cached || m);
     return { ...quote, key: m.chainId + ':' + String(m.controller).toLowerCase(), chainId: String(m.chainId), controller: String(m.controller).toLowerCase(), token: m.token, live: !!m.live,
       symbol: String(m.symbol || m.name || 'Token').slice(0, 24), name: String(m.name || '').slice(0, 48), logo: artURL(m.logo || m.profileImage), banner: artURL(m.profileBanner),
       priceUsd: quote?.priceUsd??null, mcapUsd: quote?.marketCapUsd??null, volUsd: quote?.volume24Usd??null, change: quote?.change24??null, trades24: priceState(quote?.observedAt).usable?num(s.trades24):null, holders: num(s.holders), lastTradeAt: num(s.lastTradeAt) };
@@ -34,7 +38,7 @@ export function coinEl(row, cls = 'mk-coin') {
   else el.textContent = letter;
   return el;
 }
-export const priceText = (v) => v == null ? '—' : fmt.price(v);
+export const priceText = (v, unit = 'USD') => v == null ? '—' : unit === 'USD' ? fmt.price(v) : new Intl.NumberFormat('en-US', {maximumSignificantDigits: 5}).format(v) + ' ' + unit;
 export const capText = (v) => v == null ? '—' : fmt.usd(v);
 export const changeText = (v) => v == null ? '—' : fmt.pct(v);
 export const ageText = (ts) => ts ? fmt.age(Date.now() / 1000 - ts) : '—';

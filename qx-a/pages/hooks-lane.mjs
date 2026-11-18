@@ -4,6 +4,7 @@
 import { mountShell } from '/qx-a/shell.mjs';
 import { setArt, ambient } from '/qx-a/components.mjs';
 import { ensureGlyphs, fillGlyphs } from '/qx-a/pages/hooks-glyphs.mjs';
+import { fillChainCount } from '/qx-chain-count.mjs';
 
 const body = document.body, opt = body.dataset;
 const trigger = document.getElementById('qhc-trigger');
@@ -27,3 +28,5 @@ for (const nav of document.querySelectorAll('.hl-subnav')) {
   const on = nav.querySelector('[aria-current="page"]');
   if (on && on.offsetLeft + on.offsetWidth > nav.clientWidth) nav.scrollLeft = on.offsetLeft - 18;
 }
+// One chain count sitewide: [data-chain-count] (e.g. the /hooks launch-chains stat) comes from chains.mjs LIVE.
+fillChainCount(document);

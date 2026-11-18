@@ -1,3 +1,4 @@
+import {fetchRead} from './qx-community-retry.mjs';
 // Community hub (/community), System A. Feed first: calls read like posts with their result, callers' records up front,
 // boards as live rooms. Every read is an existing public endpoint; every write is an existing flow (picker, follow store,
 // thanks, reactions, rankings, callout points). Nothing moves unless a real event moved it.
@@ -124,9 +125,9 @@ if(boardsBox){
   const bar=tabs(kinds.map(([id,label])=>({id,label})),{active:'launch',label:'Boards',onChange:id=>show(id)});
   const list=h('div',{class:'qa-list cx-boards','aria-live':'polite'});
   boardsBox.replaceWith(h('div',{id:'cx-board-list'},bar.el,list));
-  fetch('/api/community/boards',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{if(Array.isArray(j?.boards)){boardCount=j.boards.length;paintPeople();}}).catch(()=>{});
+  fetchRead('/api/community/boards',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{if(Array.isArray(j?.boards)){boardCount=j.boards.length;paintPeople();}}).catch(()=>{});
   async function show(kind){
-    if(!cache.has(kind))cache.set(kind,fetch('/api/community/boards?kind='+kind,{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null));
+    if(!cache.has(kind))cache.set(kind,fetchRead('/api/community/boards?kind='+kind,{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null));
     list.replaceChildren(skeletonRows(2));
     const j=await cache.get(kind);await readMarkets();
     if(!Array.isArray(j?.boards)){list.replaceChildren(state('loading',{title:'Refreshing',body:'The boards did not answer.',action:'Try again',onAction:()=>{cache.delete(kind);show(kind);}}));return;}

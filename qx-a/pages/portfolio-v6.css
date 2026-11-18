@@ -266,3 +266,21 @@ main.pf6 .pf6-row:has(.pf-row-sale:not([hidden])){height:auto;grid-template-rows
  main.pf6 .pf-holding>.pf-row-sale{grid-column:1/-1;grid-row:2}
  main.pf6 .pf6-row:has(.pf-row-sale:not([hidden])){grid-template-rows:40px auto}
 }
+/* watch-only addresses (2026-11-18, qx-portfolio-watch.mjs): square, ruled, dense; read-only rows dimmed with a plain tag */
+.pf-wallet-options[open]>#qp-wallets{width:min(340px,calc(100vw - 32px));background:var(--qa-floor-2);border-radius:2px;box-shadow:0 18px 40px -12px rgba(0,0,0,.8)}
+.pf-watch{flex:1 1 100%;width:100%;box-sizing:border-box;display:grid;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid var(--qa-rule-2);font-size:11px;color:var(--qa-tx-2)}
+.pf-watch__h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:0}.pf-watch__h b{color:var(--qa-tx);font-size:11px;letter-spacing:.04em;text-transform:uppercase}.pf-watch__h span{color:var(--qa-tx-3)}
+.pf-watch__list{list-style:none;margin:0;padding:0;display:grid}
+.pf-watch__item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:4px;min-height:32px;border-bottom:1px solid var(--qa-rule)}
+.pf-watch__item.is-editing{grid-template-columns:minmax(0,1fr) auto auto}
+.pf-watch__name{display:flex;flex-direction:column;min-width:0}.pf-watch__name b{color:var(--qa-tx);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pf-watch__name span{color:var(--qa-tx-3);font-variant-numeric:tabular-nums}
+.pf-watch .qa-btn{min-height:28px;padding:0 8px;font-size:11px;border-radius:2px}
+.pf-watch__add{display:grid;gap:6px}.pf-watch__row{display:flex;gap:6px}
+.pf-watch .pf-watch__input{width:100%;box-sizing:border-box;height:32px;min-height:32px;margin:0;padding:0 8px;border:1px solid var(--qa-rule-2);border-radius:2px;background:var(--qa-floor,transparent);color:var(--qa-tx);font-family:inherit;font-size:12px;line-height:30px;box-shadow:none}
+.pf-watch .pf-watch__input:focus{outline:1px solid var(--qa-gold-hi);outline-offset:0}
+.pf-watch__empty,.pf-watch__msg{margin:0;color:var(--qa-tx-3)}.pf-watch__msg:empty{display:none}
+.pf-watch-incl{margin-left:8px;color:var(--qa-tx-3);font-size:11px;letter-spacing:.02em;white-space:nowrap}@media (max-width:600px){.pf-watch-incl{display:block;margin-left:0}.pf-watch-incl[hidden]{display:none}}
+
+main.pf6 .pf-holding.is-watch{opacity:.92}main.pf6 .pf-holding.is-watch .pf-holding__name{flex-wrap:wrap}
+main.pf6 .pf6-tag.pf-watch-tag{color:var(--qa-tx-2);background:var(--qa-wash);border-radius:2px;max-width:150px}
+@media (max-width:600px){.pf-watch .pf-watch__input{font-size:16px}} /* no iOS focus zoom */

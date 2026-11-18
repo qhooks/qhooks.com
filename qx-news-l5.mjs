@@ -1,8 +1,10 @@
+import {createReadFetch} from './qx-community-retry.mjs';
 import {node,ago,empty,visibleTask} from './qx-news-ui.mjs';
 import {boardUrl} from './qx-board-address.mjs';
 const session=()=>import('./qx-board-session.mjs');
 export function mountDevUpdates(root,options={}){
- const {chain=null,controller=null,fetcher=fetch,sessionFor=session}=options;
+ const {chain=null,controller=null,fetcher:transport=fetch,sessionFor=session}=options;
+ const fetcher=createReadFetch(transport);
  if(!root)return null;const board=chain&&/^\d{1,6}$/.test(chain)&&/^0x[0-9a-f]{40}$/.test(controller||'')?chain+':'+controller:null;
  if((Object.hasOwn(options,'chain')||Object.hasOwn(options,'controller'))&&!board){root.hidden=true;return null;}
  const list=node('div'),status=node('p',{role:'status',class:'qn-note'}),pending=node('div'),review=node('div',{class:'nl5-review'});let disposed=false;

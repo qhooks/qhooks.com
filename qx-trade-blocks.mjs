@@ -1,3 +1,4 @@
+import {contextFromBlockConfig,setGlossaryContext} from './qx-glossary-context.mjs';
 // Trade page: reads the selected pool's launch blocks from chain and shows what a trade pays now.
 import { BLOCKS, QUOTE_ASSETS, AUCTION_ADDRESS } from '/qx-block-catalog.mjs';
 import { BLOCK_FIELDS, BLOCK_BITS } from '/full-launch/packages/multichain-launch/launch-blocks.mjs';
@@ -20,7 +21,7 @@ const card = document.getElementById('qtb');
 document.addEventListener('qhooks:pool', e => { const a = document.getElementById('qt-terminal'); if (a && e.detail) a.href = '/terminal#pool=' + encodeURIComponent(JSON.stringify(e.detail)); });
 const word = (hex, i) => BigInt('0x' + hex.slice(2 + i * 64, 2 + (i + 1) * 64));
 const pad = v => BigInt(v).toString(16).padStart(64, '0');
-let seq = 0;
+let seq = 0, glossaryPoolIdentity = null;
 
 async function call(chainId, to, data) {
   const r = await fetch(RPC[chainId], { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to, data }, 'latest'] }) });
@@ -69,6 +70,11 @@ function referral(c) {
 async function show(pool) {
   const mine = ++seq;
   const blocks = pool?.constructor?.blocks;
+  const identity=pool&&blocks?[pool.chainId,pool.token||pool.controller||'',String(blocks).toLowerCase()].join(':'):null;
+  // Clear a previous token immediately. A same-pool poll keeps the current
+  // card mounted while it reads, so the existing Rules tab stays selected.
+  if(card&&identity!==glossaryPoolIdentity){card.hidden=true;setGlossaryContext(card,{kind:'pool'});}
+  glossaryPoolIdentity=identity;
   if (!card || !blocks || BigInt(blocks) === 0n || !RPC[pool.chainId]) { if (card) card.hidden = true; return; }
   try {
     const raw = await call(pool.chainId, blocks, SEL.config);
@@ -82,7 +88,18 @@ async function show(pool) {
     if (mine !== seq) return;
     const stock = stockPair(pool.chainId, pool.constructor.quote), asset = stock ? [stock.symbol, 18] : QUOTE_ASSETS[pool.chainId] || ['quote', 18], q = v => (Number(BigInt(v)) / 10 ** asset[1]).toLocaleString(undefined, { maximumFractionDigits: 4 }) + ' ' + asset[0];
     const h = (t, a = {}, ...k) => { const n = document.createElement(t); Object.assign(n, a); n.append(...k); return n; };
-    const list = h('ul', { className: 'qtb-list' }, ...on.map(id => { const b = BLOCKS.find(x => x.id === id); return h('li', {}, h('a', { href: '/hooks#block-' + id, textContent: b?.name || id }), h('span', { textContent: summary(id, c, asset) })); }));
+    const list = h('ul', { className: 'qtb-list' }, ...on.map(id => {
+      const b = BLOCKS.find(x => x.id === id),term=id==='stormFee'?'storm-fee':id==='sandwich'?'sandwich-guard':null;
+      // Keep the authored label and its help button alive across a same-pool
+      // poll, including while someone is reading the definition.
+      let label=term?card.querySelector('[data-glossary-term="'+term+'"]')?.parentElement:null;
+      if(!label?.classList.contains('qx-glossary-label')){
+        const link=h('a', { href: '/hooks#block-' + id, textContent: b?.name || id });
+        if(term){link.dataset.glossaryTerm=term;link.dataset.glossaryOwned='';}
+        label=h('span',{className:'qx-glossary-label'},link);
+      }
+      return h('li', {}, label, h('span', { textContent: summary(id, c, asset) }));
+    }));
     const pots = [on.includes('king') && ['King pot', q(kingPot)], on.includes('clockPot') && ['Last-buyer pot', q(clockPot)], on.includes('buyback') && ['Buyback pot', q(buybackPot)]].filter(Boolean);
     card.replaceChildren(
       h('h2', { id: 'qtb-heading', textContent: 'Blocks on this pool' }),
@@ -91,8 +108,9 @@ async function show(pool) {
       on.length ? list : h('p', { className: 'qtb-note', textContent: 'No blocks are switched on for this pool.' }),
       pots.length ? h('dl', { className: 'qtb-pots' }, ...pots.map(([k, v]) => h('div', {}, h('dt', { textContent: k }), h('dd', { textContent: v })))) : '',
       on.includes('referrals') ? referral(c) : '');
+    setGlossaryContext(card,contextFromBlockConfig(c,{kind:'pool'}));
     card.hidden = false;
-  } catch { if (mine === seq) card.hidden = true; }
+  } catch { if (mine === seq) { card.hidden = true; setGlossaryContext(card,{kind:'pool'}); } }
 }
 
 document.addEventListener('qhooks:pool', e => show(e.detail));

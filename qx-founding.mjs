@@ -1,7 +1,8 @@
+import {readFoundingMetrics} from './qx-founding-metrics.mjs';
 import {profileUrl} from './qx-profile-address.mjs';
 // /founding (2026-11-10): Founding Launchers counter, rules, the founding launches with milestone progress and trust
-// links, and, with a wallet connected, that wallet's founding rewards. Reads /api/founding only (plus the existing
-// RepoProof cache and builder routes per launch). No price, market cap or chart data.
+// links, and, with a wallet connected, that wallet's founding rewards. The terminal feed supplies display holder and
+// 24h volume totals; campaign qualification and rewards stay in /api/founding.
 import {getWalletHub} from '/wallet-hub-fresh.mjs';
 import {signFoundingLink} from '/founding-config.mjs';
 import {createSolanaProfileWallet} from '/qx-solana-profile-wallet.mjs';
@@ -18,6 +19,10 @@ let data = null, stopLinkWatch=()=>{};
 async function load() {
   try { const r = await fetch('/api/founding', {cache: 'no-store'}); data = r.ok ? await r.json() : null; } catch { data = null; }
   render(); mine();
+  const snapshot = data;
+  if (snapshot?.launches?.length) {
+    try { const launches = await readFoundingMetrics(snapshot.launches); if (data === snapshot) { data = {...snapshot, launches}; render(); } } catch { /* Keep unknown display figures as dashes until the next refresh. */ }
+  }
 }
 // System A (2026-11-12): the counter is a seat map of the 50 spots, the launches are a leaderboard ranked by milestone
 // progress, and the prize figures read from the same /api/founding rules. A value that moved since the last read flashes.
@@ -93,9 +98,10 @@ function render() {
 }
 function bar(label, have, need, text, moved) {
   const fill = el('span', {class: 'fd-bar__f'}); fill.style?.setProperty('--p', (clamp01(have / need) * 100).toFixed(1) + '%');
-  return el('div', {class: 'fd-bar' + (have >= need ? ' is-full' : '')}, el('span', {class: 'fd-bar__l'}, label), flashIf(el('b', {class: 'fd-bar__v'}, text), moved), el('span', {class: 'fd-bar__t', 'aria-hidden': 'true'}, fill));
+  return el('div', {class: 'fd-bar' + (have != null && have >= need ? ' is-full' : '')}, el('span', {class: 'fd-bar__l'}, label), flashIf(el('b', {class: 'fd-bar__v'}, text), moved), el('span', {class: 'fd-bar__t', 'aria-hidden': 'true'}, fill));
 }
 function row(l, rank) {
+  const metrics = l.displayMetrics || (l.chainId === 'solana' ? {holders: l.holders ?? null, volumeUsd: l.volumeUsd ?? null, volumeWindow: 'campaign'} : {holders: null, volumeUsd: null});
   const chain = l.chainId === 'solana' ? 'Solana' : chainById(l.chainId)?.name || l.chainId, g = data.rules.grant;
   const key = l.chainId + ':' + l.token, old = prev.get(key), fresh = prev.size > 0 && !old;
   const grant = l.qualifiedAt ? '50,000 QHOOKS milestone reached ' + day(l.qualifiedAt)
@@ -113,8 +119,9 @@ function row(l, rank) {
         l.chainId==='solana' ? (l.waitingForLink?' · waiting for a wallet link':' · rewards to '+short(l.payTo)) : l.creatorShareOpen ? ' · earns on volume until ' + day(l.creatorShareUntil) : ' · volume share ended',
         l.boostOpen ? ' · 50% cashback for traders until ' + day(l.boostUntil) : '')),
     el('div', {class: 'fd-team__race'},
-      bar('Holders', Number(l.holders) || 0, g.holders, (Number(l.holders) || 0) + ' of ' + g.holders, !!old && old.holders !== l.holders),
-      bar('Volume', Number(l.volumeUsd) || 0, g.volumeUsd, usd0(l.volumeUsd) + ' of ' + usd0(g.volumeUsd), !!old && old.volumeUsd !== l.volumeUsd),
+      bar('Holders', metrics.holders, g.holders, (metrics.holders == null ? '—' : String(metrics.holders)) + ' of ' + g.holders, false),
+      bar(metrics.volumeWindow === 'campaign' ? 'Volume' : 'Volume · 24h', metrics.volumeUsd, g.volumeUsd, (metrics.volumeUsd == null ? '—' : usd0(metrics.volumeUsd)) + ' of ' + usd0(g.volumeUsd), false),
+      metrics.volumeWindow !== 'campaign' ? el('p', {class: 'fd-team__note', title: 'Same totals as the token page'}, 'Token page totals') : null,
       el('p', {class: 'fd-team__grant'}, grant)),
     el('p', {class: 'fd-team__acts'}, el('a', {class: 'qa-btn qa-btn--secondary qa-btn--sm', href: '/terminal#' + (l.chainId==='solana'?'t=':'m=') + l.chainId + ':' + l.token}, 'Trade'), ' ', trust));
   if(l.chainId!=='solana')trustLinks(l, trust);
@@ -122,12 +129,12 @@ function row(l, rank) {
 }
 // RepoProof (cached report only; this page never starts a scan) and the builder record, when they exist.
 async function trustLinks(l, host) {
-  try {
+  if (l.links?.proof) try {
     const r = await fetch(l.links.proof, {cache: 'no-store'}), env = r.ok ? await r.json() : null, u = env?.report?.url;
     const id = /\/q?proof\/([0-9a-f-]{36})$/.exec(u || '')?.[1];
     host.append(' · ', id ? out('/qproof/' + id, 'QProof report') : el('span', {}, 'QProof check pending'));
   } catch {}
-  if (!l.links.builder) return;
+  if (!l.links?.builder) return;
   try {
     const r = await fetch(l.links.builder, {headers: {accept: 'application/json'}}), d = r.status === 200 ? await r.json() : null;
     if (d?.appliesToToken && /^https:\/\/heyresearch\.xyz\//.test(d.projectLink || '')) host.append(' · ', out(d.projectLink, 'Builder record ↗'));

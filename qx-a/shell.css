@@ -196,11 +196,12 @@ dialog.qa-menu::backdrop { background: rgba(0,0,0,.58); -webkit-backdrop-filter:
 .qa-menu__row .qa-i { width: 17px; height: 17px; }
 
 /* ---------- footer with the brand line ---------- */
-footer.qa-foot { position: relative; z-index: 1; display: block; max-width: var(--qa-maxw); width: auto; margin: var(--qa-s16) auto 0; padding: var(--qa-s16) var(--qa-pad) var(--qa-s10); border: 0; background: none; overflow: hidden; color: var(--qa-tx); font-size: 15px; }
+footer.qa-foot { position: relative; z-index: 1; display: block; max-width: var(--qa-maxw); width: auto; margin: var(--qa-s8) auto 0; padding: var(--qa-s10) var(--qa-pad) var(--qa-s10); border: 0; background: none; overflow: hidden; color: var(--qa-tx); font-size: 15px; }
 footer.qa-foot::before { content: ""; position: absolute; left: var(--qa-pad); right: var(--qa-pad); top: 0; height: 1px; background: var(--qa-rule); }
 footer.qa-foot::after { content: ""; position: absolute; left: 50%; top: -120px; width: 620px; height: 320px; transform: translateX(-50%); background: radial-gradient(closest-side, var(--qa-gold-wash), transparent 72%); pointer-events: none; }
 .qa-foot .qa-line { position: relative; }
-.qa-foot .qa-line__hook { position: relative; display: block; width: 2px; height: 46px; margin-bottom: 18px; background: linear-gradient(180deg, transparent, var(--qa-gold-hi)); }
+/* S3 2026-11-18: the 2px gold rule read as a stray line above the footer headline; the footer carries no hook rule. */
+.qa-foot .qa-line__hook { display: none; }
 /* audit #33 (2026-11-12): no ringed bead at the foot of the footer line; the thin line stays */
 .qa-foot .qa-line__text { margin: 0; font-size: 40px; line-height: 1.02; font-weight: 840; font-stretch: var(--qa-wd-display); letter-spacing: var(--qa-track-display); color: var(--qa-tx); transform-origin: left bottom; transition: transform .7s var(--qa-ease); }
 .qa-foot .qa-line__b { transition: opacity .45s var(--qa-ease); }
@@ -270,7 +271,7 @@ footer.qa-foot::after { content: ""; position: absolute; left: 50%; top: -120px;
   .qa-menu__groups { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 26px 32px; padding: 20px 0 6px; }
   .qa-menu__g a { padding: 6px 0; }
   .qa-menu__g a span { display: block; margin-top: 1px; font-size: 12.5px; color: var(--qa-tx-3); line-height: 1.3; }
-  footer.qa-foot { padding: var(--qa-s24) var(--qa-pad) var(--qa-s12); }
+  footer.qa-foot { padding: var(--qa-s12) var(--qa-pad) var(--qa-s12); }
   .qa-foot .qa-line__text { font-size: 72px; }
   .qa-foot__links { display: none; }
   .qa-foot__groups { position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 24px; margin-top: var(--qa-s12); }

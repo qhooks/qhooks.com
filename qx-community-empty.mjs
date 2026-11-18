@@ -1,3 +1,4 @@
+import {createReadFetch} from './qx-community-retry.mjs';
 export const RANKING_WAIT='Rankings appear once callers have 5 timed calls';
 export const boardHasNoCalls=({posts=[],pinned=[],next=null,linkedCall=null}={})=>!next&&![...posts,...pinned,...(linkedCall?[linkedCall]:[])].some(post=>post.kind==='call');
 export function firstCallPrompt(doc,{href='/community#make-a-call',text='No calls yet. Put your thesis on record.'}={}){
@@ -10,6 +11,7 @@ export function qualifiedCallers(body){
  return body.callers.filter(row=>row?.version===2&&row.rankEligible===true&&row.coverage?.completeRecordSet===true).slice(0,50);
 }
 export function mountCallerRankings(container,note,{document:doc=globalThis.document,fetcher=globalThis.fetch,loadRows=()=>import('./qx-board-rows.mjs')}={}){
+ fetcher=createReadFetch(fetcher);
  let disposed=false;
  async function refresh(){
   container.hidden=true;note.hidden=false;note.textContent=RANKING_WAIT;
@@ -22,7 +24,7 @@ export function mountCallerRankings(container,note,{document:doc=globalThis.docu
    const m=await loadRows();if(disposed)return;container.replaceChildren(...rows.map((row,index)=>m.callerRow(row,index+1)));container.hidden=false;note.hidden=true;
   }catch{
    if(disposed)return;container.hidden=true;note.hidden=false;note.textContent=RANKING_WAIT+'. Caller records are refreshing. ';
-   const retry=doc.createElement('button');retry.type='button';retry.className='qx-btn qx-btn-ghost';retry.textContent='Retry caller records';retry.addEventListener('click',()=>void refresh());note.append(retry);
+   const retry=doc.createElement('button');retry.type='button';retry.style.minHeight='32px';retry.className='qx-btn qx-btn-ghost';retry.textContent='Retry caller records';retry.addEventListener('click',()=>void refresh());note.append(retry);
   }
  }
  const ready=refresh();return{ready,refresh,dispose(){disposed=true;}};

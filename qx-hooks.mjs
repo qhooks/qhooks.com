@@ -1,6 +1,7 @@
 // Hooks page (System A): launch blocks as living building blocks. Each block has a glyph, one line, how it works, and the
 // launches whose pools run it, read from the public launch list (block masks). Trades on those launches light the blocks they
 // ran through. Catalog, presets and built-in features come from /qx-block-catalog.mjs.
+import {setGlossaryContext} from './qx-glossary-context.mjs';
 import { BLOCKS, CATEGORIES, PRESETS, BUILT_IN, presetVisible } from '/qx-block-catalog.mjs';
 import { h, fmt, RM, restart, toast, sectionNav, avatar } from '/qx-a/components.mjs';
 import { glyph, fillGlyphs } from '/qx-a/pages/hooks-glyphs.mjs';
@@ -10,6 +11,8 @@ const d = document, $ = (id) => d.getElementById(id);
 const catName = (id) => CATEGORIES.find((c) => c.id === id)?.name || '';
 const unitText = { pct: '%', supplyPct: '% of supply', sec: 'sec', min: 'min', hr: 'hours', day: 'days', quote: 'quote', raw: '', addr: '' };
 const shown = (p) => p.def === 'auto' ? (p.hint || 'auto') : p.def === '' ? 'you set it' : `${p.def}${unitText[p.unit] ? ' ' + unitText[p.unit] : ''}`.replace(' %', '%');
+const ruleTerm = id => ({stormFee:'storm-fee',sandwich:'sandwich-guard'}[id]);
+const ruleMarker = id => ruleTerm(id) ? {'data-glossary-term':ruleTerm(id),'data-glossary-owned':''} : {};
 const blockName = (id) => BLOCKS.find((b) => b.id === id)?.name || id;
 // The opening auction is the holder gate pointed at the auction contract, so a launch's mask shows it as the holder gate.
 const maskId = (id) => id === 'openingAuction' ? 'holderGate' : id;
@@ -41,12 +44,13 @@ function card(b) {
   const el = h('article', { class: 'hk-block', 'data-cat': b.cat, id: 'block-' + b.id },
     h('span', { class: 'hl-gt hk-block__g' }, glyph(b.id)),
     h('div', { class: 'hk-block__main' },
-      h('h3', { class: 'hk-block__t' }, b.name),
+      h('h3', { class: 'hk-block__t', ...ruleMarker(b.id) }, b.name),
       h('p', { class: 'hk-block__line' }, b.line),
       h('p', { class: 'hk-block__meta' }, h('span', { class: 'qa-tag hk-cat hk-cat--' + b.cat }, catName(b.cat)), uses),
       h('details', { class: 'hl-more hk-block__how' }, h('summary', null, 'How it works'),
         h('p', null, b.how),
         b.params.length ? h('dl', { class: 'qa-kv hk-params' }, b.params.map((p) => h('div', null, h('dt', null, p.label), h('dd', null, shown(p))))) : null)));
+  setGlossaryContext(el,{kind:'catalog'});
   usesLine(b.id, uses);
   return el;
 }
@@ -71,11 +75,13 @@ function presetRow(p) {
   const users = h('span', { class: 'hk-uses', dataset: { preset: p.id } });
   const fill = () => { const u = presetUsers(p); users.replaceChildren(); if (u.length) users.append(h('span', { class: 'hk-uses__faces' }, u.slice(0, 4).map((m) => avatar(m.key.split(':')[1], '', m.logo || null))), h('span', null, 'Live on ', h('b', null, String(u.length)), u.length === 1 ? ' launch' : ' launches', ' · ' + u.slice(0, 3).map((m) => '$' + m.symbol).join(', '))); };
   fill(); users.refill = fill;
-  return h('article', { class: 'hk-preset', id: 'preset-' + p.id },
+  const article = h('article', { class: 'hk-preset', id: 'preset-' + p.id },
     h('div', { class: 'hk-preset__head' }, h('h3', { class: 'hk-preset__t' }, p.name), users),
     h('p', { class: 'hk-preset__line' }, p.line),
-    h('ol', { class: 'hk-rail', 'aria-label': p.name + ' blocks' }, p.on.map((id) => h('li', null, h('a', { href: '#block-' + id, class: 'hk-node' }, h('span', { class: 'hl-gt hl-gt--sm' }, glyph(id)), h('span', null, blockName(id)))))),
+    h('ol', { class: 'hk-rail', 'aria-label': p.name + ' blocks' }, p.on.map((id) => h('li', null, h('a', { href: '#block-' + id, class: 'hk-node', ...ruleMarker(id) }, h('span', { class: 'hl-gt hl-gt--sm' }, glyph(id)), h('span', null, blockName(id)))))),
     h('a', { class: 'qa-link hk-preset__go', href: '/qtoken-studio?blocks=' + p.id }, 'Launch with this', h('span', { 'aria-hidden': 'true' }, '→')));
+  setGlossaryContext(article,{kind:'catalog'});
+  return article;
 }
 $('hk-presets').append(...PRESETS.filter((p) => p.id !== 'none' && presetVisible(p)).map(presetRow));
 

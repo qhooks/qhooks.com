@@ -1,5 +1,7 @@
+import {createReadFetch} from './qx-community-retry.mjs';
 const ID=/^p[0-9a-v]{12}$/;
 export function createCallThanksClient({fetcher=(...args)=>globalThis.fetch(...args)}={}){
+ fetcher=createReadFetch(fetcher);
  return{async request(id,{auth={},on,connection,signal}={}){
   if(!ID.test(id||''))throw Error('This call record is invalid.');const writing=typeof on==='boolean';
   if(writing){if(!auth.authorization||!connection)throw Error('Sign in before sending thanks.');await connection.check();connection.assertCurrent();}

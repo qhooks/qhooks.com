@@ -20,3 +20,6 @@ document.querySelector('[data-refresh]')?.addEventListener('click',()=>{
  if(!state||state.cachedOnly||state.id)return;
  const u=new URL(state.url);if(u.origin!==location.origin)return;u.searchParams.set('request','true');location.assign(u.pathname+u.search);
 });
+// Evidence links that point at a receipt open the audit trail before the browser scrolls to it.
+const openReceipt=()=>{const target=/^#receipt-\d{1,2}$/.test(location.hash)?document.getElementById(location.hash.slice(1)):null;const box=target?.closest('details');if(box&&!box.open){box.open=true;target.scrollIntoView({block:'nearest'});}};
+addEventListener('hashchange',openReceipt);openReceipt();

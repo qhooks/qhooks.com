@@ -1,0 +1,37 @@
+/* Dead columns (2026-11-18, qx-discovery-rows.mjs): a data column fewer than 30% of the visible rows can fill is hidden,
+   header and cells together. At 1100 px and up the row grid is rebuilt from the visible columns (--qxfd-cols), keeping
+   the density sheet's track sizes and visual order, so no empty tracks remain. Below 1100 px the phone grid keeps its
+   own tracks; hidden cells simply do not render. */
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table.qxfd-col-off-move.qxfd-table :is(thead,tbody) tr>:is(td,th).qxfd-move,body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-col-off-move :is(thead,tbody) tr>:is(td,th).qxfd-move,
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table.qxfd-col-off-volume.qxfd-table :is(thead,tbody) tr>:is(td,th).qxfd-volume,body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-col-off-volume :is(thead,tbody) tr>:is(td,th).qxfd-volume,
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table.qxfd-col-off-liquidity.qxfd-table :is(thead,tbody) tr>:is(td,th).qxfd-liquidity,body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-col-off-liquidity :is(thead,tbody) tr>:is(td,th).qxfd-liquidity,
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table.qxfd-col-off-mcap.qxfd-table :is(thead,tbody) tr>:is(td,th).qxfd-mcap,body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-col-off-mcap :is(thead,tbody) tr>:is(td,th).qxfd-mcap,
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table.qxfd-col-off-holders.qxfd-table :is(thead,tbody) tr>:is(td,th).qxfd-holders,body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-col-off-holders :is(thead,tbody) tr>:is(td,th).qxfd-holders,
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table.qxfd-col-off-txns.qxfd-table :is(thead,tbody) tr>:is(td,th).qxfd-txns,body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-col-off-txns :is(thead,tbody) tr>:is(td,th).qxfd-txns,
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table.qxfd-col-off-makers.qxfd-table :is(thead,tbody) tr>:is(td,th).qxfd-makers,body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-col-off-makers :is(thead,tbody) tr>:is(td,th).qxfd-makers,
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table.qxfd-col-off-top10.qxfd-table :is(thead,tbody) tr>:is(td,th).qxfd-top10,body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-col-off-top10 :is(thead,tbody) tr>:is(td,th).qxfd-top10,
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table.qxfd-col-off-dev.qxfd-table :is(thead,tbody) tr>:is(td,th).qxfd-dev,body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-col-off-dev :is(thead,tbody) tr>:is(td,th).qxfd-dev,
+body.qa.qxt #qxt-discover.qxfd-price-visible #qxfd-panel .qxfd-scroll table.qxfd-table.qxfd-col-off-riskgrid.qxfd-table :is(thead,tbody) tr>:is(td,th).qxfd-riskgrid,body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-col-off-riskgrid :is(thead,tbody) tr>:is(td,th).qxfd-riskgrid{display:none!important}
+@media(min-width:1100px){
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-cols-dynamic :is(tr[data-key],thead tr,.qxfd-skeleton){grid-template-columns:var(--qxfd-cols)!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-cols-dynamic :is(thead,tbody) tr>:is(td,th):not(.qxfd-contract-detail):not(.qxfd-riskgrid){grid-column:auto!important}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-cols-dynamic tr>.qxfd-token{order:1}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-cols-dynamic tr>.qxfd-price{order:2}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-cols-dynamic tr>.qxfd-mcap{order:3}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-cols-dynamic tr>.qxfd-liquidity{order:4}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-cols-dynamic tr>.qxfd-volume{order:5}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-cols-dynamic tr>.qxfd-txns{order:6}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-cols-dynamic tr>.qxfd-holders{order:7}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-cols-dynamic tr>.qxfd-top10{order:8}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-cols-dynamic tr>.qxfd-dev{order:9}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-cols-dynamic tr>.qxfd-move{order:10}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-cols-dynamic tr>.qxfd-safety{order:11}
+ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table.qxfd-cols-dynamic tr>.qxfd-buy{order:12}
+}
+/* A row with nothing observed yet: one note instead of a line of dashes. */
+#qxt-discover tr.qxfd-first-trade-pending>td:is(.qxfd-move,.qxfd-volume,.qxfd-liquidity,.qxfd-mcap,.qxfd-holders,.qxfd-txns,.qxfd-makers,.qxfd-top10,.qxfd-dev){visibility:hidden}
+#qxt-discover tr.qxfd-first-trade-pending>td.qxfd-price{overflow:visible!important}
+#qxt-discover tr.qxfd-first-trade-pending>td.qxfd-price>:not(.qxfd-pending-note){display:none!important}
+#qxt-discover .qxfd-pending-note{display:inline-block;white-space:nowrap;font-size:11px;color:var(--qa-tx-3,var(--qx-muted));text-align:left}
+#qxt-discover .qxfd-pending-note[hidden]{display:none!important}
+#qxt-discover .qxfd-boost[data-kind=paid]{opacity:.75;border-style:dashed}

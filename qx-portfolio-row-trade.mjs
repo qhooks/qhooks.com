@@ -2,7 +2,8 @@ import {createRowSale} from './qx-portfolio-sell-core.mjs';
 import {externalTradingNote} from './qx-external-trading.mjs';
 import {chainById} from './chains.mjs';
 const EVM=/^0x[0-9a-f]{40}$/i;
-export const rowCanSell=(row,owner)=>!!row&&EVM.test(owner||'')&&String(row.chainId)!=='solana'&&EVM.test(row.address||'')&&row.units>0&&!row.native&&!row.spam&&!!chainById(String(row.chainId))&&(!!row.qhooks?.controller||!externalTradingNote(String(row.chainId)));
+// watch-only rows (qx-portfolio-watch.mjs) are read only: never a sell, whatever else holds
+export const rowCanSell=(row,owner)=>!!row&&!row.watch&&EVM.test(owner||'')&&String(row.chainId)!=='solana'&&EVM.test(row.address||'')&&row.units>0&&!row.native&&!row.spam&&!!chainById(String(row.chainId))&&(!!row.qhooks?.controller||!externalTradingNote(String(row.chainId)));
 export function mountPortfolioSelling({h,getOwner,fetchImpl=globalThis.fetch,loadTicket=()=>import('./qx-terminal-trade.mjs')}={}){
  const panel=h('div',{class:'pf-row-sale',role:'group','aria-label':'Sell holding',hidden:true}),text=h('p',{role:'status','aria-live':'polite'}),preview=h('p',{class:'pf-row-sale__preview'}),actions=h('div',{class:'pf-row-sale__actions'}),engine=h('div',{class:'pf-row-sale__engine'});
  panel.append(text,preview,actions,engine);let list=null,ticket=null,loading=null,observed=null,returnFocus=null;

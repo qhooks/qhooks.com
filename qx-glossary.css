@@ -1,0 +1,34 @@
+/* Small inline definitions, using the existing System A palette in either theme. */
+.qx-glossary-help{display:inline-flex!important;align-items:center;justify-content:center;box-sizing:border-box;min-width:24px;min-height:24px;width:24px;height:24px;padding:0!important;margin:0 0 0 .2em;border:1px solid var(--qa-rule-2,#7776)!important;border-radius:3px;background:transparent!important;color:var(--qa-tx-2,currentColor)!important;font:600 12px/1 var(--qa-sans,system-ui)!important;vertical-align:middle;cursor:help;flex:0 0 auto;letter-spacing:0!important;text-transform:none!important;box-shadow:none!important;touch-action:manipulation}
+.qx-glossary-help::before{content:'?';speak:none}
+.qx-glossary-help:hover,.qx-glossary-help[aria-expanded=true]{color:var(--qa-gold,#b38a4b)!important;border-color:currentColor!important;background:var(--qa-gold-wash,#b38a4b1a)!important}
+.qx-glossary-help:focus-visible{outline:2px solid var(--qa-gold,#b38a4b);outline-offset:3px}
+.qx-glossary-pop{position:fixed;inset:auto;margin:0;box-sizing:border-box;width:min(352px,calc(100vw - 32px));max-height:min(540px,calc(100dvh - 32px));overflow:auto;overscroll-behavior:contain;padding:18px;background:var(--qa-slab-a,#151a18);color:var(--qa-tx,#f4f1e9);border:1px solid var(--qa-rule-2,#7776);border-radius:4px;box-shadow:var(--qa-shadow-pop,0 16px 36px #0005);font:400 14px/1.55 var(--qa-sans,system-ui);letter-spacing:normal;text-transform:none;z-index:16000}
+.qx-glossary-pop[hidden]{display:none!important}
+.qx-glossary-pop::backdrop{background:transparent}
+.qx-glossary-pop__head{display:flex;gap:12px;align-items:start;justify-content:space-between;margin:0 0 10px}
+.qx-glossary-pop h2{font:650 18px/1.25 var(--qa-sans,system-ui);font-stretch:108%;margin:0;color:var(--qa-tx,#f4f1e9);letter-spacing:-.02em;text-transform:none}
+.qx-glossary-pop p{margin:0 0 14px;color:var(--qa-tx-2,#ddd);font:400 14px/1.55 var(--qa-sans,system-ui);letter-spacing:normal}
+.qx-glossary-pop__close{display:grid;place-items:center;flex:0 0 auto;width:32px;height:32px;margin:-5px -6px 0 0;padding:0;border:0;border-radius:3px;background:var(--qa-wash,#fff1);color:var(--qa-tx,#f4f1e9);font:400 22px/1 system-ui;cursor:pointer}
+.qx-glossary-pop__foot{display:flex;gap:16px;align-items:center;justify-content:space-between;border-top:1px solid var(--qa-rule,#7774);padding-top:12px}
+.qx-glossary-pop a,.qx-glossary-pop__all{color:var(--qa-gold,#d2ad72);font:600 12px/1.4 var(--qa-sans,system-ui);text-decoration:underline;text-underline-offset:3px}
+.qx-glossary-pop__all{padding:4px 0;border:0;background:none;cursor:pointer}
+.qx-glossary-pop :is(button,a):focus-visible{outline:2px solid var(--qa-gold,#b38a4b);outline-offset:3px}
+.qx-glossary-pop dl{margin:0}
+.qx-glossary-pop dt{font-weight:650;font-size:15px;margin:18px 0 4px;color:var(--qa-tx,#f4f1e9)}
+.qx-glossary-pop dd{margin:0;padding:0 0 16px;border-bottom:1px solid var(--qa-rule,#7774);color:var(--qa-tx-2,#ddd)}
+.qx-glossary-pop dd:last-child{border-bottom:0;padding-bottom:0}
+@media(pointer:coarse){.qx-glossary-help{width:28px;height:28px;min-width:28px;min-height:28px}.qx-glossary-pop__close{width:40px;height:40px}}
+@media(prefers-reduced-motion:reduce){.qx-glossary-pop,.qx-glossary-help{scroll-behavior:auto;transition:none;animation:none}}
+/* Keep menu/footer link rows intact when their definition control is adjacent. */
+:is(nav,footer) li:has(>a+.qx-glossary-help){display:flex;align-items:baseline;gap:2px}
+:is(nav,footer) li:has(>a+.qx-glossary-help)>a{flex:1;min-width:0}
+
+.qa-menu__g li:has(>a+.qx-glossary-help){display:flex;align-items:baseline;gap:2px}
+.qa-menu__g li:has(>a+.qx-glossary-help)>a{flex:1;min-width:0}
+.qx-glossary-sr{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important}
+
+.qx-glossary-label{display:inline-flex;align-items:center;gap:2px;min-width:0;text-align:left}
+
+/* Keep heading text and its sibling help control on the same compact line. */
+.hk-block__t[data-glossary-owned],.qxb-card h4[data-glossary-owned]{display:inline}

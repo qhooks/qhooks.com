@@ -9,10 +9,10 @@ export const CHAIN_WORD = WORDS[CHAIN_COUNT] || String(CHAIN_COUNT);
 export const CHAIN_WORD_CAP = CHAIN_WORD.charAt(0).toUpperCase() + CHAIN_WORD.slice(1);
 /// "Base, Robinhood Chain, … and Monad"
 export const chainNames = (list = LIVE) => { const n = list.map((c) => c.name); return n.length > 1 ? n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1] : n.join(''); };
-/// Fills [data-chain-count] with the word ("seven"); data-chain-count="cap" gives "Seven".
+/// Fills [data-chain-count] with the word ("seven"); data-chain-count="cap" gives "Seven", "num" gives the digit ("7").
 export function fillChainCount(root = globalThis.document) {
   for (const el of root?.querySelectorAll?.('[data-chain-count]') || []) {
-    const t = el.dataset.chainCount === 'cap' ? CHAIN_WORD_CAP : CHAIN_WORD;
+    const mode = el.dataset.chainCount, t = mode === 'cap' ? CHAIN_WORD_CAP : mode === 'num' ? String(CHAIN_COUNT) : CHAIN_WORD;
     if (el.textContent !== t) el.textContent = t;
   }
 }

@@ -22,7 +22,7 @@ function paintToken(row) {
     box.hidden = false;
   }
   const p = prev.get('token');
-  tick(box.querySelector('.mko-token__px'), priceText(row.priceUsd), row.priceUsd, p);
+  tick(box.querySelector('.mko-token__px'), priceText(row.priceUsd ?? row.priceQuote, row.priceUsd == null ? row.quoteSymbol : 'USD'), row.priceUsd, p);
   prev.set('token', row.priceUsd);
   const chg = box.querySelector('.mko-token__chg'); chg.textContent = changeText(row.change) + ' 24h'; chg.className = 'mko-token__chg ' + (row.change > 0 ? 'qa-up' : row.change < 0 ? 'qa-down' : 'qa-muted');
   box.querySelector('.mko-token__mc').textContent = capText(row.mcapUsd);
@@ -46,7 +46,7 @@ function paintList(rows) {
       li.append(a);
     }
     const p = prev.get(r.key);
-    tick(li.querySelector('.mk-mrow__px'), priceText(r.priceUsd), r.priceUsd, p);
+    tick(li.querySelector('.mk-mrow__px'), priceText(r.priceUsd ?? r.priceQuote, r.priceUsd == null ? r.quoteSymbol : 'USD'), r.priceUsd, p);
     prev.set(r.key, r.priceUsd);
     const chg = li.querySelector('.mk-mrow__chg'); chg.textContent = changeText(r.change); chg.className = 'mk-mrow__chg ' + (r.change > 0 ? 'qa-up' : r.change < 0 ? 'qa-down' : 'qa-muted');
     li.querySelector('.mk-mrow__mc').textContent = 'MC ' + capText(r.mcapUsd);

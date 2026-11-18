@@ -13,3 +13,8 @@ body.qa.qxt #qxt-discover .qxfd-scroll table.qxfd-table tbody tr[data-key]>td.qx
 @media(prefers-reduced-motion:reduce){#qxt-discover .qxfd-group-toggle{transition:none}}
 /* WebKit: closed filter content must not contribute off-screen layout. */
 #qxt-discover .qxfd-list-options:not([open])>.qxfd-list-options-body{display:none!important}
+/* Hidden-by-filters line: one compact rule above the list. Show all pauses filters for this view only. */
+#qxt-discover .qxfd-hidden-line{display:flex;align-items:center;gap:6px;margin:0;padding:6px 12px;border-bottom:1px solid var(--qa-line,var(--qx-line-2));font:12px/1.3 var(--qa-mono,var(--qx-mono,monospace));color:var(--qa-tx-3,var(--qx-muted));letter-spacing:.02em}
+#qxt-discover .qxfd-hidden-line[hidden]{display:none!important}
+#qxt-discover .qxfd-show-all{min-height:28px;padding:0 4px;border:0;background:none;color:var(--qa-tx,var(--qx-ink));font:inherit;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+#qxt-discover .qxfd-show-all:focus-visible{outline:2px solid var(--qa-gold,var(--qx-brass));outline-offset:2px}

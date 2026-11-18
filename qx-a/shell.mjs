@@ -244,7 +244,7 @@ export function mountShell(o = {}) {
     if (p.ribbon) addRibbon(p.ribbon);
     if (p.footer === false && foot) { foot.remove(); foot = null; }
     else if (p.footer === true && !foot) { foot = makeFoot(); (getapp || tabbar).before(foot); }
-    if (p.wallet) walletSlot.replaceChildren(p.wallet);
+    if (p.wallet) { walletSlot.replaceChildren(p.wallet); if (p.wallet.id === 'qhc-trigger' && p.wallet.classList?.contains('qa-wallet__btn')) paintWalletButton(p.wallet); }
     setActive(p.active || st.active || NAV.find((n) => n.match.test(path()))?.id || '');
   }
   function setSearch(node) { searchSlot.hidden = false; searchSlot.classList.toggle('is-page', !!node); searchSlot.replaceChildren(node || search.el); }
@@ -282,11 +282,17 @@ const linkProps = (u) => (/^https?:/.test(u) ? { href: u, target: '_blank', rel:
 /* ---------- wallet ---------- */
 // The site wallet (wallet-site.mjs, wallet-login.mjs, l121-mobile-login.mjs, the account menu in qx-wallet-copy.mjs) is
 // bound to #qhc-trigger and #qhc-dialog by id. The trigger moves into the slot; a page without the wallet gets it loaded.
+// One header Connect look on every page (S7): gold while disconnected, quiet once a wallet shows. Pages that hand the
+// shell their own #qhc-trigger (o.wallet) get the same paint instead of a fixed outline class.
+function paintWalletButton(t) {
+  if (!t || t.dataset.qaWalletPaint) return; t.dataset.qaWalletPaint = '1';
+  const paint = () => { const on = /^Wallet /.test(t.getAttribute('aria-label') || '') || /^0x[0-9a-f]{4}/i.test(t.textContent.trim()); t.classList.toggle('qa-btn--secondary', on); t.classList.toggle('qa-btn--primary', !on); };
+  paint(); new MutationObserver(paint).observe(t, { attributes: true, attributeFilter: ['aria-label'], childList: true, characterData: true, subtree: true });
+}
 function adoptWallet(slot) {
   const take = (t) => {
     t.hidden = false; t.removeAttribute('hidden'); t.classList.add('qa-btn', 'qa-wallet__btn');
-    const paint = () => { const on = /^Wallet /.test(t.getAttribute('aria-label') || '') || /^0x[0-9a-f]{4}/i.test(t.textContent.trim()); t.classList.toggle('qa-btn--secondary', on); t.classList.toggle('qa-btn--primary', !on); };
-    paint(); new MutationObserver(paint).observe(t, { attributes: true, attributeFilter: ['aria-label'], childList: true, characterData: true, subtree: true });
+    paintWalletButton(t);
     slot.replaceChildren(t);
   };
   const t = doc.getElementById('qhc-trigger');
@@ -408,10 +414,10 @@ function makeSearch(kind) {
     if (cur >= 0) input.setAttribute('aria-activedescendant', id + '-' + cur); else input.removeAttribute('aria-activedescendant');
     show(items.length > 0 && doc.activeElement === input);
   };
-  const close = () => { show(false); cur = -1; };
+  const close = () => { ++seq; items = []; show(false); cur = -1; };
   const run = async () => {
     const q = input.value.trim(), n = ++seq;
-    items = q ? await results(q) : []; if (n !== seq) return; cur = -1; paint();
+    const next = q ? await results(q) : []; if (n !== seq) return; items = next; cur = -1; paint();
   };
   input.addEventListener('input', run);
   input.addEventListener('focus', () => { import('./live.mjs').then((m) => m.loadEco(10 * 60e3)).catch(() => {}); if (input.value.trim()) run(); });
@@ -465,7 +471,14 @@ async function chainNames() {
 // The terminal's own search does the token lookup (names, symbols, contract addresses on every chain).
 export function terminalSearch(q) {
   const box = doc.getElementById('qxt-search');
-  if (box) { doc.getElementById('qa-menu')?.close(); box.value = q; box.dispatchEvent(new Event('input', { bubbles: true })); box.focus(); return; }
+  if (box) {
+    // Ask the mounted terminal to reveal search without discarding the selected
+    // token's history entry. Its capture-phase ticket guard owns admission.
+    const request = new CustomEvent('qxt:search', { cancelable: true, detail: { handled: false } });
+    if (!doc.dispatchEvent(request) || !request.detail.handled) return false;
+    doc.getElementById('qa-menu')?.close(); box.value = q;
+    box.dispatchEvent(new Event('input', { bubbles: true })); box.focus(); return true;
+  }
   session('qa:search', q); location.href = '/terminal';
 }
 function pickUpSearch() {

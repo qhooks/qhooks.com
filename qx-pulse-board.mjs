@@ -60,6 +60,7 @@ export function mountPulseBoard({host,el,makeLoader,makeRow,updateRow,viewModels
   root,quickHost,configure,select,stage:()=>selected,render:paint,
   setActive(value){enabled=!!value;root.hidden=!enabled;if(enabled){configure();ageTimer??=setInterval(tick,1000);}else{controller.setActive(false);clearInterval(ageTimer);ageTimer=null;}headerView.refresh();},
   refreshNext:()=>controller.refreshNext(),
+  pollNext:()=>controller.pollNext(),
   getNode:key=>{for(const p of parts.values())if(p.nodes.has(key))return p.nodes.get(key);return null;},
   getModels:()=>[...parts.values()].filter(p=>!media.matches||p.id===selected).flatMap(p=>p.models),
   focusKey(key,tr){for(const p of parts.values())if(p.nodes.get(key)?.tr===tr){focusKeys.set(p.id,key);for(const [k,n]of p.nodes)n.open.tabIndex=k===key?0:-1;return;}},

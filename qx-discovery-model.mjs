@@ -1,8 +1,12 @@
 // Provider-independent market views. Missing history never becomes a zero return.
-import {safeStartMatches} from './qx-safe-start.mjs';
+import {safeStartMatches,migrateLegacySafeStart} from './qx-safe-start.mjs';
 export const WINDOWS=[['m5','5m',300],['m15','15m',900],['h1','1h',3600],['h6','6h',21600],['h12','12h',43200],['h24','24h',86400],['d7','1w',604800]];
 export const DISCOVERY_TABS=[['trending','Trending'],['new','New pairs'],['bonding','Near bond'],['migrated','Migrated'],['gainers','Gainers'],['losers','Losers'],['volume','Volume']];
+// One Near bond threshold for List, Pulse and the server tab (2026-11-18).
+export const NEAR_BOND_PROGRESS=0.5;
+export const nearBond=s=>s.stage==='bonding'&&s.progress>=NEAR_BOND_PROGRESS;
 export const finite=value=>typeof value==='number'&&Number.isFinite(value)?value:null;
+export const lifecycleTime=value=>{const n=typeof value==='number'?value:typeof value==='string'&&value.trim()?Date.parse(value):NaN;return Number.isFinite(n)&&n>0?(n<1e12?n*1000:n):null;};
 export function lifecycle(row){
  const value=row.lifecycle||row.launchpadDetails||row.launchpad_details;
  if(!value||typeof value!=='object')return {stage:'unknown',progress:null,destination:null};
@@ -10,8 +14,18 @@ export function lifecycle(row){
  const destination=typeof (value.destination||value.migrated_destination_pool_address)==='string'?(value.destination||value.migrated_destination_pool_address):null;
  // A completed curve alone does not prove a migration destination exists.
  const migrated=(value.stage==='migrated'||value.completed===true)&&!!destination;
- const bonding=!migrated&&(value.stage==='bonding'||value.completed===false)&&progress!==null&&progress>=0&&progress<1;
- return {stage:migrated?'migrated':bonding?'bonding':value.completed===true||value.stage==='completed'?'completed':'unknown',progress:progress!==null&&progress>=0&&progress<=1?progress:null,destination,venue:typeof value.venue==='string'?value.venue:null};
+ const bonding=!migrated&&(value.stage==='bonding'||value.completed===false)&&progress!==null&&progress>=0&&progress<=1;
+ return {stage:migrated?'migrated':bonding?'bonding':value.completed===true||value.stage==='completed'?'completed':'unknown',progress:progress!==null&&progress>=0&&progress<=1?progress:null,destination,venue:typeof value.venue==='string'?value.venue:null,
+  source:typeof value.source==='string'?value.source:null,observedAt:lifecycleTime(value.observedAt),migratedAt:lifecycleTime(value.migratedAt),destinationVenue:typeof value.destinationVenue==='string'?value.destinationVenue:null};
+}
+// Dedupe can prefer a priced pool row while preserving a reader's curve evidence.
+// A later price observation does not renew the lifecycle's own observation clock.
+export function mergeLifecycle(first,next){
+ const a=lifecycle(first),b=lifecycle(next);
+ if(b.stage==='unknown')return a;
+ if(a.stage==='unknown')return b;
+ const at=a.observedAt??lifecycleTime(first.observedAt)??0,bt=b.observedAt??lifecycleTime(next.observedAt)??0;
+ return bt>at||bt===at&&b.stage==='migrated'&&a.stage!=='migrated'?b:a;
 }
 const createdMillis=row=>{const v=row.createdAt,at=typeof v==='number'?v:Date.parse(v);return Number.isFinite(at)?at<1e12?at*1000:at:0;};
 export function changeAt(row,window){return finite(row.change?.[window]);}
@@ -31,7 +45,7 @@ export function validateDiscoveryFilters(raw={}){
 export function filterDiscovery(rows,{tab='trending',window='h24',filters={},now=Date.now(),factsOf=row=>row.discoveryFacts||{}}={}){
  const f=validateDiscoveryFilters(filters),lower=(v,key)=>!f[key]||(finite(v)!==null&&v>=Number(f[key]));
  let result=rows.filter(row=>{
-  const stage=lifecycle(row);if(tab==='bonding'&&!(stage.stage==='bonding'&&stage.progress>=.8))return false;
+  const stage=lifecycle(row);if(tab==='bonding'&&!nearBond(stage))return false;
   if(tab==='migrated'&&stage.stage!=='migrated')return false;
   const move=changeAt(row,window);if(tab==='gainers'&&!(move>0)||tab==='losers'&&!(move<0))return false;
   const cap=finite(row.marketCapUsd)>0?row.marketCapUsd:row.fdvUsd;
@@ -47,13 +61,14 @@ export function filterDiscovery(rows,{tab='trending',window='h24',filters={},now
  });
  if(tab==='gainers'||tab==='losers')result.sort((a,b)=>(changeAt(a,window)-changeAt(b,window))*(tab==='gainers'?-1:1));
  else if(tab==='bonding')result.sort((a,b)=>lifecycle(b).progress-lifecycle(a).progress);
+ else if(tab==='migrated')result.sort((a,b)=>(lifecycle(b).migratedAt??0)-(lifecycle(a).migratedAt??0));
  else if(tab==='new')result.sort((a,b)=>createdMillis(b)-createdMillis(a));
  return result;
 }
-const VIEW_TABS=[...DISCOVERY_TABS,['funds','Funds']];
+const VIEW_TABS=[...DISCOVERY_TABS,['hot','Hot'],['funds','Funds']];
 const VIEW_KEY='qhooks:terminal:market-views:v1';
 export function createMarketViews(storage){
- const read=()=>{try{const v=JSON.parse(storage?.getItem(VIEW_KEY)||'[]');return Array.isArray(v)?v.slice(0,12).filter(x=>x&&typeof x.name==='string'&&x.name.length<=32&&VIEW_TABS.some(([k])=>k===x.tab)&&WINDOWS.some(([k])=>k===x.window)).map(x=>({...x,filters:validateDiscoveryFilters(x.filters)})):[];}catch{return [];}};
+ const read=()=>{try{const v=JSON.parse(storage?.getItem(VIEW_KEY)||'[]');return Array.isArray(v)?v.slice(0,12).filter(x=>x&&typeof x.name==='string'&&x.name.length<=32&&VIEW_TABS.some(([k])=>k===x.tab)&&WINDOWS.some(([k])=>k===x.window)).map(x=>({...x,filters:validateDiscoveryFilters(migrateLegacySafeStart(validateDiscoveryFilters(x.filters)).filters)})):[];}catch{return [];}}; // Saved views holding the exact v1 Safe-start preset restore the v2 preset.
  const write=rows=>{if(!storage?.setItem)throw Error('This device cannot save views.');storage.setItem(VIEW_KEY,JSON.stringify(rows));return rows;};
  return {list:read,save(raw){const name=String(raw.name||'').trim();if(!name||name.length>32)throw Error('Name this view with 1–32 characters.');if(!VIEW_TABS.some(([k])=>k===raw.tab)||!WINDOWS.some(([k])=>k===raw.window))throw Error('Choose a market view and time window.');const row={name,tab:raw.tab,window:raw.window,chain:String(raw.chain),filters:validateDiscoveryFilters(raw.filters),layout:raw.layout==='pulse'?'pulse':'list',stage:['new','bonding','migrated'].includes(raw.stage)?raw.stage:'new'},rows=read(),i=rows.findIndex(x=>x.name.toLowerCase()===name.toLowerCase());if(i<0){if(rows.length>=12)throw Error('Keep at most twelve market views.');rows.push(row);}else rows[i]=row;return write(rows);},remove(name){return write(read().filter(x=>x.name!==name));}};
 }

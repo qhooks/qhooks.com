@@ -1,3 +1,4 @@
+import {copyWinRate, lastHourView, copySparkPoints, copyBoardRows, copyRowPriced, UNPRICED_TITLE} from '/qx-copy-data.mjs';
 // Auto-copy in System A: the shell, the wallet you picked with its live trades, and a board of traders to copy in one tap.
 // The copy account, limits and every signature stay in /qx-pro-copy.mjs. Reads public wallet data only:
 // /api/wallets/activity and /api/wallets/live for the picked wallet, /api/wallets/smart for the board (visible tab only).
@@ -16,7 +17,7 @@ const money = (v) => { if (v == null || !Number.isFinite(v)) return '—'; const
 const signed = (v) => v == null || !Number.isFinite(v) ? '—' : (v > 0 ? '+' : '') + money(v);
 const pctS = (v) => v == null || !Number.isFinite(v) ? '' : (v > 0 ? '+' : '') + (Math.abs(v) >= 100 ? Math.round(v) : v.toFixed(1)) + '%';
 const tone = (v) => v > 0 ? 'qa-up' : v < 0 ? 'qa-down' : '';
-const getJSON = async (url) => { const r = await fetch(url, { cache: 'no-store', headers: { accept: 'application/json' } }); if (!r.ok) throw Error(String(r.status)); return r.json(); };
+const getJSON = async (url) => { const r = await fetch(url, { signal: AbortSignal.timeout(8000), cache: 'no-store', headers: { accept: 'application/json' } }); if (!r.ok) throw Error(String(r.status)); return r.json(); };
 const q = new URLSearchParams(location.search), leader = String(q.get('w') || '').toLowerCase();
 const copyHref = (w, chains) => '/copy?w=' + w + ((chains || []).filter((c) => COPY_CHAINS.includes(c)).length === 1 ? '&chain=' + chains.find((c) => COPY_CHAINS.includes(c)) : '');
 
@@ -28,7 +29,7 @@ async function paintLeader(wallet = leader, featured = null) {
   leaderStop?.();
   const stats = make('dl', 'mkc-leader__stats'), live = make('ol', 'mkc-live'), chart = make('div', 'mkc-leader__chart');
   box.replaceChildren(...[
-    make('div', 'mkc-leader__who', make('span', 'mkc-leader__ava', identicon(leader, 72)), make('div', null, make('p', 'mkc-leader__k', featured ? 'Top trader · ' + featured.label : 'You picked'), make('h2', 'mkc-leader__n', short(wallet)),
+    make('div', 'mkc-leader__who', make('span', 'mkc-leader__ava', identicon(wallet, 72)), make('div', null, make('p', 'mkc-leader__k', featured ? 'Top trader · ' + featured.label : 'You picked'), make('h2', 'mkc-leader__n', short(wallet)),
       make('p', 'mkc-leader__links', (() => { const a = make('a', 'qa-link', 'Wallet card'); a.href = '/wallets?w=' + wallet; return a; })()))),
     featured ? (() => { const a = make('a', 'qa-btn qa-btn--secondary mkc-copy mkc-leader__copy', 'Copy this wallet'); a.href = copyHref(wallet, featured.row.chains); return a; })() : null,
     stats, chart, make('div', 'mkc-live__h', make('span', 'mkc-live__dot'), make('b', null, 'Their last hour'), make('small', 'mkc-live__at', 'Refreshing')), live].filter(Boolean));
@@ -37,17 +38,20 @@ async function paintLeader(wallet = leader, featured = null) {
     const t = a?.total; if (!t) { stats.replaceChildren(make('div', null, make('dt', null, 'Last 7 days'), make('dd', null, 'No sampled trades'))); return; }
     stats.replaceChildren(
       make('div', 'is-big', make('dt', null, 'PnL · 7 days'), make('dd', tone(t.pnlUsd), signed(t.pnlUsd), make('small', tone(t.pnlPct), ' ' + pctS(t.pnlPct)))),
-      make('div', null, make('dt', null, 'Win'), make('dd', null, t.winRate == null ? '—' : Math.round(t.winRate * 100) + '%')),
+      make('div', null, make('dt', null, 'Win'), make('dd', null, copyWinRate(t))),
       make('div', null, make('dt', null, 'Trades'), make('dd', null, String(t.trades))),
       make('div', null, make('dt', null, 'Volume'), make('dd', null, money(t.volumeUsd))));
     if (Array.isArray(a.series) && a.series.length > 1) chart.append(spark(a.series.map((p) => p[1]), 320, 56));
   }).catch(() => stats.replaceChildren(make('div', null, make('dt', null, 'Last 7 days'), make('dd', null, 'Refreshing'))));
   let seen = null;
   leaderStop = visiblePoll(async () => {
-    const l = await getJSON('/api/wallets/live?w=' + wallet);
-    $('mkc-leader').querySelector('.mkc-live__at').textContent = l?.at ? 'Live · ' + ago(Math.floor(l.at / 1000)) + ' ago' : 'Refreshing';
-    const rows = (l?.trades || []).slice(0, 6), keys = rows.map((x) => x.tx + x.token + x.side);
-    if (!rows.length) { live.replaceChildren(make('li', 'mkc-live__empty', 'No trades in the last hour. New ones show here.')); seen = new Set(); return; }
+    let l, failed = false;
+    try { l = await getJSON('/api/wallets/live?w=' + wallet); } catch { failed = true; }
+    if (!live.isConnected) return;
+    const view = lastHourView(l, {failed}), at = box.querySelector('.mkc-live__at');
+    at.textContent = view.status; at.title = l?.scope || 'Indexed trades';
+    const rows = view.trades, keys = rows.map(x => x.chainId + x.tx + x.token + x.side);
+    if (!rows.length) { live.replaceChildren(make('li', 'mkc-live__empty', view.message)); seen = new Set(); return; }
     live.replaceChildren(...rows.map((x, i) => {
       const li = make('li', 'mkc-tr ' + (x.side === 'buy' ? 'is-buy' : 'is-sell') + (seen && !seen.has(keys[i]) && !RM ? ' mk-enter is-new' : ''),
         make('span', 'mkc-tr__side', x.side === 'buy' ? 'Buy' : 'Sell'), tokenIcon(x, 22), make('b', null, x.symbol || short(x.token)), make('span', 'mkc-tr__c', SHORT[x.chainId] || ''),
@@ -60,11 +64,19 @@ async function paintLeader(wallet = leader, featured = null) {
 
 /* ---------- traders to copy: the smart-money board, copy chains only ---------- */
 async function loadBoard() {
+  let readable = false;
   for (const url of ['/api/wallets/smart?chain=all&tf=7d', '/api/wallets/smart?chain=all&tf=24h', '/api/wallets/smart?chain=all&tf=6h']) {
-    try { const j = await getJSON(url); if (j?.rows?.length) return { rows: j.rows, tf: j.tf || url.split('tf=')[1] }; } catch {}
+    try { const j = await getJSON(url); if (Array.isArray(j?.rows)) readable = true; if (j?.rows?.length) return { rows: j.rows, tf: j.tf || url.split('tf=')[1] }; } catch {}
   }
-  const lb = await getJSON('/api/wallets/leaderboard?window=7d');
-  return { rows: (lb.rows || []).map((x) => ({ ...x, chains: x.chains || ['4663'], topTokens: x.topTokens || [], tags: [], spark: [] })), tf: 'QHooks launches, 7 days' };
+  if (!readable) throw Error('Copy board is refreshing');
+  return {rows: [], tf: '7d'};
+}
+function traderSpark(series) {
+  const points = copySparkPoints(series);
+  if (!points) return '—';
+  const chart = document.createElementNS('http://www.w3.org/2000/svg','svg'), line = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+  chart.setAttribute('viewBox','0 0 72 26'); chart.setAttribute('width','72'); chart.setAttribute('height','26'); chart.setAttribute('aria-hidden','true'); chart.setAttribute('class','qsm-spark');
+  line.setAttribute('points',points); line.setAttribute('fill','none'); chart.append(line); return chart;
 }
 const TF = { '6h': 'Last 6 hours', '24h': 'Last 24 hours', '7d': 'Last 7 days' };
 let boardKeys = null;
@@ -72,7 +84,7 @@ async function paintBoard() {
   const list = $('mkc-list'), note = $('mkc-who-note');
   let data;
   try { data = await loadBoard(); } catch { if (!list.childElementCount) list.replaceChildren(make('li', 'mkc-empty', 'The board is refreshing. Try again in a moment.')); note.textContent = 'Refreshing'; return; }
-  const rows = data.rows.filter((r) => (r.chains || []).some((c) => COPY_CHAINS.includes(c)) && r.wallet !== leader).sort((a, b) => (b.pnlUsd || 0) - (a.pnlUsd || 0)).slice(0, 12);
+  const rows = copyBoardRows(data.rows, COPY_CHAINS).filter(r => r.wallet !== leader).slice(0, 12);
   note.textContent = (TF[data.tf] || data.tf) + ' · ranked by PnL';
   if (!rows.length) { list.replaceChildren(make('li', 'mkc-empty', 'Traders fill in as trades are sampled on the copy chains.')); return; }
   const keys = rows.map((r) => r.wallet + r.pnlUsd);
@@ -85,8 +97,8 @@ async function paintBoard() {
     who.href = '/wallets?w=' + r.wallet;
     const li = make('li', 'mkc-row' + (i < 3 ? ' is-top' : '') + (boardKeys && !boardKeys.has(keys[i]) && !RM ? ' mk-enter' : ''),
       make('span', 'mkc-row__rank', String(i + 1)), who,
-      make('span', 'mkc-row__spark', spark(r.spark, 72, 26)),
-      make('span', 'mkc-row__pnl', make('b', tone(r.pnlUsd), signed(r.pnlUsd)), make('small', null, r.winRate == null ? '' : 'Win ' + Math.round(r.winRate * 100) + '%')),
+      make('span', 'mkc-row__spark', traderSpark(r.series)),
+      (() => { const pnl = make('span', 'mkc-row__pnl', make('b', tone(r.pnlUsd), signed(r.pnlUsd)), make('small', null, 'Win ' + copyWinRate(r))); if (!copyRowPriced(r)) pnl.title = UNPRICED_TITLE; return pnl; })(),
       copy);
     return li;
   }));

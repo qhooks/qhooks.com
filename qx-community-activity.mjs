@@ -1,3 +1,4 @@
+import {createReadFetch} from './qx-community-retry.mjs';
 import {callResultText} from './qx-call-result.mjs';
 import {profileUrl} from './qx-profile-address.mjs';
 import {clampInto} from '/qx-more-text.mjs';
@@ -15,6 +16,7 @@ export function activityQuery({view='recent',chain,board,caller,before,after,fol
  if(view==='following'&&following.server){params.set('source','wallet');}else if(view==='following'){const saved=followingQuery(following);if(saved.boards.length)params.set('boards',saved.boards.join(','));if(saved.callers.length)params.set('callers',saved.callers.join(','));}return params;
 }
 export function createCommunityActivityReader({fetcher=globalThis.fetch,now=Date.now,ttl=15000,headers=()=>communityFollowing.authHeaders?.()||{}}={}){
+ fetcher=createReadFetch(fetcher);
  const cache=new Map();return{async read(params,{force=false,signal}={}){
   const auth=params.get('source')==='wallet'?headers():{},key=params.toString()+'|'+(auth.authorization||''),cached=cache.get(key);if(!force&&cached&&cached.at<=now()&&now()<cached.at+ttl)return cached.body;
   const response=await fetcher(ENDPOINT+'?'+params.toString(),{cache:'no-store',signal,headers:auth}),body=await response.json().catch(()=>null);if(signal?.aborted)throw Object.assign(Error('Activity read cancelled.'),{name:'AbortError'});
@@ -89,6 +91,7 @@ export function mountCommunityActivity(target,{board=null,caller=null,compact=fa
  check.addEventListener('click',refresh);show.addEventListener('click',()=>{if(!pending)return;body=pending;pending=null;bar.hidden=true;status.textContent='Latest public calls loaded.';renderCalls();});
  more.addEventListener('click',async()=>{if(!body?.nextCursor)return;more.disabled=true;try{const next=await request({before:body.nextCursor});if(!next)return;const known=new Set(body.calls.map(call=>call.id)),calls=[...body.calls,...next.calls.filter(call=>!known.has(call.id))].slice(0,80),callers=new Map();for(const call of calls){const author=callers.get(call.author)||{wallet:call.author,callsInPage:0,lastCallAt:call.createdAt};author.callsInPage++;callers.set(call.author,author);}body={...next,calls,callers:[...callers.values()],latestCursor:body.latestCursor||next.latestCursor};renderCalls();}catch(error){status.textContent=error.message;}finally{more.disabled=false;schedule();}});
  const visibility=()=>{if(doc.hidden){controller?.abort();timers.clearTimeout(timer);generation++;}else void checkNew();},followingChanged=()=>{if(view==='following')void refresh();};doc.addEventListener('visibilitychange',visibility);events?.addEventListener?.(FOLLOW_EVENT,followingChanged);events?.addEventListener?.('storage',followingChanged);
+ fetcher=createReadFetch(fetcher);
  let rankingRequested=false;
  function loadRanking(){if(compact||doc.hidden||disposed||rankingRequested)return;rankingRequested=true;fetcher('/api/community/v2/callers',{cache:'no-store'}).then(async response=>{if(!response.ok)throw Error('ranking');const data=await response.json();if(!Array.isArray(data.callers)||data.coverage?.completeRecordSet!==true)throw Error('ranking');ranked=new Set(qualifiedCallers(data).map(row=>row.wallet));if(body&&!disposed&&!doc.hidden)renderCalls();}).catch(()=>{rankingRequested=false;});}
 

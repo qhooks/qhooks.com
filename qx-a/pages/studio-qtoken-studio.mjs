@@ -6,10 +6,12 @@
 //  - the page light follows the banner the person adds (System A: the token's art is the room);
 //  - on phone, a bottom bar with the token so far and a Preview button that opens the same preview as a sheet.
 // Every movement here is caused by the person's own edit (typing, an upload, a block turned on or off, a step change).
+import {normalizeGlossaryContext,setGlossaryContext} from '/qx-glossary-context.mjs';
 import { bootStudio, QHOOKS_ART, frameBatch } from '/qx-a/pages/studio-common.mjs';
 import { h, icon, RM, restart, setArt, openSheet, closeSheet } from '/qx-a/components.mjs';
 
 const $ = (id) => document.getElementById(id);
+const RULE_TERMS = {stormFee:'storm-fee',sandwich:'sandwich-guard'};
 const shell = bootStudio({ active: 'launch', mode: 'detail', title: 'Expert Studio', back: '/create' });
 document.body.classList.add('qst-has-dock');
 
@@ -50,15 +52,16 @@ const coinImg = h('img', { class: 'qst-coin__img', alt: '', hidden: true });
 const coinLetter = h('span', { class: 'qst-coin__letter' }, 'Q');
 const coinPulse = h('span', { class: 'qa-coin__pulse', 'aria-hidden': 'true' });
 const coin = h('span', { class: 'qa-coin qa-coin--md qst-coin' }, coinLetter, coinImg, h('span', { class: 'qa-coin__ring', 'aria-hidden': 'true' }), coinPulse);
-const nameEl = h('b', { class: 'qst-card__name' }, 'Your token');
-const tickEl = h('span', { class: 'qst-card__tick' }, '$TICKER');
+const nameEl = h('b', { class: 'qst-card__name', 'data-user-content':'' }, 'Your token');
+const tickEl = h('span', { class: 'qst-card__tick', 'data-user-content':'' }, '$TICKER');
 const chainIco = h('img', { class: 'qst-chain-ico', alt: '', width: 16, height: 16 });
 const chainEl = h('span', null, chainIco, h('span', { class: 'qst-chain-name' }, 'Base'));
 const supplyEl = h('span');
 const live = h('span', { class: 'qa-live qst-pv__live' }, h('span', { class: 'qa-live__dot' }), h('b', null, 'Live preview'));
-const pairEl = h('span', { class: 'qst-pool__pair' });
+const pairEl = h('span', { class: 'qst-pool__pair', 'data-user-content':'' });
 const fig = (label) => { const b = h('b'); return { b, el: h('div', null, b, h('span', null, label)) }; };
 const fStart = fig('Starts at'), fFee = fig('Creator LP fee'), fMode = fig('Graduation');
+fStart.el.querySelector('span').setAttribute('data-glossary-term','standard-start');fStart.el.querySelector('span').setAttribute('data-glossary-owned','');
 const hookCount = h('span', { class: 'qst-hooks__n' }, '0');
 const hookList = h('ol', { class: 'qst-hooks__list' });
 const hookEmpty = h('p', { class: 'qst-hooks__empty' }, 'No blocks: a plain protected pool.');
@@ -91,6 +94,9 @@ function readBlocks() {
     id: c.dataset.block, name: txt(c.querySelector('h4')), group: txt(c.closest('.qxb-group')?.querySelector('h3')),
   })).filter((b) => b.id && b.name);
 }
+const readRuleContext=el=>{try{return normalizeGlossaryContext(JSON.parse(el?.getAttribute('data-glossary-context')||'null'));}catch{return null;}};
+function syncRuleContext(){setGlossaryContext(hookList,readRuleContext($('qx-blocks')));setGlossaryContext(fStart.el,readRuleContext($('ql-start-cap')));}
+document.addEventListener('qhooks:glossary-context',event=>{if(event.target===$('qx-blocks')||event.target===$('ql-start-cap'))syncRuleContext();});
 let shown = new Map();
 function paintHooks() {
   const list = readBlocks(), next = new Set(list.map((b) => b.id));
@@ -101,7 +107,7 @@ function paintHooks() {
   list.forEach((b, i) => {
     let li = shown.get(b.id);
     if (!li) {
-      li = h('li', { class: 'qst-hook', dataset: { block: b.id } }, h('span', { class: 'qst-hook__clip', 'aria-hidden': 'true' }), h('span', { class: 'qst-hook__t' }, b.name), h('span', { class: 'qst-hook__g' }, b.group));
+      li = h('li', { class: 'qst-hook', dataset: { block: b.id } }, h('span', { class: 'qst-hook__clip', 'aria-hidden': 'true' }), h('span', { class: 'qst-hook__t', ...(RULE_TERMS[b.id]?{'data-glossary-term':RULE_TERMS[b.id],'data-glossary-owned':''}:{}) }, b.name), h('span', { class: 'qst-hook__g' }, b.group));
       if (!RM && ready) li.classList.add('is-in');
       shown.set(b.id, li);
     }
@@ -146,6 +152,7 @@ function paintArt() {
 }
 
 function paint() {
+  syncRuleContext();
   const name = val('ql-name'), sym = val('ql-symbol').toUpperCase();
   setText(nameEl, name || 'Your token');
   setText(tickEl, '$' + (sym || 'TICKER'));
@@ -177,7 +184,7 @@ function compact(n) { if (n >= 1e12) return +(n / 1e12).toFixed(2) + 'T'; if (n 
 /* ---------- phone bar: the token so far + the preview sheet ---------- */
 const dockImg = h('img', { alt: '', hidden: true });
 const dockLetter = h('span', { class: 'qst-coin__letter' }, 'Q');
-const dockName = h('b', null, 'Your token'), dockTick = h('span', null, '$TICKER'), dockChain = h('span'), dockBlocks = h('span');
+const dockName = h('b', {'data-user-content':''}, 'Your token'), dockTick = h('span', {'data-user-content':''}, '$TICKER'), dockChain = h('span'), dockBlocks = h('span');
 const previewBtn = h('button', { class: 'qa-btn qa-btn--secondary qst-dock__btn', type: 'button', 'aria-haspopup': 'dialog' }, 'Preview');
 const dock = h('div', { class: 'qst-dock', role: 'region', 'aria-label': 'Your token so far' },
   h('span', { class: 'qst-dock__coin', 'aria-hidden': 'true' }, dockLetter, dockImg),

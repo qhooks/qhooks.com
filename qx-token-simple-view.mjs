@@ -51,9 +51,9 @@ export function mountSimpleTokenView({document:doc=globalThis.document,h,onChang
  const foldChartTools=()=>{
   const tools=doc.querySelector('#ta-chart .qxt-chart-tools');if(!tools)return false;
   let details=tools.closest('.ta-chart-more');if(!details){details=fold(tools,'Chart tools & overlays');details.classList.add('ta-chart-more');}
-  const legend=doc.querySelector('#ta-chart .qxt-layer-legend'),units=doc.querySelector('#ta-chart [aria-label="Chart units"]');
-  for(const node of [legend,units])if(node&&node.parentElement!==details)details.insertBefore(node,tools);
-  const complete=!!legend&&!!units;if(complete)chartObserver?.disconnect();return complete;
+  const legend=doc.querySelector('#ta-chart .qxt-layer-legend'); // ux-pricemc: Price | MC stays on the chart bar
+  if(legend&&legend.parentElement!==details)details.insertBefore(legend,tools);
+  const complete=!!legend;if(complete)chartObserver?.disconnect();return complete;
  };
  if(!foldChartTools()&&get('ta-chart')){chartObserver=new MutationObserver(foldChartTools);chartObserver.observe(get('ta-chart'),{subtree:true,childList:true});}
  select('trades');return{select,get current(){return current;},dispose(){observer.disconnect();paneObserver.disconnect();chartObserver?.disconnect();oldTabs.removeEventListener('click',nativeClick);doc.removeEventListener('click',fullClick,true);}};

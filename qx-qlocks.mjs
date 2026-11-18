@@ -1,20 +1,24 @@
+import {lockRead, fillLockSection} from './qx-qlocks-read.mjs';
 // QLocks page (/qlocks): look up any token's locks, lock tokens (one or a whole sheet), lock LP positions, manage
 // your own locks, and, in a separate section, revocable staff grants (never shown or counted as locked).
 // Reads go to public RPCs; every write is a transaction the connected wallet signs.
-import { calldata, ethCall, rpc, words, toAddress, uintArray, parseUnits, formatUnits, erc20, send, ensureAllowance, connectedAddress, onWalletChange, CHAIN_NAME, codeAt, h } from '/qx-chain.mjs';
+import { calldata, ethCall as chainEthCall, rpc as chainRpc, words, toAddress, uintArray, parseUnits, formatUnits, erc20, send, ensureAllowance, connectedAddress, onWalletChange, CHAIN_NAME, h } from '/qx-chain.mjs';
 import { visibleChains, chainById } from '/chains.mjs';
 import * as C from '/qx-qlocks-core.mjs';
 import { extraAddress } from '/qx-extras.mjs';
 import { openWallet } from '/qx-qlocks-wallet.mjs';
 
 const root = document.getElementById('qlk-root');
+const rpc = (id, method, params) => chainRpc(id, method, params, {signal: AbortSignal.timeout(8000)});
+const ethCall = (id, to, data) => chainEthCall(id, to, data, undefined, {signal: AbortSignal.timeout(8000)});
+const codeAt = (id, address) => rpc(id, 'eth_getCode', [address, 'latest']);
 let art, chainId = new URLSearchParams(location.search).get('chain') || '4663';
 let tokenParam = (new URLSearchParams(location.search).get('token') || '').toLowerCase();
 if (!chainById(chainId)) chainId = '4663';
 
 async function artifact() {
-  if (!art) art = fetch('/full-launch/qlocks-v2.json', { cache: 'no-store' }).then(r => { if (!r.ok) throw Error('QLocks details unavailable'); return r.json(); })
-    .then(a => { if (a.kind !== 'qhooks-qlocks-v2' || a.schemaVersion !== 1) throw Error('Unknown QLocks artifact'); return a; });
+  if (!art) art = fetch('/full-launch/qlocks-v2.json', { cache: 'no-store', signal: AbortSignal.timeout(8000) }).then(r => { if (!r.ok) throw Error('QLocks details unavailable'); return r.json(); })
+    .then(a => { if (a.kind !== 'qhooks-qlocks-v2' || a.schemaVersion !== 1) throw Error('Unknown QLocks artifact'); return a; }).catch(e => { art = null; throw e; });
   return art;
 }
 const L = async () => (await artifact()).contracts.locksV2;
@@ -43,7 +47,7 @@ function decodeGrant(id, hex) {
 let flash = '';
 async function act(btn, status, fn) {
   btn.disabled = true; status.textContent = '';
-  try { await fn(s => { status.textContent = s; }); status.textContent ||= 'Done.'; flash = status.textContent; setTimeout(() => render().catch(() => {}), 1500); }
+  try { await fn(s => { status.textContent = s; }); status.textContent ||= 'Done.'; flash = status.textContent; setTimeout(refreshLocks, 1500); }
   catch (e) { status.textContent = e.message || 'That did not go through'; }
   finally { btn.disabled = false; }
 }
@@ -56,7 +60,7 @@ const select = (label, opts, def) => h('select', { ariaLabel: label }, ...opts.m
 
 function chainPicker() {
   const s = select('Network', visibleChains().map(c => [c.id, c.name]), chainId);
-  s.addEventListener('change', () => { chainId = s.value; render(); });
+  s.addEventListener('change', () => { chainId = s.value; refreshLocks(); });
   return s;
 }
 
@@ -334,35 +338,55 @@ async function grantsSection(g, me) {
 let seq = 0;
 async function render() {
   const mineSeq = ++seq, me = connectedAddress();
-  const c = await L(), g = await G();
   const picker = chainPicker();
   const lookup = input({ placeholder: 'Token address', value: tokenParam, ariaLabel: 'Look up a token' });
   const go = h('button', { type: 'button', class: 'qtx-mini' }, 'Look up');
-  go.addEventListener('click', () => { tokenParam = lookup.value.trim().toLowerCase(); history.replaceState(null, '', '?chain=' + chainId + (tokenParam ? '&token=' + tokenParam : '')); render(); });
+  go.addEventListener('click', () => { tokenParam = lookup.value.trim().toLowerCase(); history.replaceState(null, '', '?chain=' + chainId + (tokenParam ? '&token=' + tokenParam : '')); refreshLocks(); });
   const top = h('div', { class: 'qlk-top' }, field('Network', picker), field('Token', lookup), go);
-  const v1addr = await extraAddress('locks').catch(() => null);
-  const [v2on, v1on] = await Promise.all([live(c), v1addr ? codeAt(chainId, v1addr).then(x => x !== '0x') : false]);
+  const pending = h('section', {class: 'qlk-card'}, h('p', {}, 'Refreshing'));
+  root.replaceChildren(top, pending);
+  const [c, g] = await lockRead(() => Promise.all([L(), G()]));
+  const v1addr = await lockRead(() => extraAddress('locks', chainId)).catch(() => null);
+  const [v2on, v1on] = await lockRead(() => Promise.all([live(c), v1addr ? codeAt(chainId, v1addr).then(x => x !== '0x') : false]));
   const lc = v2on ? c : null, l1 = v1on ? v1addr : null;
   if (!lc && !l1) {
     if (mineSeq !== seq) return;
     root.replaceChildren(top, h('section', { class: 'qlk-card' }, h('h2', {}, 'QLocks is not on ' + CHAIN_NAME[chainId] + ' yet'), h('p', { class: 'qtb-note' }, 'Pick another network, or check back soon.')));
     return;
   }
-  const parts = [top, flash ? h('p', { class: 'qlk-flash', role: 'status' }, flash) : null];
-  if (isAddr(tokenParam)) parts.push(await tokenSection(lc, l1, tokenParam).catch(() => h('section', { class: 'qlk-card' }, h('p', { class: 'qtx-alert' }, 'That token could not be read on ' + CHAIN_NAME[chainId] + '.'))));
-  else parts.push(await recentTokens(lc, l1).catch(() => null));
-  if (lc) {
-    if (me) { const m = await mine(c, me); if (m) parts.push(m); }
-    else { const b = h('button', { type: 'button', class: 'workspace-button' }, 'Connect your wallet'); b.addEventListener('click', () => openWallet()); parts.push(h('section', { class: 'qlk-card qlk-connect' }, h('p', { class: 'qtb-note' }, 'Connect your wallet to lock tokens or manage your locks.'), b)); }
-    parts.push(h('div', { class: 'qlk-card qlk-forms' }, lockForm(c, me), sheetForm(c, me, 'locks')));
-    parts.push(await lpForm(c, me));
-    parts.push(await grantsSection(g, me));
-  } else {
-    parts.push(h('section', { class: 'qlk-card' }, h('h2', {}, 'New locks'), h('p', { class: 'qtb-note' }, 'Step schedules, batch locks from a sheet and LP locks come to ' + CHAIN_NAME[chainId] + ' with the next QLocks contract. Until then, lock team tokens from your token\'s Trade page.')));
-  }
   if (mineSeq !== seq) return;
+  const parts = [top, flash ? h('p', {class: 'qlk-flash', role: 'status'}, flash) : null];
+  const tasks = [];
+  const section = (label, read) => {
+    const slot = h('div', {'data-lock-section': label}, h('section', {class: 'qlk-card'}, h('h2', {}, label), h('p', {}, 'Refreshing')));
+    parts.push(slot);
+    tasks.push(() => fillLockSection({read, current: () => mineSeq === seq,
+      show: value => slot.replaceChildren(...(value ? [value] : [])),
+      failed: () => {
+        const retry = h('button', {type: 'button', class: 'qtx-mini'}, 'Retry'); retry.addEventListener('click', refreshLocks);
+        slot.replaceChildren(h('section', {class: 'qlk-card'}, h('h2', {}, label), h('p', {}, 'Locks are refreshing. Try again.'), retry));
+      }}));
+  };
+  if (isAddr(tokenParam)) section('Token locks', () => tokenSection(lc, l1, tokenParam));
+  else section('Recent locks', () => recentTokens(lc, l1));
+  if (lc) {
+    if (me) section('Your locks', () => mine(c, me));
+    else { const b = h('button', {type: 'button', class: 'workspace-button'}, 'Connect your wallet'); b.addEventListener('click', () => openWallet()); parts.push(h('section', {class: 'qlk-card qlk-connect'}, h('p', {class: 'qtb-note'}, 'Connect your wallet to lock tokens or manage your locks.'), b)); }
+    parts.push(h('div', {class: 'qlk-card qlk-forms'}, lockForm(c, me), sheetForm(c, me, 'locks')));
+    section('LP locks', () => lpForm(c, me));
+    section('Staff grants', () => grantsSection(g, me));
+  } else parts.push(h('section', {class: 'qlk-card'}, h('h2', {}, 'New locks'), h('p', {class: 'qtb-note'}, 'Step schedules, batch locks from a sheet and LP locks come to ' + CHAIN_NAME[chainId] + ' with the next QLocks contract. Until then, lock team tokens from your token\'s Trade page.')));
   root.replaceChildren(...parts.filter(Boolean));
+  await Promise.all(tasks.map(run => run()));
 }
 
-render().catch(e => { root.replaceChildren(h('section', { class: 'qlk-card' }, h('p', { class: 'qtx-alert' }, e.message || 'QLocks could not load. Refreshing…'))); setTimeout(() => render().catch(() => {}), 8000); });
-onWalletChange(() => render().catch(() => {}));
+function refreshLocks() {
+  const revision = seq + 1;
+  return render().catch(() => {
+    if (revision !== seq) return;
+    const retry = h('button', {type: 'button', class: 'qtx-mini'}, 'Retry'); retry.addEventListener('click', refreshLocks);
+    root.replaceChildren(chainPicker(), h('section', {class: 'qlk-card'}, h('p', {}, 'Locks are refreshing. Try again.'), retry));
+  });
+}
+refreshLocks();
+onWalletChange(refreshLocks);

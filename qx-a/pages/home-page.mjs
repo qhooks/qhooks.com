@@ -25,7 +25,8 @@ addEventListener('qa:wallet', () => { const c = doc.querySelector('[data-a-conne
 {
   const foot = shell.footer, base = foot?.querySelector('.qa-foot__base');
   const dir = doc.querySelector('[data-a-dir]'), legal = doc.querySelector('[data-a-legal]');
-  if (foot && base) { if (dir) foot.insertBefore(dir, base); if (legal) base.after(legal); }
+  // The page's legal line (Terms, Privacy, chart attribution) replaces the shell's own Terms · Privacy pair: one row, not two.
+  if (foot && base) { if (dir) foot.insertBefore(dir, base); if (legal) { base.after(legal); base.querySelector('.qa-foot__legal')?.remove(); } }
 }
 
 // "On this page" navs: the link for the section in view is underlined in gold.

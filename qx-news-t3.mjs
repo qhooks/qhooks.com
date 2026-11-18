@@ -1,8 +1,10 @@
+import {createReadFetch} from './qx-community-retry.mjs';
 import {node,ago,empty} from './qx-news-ui.mjs';
 import {launchMatch,launchChainName} from './qx-news-t3-core.mjs';
 import {visibleChains} from './chains.mjs';
 const auth=async()=>{const [{authHeaders},record,sol]=await Promise.all([import('./qx-board-session.mjs'),import('./qx-trade-record.mjs'),import('./qx-solana.mjs')]);const evm=authHeaders();return evm.authorization?evm:record.tradeRecordHeaders('solana',sol.solAddress())};
 export function mountLaunchAlerts(root,{fetcher=fetch,headers=auth}={}){
+ fetcher=createReadFetch(fetcher);
  if(!root)return;let data=null,busy=false;
  const status=node('p',{role:'status',class:'qn-note'}),list=node('div',{class:'nt3-launches'}),rules=node('div'),form=node('form',{class:'nt3-form'}),chain=node('select',{'aria-label':'Launch chain'}),liquidity=node('input',{type:'number',min:0,max:1e10,value:0,'aria-label':'Minimum liquidity in USD'}),holders=node('input',{type:'number',min:0,max:1e8,step:1,value:0,'aria-label':'Minimum holders'}),clean=node('input',{type:'checkbox',checked:''}),history=node('input',{type:'checkbox'}),push=node('input',{type:'checkbox'}),telegram=node('input',{type:'checkbox'}),save=node('button',{type:'submit',class:'qn-button'},'Save filter'),refresh=node('button',{type:'button',class:'qn-button'},'Refresh');
  chain.append(node('option',{value:'all'},'All chains'),...visibleChains().map(c=>node('option',{value:c.id},c.short||c.name)),node('option',{value:'solana'},'Solana'));

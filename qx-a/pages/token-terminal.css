@@ -164,7 +164,9 @@ body.qa.qxt .qxt-identity-context > :first-child { padding-left: 0; box-shadow: 
 body.qa.qxt .qxt-identity-context .qxt-chain-label { display: none; }
 body.qa.qxt .qxt-identity-context .qxt-chain-label + * { padding-left: 0; box-shadow: none; }
 body.qa.qxt .qxt-identity-context .qxt-contract { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--qa-tx-2); }
-body.qa.qxt .qxt-identity-context .qxt-contract-kind { display: none; }
+/* K4 (2026-11-18): the kind label stays, so the route ("QHooks pool") is never read as the label of the token address. */
+body.qa.qxt .qxt-identity-context .qxt-contract-kind { display: inline-flex; font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--qa-tx-3); padding-right: 6px !important; }
+body.qa.qxt .qxt-identity-context .qxt-contract-kind + .qxt-contract { padding-left: 0 !important; box-shadow: none !important; }
 body.qa.qxt .qxt-identity-context :is(a, button) { color: var(--qa-tx-2); cursor: pointer; }
 body.qa.qxt .qxt-identity-context :is(a, button):hover { color: var(--qa-tx); }
 body.qa.qxt .qxt-identity-context .qxt-call-action { color: var(--qa-gold-hi); }

@@ -2,6 +2,7 @@ import {createReadablePrice} from '/qx-readable-price.mjs';
 import{fundFor}from'/qx-fund-catalog.mjs';
 import {QPROOF_CHECK_COUNT_MEANING} from '../../qproof-check-meanings.mjs';
 import {priceLabel} from '/qx-price-presentation.mjs';
+import {capSupply,capLabel} from '/qx-chart-unit.mjs'; // ux-pricemc: header figure follows the chart's Price | MC
 import{mountSimpleTokenView}from'/qx-token-simple-view.mjs';
 // QHooks System A: the terminal and token page (token lane, 2026-11-11).
 // Presentation only. Every number here comes from what the terminal already loaded (window.qxTerminal.state /
@@ -13,8 +14,8 @@ import { shown, shownKids } from '/qx-shown.mjs';
 import { activityQuery } from '/qx-community-activity.mjs';
 import { profileUrl } from '/qx-profile-address.mjs';
 import {mountProofPopover} from '/qx-proof-popover.mjs';
-import {readRepoProofSnapshot,refreshRepoProofSnapshot} from '/qx-repoproof.mjs';
-import {readQProofPresentation,qproofAgeLabel,safeQProofUrl} from '/qproof-view.mjs';
+import {readRepoProofSnapshot,refreshRepoProofSnapshot,terminalRepoProofSubject} from '/qx-repoproof.mjs';
+import {readQProofPresentation,qproofAgeLabel,safeQProofUrl,qproofEvidenceItems} from '/qproof-view.mjs';
 
 const doc = document, root = doc.documentElement, body = doc.body;
 const $ = (id) => doc.getElementById(id);
@@ -189,18 +190,20 @@ function paintProof() {
 /* newcomerA (2026-11-12): the chip opens the checks themselves (a sheet on a phone, a popover on desktop), the ones
    that need a look first, each with a one-line reason, and a link to the full report. Read from the same RepoProof
    report the page already shows (#qxt-repoproof); nothing new is fetched. */
-const PROOF_RANK = { danger: 0, caution: 1, unknown: 2, clear: 3, info: 4 };
-const PROOF_WORD = { danger: 'Failed', caution: 'Warning', unknown: 'Not checked', clear: 'Passed', info: 'Note' };
+const PROOF_RANK = { danger: 0, watch: 1, clear: 2, incomplete: 3, info: 4 };
 const oneLine = (t) => { const s = String(t || '').replace(/\s+/g, ' ').trim(), first = (s.match(/^.+?[.!?](?=\s|$)/) || [s])[0].replace(/[.]$/, ''); return first.length > 96 ? first.slice(0, first.lastIndexOf(' ', 92)) + '…' : first; };
 function readProofChecks() {
   const rp=$('qxt-repoproof'),snapshot=readRepoProofSnapshot(rp),p=readQProofPresentation(snapshot);
-  const list=(p.checks||[]).map(c=>({id:c.id,st:c.status||'unknown',title:c.title||'Check',why:oneLine(c.why||c.detail),detail:c.detail||'',evidenceLinks:Array.isArray(c.evidenceLinks)?c.evidenceLinks:[]})).sort((a,b)=>(PROOF_RANK[a.st]??2)-(PROOF_RANK[b.st]??2));
-  return{snapshot,list,link:safeQProofUrl(p.links.report)||rp?.querySelector('.qpr-report-link')?.href||'',legend:QPROOF_CHECK_COUNT_MEANING};
+  const selected=api()?.state?.sel,subject=terminalRepoProofSubject(selected?{kind:selected.ext?'external':'launch',chainId:selected.chainId,token:selected.ext,controller:selected.controller}:null);
+  const list=p.checks.map(c=>({...c,why:oneLine(c.why||c.detail),fullWhy:c.why||'',detail:c.detail||c.why||''})).sort((a,b)=>(PROOF_RANK[a.level]??3)-(PROOF_RANK[b.level]??3));
+  return{ownerKey:subject?subject.kind+':'+subject.chainId+':'+subject.address:null,snapshot,list,link:safeQProofUrl(p.links.report)||safeQProofUrl(rp?.querySelector('.qpr-report-link')?.href)||'',legend:QPROOF_CHECK_COUNT_MEANING};
 }
-const proofRow=c=>h('li',{class:'ta-pc is-'+c.st},h('span',{class:'ta-proof-status is-'+c.st},({danger:'Danger',caution:'Watch',clear:'Passed',unknown:'Not checked',info:'Note'})[c.st]||'Not checked'),
- h('div',{class:'ta-pc__txt'},h('b',null,c.title),c.why?h('span',null,c.why):null),
- c.evidenceLinks.length?h('div',{class:'ta-proof-evidence'},c.evidenceLinks.filter(e=>safeQProofUrl(e.url)).map(e=>h('a',{href:safeQProofUrl(e.url),target:'_blank',rel:'noopener noreferrer'},e.label||e.value||'Evidence'))):null,
- c.detail&&c.detail!==c.why?h('details',{class:'ta-proof-more','data-proof-section':'row-'+c.id},h('summary',null,'More'),h('p',null,c.detail)):null);
+// Rows arrive through normalizeQProofChecks (level/status/label, safe evidenceLinks); evidenceRefs are server
+// receipt references, re-read here so a raw flag row is filtered the same way as a check row.
+const proofRow=c=>{const refs=qproofEvidenceItems(c.evidenceRefs,2);return h('li',{class:'ta-pc is-'+c.st},h('span',{class:'ta-proof-status is-'+c.st},c.label),
+ h('div',{class:'ta-pc__txt'},h('b',null,c.title||'Check'),c.why?h('span',null,c.why):null),
+ c.evidenceLinks.length||refs.length?h('div',{class:'ta-proof-evidence'},refs.map(e=>e.url?h('a',{href:e.url,target:'_blank',rel:'noopener noreferrer'},e.label):h('span',e.receiptSha256?{title:'Receipt '+e.receiptSha256}:null,e.label)),c.evidenceLinks.filter(e=>safeQProofUrl(e.url)).map(e=>h('a',{href:safeQProofUrl(e.url),target:'_blank',rel:'noopener noreferrer'},e.label||e.value||'Evidence'))):null,
+ (c.fullWhy&&c.fullWhy!==c.why||c.detail&&c.detail!==c.why)?h('details',{class:'ta-proof-more','data-proof-section':'row-'+c.id},h('summary',null,'More'),c.fullWhy&&c.fullWhy!==c.why?h('p',null,c.fullWhy):null,c.detail&&c.detail!==c.fullWhy?h('p',null,c.detail):null):null);};
 const proofView=mountProofPopover({document:doc,window,chip:proofChip,desktop:desk,h,readChecks:readProofChecks,renderRow:proofRow,report:$('qxt-repoproof'),refresh:()=>refreshRepoProofSnapshot($('qxt-repoproof')),reduceMotion:RM});
 new MutationObserver(() => { paintProof(); if (!proofView.element.hidden) proofView.render(); }).observe($('qxt-repoproof'), { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['hidden'] });
 
@@ -592,13 +595,17 @@ function paint() {
   if (live != null) { P.price.set(live, dir); P.price.el.classList.remove('ta-quote-unit'); }
   else if (q > 0) { P.price.el.textContent = fmt.price(q).slice(1) + ' ' + (m.quoteSymbol || ''); P.price.el.classList.add('ta-quote-unit'); }
   else { P.price.el.textContent = '—'; }
-  priceDetail.update({value:live!=null?live:q>0?q:null,unit:live!=null?'USD':m.quoteSymbol||''});
+  // ux-pricemc: in MC mode the main figure is the chart's MC (same multiplier, same formatter as the chart's last value)
+  const capK=$('qxt-chart')?.dataset.unit==='mcap'?capSupply(A.state.data?.summary):null,capBase=live??(q>0?q:null);
+  if(capK&&capBase){P.price.el.textContent=capLabel(capBase*capK,live!=null?'USD':m.quoteSymbol||'');P.price.el.classList.remove('ta-quote-unit');}
+  P.price.el.classList.toggle('ta-cap',!!(capK&&capBase));P.price.el.dataset.unit=capK&&capBase?'mcap':'price';
+  priceDetail.update({value:capK&&capBase?null:live!=null?live:q>0?q:null,unit:live!=null?'USD':m.quoteSymbol||''});
   priceAge.textContent=priceLabel(s.priceAt,{refreshing:!!s.pricesRefreshing});P.price.el.style.opacity=s.pricesRefreshing?'.65':'1';
   const showPriceAge=priceAge.textContent.startsWith('Refreshing')||priceAge.textContent==='Price syncing';
   priceAge.hidden=!showPriceAge;priceAge.style.display=showPriceAge?'block':'none';
   ticketMeta=m;placeTicketIdentity();
   const ch = s.change24==null?NaN:Number(s.change24);
-  if (Number.isFinite(ch)) { const delta = live != null && ch > -1 ? live - live / (1 + ch) : null; P.change.set(ch, { label: '24h', delta, words: 'past day', pulse: !!dir }); P.change.el.hidden = showPriceAge; } else P.change.el.hidden = true;
+  if (Number.isFinite(ch)) { const delta = live != null && ch > -1 && !(capK&&capBase) ? live - live / (1 + ch) : null; P.change.set(ch, { label: '24h', delta, words: 'past day', pulse: !!dir }); P.change.el.hidden = showPriceAge; } else P.change.el.hidden = true;
   if (live != null) T.lastPrice = live;
   // pressure: buys vs sells, last 24h
   const b24 = Number(s.buys24), s24 = Number(s.sells24);

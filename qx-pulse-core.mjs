@@ -1,4 +1,4 @@
-import {filterDiscovery,lifecycle} from './qx-discovery-model.mjs';
+import {filterDiscovery,lifecycle,nearBond} from './qx-discovery-model.mjs';
 export const PULSE_COLUMNS=Object.freeze([['new','New'],['bonding','Near bond'],['migrated','Migrated']]);
 const columns=PULSE_COLUMNS.map(([id])=>id);
 export const pulseIdentity=row=>String(row.chainId)+':'+(String(row.chainId)==='solana'?String(row.token?.address||''):String(row.token?.address||'').toLowerCase());
@@ -6,7 +6,7 @@ export const pulseIdentity=row=>String(row.chainId)+':'+(String(row.chainId)==='
 export function pulseRows(records,{filters={},chain='all',window='h6',now=Date.now(),factsOf}={}){
  const raw=id=>Array.isArray(records[id]?.data?.rows)?records[id].data.rows:[],all=columns.flatMap(raw);
  const migrated=new Set(all.filter(r=>lifecycle(r).stage==='migrated').map(pulseIdentity));
- const bonding=new Set(all.filter(r=>{const s=lifecycle(r);return s.stage==='bonding'&&s.progress>=.8&&!migrated.has(pulseIdentity(r));}).map(pulseIdentity));
+ const bonding=new Set(all.filter(r=>{const s=lifecycle(r);return nearBond(s)&&!migrated.has(pulseIdentity(r));}).map(pulseIdentity));
  return Object.fromEntries(columns.map(id=>{const seen=new Set();const rows=filterDiscovery(raw(id),{tab:id,window,filters,now,factsOf}).filter(r=>{
   const key=pulseIdentity(r);if(chain!=='all'&&String(r.chainId)!==String(chain)||seen.has(key))return false;
   if(id==='new'&&(migrated.has(key)||bonding.has(key))||id==='bonding'&&migrated.has(key))return false;
@@ -47,6 +47,16 @@ export function createPulseController({makeLoader,onChange=()=>{},visible=()=>tr
   setHold(reason,value){if(value)holds.add(reason);else holds.delete(reason);if(!holds.size&&pending.size){for(const [id,next]of pending)records[id]=next;pending.clear();}publish();if(!holds.size&&active)void fill();},
   refreshNext(){if(!active||holds.size||!visible()||flight||now()-lastStart<minRefreshMs)return Promise.resolve(false);const tab=mobile?selected:columns[cursor++%columns.length];return run(tab);},
   refreshColumn:tab=>columns.includes(tab)?run(tab,true):Promise.resolve(false),
+  // D4: one conditional re-read of the next column (phone: the selected one) for the 10 s live poll.
+  async pollNext(){
+   if(!active||holds.size||!visible()||flight||typeof loader.poll!=='function')return 'skip';
+   const tab=mobile?selected:columns[cursor++%columns.length];
+   if(!records[tab].data)return (await run(tab))?'changed':'error';
+   const mine=epoch;request={tab,epoch:mine};
+   const work=loader.poll(tab,context.chain,context.window,context.filters);flight=work;
+   try{return await work;}catch{return 'error';}
+   finally{if(flight===work){flight=null;request=null;}}
+  },
   snapshot:()=>({records,paused:holds.size>0,manual:holds.has('manual'),mobile,selected,context}),
   dispose(){active=false;stop();holds.clear();},
  };

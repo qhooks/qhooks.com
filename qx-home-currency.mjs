@@ -98,8 +98,10 @@ export function homePicker({document: doc = globalThis.document, getOwner = () =
   note.setAttribute('role', 'status'); root.append(line, choices, hint, label, note, recovery);
   let owner = null, pref = {...DEFAULT_HOME}, revision = 0, busy = false, pollTimer;
   function paint() {
-    const usd = getUsd(pref), money = Number.isFinite(usd) ? '$' + usd.toFixed(2) : 'Refreshing';
-    line.textContent = 'Home: ' + homeName(pref) + ' · ' + money;
+    // K2 (2026-11-18): no wallet means no home balance to read, so a visitor sees the home name alone, never a
+    // "Refreshing" that cannot resolve. A connected wallet shows its balance, or "Refreshing" until it lands.
+    const usd = getUsd(pref), money = Number.isFinite(usd) ? '$' + usd.toFixed(2) : owner ? 'Refreshing' : '';
+    line.textContent = 'Home: ' + homeName(pref) + (money ? ' · ' + money : '');
     chain.value = String(pref.chainId); fillAssets(pref.asset); toggle.checked = pref.sellsGoHome;
     hint.hidden = pref.chainId !== 1;
     const result = owner && homeTransfer(owner, store); recovery.replaceChildren();

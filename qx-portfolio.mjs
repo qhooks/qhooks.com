@@ -8,9 +8,13 @@ import {portfolioReader,chainReadState,portfolioNeedsRefresh,portfolioBalanceAt}
 import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
 import {profileUrl} from './qx-profile-address.mjs';
 import {LIVE} from './chains.mjs';
+import {withHoldingPrices} from './qx-portfolio-price-col.mjs'; // ux-pricemc: Price column
 import {outsideCosts} from './qx-wallet-pnl.mjs';
 import * as T from './qx-portfolio-tabs.mjs';
 import {isTestLaunch, orderLaunches} from './qx-test-tag.mjs';
+// watch-only addresses (2026-11-18): read-only public addresses merged into the owner's total (qx-portfolio-watch.mjs)
+import {mountWatchOnly} from './qx-portfolio-watch.mjs';
+const mergeOwnPortfolios = reports => mergePortfolios(reports);
 
 const known = n => typeof n === 'number' && Number.isFinite(n);
 const names = Object.fromEntries(LIVE.map(c => [c.id, c.short]));
@@ -236,7 +240,10 @@ export function groupNativeEther(rows,{chain='all'}={}) {
  const group={rows:eth,units:eth.reduce((n,r)=>n+r.units,0),valueUsd:sumKnown(eth.map(r=>r.valueUsd)),partial:eth.some(r=>!known(r.valueUsd))};
  let added=false;return rows.flatMap(row=>{if(!eth.includes(row))return [{row}];if(added)return [];added=true;return [group];});
 }
-export function renderHoldingRows(rows,options={}) {
+export function renderHoldingRows(rows,options={}) { // ux-pricemc: every holding row gets its Price cell
+ return withHoldingPrices(holdingRowNodes(rows,options),rows,{h:options.h,key:r=>marketKey(r.chainId,r.address)});
+}
+function holdingRowNodes(rows,options={}) {
  return groupNativeEther(rows,options).map(item=>{
   if(item.row)return renderHoldingRow(item.row,options);
   const {h}=options,details=h('details',{class:'pf-eth-group',role:'listitem'}),summary=h('summary',{class:'pf-holding pf-eth-summary'},
@@ -247,6 +254,7 @@ export function renderHoldingRows(rows,options={}) {
  });
 }
 export function renderHoldingRow(r,{h,natives={},owner=null,mine=false,readonly=false,chain='all',onSell}={}) {
+ readonly = readonly || !!r.watch;
  const v=holdingRowView(r),split=T.rowCost(r,pnlNativeQuote(natives[r.chainId])),canSell=!readonly&&mine&&!v.cash&&rowCanSell(r,owner),pnlCls=v.pnlDirection>0?' qp-positive':v.pnlDirection<0?' qp-negative':'';
  const metadata=h('details',{class:'pf-holding__details'},h('summary',{},r.priceLabel==='on curve'?'on curve':r.chainName||names[r.chainId]||r.chainId),h('p',{},priceText(r.priceUsd)+' · '+percent(r.change24)+' 24h · '+(r.chainName||r.chainId)+(r.priceStatus==='last-known'?' · Cached · '+portfolioReadLabel(r.priceAt).replace(/^(Live|Read) · /,''):r.pricesRefreshing?' · Price update pending':'')));
  return h('article',{class:'pf6-row pf-holding'+(v.cash?' is-cash':'')+(r.spam?' is-spam':''),role:'listitem','data-key':marketKey(r.chainId,r.address)},holdingArt(h,r),
@@ -321,7 +329,9 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
    catch { $('qp-status').textContent = 'Could not connect the Solana wallet. Try again.'; }
    finally { e.currentTarget.disabled = false; }
   })) : [h('p', {}, 'Open this page in a Solana wallet browser, or enable your wallet extension.')] )));
-  $('qp-wallets')?.replaceChildren(h('span', {}, 'Base · Ethereum · Arbitrum · BNB · Robinhood'), detail);
+  // watch-only: #qp-wallets lives in the detached Wallets disclosure until addresses() attaches it, so look there first
+  // (getElementById alone missed it on first paint and the disclosure opened empty).
+  (walletOptions.querySelector?.('#qp-wallets')||$('qp-wallets'))?.replaceChildren(h('span', {}, 'Base · Ethereum · Arbitrum · BNB · Robinhood'), detail, watch.panel);
  }
  function skeleton() {
   $('qp-total').textContent = '—'; $('qp-total').classList.add('qp-skeleton');
@@ -404,7 +414,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   $('qp-total').classList.remove('qp-skeleton'); paintHeroValue(0, failed);
   paintReadAge();
   $('qp-overview')?.setAttribute('aria-busy', 'false');
-  paintAllocation(); paintPnl(); paintNotes(failed);
+  paintAllocation(); paintPnl(); paintNotes(failed); watch.paint(current); // watch-only: incl. N watched + per-address notes
  }
  // ---------- tabs ----------
  function counts() {
@@ -426,7 +436,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   if (!current) return;
   const rows = T.filterRows(current.rows, prefs), nat = natives(), owner = me(), mine = own();
   $('qp-count').textContent = tab === 'holding' ? rows.length + (rows.length === 1 ? ' holding shown' : ' holdings shown') : '';
-  $('qp-holdings').replaceChildren(...(rows.length ? renderHoldingRows(rows,{h,natives:nat,owner,mine,readonly:!!savedPreview,chain:prefs.chain,onSell:(row,p,trigger)=>seller.begin(row,p,trigger)}) : [h('p', {class: 'qa-empty'}, current.rows.length ? 'No holdings match these filters.' : 'No holdings found in this reading.')]));
+  $('qp-holdings').replaceChildren(...(rows.length ? watch.rows(rows,list=>renderHoldingRows(list,{h,natives:nat,owner,mine,readonly:!!savedPreview,chain:prefs.chain,onSell:(row,p,trigger)=>seller.begin(row,p,trigger)}),{natives:nat}) : [h('p', {class: 'qa-empty'}, current.rows.length ? 'No holdings match these filters.' : 'No holdings found in this reading.')]));
   if(!savedPreview)seller.attach($('qp-holdings'));
  }
  function paintClosed() {
@@ -603,6 +613,17 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
  }
  function kept(family,address){const item=reader.cached(family,address);return item?{...item.report,refreshing:!item.fresh||!!item.report.refreshing}:null;}
  const paintAll = (failed = []) => { paintOverview(failed); paintChips(); paintTabs(); paintList(); };
+ // ---------- watch-only addresses (qx-portfolio-watch.mjs) ----------
+ // Own wallet only (never in ?wallet= view or the saved snapshot). Every merge on this page goes through watch.merge.
+ const watch=mountWatchOnly({h,reader,storage,document,fetchImpl,owner:()=>own()?me():null,solOwner:()=>view?null:sol.solAddress(),active:()=>!disposed&&own()&&!savedPreview,
+  // watched rows get the same Price cell as the owner's rows (ux-pricemc x watch-only integration)
+  renderRow:(r,o)=>withHoldingPrices([renderHoldingRow(r,o)],[r],{h:o.h,key:x=>marketKey(x.chainId,x.address)})[0],chainName,getChain:()=>prefs.chain,marketKey,onChange:()=>{
+   const repaint=()=>{if(disposed||!current||savedPreview)return;const reports=[kept('evm',me()),view?null:kept('solana',sol.solAddress())].filter(Boolean);if(!reports.length)return;
+    for(const r of reports)if(r.address===me())costs?.apply(r);current=mergePortfolios(reports);if(feed)applyLive(current,feed);paintAll();};
+   if(activeLoad)void activeLoad.finally(repaint).catch(()=>{});else repaint();}});
+ const mergePortfolios=reports=>watch.merge(reports,mergeOwnPortfolios);
+ onWalletChange(()=>void watch.ownerChanged(),{storage});void watch.ownerChanged();
+ // ---------- end watch-only ----------
  function clearSavedDisplay(){savedPreview=null;delete root.dataset.readonlySnapshot;current=null;for(const id of ['qp-addresses','qp-holdings','qp-top','qp-chains','qp-allocation','qp-notes','qp-stats'])$(id)?.replaceChildren();$('qp-total').textContent='—';$('qp-at').textContent='Time unavailable';$('qp-count').textContent='';paintPnl();paintTabs();}
  function paintSavedSnapshot(){
   const owner=savedPortfolioAddress({storage}),report=owner?savedPortfolioSnapshot({reader,owner}):null;if(!report)return false;

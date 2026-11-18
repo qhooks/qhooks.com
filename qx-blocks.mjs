@@ -1,3 +1,4 @@
+import {contextFromBlockConfig,setGlossaryContext} from './qx-glossary-context.mjs';
 import {studioImpact} from './qx-studio-impact.mjs';
 import {currentGuidedStart} from './qx-guided-start-control.mjs';
 import {STUDIO_KITS} from './qx-block-catalog.mjs';
@@ -18,6 +19,7 @@ const d = document;
 const root = d.getElementById('qx-blocks');
 const out = d.getElementById('ql-blocks');
 const OWNER = '@owner';
+const RULE_TERMS = {stormFee:'storm-fee',sandwich:'sandwich-guard'};
 // A payee paid through a vesting stream (QVest) of the connected wallet, before the wallet connects. The stream's address
 // needs the wallet, so this stands in until then; a launch can never be encoded with it (it is not an address).
 const OWNER_VEST = '@owner-vest';
@@ -157,6 +159,7 @@ if (root && out) {
   const sinceBuy=el('input',{type:'number',min:'0',value:'0','aria-label':'Seconds since last buy',oninput:()=>renderSummary(config(),out.dataset.problem)});
   const fmt=n=>Number(n).toLocaleString('en-US',{maximumSignificantDigits:5});
   function renderSummary(c,issue){
+   setGlossaryContext(root,contextFromBlockConfig(c,{kind:'draft'}));
    const [sym,decimals]=quoteAsset(),lp=Number(d.getElementById('ql-fee')?.value??1),minutes=Number(simTime.value),size=Number(simSize.value);
    const result=studioImpact({config:c,on:isOn,size,minutes,lpPercent:lp,quoteDecimals:decimals,supply:Number(d.getElementById('ql-supply')?.value),tokenAmount:d.getElementById('ql-token-funding')?.value,tokenDecimals:Number(d.getElementById('ql-decimals')?.value||18),quoteFunding:d.getElementById('ql-quote-funding')?.value||'0',pricing:currentGuidedStart(d.getElementById('ql-start-cap')),quote:(selectedPair(chainId())?stockPair(chainId(),selectedPair(chainId())):null)?.address||chainById(chainId())?.quote.address, sinceBuy:Number(sinceBuy.value)});
    const row=(label,value)=>el('li',{},el('span',{text:label}),el('b',{text:value}));
@@ -193,7 +196,7 @@ if (root && out) {
       el('small', { role: 'status', text: connectedAddress() ? '' : 'You can also do this after connecting your wallet in the next step.' })) : null;
     const body = active && b.params.length ? el('div', { class: 'qxb-params' }, b.params.map(p => field(p, b))) : null;
     return el('article', { class: 'qxb-card' + (active ? ' on' : ''), 'data-block': b.id },
-      el('header', {}, el('div', {}, el('h4', { text: b.name }), el('p', { text: b.line })), toggle),
+      el('header', {}, el('div', {}, el('h4', { text: b.name, ...(RULE_TERMS[b.id] ? {'data-glossary-term':RULE_TERMS[b.id],'data-glossary-owned':''} : {}) }), el('p', { text: b.line })), toggle),
       active ? el('p', { class: 'qxb-how', text: b.how }) : null, blocked ? el('p', { class: 'qxb-how', text: 'Off while the opening auction is on: it would treat the whole batch as one trader.' }) : null, body, setup,
       b.id === 'payees' ? payees() : null,el('small',{class:'qs-block-meta','data-qs-usage':b.id,text:studioGas([b.id]).label+' · Launch count not loaded'}));
   }

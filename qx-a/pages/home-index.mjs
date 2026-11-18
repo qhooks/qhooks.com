@@ -3,6 +3,7 @@ import{publicReadFetch}from'../../qx-public-read.mjs';
 import{homeTradeLink}from'/qx-home-trade-link.mjs';
 import{assetPriceFields,priceObservation}from'/qx-price-state.mjs';
 import{priceLabel}from'/qx-price-presentation.mjs';
+import{fetchDexPairs,pickPair,rowPatch}from'/qx-dex-live.mjs';
 // QHooks System A: the home page runtime (2026-11-12, the scroll-driven 3D landing). One fixed WebGL stage behind the
 // page (qx-a/landing/scene.mjs, three self-hosted, the commercial's hook model) and six pinned chapters that scroll over
 // it: the brand line, then Builders, Callers, Holders, Traders, each with one hero object and its live data, then
@@ -48,7 +49,7 @@ addEventListener('qa:wallet', () => trigger?.click());
 { // one footer: the site directory and the legal line move into the shell footer
   const foot = shell.footer, base = foot?.querySelector('.qa-foot__base');
   const dir = $('[data-a-dir]'), legal = $('[data-a-legal]');
-  if (foot && base) { if (dir) foot.insertBefore(h('details',{class:'hm-directory'},h('summary',{},'Explore QHooks'),dir),base); if (legal) base.after(legal); }
+  if (foot && base) { if (dir) foot.insertBefore(h('details',{class:'hm-directory'},h('summary',{},'Explore QHooks'),dir),base); if (legal) { base.after(legal); base.querySelector('.qa-foot__legal')?.remove(); } }
 }
 const ribbon = shell.ribbon;
 fillChainCount();
@@ -219,15 +220,33 @@ function launchSub(m) {
   const t = num(m.summary?.trades24); if (t != null) parts.push(t + (t === 1 ? ' trade' : ' trades'));
   return parts.join(' · ');
 }
+// H1 (2026-11-18): a launch with no trade in the last hour has no server price (the feed drops prices older than 1 h),
+// so the row read "Price refreshing" forever. One DexScreener read per chain on first draw (the same public read
+// /markets uses; never a poller) fills the last pool price, and the row says how long since the last trade.
+const lastPrices = new Map(); let lastPricesRead = false;
+function lastPrice(m){ const r=lastPrices.get(key(m)); return r&&Number.isFinite(r.priceUsd)&&r.priceUsd>0?r:null; }
+function noTradesLabel(m){ const at=num(m.summary?.lastTradeAt)||num(m.summary?.priceAt); if(!at)return ''; const ms=at>1e12?at:at*1000,age=Math.max(0,Date.now()-ms); return 'No trades in '+(age<3600000?Math.max(1,Math.round(age/60000))+'m':age<172800000?Math.round(age/3600000)+'h':Math.round(age/86400000)+'d'); }
+async function readLastPrices(markets){
+  if (lastPricesRead) return; lastPricesRead = true;
+  const missing = markets.filter((m) => !(String(m.chainId)===QCHAIN&&lower(m.token)===QH) && !(num(assetPriceFields(m.summary||{},{chainId:m.chainId,token:m.token,at:priceObservation(m.summary,m.observedAt??null)}).priceUsd) > 0) && m.token);
+  const byChain = new Map(); for (const m of missing) byChain.set(String(m.chainId), [...(byChain.get(String(m.chainId)) || []), m]);
+  await Promise.all([...byChain].map(async ([chain, list]) => {
+    const pairs = await fetchDexPairs(chain, list.map((m) => m.token)).catch(() => null);
+    for (const m of list) { const patch = rowPatch(pickPair(pairs, chain, m.token, null)); if (patch) lastPrices.set(key(m), patch); }
+  }));
+  if (lastPrices.size) drawLaunches();
+}
 function homePrice(m){
   const canonical=String(m.chainId)===QCHAIN&&lower(m.token)===QH;
   const s=canonical?qSummary():assetPriceFields(m.summary||{},{chainId:m.chainId,token:m.token,at:priceObservation(m.summary,m.observedAt??null)});
   if(canonical)return Number.isFinite(s.priceUsd)&&s.priceUsd>0?fmt.price(s.priceUsd):'Price syncing';
-  return Number.isFinite(s.priceUsd)&&s.priceUsd>0?fmt.price(s.priceUsd)+(s.pricesRefreshing?' · Refreshing':''):'Price refreshing';
+  if(Number.isFinite(s.priceUsd)&&s.priceUsd>0)return fmt.price(s.priceUsd);
+  const last=lastPrice(m);return last?fmt.price(last.priceUsd):'—';
 }
 
 function paintLaunchChange(m,node){
   const canonical=String(m.chainId)===QCHAIN&&lower(m.token)===QH,s=canonical?qSummary():m.summary||{},change=num(s.change24);
+  if(!canonical&&!(num(assetPriceFields(m.summary||{},{chainId:m.chainId,token:m.token,at:priceObservation(m.summary,m.observedAt??null)}).priceUsd)>0)){node.className='hm-tick';flash(node,noTradesLabel(m));return;}
   const refreshing=canonical&&num(s.priceUsd)>0&&(qReadFailed||s.pricesRefreshing);
   node.className='hm-tick '+pctCls(refreshing?0:change??0);
   flash(node,refreshing?priceLabel(s.priceAt,{refreshing:true}):(!canonical||num(s.priceUsd)>0)&&change!=null?fmt.pct(change):'');
@@ -278,6 +297,7 @@ async function loadFeed() {
   pulse.update(!first); count('launches', live.length);
   calls.forEach((x) => x.paintChip?.()); // the feed brings the logos the call cards wait for
   drawLaunches(fresh);
+  void readLastPrices(markets.filter((m) => m.live).sort((a, b) => (b.listedAt || 0) - (a.listedAt || 0)).slice(0, 10));
   if (!S.q && qm) paintTag(qm.summary);
   for (const k of fresh) {
     const m = markets.find((x) => key(x) === k); if (!m) continue;

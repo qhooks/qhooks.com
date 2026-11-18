@@ -1,3 +1,4 @@
+import {setGlossaryContext} from './qx-glossary-context.mjs';
 import {kitTradeoff} from './qx-launch-kit-copy.mjs';
 import {createFeePresentation} from './qx-create-fee-presentation.mjs';
 import {evmModel,mountCreateModelPreview,mountChainModelLabels} from './qx-create-model-preview.mjs';
@@ -283,7 +284,9 @@ async function readPoolPrices(){
  }catch{if(run===poolRun&&key===poolKey()){poolPrices={key,rows:[],at:Date.now()};renderPools();renderQuick();}}
  finally{if(run===poolRun)poolReadKey='';}
 }
-async function rpcMany(calls){const c=chainById(chainId),r=await fetch(c.rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(calls.map(([method,params],id)=>({jsonrpc:'2.0',id,method,params})))}),j=await r.json();if(!Array.isArray(j))throw Error('RPC error');return calls.map((_,id)=>j.find(r=>r.id===id)?.result||'0x');}
+// Robinhood reads go through the same-origin RPC proxy: the public RH RPC intermittently sends a doubled CORS header.
+const readRpcUrl=id=>String(id)==='4663'?'/api/rpc/4663':chainById(id).rpc;
+async function rpcMany(calls){const r=await fetch(readRpcUrl(chainId),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(calls.map(([method,params],id)=>({jsonrpc:'2.0',id,method,params})))}),j=await r.json();if(!Array.isArray(j))throw Error('RPC error');return calls.map((_,id)=>j.find(r=>r.id===id)?.result||'0x');}
 function tierSteps(t){if(t==='custom'&&customUsd&&startBase?.usd){try{return selectedStart({tier:t,steps:startSteps,customUsd,standardUsd:startBase.usd}).steps;}catch{return startSteps;}}const tier=START_TIERS.find(x=>x[0]===t);if(!tier||tier[2]===null)return startSteps;if(!tier[2])return 0;return startBase?.usd?stepsForUsd(tier[2],startBase.usd):0;}
 function capText(steps){if(!startBase)return '';const text=startCapText(startBase.usd,steps);return text?text:+capAtSteps(startBase.cap,steps).toPrecision(3)+' '+startBase.unit;}
 function renderStart(){
@@ -382,7 +385,15 @@ function renderQuick(){
  const readiness=launchReadiness({available:CREATE_EXECUTION_ENABLED&&!!quickFactory(chainId),hold:CREATE_EXECUTION_HOLD,busy,image,name:$('name').value,symbol:$('symbol').value,banner,bannerMessage:$('need-banner').textContent,validationError,taken:!!taken,wallet:!!conn,wrongChain:!!conn&&conn.chainId!==chainId,chainMessage:'Switch your wallet to '+c.name+' to review the launch cost.',chainLabel:'Switch to '+c.short+' and launch',priceBlocked:priceBlocked(),poolsBlocked:poolsBlocked(),keyBlocked:pqBlocked(),cost:bound,costError:feeView.phase==='unavailable'?feeView.message:costError,funded:cost?.live?cost.quote.funded:null,balanceMessage:box.querySelector('.qq-short')?.textContent});
  b.disabled=readiness.disabled;b.textContent=readiness.label;paintLaunchReadiness(quickReadinessHost(),readiness);
  const total=document.getElementById('cr5-total');if(total)total.textContent=displayCost?(cost.live?'Wallet estimate · ':'Planning estimate · ')+ethText(BigInt(cost.totalWei)+(isRangeKit()&&cost.gasPriceWei?BigInt(RANGE_GAS.make+(pqOnChain()&&pqKeyHex()?RANGE_GAS.pointPq:RANGE_GAS.point))*BigInt(cost.gasPriceWei):0n))+' '+c.native:feeView.phase==='reading'?'Reading fees…':'Fees unavailable · retry below';
- const defaults=document.getElementById('cr5-defaults');if(defaults)defaults.textContent=pick.name+' · '+(startSteps?'Custom start':'Standard start')+' · 100% in pool · LP locked';
+ const defaults=document.getElementById('cr5-defaults');if(defaults){
+  defaults.replaceChildren(document.createTextNode(pick.name+' · '));
+  const label=el('span',{},startSteps?'Custom start':'Standard start');
+  // Only the authored Standard start label is a definition target. The custom
+  // tier’s displayed estimate is not an exact factory read for that tier.
+  if(!startSteps){label.dataset.glossaryTerm='standard-start';label.dataset.glossaryOwned='';}
+  defaults.append(label,document.createTextNode(' · 100% in pool · LP locked'));
+  setGlossaryContext(defaults,{kind:'draft',start:{standardUsd:startBase?.usd??null,actualUsd:startSteps?null:startBase?.usd??null,chainId:String(chainId),quoteSymbol:startBase?.unit??null,steps:startSteps}});
+ }
  renderAdv();const adv=$('adv');if(!pqBlocked())advAuto=false;else if(adv&&!adv.hidden&&conn&&conn.chainId===chainId&&!advAuto){advAuto=true;adv.open=true;const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;}
 }
 
@@ -460,7 +471,7 @@ const callAt=tx=>rpc('eth_call',[tx,'latest']);
 async function sendOne(provider,from,call){
  const tx={from,to:call.to,data:call.data,value:call.value||'0x0'};
  try{await callAt(tx);tx.gas='0x'+(BigInt(await rpc('eth_estimateGas',[tx]))*13n/10n).toString(16);}catch{throw Error('This step would fail right now. Nothing was sent.');}
- try{const b=JSON.parse(await fetch(chainById(chainId).rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_getBlockByNumber',params:['latest',false]})}).then(r=>r.text())).result,tip=BigInt(await provider.request({method:'eth_maxPriorityFeePerGas'}).catch(()=>'0x0'));
+ try{const b=JSON.parse(await fetch(readRpcUrl(chainId),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_getBlockByNumber',params:['latest',false]})}).then(r=>r.text())).result,tip=BigInt(await provider.request({method:'eth_maxPriorityFeePerGas'}).catch(()=>'0x0'));
   if(b?.baseFeePerGas){tx.maxPriorityFeePerGas='0x'+tip.toString(16);tx.maxFeePerGas='0x'+(BigInt(b.baseFeePerGas)*2n+tip).toString(16);}}catch{}
  const hash=await provider.request({method:'eth_sendTransaction',params:[tx]});
  const r=await receipt(provider,hash);if(r.status!=='0x1')throw Error('The network refused this step. Only network gas was spent.');return r;

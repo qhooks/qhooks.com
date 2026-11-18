@@ -120,7 +120,7 @@ export function dexRows(pairs, chainId, observedAt = Date.now()) {
       chainId: cid, pool: low(cid, p.pairAddress), dex: tidy(p.dexId, 60) || null,
       token: { address: low(cid, p.baseToken.address), symbol: tidy(p.baseToken.symbol, 20) || '?', name: tidy(p.baseToken.name, 100), logo: httpsOrNull(p.info?.imageUrl) },
       quote: { address: p.quoteToken?.address ? low(cid, p.quoteToken.address) : null, symbol: tidy(p.quoteToken?.symbol, 20) || null },
-      createdAt: num(p.pairCreatedAt), priceUsd: num(p.priceUsd), liquidityUsd: num(p.liquidity?.usd), marketCapUsd: num(p.marketCap), fdvUsd: num(p.fdv),
+      createdAt: num(p.pairCreatedAt), ...(num(p.boosts?.active) !== null ? { boosts: { active: num(p.boosts.active) } } : {}), priceUsd: num(p.priceUsd), liquidityUsd: num(p.liquidity?.usd), marketCapUsd: num(p.marketCap), fdvUsd: num(p.fdv),
       volumeUsd: Object.fromEntries(windows.map(w => [w, num(p.volume?.[w])])), change: Object.fromEntries(windows.map(w => [w, frac(p.priceChange?.[w])])),
       txns: Object.fromEntries(windows.map(w => [w, { buys: num(p.txns?.[w]?.buys), sells: num(p.txns?.[w]?.sells) }])),
       hasSocials:Array.isArray(p.info?.socials)||Array.isArray(p.info?.websites)?[...(Array.isArray(p.info.socials)?p.info.socials:[]),...(Array.isArray(p.info.websites)?p.info.websites:[])].some(x=>httpsOrNull(x?.url)!==null):null,

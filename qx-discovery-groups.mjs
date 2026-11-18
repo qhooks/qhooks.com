@@ -1,18 +1,18 @@
 import{capDiscoveryObservations}from'./qx-discovery-freshness.mjs';
 import{discoveryCandidate,trendingCandidate,observedActivity,rankDiscovery}from'./qx-discovery-rank.mjs';
-export const TRENDING_ACTIVITY=Object.freeze({volume24Usd:500,transactions:20});
+export const TRENDING_ACTIVITY=Object.freeze({volume24Usd:500,transactions:10});
 const numeric=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0?v:null;
 export const discoveryContractKey=row=>String(row.chainId)+':'+(String(row.chainId)==='solana'?String(row.token?.address||''):String(row.token?.address||'').toLowerCase());
-const ticker=value=>typeof value==='string'?value.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/g,'').trim().normalize('NFC').toUpperCase():'';
+const ticker=value=>typeof value==='string'?value.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/g,'').normalize('NFKC').replace(/\s+/g,' ').trim().toUpperCase():'';
 export function defaultTrendingMode({tab,query='',filters={},sort={}}={}){return tab==='trending'&&!String(query).trim()&&!Object.values(filters).some(v=>v!==null&&v!==undefined&&String(v).trim()!=='')&&(!sort?.key||sort.key==='hot'&&sort.direction!=='asc');}
-// Filters, windows and sort preferences never bypass Trending's listing policy.
-// Explicit search remains a direct route to every received contract.
-export function trendingProjectionMode({tab,query=''}={}){return tab==='trending'&&!String(query).trim();}
+// Chain/window/custom-filter choices retain the default listing policy.
+// Search and explicit manual sorting expose the original received matches.
+export function trendingProjectionMode({tab,query='',sort={}}={}){return tab==='trending'&&!String(query).trim()&&(!sort?.key||sort.key==='hot'&&sort.direction!=='asc');}
 export function trendingActivity(row){const volume24Usd=numeric(row.volumeUsd?.h24),transactions=observedActivity(row,'h24');return{volume24Usd,transactions,eligible:volume24Usd!==null&&volume24Usd>=TRENDING_ACTIVITY.volume24Usd&&transactions!==null&&transactions>=TRENDING_ACTIVITY.transactions};}
 const knownDesc=(a,b)=>a===null?b===null?0:1:b===null?-1:b-a;
-const memberOrder=(a,b)=>knownDesc(numeric(a.liquidityUsd),numeric(b.liquidityUsd))||knownDesc(numeric(a.volumeUsd?.h24),numeric(b.volumeUsd?.h24))||knownDesc(observedActivity(a,'h24'),observedActivity(b,'h24'))||(discoveryContractKey(a)<discoveryContractKey(b)?-1:discoveryContractKey(a)>discoveryContractKey(b)?1:0);
-/** Final Trending listing projection in every chain/window/sort/filter view. Never alter raw loader/cache/API records.
- * A same-ticker bucket is a presentation group, never an asset/issuer assertion.
+const memberOrder=(a,b)=>knownDesc(numeric(a.volumeUsd?.h24),numeric(b.volumeUsd?.h24))||knownDesc(numeric(a.liquidityUsd),numeric(b.liquidityUsd))||knownDesc(observedActivity(a,'h24'),observedActivity(b,'h24'))||(discoveryContractKey(a)<discoveryContractKey(b)?-1:discoveryContractKey(a)>discoveryContractKey(b)?1:0);
+/** Final default Trending projection in every chain/window/custom-filter view. Never alter raw loader/cache/API records.
+ * A same-name/ticker bucket is a presentation group, never an asset/issuer assertion.
  * No envelope time is admitted as a provider observation. */
 export function projectTrendingContracts(rows,{expanded=new Set(),now=Date.now(),window='h24',chain='all',...view}={}){
  if(!trendingProjectionMode(view))return{active:false,rows,metadata:new Map(),listingCount:rows.length,receivedContracts:rows.length};
@@ -20,13 +20,13 @@ export function projectTrendingContracts(rows,{expanded=new Set(),now=Date.now()
  const groups=new Map();for(const original of received.values()){
   // Expiry removes observations only. Identity/safety/holder facts and source clocks remain independent.
   const row=capDiscoveryObservations(original,{now});if(!discoveryCandidate(row))continue;
-  const symbol=ticker(row.token?.symbol),id=symbol&&symbol!=='?'?String(row.chainId)+'\u0000'+symbol:'contract:'+discoveryContractKey(row);
+  const symbol=ticker(row.token?.symbol),name=ticker(row.token?.name),id=symbol&&symbol!=='?'?String(row.chainId)+'\u0000'+name+'\u0000'+symbol:'contract:'+discoveryContractKey(row);
   if(!groups.has(id))groups.set(id,[]);groups.get(id).push(row);
  }
  const selected=[],byRepresentative=new Map();
  for(const[id,members]of groups){
-  const eligible=members.filter(row=>trendingCandidate(row,{window,filters:view.filters||{}})&&trendingActivity(row).eligible).sort(memberOrder);if(!eligible.length)continue;
-  const representative=eligible[0],key=discoveryContractKey(representative),ordered=[representative,...members.filter(row=>discoveryContractKey(row)!==key).sort(memberOrder)];
+  const eligible=members.filter(row=>numeric(row.liquidityUsd)!==null&&row.liquidityUsd>=1000&&trendingCandidate(row,{window,filters:view.filters||{}})&&trendingActivity(row).eligible).sort(memberOrder);if(!eligible.length)continue;
+  const representative=eligible[0],key=discoveryContractKey(representative),ordered=eligible;
   selected.push(representative);byRepresentative.set(key,{id,members:ordered,expanded:expanded.has(id),representative:key});
  }
  const ordered=rankDiscovery(selected,{window,now,chain,limit:Infinity,filters:view.filters||{}}),projected=[],metadata=new Map();

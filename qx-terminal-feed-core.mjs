@@ -2,17 +2,19 @@ import{fundFor}from'./qx-fund-catalog.mjs';
 import{quickBuyPlan}from'./qx-quick-buy-plan.mjs';
 import{priceLabel,observedAge}from'./qx-price-presentation.mjs';
 import{createFeedPriceCache}from'./qx-feed-price-cache.mjs';
-import {assetPriceFields,priceState,priceObservation} from './qx-price-state.mjs';
+import {assetPriceFields,priceState,priceObservation,isQhooksPriceAsset,QHOOKS_PRICE_IDENTITY} from './qx-price-state.mjs';
 import {priceDigits} from './qx-price.mjs'; // one price format sitewide (2026-11-12)
 import {tokenAvatar,tokenAvatarSources,avatarImage} from './qx-token-avatar.mjs';
 // Discover's data contract and presentation helpers. No DOM, wallet calls or currency estimates.
-import {WINDOWS,DISCOVERY_TABS,lifecycle,filterDiscovery} from './qx-discovery-model.mjs';
+import {WINDOWS,DISCOVERY_TABS,lifecycle,filterDiscovery,mergeLifecycle} from './qx-discovery-model.mjs';
 import { stockPair } from './full-launch/packages/multichain-launch/stock-pairs.mjs';
 import { chainById } from './chains.mjs';
 import { DIRECT_CHAINS } from './qx-elysium-direct.mjs';
 import {safetyChecked,plainMarketError} from './qx-terminal-data.mjs';
 import {officialLogo} from './qx-official.mjs';
-import {discoveryCandidate,rankDiscovery,compareHotNow} from './qx-discovery-rank.mjs';
+import {discoveryCandidate,rankDiscovery,orderByTrendingScore} from './qx-discovery-rank.mjs';
+import {activeBoost,dexPaid} from './qx-discovery-rows.mjs';
+import {rowsSignature} from './qx-feed-live.mjs';
 
 export const DASH = '—';
 // Chip order (Randall, 2026-11-09): "sol-rh-bnb-Elysium-eth-base-arb".
@@ -21,7 +23,7 @@ export const CHAINS = [
   ['99901', 'Elysium', 'elysium'], ['1', 'Ethereum', 'ethereum'], ['8453', 'Base', 'base'], ['42161', 'Arbitrum', 'arbitrum'],
   ['143', 'Monad', 'monad'],
 ];
-export const TABS = [...DISCOVERY_TABS,['funds','Funds']];
+export const TABS = [...DISCOVERY_TABS.flatMap(tab => tab[0] === 'trending' ? [tab, ['hot', 'Hot']] : [tab]),['funds','Funds']];
 export function feedSourceLabel(source){
  if(typeof source!=='string')return '';
  if(/^dex\s*screener (boosted(?:\/promoted)? tokens|boosts|promoted tokens)$/i.test(source))return 'Boosted tokens · DexScreener';
@@ -100,7 +102,15 @@ export function launchRow(market) {
     chainId: String(market.chainId), pool: market.controller, dex: 'QHooks', launch: market,
     token: { address: market.token, symbol: market.symbol, name: market.name, profileImage:market.profileImage,launchImage:market.launchImage,logo: tokenAvatar(market).src || officialLogo(market.chainId, market.token) },
     quote: { symbol: market.quoteSymbol }, createdAt: market.launchedAt,
-    priceUsd: s.priceUsd ?? null,priceAt:s.priceAt??market.priceAt??market.observedAt??(s.lastTradeAt?s.lastTradeAt*1000:null),priceSource:s.priceSource,pricePoolId:s.pricePoolId,priceSourceVersion:s.priceSourceVersion,pricesRefreshing:s.pricesRefreshing, volumeUsd: { h24: s.volume24Usd ?? null }, liquidityUsd: s.liquidityUsd ?? null,
+    // Carry only original observations already supplied by the summary/market.
+    // Explicit unknown beats a fallback; index checks and price clocks are not
+    // capitalization observations.
+    ...(Object.hasOwn(s,'observedAt')?{observedAt:s.observedAt}:Object.hasOwn(market,'observedAt')?{observedAt:market.observedAt}:{}),
+    ...(Object.hasOwn(s,'capAt')?{capAt:s.capAt}:Object.hasOwn(market,'capAt')?{capAt:market.capAt}:{}),
+    ...(Object.hasOwn(s,'stale')?{stale:s.stale}:Object.hasOwn(market,'stale')?{stale:market.stale}:{}),
+    ...(Object.hasOwn(s,'refreshFailed')?{refreshFailed:s.refreshFailed}:Object.hasOwn(market,'refreshFailed')?{refreshFailed:market.refreshFailed}:{}),
+    ...(Object.hasOwn(s,'capsRefreshing')?{capsRefreshing:s.capsRefreshing}:Object.hasOwn(market,'capsRefreshing')?{capsRefreshing:market.capsRefreshing}:{}),
+    priceUsd: s.priceUsd ?? null,priceAt:s.priceAt??market.priceAt??market.observedAt??(s.lastTradeAt?s.lastTradeAt*1000:null),priceSource:s.priceSource,pricePoolId:s.pricePoolId,priceSourceVersion:s.priceSourceVersion,pricesRefreshing:Object.hasOwn(s,'pricesRefreshing')?s.pricesRefreshing:market.pricesRefreshing, volumeUsd: { h24: s.volume24Usd ?? null }, liquidityUsd: s.liquidityUsd ?? null,
     marketCapUsd: s.mcapUsd ?? null, fdvUsd: s.fdvUsd ?? null,
     quoteAmounts: { price: s.price, volume: s.volume24, liquidity: s.liquidity, mcap: s.mcap, unit: market.quoteSymbol },
     change: { m5: null, h1: null, h6: null, h24: s.change24 ?? null },
@@ -125,7 +135,8 @@ export function knownHolderCount(row){const candidates=[row.holdersCount,row.hol
 export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24' } = {}) {
   const original=row;const chainId = String(row.chainId), rawToken=row.token||{}, fund=fundFor(chainId,rawToken.address), token=fund?{...rawToken,...fund}:rawToken;
   row=assetPriceFields(row,{chainId,token:token.address,at:row.observedAt,now});
-  if(priceState(original.capAt,now).usable)row={...row,marketCapUsd:original.marketCapUsd,fdvUsd:original.fdvUsd};
+  const canonicalCap=!isQhooksPriceAsset(chainId,token.address)||(original.priceSource==='qhooks-main-pool'&&original.pricePoolId===QHOOKS_PRICE_IDENTITY.poolId);
+  if(canonicalCap&&priceState(original.capAt,now).usable)row={...row,marketCapUsd:original.marketCapUsd,fdvUsd:original.fdvUsd};
   if(!priceState(row.priceAt,now).usable&&row.quoteAmounts)row={...row,quoteAmounts:{...row.quoteAmounts,price:null,mcap:null}};
   const chain = CHAINS.find(([id]) => id === chainId);
   // Zero means the provider doesn't know the cap: fall back to FDV (tagged), else a dash.
@@ -152,8 +163,9 @@ export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24'
     holders:compact(numeric.holders),volume: displayMoney('volume'), liquidity: displayMoney('liquidity'), mcap: capValue,
     capKind,capCaption:capValue===DASH?'syncing':capKind,
     buys: compact(buys), sells: compact(sells), makers: compact(numeric.makers), numeric,
-    // A paid DexScreener boost says so (server/market-freshness.mjs stamps the boosts fallback's rows).
-    boosted: !row.launch && (row.provenance?.discoverySource === 'dexscreener_token_boosts'||row.provenance?.promoted===true),
+    // Boosted only while a boost is active (pair boosts.active, or matched to the current boost lists under 24 h ago);
+    // a paid profile is labelled "DEX paid" instead. Neither adds rank (qx-discovery-rows.mjs).
+    boosted: activeBoost(row, now), dexPaid: !activeBoost(row, now) && dexPaid(row),
     safety: safetyLabel(row.safety), quick: row.launch ? launchQuick(row.launch, quick) : externalQuick(chainId, address, quick),
   };
 }
@@ -165,7 +177,7 @@ export function safeLogo(url) {
 
 export function sortRows(rows, sort = {}) {
   if (!SORT_KEYS.includes(sort.key)) return [...rows];
-  if(sort.key==='hot')return [...rows].sort((a,b)=>(sort.direction==='asc'?-1:1)*compareHotNow(a.row,b.row,{window:a.window||'h24'}));
+  if(sort.key==='hot'){const order=new Map(orderByTrendingScore(rows.map(vm=>vm.row),{window:rows[0]?.window||'h24'}).map((row,i)=>[row,i]));return [...rows].sort((a,b)=>(sort.direction==='asc'?-1:1)*(order.get(a.row)-order.get(b.row)));}
   const sign = sort.direction === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {
     const x = number(a.numeric[sort.key]), y = number(b.numeric[sort.key]);
@@ -200,9 +212,12 @@ export const hasTokenHash = hash => /^#(?:t|m|pool)=/.test(hash || '');
 // whichever answers first paints. Server rows stay first once both are in (dedupe by chain + token). The last good
 // list per view is kept on the device, so a reload paints it at once and a failed refresh keeps it ("Refreshing…").
 export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTimeout = 12000, browserDelay = 2500, browser = null, storage = null, minRows = 12, cacheRead = null, cacheWrite = null, priceCache = null }) {
-  let generation = 0, active = null, pendingKey = null, pendingPromise = null;
+  let generation = 0, active = null, pendingKey = null, pendingPromise = null, polling = null;
   const cache = new Map(),prices=priceCache||createFeedPriceCache({storage});
-  function cancel() { generation++; active?.abort(); active = null; pendingKey = pendingPromise = null; }
+  // D4 live polls: the server's ETag, the last browser-read rows and what was last shown, per list key.
+  const etags = new Map(), owns = new Map(), shown = new Map();
+  const remember = (map, key, value) => { map.delete(key); map.set(key, value); if (map.size > 24) map.delete(map.keys().next().value); };
+  function cancel() { generation++; active?.abort(); active = null; polling?.abort(); polling = null; pendingKey = pendingPromise = null; }
   const usable = rows => (Array.isArray(rows) ? rows : []).filter(r => r && r.token && typeof r.token.address === 'string' && CHAINS.some(([id]) => id !== 'all' && id === String(r.chainId)));
   // A server-filtered list (discofeed) is the whole answer for its filters, however short: never top it up or re-floor it.
   const full = (data,chain,filters) => {
@@ -233,14 +248,16 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
   }
   // Filters travel to the server (it filters the whole pool before its top-N cut); only the set ones are sent.
   const filterParams = filters => Object.entries(filters || {}).filter(([k, v]) => ['liquidityMin','liquidityMax','capMin','capMax','volumeMin','transactionsMin','ageMinHours','ageMaxHours','venue','hasSocials'].includes(k) && v !== '' && v != null).sort(([a], [b]) => (a < b ? -1 : 1));
-  async function serverRead(tab, chain, window, parent, filters) {
+  const feedUrl = (tab, chain, window, filters) => '/api/terminal/market/feed?' + new URLSearchParams([['tab', tab], ['chain', chain], ['window', window], ...filterParams(filters)]);
+  async function serverRead(tab, chain, window, parent, filters, key = null) {
     if (SERVER_SKIP.has(String(chain))) return null;
     const controller = new AbortController(), abort = () => controller.abort(), timer = setTimeout(abort, serverTimeout);
     parent.addEventListener('abort', abort, { once: true });
     try {
-      const response = await fetcher('/api/terminal/market/feed?' + new URLSearchParams([['tab', tab], ['chain', chain], ['window', window], ...filterParams(filters)]), { cache: 'no-store', signal: controller.signal });
+      const response = await fetcher(feedUrl(tab, chain, window, filters), { cache: 'no-store', signal: controller.signal });
       const body = await response.json();
       if (!response.ok || body?.version !== 1 || !Array.isArray(body.rows)) return null;
+      if (key && response.headers?.get?.('etag')) remember(etags, key, response.headers.get('etag'));
       return { ...body, rows: usable(body.rows) };
     } catch { return null; } finally { clearTimeout(timer); parent.removeEventListener('abort', abort); }
   }
@@ -253,11 +270,11 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
       if (!seen.has(k)) { seen.set(k,rows.length); rows.push(r); }
       else {
         const i=seen.get(k),a=rows[i],newer=r.stale!==true&&(a.stale===true||(r.observedAt||0)>(a.observedAt||0))?r:a;
-        rows[i]={...newer,provenance:{...newer.provenance,...(a.provenance?.promoted===true||r.provenance?.promoted===true?{promoted:true}:{})}};
+        rows[i]={...newer,lifecycle:mergeLifecycle(a,r),provenance:{...newer.provenance,...(a.provenance?.promoted===true||r.provenance?.promoted===true?{promoted:true}:{})}};
       }
     }
     const serverFresh = server && server.rows.length && server.stale !== true;
-    const ordered=tab==='trending'?rankDiscovery(rows,{window,chain,filters,limit:chain==='all'?100:Infinity}):rows;
+    const ordered=tab==='trending'?rankDiscovery(rows,{window,chain,filters,limit:chain==='all'?100:Infinity}):['bonding','migrated'].includes(tab)?filterDiscovery(rows,{tab,window,filters:Object.fromEntries(filterParams(filters))}):rows;
     return { version: 1, ...(server || {}), tab, chain, window, rows:ordered, total:ordered.length, pool:rows.filter(discoveryCandidate).length, browser: true, status: undefined, error: undefined, fallback: undefined,
       source: [server?.rows.length ? feedSourceLabel(server.source) : null, ...String(own.source || '').split(' · ')].filter((v, i, all) => v && !all.slice(0, i).some(p => p && p.includes(v))).join(' · ') || null,
       observedAt: serverFresh ? server.observedAt : own.observedAt, stale: serverFresh ? !!server.stale : false };
@@ -292,10 +309,9 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
     };
     try {
       if (browser) early = setTimeout(() => { if (!serverDone) void startOwn(); }, browserDelay);
-      server = prices.reconcile(await serverRead(tab, chain, window, controller.signal, filters)); serverDone = true;
+      server = prices.reconcile(await serverRead(tab, chain, window, controller.signal, filters, key)); serverDone = true;
       if (!live()) return;
-      // Movers count as full only when enough rows survive the ranking (the server's All list is mostly unranked boosts).
-      const enough = d => full(d,chain,filters) && (d.filtered === true || !MOVERS.includes(tab) || rankRows(d.rows, tab, window).length >= minRows);
+      const enough = d => enoughFor(d, tab, chain, window, filters);
       if (browser && !enough(server)) {
         // Paint whatever the server had while the browser read finishes.
         if (server?.rows.length) paintPartial();
@@ -319,6 +335,8 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
         throw new Error(plainMarketError());
       }
       cache.set(key, data); cacheWrite?.(storage, key, data);
+      if (own?.rows?.length) remember(owns, key, own);
+      remember(shown, key, rowsSignature(data));
       changed({ key, loading: false, data, error: null });
     } catch (error) {
       if (!live()) return;
@@ -330,5 +348,41 @@ export function createFeedLoader({ fetcher, changed, timeout = 12000, serverTime
       if (mine === generation) active = null;
     }
   }
-  return { load, cancel };
+  // Movers count as full only when enough rows survive the ranking (the server's All list is mostly unranked boosts).
+  function enoughFor(d, tab, chain, window, filters) { return full(d,chain,filters) && (d.filtered === true || !MOVERS.includes(tab) || rankRows(d.rows, tab, window).length >= minRows); }
+  // D4: one conditional re-read of the list on screen. Never starts the browser provider fallback (that stays with load):
+  // a thin answer reuses the last browser-read rows for this key. Resolves 'changed' | 'unchanged' | 'busy' | 'skip' | 'error'.
+  async function poll(tab, chain, window = 'h24', filters = {}) {
+    const fkey = filterParams(filters).map(([k, v]) => k + '=' + v).join('&'), key = tab + ':' + chain + ':' + window + (fkey ? ':' + fkey : '');
+    if (pendingPromise || polling) return 'busy';
+    if (SERVER_SKIP.has(String(chain))) return 'skip';
+    filters = Object.fromEntries(filterParams(filters));
+    const mine = generation, controller = new AbortController(), timer = setTimeout(() => controller.abort(), serverTimeout);
+    polling = controller;
+    try {
+      const etag = etags.get(key);
+      const response = await fetcher(feedUrl(tab, chain, window, filters), { cache: 'no-store', credentials: 'omit', signal: controller.signal, ...(etag ? { headers: { 'if-none-match': etag } } : {}) });
+      if (mine !== generation) return 'busy';
+      if (response.status === 304) return 'unchanged';
+      const body = await response.json();
+      if (mine !== generation) return 'busy';
+      if (!response.ok || body?.version !== 1 || !Array.isArray(body.rows)) return 'error';
+      if (response.headers?.get?.('etag')) remember(etags, key, response.headers.get('etag'));
+      const server = prices.reconcile({ ...body, rows: usable(body.rows) }), retained = cache.get(key) || null, own = owns.get(key);
+      let data = ranked(enoughFor(server, tab, chain, window, filters) || !own ? server : merged(server, own, tab, chain, window, filters), tab, window);
+      if (!data?.rows?.length && data?.filtered !== true) return 'error';
+      // Same guard as load: a much thinner read keeps the last good rows behind the new ones, marked refreshing.
+      if (data.rows.length && data.filtered !== true && retained?.rows?.length && data.rows.length < retained.rows.length / 2) {
+        const seen = new Set(data.rows.map(r => String(r.chainId) + ':' + String(r.token.address).toLowerCase()));
+        data = { ...data, rows: [...data.rows, ...retained.rows.filter(r => r?.token?.address && !seen.has(String(r.chainId) + ':' + String(r.token.address).toLowerCase()))], stale: true };
+      }
+      const signature = rowsSignature(data);
+      if (signature === shown.get(key)) return 'unchanged';
+      remember(shown, key, signature); cache.set(key, data); cacheWrite?.(storage, key, data);
+      changed({ key, loading: false, data, error: null, live: true });
+      return 'changed';
+    } catch { return mine === generation ? 'error' : 'busy'; }
+    finally { clearTimeout(timer); if (polling === controller) polling = null; }
+  }
+  return { load, cancel, poll };
 }

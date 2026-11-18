@@ -1,3 +1,4 @@
+import {createReadFetch} from './qx-community-retry.mjs';
 import {communityTarget,communityKey} from './qx-community-intent.mjs';
 import {isElysiumDiscussion} from './qx-community-capabilities.mjs';
 import {memberWalletKey} from './qx-member-wallet.mjs';
@@ -28,6 +29,7 @@ export function browserFollowImport(storage){
  return{subjects:[...unique.values()],clear(){for(const cleanup of cleanups)try{cleanup();}catch{}}};
 }
 export function createCommunityFollowing({storage=()=>localStorage,fetcher=(...args)=>globalThis.fetch(...args),session=()=>null,events=globalThis.window,now=Date.now,limit=1000}={}){
+ fetcher=createReadFetch(fetcher);
  let memory=[],owner=null,inflight=null,sessionReader=session,configured=false,signInHandler=null;
  const current=()=>{const value=sessionReader?.();return value?.wallet&&value.token&&value.expiresAt>now()?value:null;};
  const notify=()=>events?.dispatchEvent?.(typeof CustomEvent==='function'?new CustomEvent(EVENT):new Event(EVENT));
@@ -58,6 +60,7 @@ export const communityFollowing=createCommunityFollowing();
 // public page never signs or changes a follow; migration runs only with sign-in.
 if(globalThis.window&&globalThis.document)void import('./qx-board-session.mjs').then(auth=>{communityFollowing.configure(()=>auth.boardSession(),{fallback:true});return communityFollowing.refresh();}).catch(()=>{});
 export async function migrateCommunityFollowing(session,{storage=()=>localStorage,fetcher=(...args)=>globalThis.fetch(...args),current=()=>true,now=Date.now}={}){
+ fetcher=createReadFetch(fetcher);
  const store=createCommunityFollowing({storage,fetcher,now,session:()=>current()?session:null});await store.refresh();
  await communityFollowing.refresh().catch(()=>{});
 }

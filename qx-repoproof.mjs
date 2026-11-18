@@ -59,6 +59,7 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
   clearTimeout(retryTimer);retryTimer=null;
   const alive=current(),blocked=envelope?.state==='busy'||envelope?.state==='rate_limited',waiting=retryTime!==null&&Date.now()<retryTime||blocked&&retryTime===null;
   check.disabled=!alive||pending||waiting||!!qproofReadParams(doc.location?.search).cached_only;refresh.disabled=!alive||pending;
+  const summaryRefresh=reportHost.querySelector('[data-proof-action="refresh"]');if(summaryRefresh){summaryRefresh.disabled=refresh.disabled;summaryRefresh.textContent=pending?'Refreshing…':'Refresh';}
   check.textContent=pending?'Reading…':envelope?.report?'Run another check':'Check with QProof';
   const texts={ready:'Report available',refreshing:'Refreshing…',not_checked:'Refreshing…',unavailable:'Refreshing…',busy:'Check in progress',rate_limited:'Check limit reached'};
   const queued=envelope?.freshness?.refreshQueued===true||envelope?.queued===true;
@@ -80,11 +81,12 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
   const report=envelope?.report;if(!report||typeof report!=='object'){reportHost.replaceChildren();return;}
   const prior=new Map([...reportHost.querySelectorAll('details')].map(node=>[node.getAttribute('data-qpr-detail'),node.open]));
   const creator=typeof getCreator==='function'?getCreator(envelope):tokenCreatorTruth({chainId:target.chainId,token:target.kind==='token'?target.address:report.input?.launchToken,reports:[envelope]});
-  const coverage=report.coverage||{},checks=(Array.isArray(report.checks)?report.checks:[]).map(c=>['token','launch'].includes(target.kind)?creatorCheckView(c,creator,envelope):c),receipts=Array.isArray(report.receipts)?report.receipts:[];
+  const presentation=readQProofPresentation(envelope),rank={danger:0,watch:1,clear:2,incomplete:3,info:4};
+  const coverage=report.coverage||{},checks=presentation.checks.map(c=>['token','launch'].includes(target.kind)?creatorCheckView(c,creator,envelope):c).sort((a,b)=>(rank[a.level]??3)-(rank[b.level]??3)),receipts=Array.isArray(report.receipts)?report.receipts:[];
   const counts=qproofCheckSummary({checks});let truth=null;
   if(['token','launch'].includes(target.kind))try{truth=tokenTruth({subject:{chainId:target.chainId,token:target.kind==='token'?target.address:report.launchToken||report.input?.launchToken||report.subject?.address},report,envelope,creatorIdentity:creator});}catch{}
   const authorityLabel=v=>v?.label||'Unknown';
-  const presentation=readQProofPresentation(envelope),summary=renderQProofSummary(h,presentation,{onRefresh:()=>request('GET'),refreshing:pending});
+  const summary=renderQProofSummary(h,presentation,{onRefresh:()=>request('GET'),refreshing:pending});
   const link=safeQProofUrl(presentation.links.report)||reportURL(report.url),sell=repoProofSellEvidence(report);
   const source=h('div',{class:'qpr-report-overview'},summary.bar,summary.strip,summary.fee,
    link?h('a',{class:'qpr-report-link',href:link},'Open full QProof report'):h('p',{class:'qpr-unknown'},'Report link not available.'),
@@ -94,9 +96,9 @@ export function mountRepoProofCheck(container,{subject,getSubject=()=>subject,on
    ...[['Mint authority',truth?.authorities.mint],['Freeze authority',truth?.authorities.freeze]].map(([name,v])=>h('div',{},h('dt',{},name),h('dd',{},authorityLabel(v),v?.address?h('code',{},v.address):null)))):null;
   const sellNode=target.kind==='token'||target.kind==='launch'||report.observations?.simulation?h('div',{class:'qpr-sell'},h('h4',{},'Sell evidence'),h('b',{},sell.headline),h('p',{},sell.detail)):null;
   const receiptIds=new Map(receipts.filter(r=>Number.isSafeInteger(r?.index)&&r.index>=0).map(r=>[r.index,id+'-receipt-'+r.index]));
-  const rows=checks.map((c,i)=>{const status=['danger','caution','clear','unknown','info'].includes(c?.status)?c.status:'unknown',evidence=Array.isArray(c?.evidence)?c.evidence:[];
-   return disclosure('check-'+i,h('span',{class:'qpr-check-title'},h('span',{class:'qpr-check-status '+status},label(status)),h('b',{},String(c?.title||'Untitled check'))),h('div',{},
-    c?.category?h('p',{class:'qpr-category'},'Category: '+String(c.category)):null,h('p',{class:'qpr-detail'},typeof c?.detail==='string'&&c.detail?c.detail:'No further detail returned.'),
+  const rows=checks.map((c,i)=>{const status=c.status,evidence=(Array.isArray(c.evidence)?c.evidence:[]).filter(index=>Number.isSafeInteger(index)&&index>=0);
+   return disclosure('check-'+i,h('span',{class:'qpr-check-title'},h('span',{class:'qpr-check-status '+status},c.label),h('b',{},String(c?.title||'Untitled check'))),h('div',{},
+    c?.category?h('p',{class:'qpr-category'},'Category: '+String(c.category)):null,c.why&&c.why!==c.detail?h('p',{class:'qpr-why'},c.why):null,h('p',{class:'qpr-detail'},c.detail||'No further detail returned.'),
     c?.data&&typeof c.data==='object'&&!Array.isArray(c.data)&&Object.keys(c.data).length?disclosure('check-fields-'+i,'Returned check fields',fields(c.data)):null,
     h('div',{class:'qpr-evidence'},'Evidence: ',...(Array.isArray(c.evidenceLinks)?c.evidenceLinks:[]).filter(e=>safeQProofUrl(e.url)).map(e=>h('a',{href:safeQProofUrl(e.url),target:'_blank',rel:'noopener noreferrer'},e.label||e.value||'Open evidence')),evidence.length?evidence.map(index=>receiptIds.has(index)?h('button',{type:'button',class:'qpr-source-link',onclick:()=>{receiptNode.open=true;const receipt=doc.getElementById(receiptIds.get(index));receipt?.scrollIntoView({block:'nearest'});receipt?.focus({preventScroll:true});}},'Receipt '+index):h('span',{},'Receipt '+scalar(index)+' not returned')):h('span',{},'No receipt pointer returned.'))),status==='danger'||status==='caution');});
   const checklist=h('div',{class:'qpr-checks'},h('h4',{},'All returned checks · '+checks.length),rows.length?rows:h('p',{class:'qpr-unknown'},'No check details returned.'));
