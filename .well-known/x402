@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "resources": [
+    "https://qhooks.com/api/x402/v1/qproof?chain=4663&address=0x20429af7ca3b0ce4d99edbaa0693f26c5df05195",
+    "https://qhooks.com/api/x402/v1/qproof/scan?chain=4663&address=0x20429af7ca3b0ce4d99edbaa0693f26c5df05195"
+  ]
+}

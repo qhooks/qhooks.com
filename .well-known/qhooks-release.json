@@ -14,7 +14,7 @@
     ".well-known/qhooks-release.json",
     "README.md"
   ],
-  "releaseId": "8f4aad10-cf9e-45ba-afcd-0f046e8a166c",
+  "releaseId": "28586b61-2272-4bb2-acfe-d3144d7200d0",
   "files": {
     ".well-known/assetlinks.json": {
       "sha256": "c050db9daa7f0c6ea2110ab00b609a2a99970d7366c708a84844a8f6e0928ba0",
@@ -284171,39 +284171,47 @@
     "qx-hook-referral.mjs": {
       "sha256": "ce5dc2d24a039f3ac8533ea20bd6079ac68e46f9886e490d49743d0503dbe779",
       "bytes": 8829
+    },
+    ".well-known/x402": {
+      "sha256": "3b29998dffd2090114ff9ca46ca3ad80dbb0415fa48cd55ffa1a83b8ae832739",
+      "bytes": 259
+    },
+    "_headers": {
+      "sha256": "576771f971369b0e54c8addf4838086ed0a07cd49b8add12eb821e1f72866c31",
+      "bytes": 129
+    },
+    "openapi.json": {
+      "sha256": "e8b097e5fa305a27b957046e6ad0ca4c7faead48049bb55cc72d9856791432af",
+      "bytes": 5350
     }
   },
-  "contentDigest": "1784462be84b72449339f8795a4d468e8b0491d105ba036c094280122ff15af8",
-  "sourceTree": "work/qhooks-autonomo-hook-root-rel-r2-20261119",
+  "contentDigest": "cb93a318a62c0b3db156b4bd5bc58b5ced528d1521f99e9c477daaff2aba26cb",
+  "sourceTree": "work/qhooks-x402scan-static-root-rel-20261119",
   "sourceWorkerSha256": "5e64ad9863f0f5a07edef2234ad8b3099e6889090ec0d8a2d427080ab249ac21",
-  "sourceManifestSha256": "624cacde0f29944c204e67c3bc26942834da81dfd3f7303fa1995f5c2529de55",
-  "sourceFreezeSha256": "f9659b7c1937f617eee392fb413fc388af8d85ef0022e2beb9e374ec9fb9e05d",
+  "sourceManifestSha256": "0885c7fff4fcf87b8c4d6509ae5ca860e2387c578e7b0aa91adbb1b01924aa7a",
+  "sourceFreezeSha256": "0885c7fff4fcf87b8c4d6509ae5ca860e2387c578e7b0aa91adbb1b01924aa7a",
   "all14ArtifactDigest": "67c3c93f462d591e7aaa01fa0c5bf61e86a34bd23dacb4b823c696acc3691397",
-  "sourcePatchSha256": "c51638876ce7a29438a0bc1edc0da96a1c735596739fbe9eb343ddc8e562eaf5",
-  "sourceReleaseReceiptSha256": "91c9354d916de3620f093240c347a7c53d5281fccdd76537952fabe2be4f5906",
-  "sourceReleaseReceiptStatus": "LIVE_AUTONOMO_HOOK_SHARE_EXISTING_METADATA_INCIDENT_OPEN",
+  "sourcePatchSha256": null,
+  "sourceReleaseReceiptSha256": "a207c46b8f7568404e532817a233ace8ec2bcf089afad7d842a8507aa7ac45dc",
+  "sourceReleaseReceiptStatus": "LIVE_X402SCAN_DISCOVERY_VERIFIED",
   "acceptance": {
-    "sourceAndLocalReleaseGates": "Root exact LIVE receipt bound; public mirror does not independently repeat release gates",
+    "sourceAndLocalReleaseGates": "Three static additions only. Worker, server, all existing public assets and page graphs byte-identical; 188 routes unchanged; exact draft GET/HEAD JSON checks and live readback accepted.",
+    "connectedWebKit": "Reused unchanged sealed CURRENT artifacts; no new browser run.",
     "postDeployWatch": {
       "status": "OBSERVED_WATCH_CRITERION_MET",
-      "monitorSeconds": 90,
-      "observedEventSpanSeconds": 84.946,
-      "sampledNotPopulation": true,
-      "fetches": 198,
+      "seconds": 60.389,
+      "observedSpanSeconds": 55.041,
+      "fetches": 82,
       "fetch5xx": 0,
       "exceptions": 0,
-      "keeperLeaseBusyEvents": 0,
-      "scheduled": 1,
-      "criterionMet": true
+      "keeperLeaseBusy": 0,
+      "scheduledOk": 4,
+      "sampled": true,
+      "globalHealthClaim": false
     },
-    "fundedFinancialProof": "No independent funded/signing/mined-payment proof is claimed by this static mirror",
-    "remainingIncident": {
-      "token": "CWGTA RH",
-      "status": "OPEN_PREEXISTING_METADATA_503",
-      "notResolvedOrClaimedByThisRelease": true
-    }
+    "fundedFinancialProof": "No funded calls. Discovery documents are not settlement proof."
   },
-  "provenance": "Exact static public-source/checksum attestation for Root LIVE Autonomo hook-referral integration. Server-only registry data/audit tables and backend source excluded. Pre-existing CWGTA RH metadata503 remains OPEN and unrelated. Actual Root release status is preserved; no global-health, launch-commission, funded or mined-payment claim.",
+  "provenance": "Exact static public-source/checksum attestation for the accepted x402scan discovery files. TradingView exclusions, prior assets, normal hooks and license checks preserved. Backend code and credentials excluded.",
   "apacheSuccessorPins": {
     "priorPinsPreserved": 79,
     "totalPins": 81,
@@ -284211,9 +284219,8 @@
     "policyExpansion": false
   },
   "priorReleaseAttestation": {
-    "releaseId": "5bb05117-3b40-41ab-a3e1-43c0b454a161",
-    "contentDigest": "49c2dddc10b26bcb0fd4d81027eca126915945143916711a4806fad5d9d539ae",
-    "sourceReleaseReceiptStatus": "LIVE_AUTONOMO_REGISTRY_EXISTING_METADATA_INCIDENT_OPEN",
-    "sourceReleaseReceiptSha256": "801e46fade3b4521f1500e71996c95573f8d6a5e81a842c6934d6774f14e4850"
+    "releaseId": "8f4aad10-cf9e-45ba-afcd-0f046e8a166c",
+    "contentDigest": "1784462be84b72449339f8795a4d468e8b0491d105ba036c094280122ff15af8",
+    "sourceReleaseReceiptSha256": "91c9354d916de3620f093240c347a7c53d5281fccdd76537952fabe2be4f5906"
   }
 }

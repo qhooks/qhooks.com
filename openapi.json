@@ -1,0 +1,173 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "QHooks QProof",
+    "version": "1.0.0",
+    "description": "Token-risk evidence for agents. Stored reports cost $0.02 and fresh scan requests cost $0.25 through the x402 HTTP interface.",
+    "x-guidance": "GET /api/x402/v1/qproof returns stored evidence. GET /api/x402/v1/qproof/scan requests fresh evidence. Both take chain and address query parameters. Payment network and analysis chain are separate. Unknown, stale and incomplete results remain explicit.",
+    "contact": {
+      "name": "QHooks",
+      "email": "team@qhooks.com",
+      "url": "https://qhooks.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://qhooks.com"
+    }
+  ],
+  "paths": {
+    "/api/x402/v1/qproof": {
+      "get": {
+        "operationId": "qproof_stored",
+        "summary": "QProof stored report",
+        "description": "Saved token-risk evidence with its original report time, source links, check status and unknown or stale values.",
+        "tags": [
+          "Token risk"
+        ],
+        "parameters": [
+          {
+            "name": "chain",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Supported EVM analysis chain identifier, independent of the payment network.",
+              "examples": [
+                "4663"
+              ]
+            },
+            "example": "4663"
+          },
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[a-fA-F0-9]{40}$",
+              "description": "EVM token contract address.",
+              "examples": [
+                "0x20429af7ca3b0ce4d99edbaa0693f26c5df05195"
+              ]
+            },
+            "example": "0x20429af7ca3b0ce4d99edbaa0693f26c5df05195"
+          }
+        ],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.02"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "responses": {
+          "200": {
+            "description": "QProof JSON result; unavailable, stale and partial states remain data, not a Clear verdict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required. Runtime x402 offers set network, token, atomic amount and merchant."
+          },
+          "400": {
+            "description": "Invalid or unsupported token input."
+          },
+          "429": {
+            "description": "Request or scan admission limit."
+          },
+          "503": {
+            "description": "Service or evidence unavailable."
+          }
+        }
+      }
+    },
+    "/api/x402/v1/qproof/scan": {
+      "get": {
+        "operationId": "qproof_fresh",
+        "summary": "QProof fresh scan",
+        "description": "A new token-risk scan request for a supported EVM token. Reports retain incomplete findings, source links and unknown values.",
+        "tags": [
+          "Token risk"
+        ],
+        "parameters": [
+          {
+            "name": "chain",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Supported EVM analysis chain identifier, independent of the payment network.",
+              "examples": [
+                "4663"
+              ]
+            },
+            "example": "4663"
+          },
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[a-fA-F0-9]{40}$",
+              "description": "EVM token contract address.",
+              "examples": [
+                "0x20429af7ca3b0ce4d99edbaa0693f26c5df05195"
+              ]
+            },
+            "example": "0x20429af7ca3b0ce4d99edbaa0693f26c5df05195"
+          }
+        ],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.25"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "responses": {
+          "200": {
+            "description": "QProof JSON result; unavailable, stale and partial states remain data, not a Clear verdict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required. Runtime x402 offers set network, token, atomic amount and merchant."
+          },
+          "400": {
+            "description": "Invalid or unsupported token input."
+          },
+          "429": {
+            "description": "Request or scan admission limit."
+          },
+          "503": {
+            "description": "Service or evidence unavailable."
+          }
+        }
+      }
+    }
+  }
+}
