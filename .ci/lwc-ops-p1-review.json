@@ -1,0 +1,47 @@
+{
+  "status": "INDEPENDENT_NARROW_APACHE_SOURCE_REVIEW",
+  "sourceRelease": "dd427398-554d-40a6-a5c6-95f78cf5d1b5",
+  "sourceWorkerSha256": "f5afa605366e80b239191d226d002790d811f26462e39b224e9d97f7aeb2640f",
+  "existingPins": 63,
+  "candidatePins": 65,
+  "newPinCount": 2,
+  "allPriorPolicyRowsAndMetadataUnchanged": true,
+  "unconditionalAdvancedChartsPathBansUnchanged": true,
+  "guardSha256": "68e9e8885b8478d85f2b126f189ccb7e32a6efc2b2eb2e6e97a71b7133159289",
+  "helperSha256": "03285eca548709d395d82680b71adb767037b235cfc08b1fc343f8d6a04fc64a",
+  "priorPolicySha256": "23ce710540cb07c7afb3cb112d95c90b76cc2359ccb06864746aaa771c7d9915",
+  "candidatePolicySha256": "adbc6a883ae23e9ec3570096b0c3fc8ab7c1f6ea24f240902a9408751326a1f7",
+  "license": {
+    "path": "vendor/lightweight-charts/LICENSE",
+    "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+  },
+  "licenseMatchesPrior": true,
+  "standaloneApacheVersion": "4.2.3",
+  "standaloneInputSha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768",
+  "bundles": [
+    {
+      "path": "b/ops-p1-curve-fu16-20261119/terminal/qx-terminal.QZQNGRWC.mjs",
+      "bytes": 407768,
+      "sha256": "cfb1375e381e03cbd9dcccdd5c1d95c3ac672f8a27c946bac7fe2ddeb50abcd7",
+      "brandMentions": 2,
+      "allMentionsMatchExistingApacheAttributionRules": true
+    },
+    {
+      "path": "b/ops-p1-curve-fu16-20261119/x-tracker/c.3JSX6SCP.mjs",
+      "bytes": 161341,
+      "sha256": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+      "brandMentions": 2,
+      "allMentionsMatchExistingApacheAttributionRules": true
+    }
+  ],
+  "terminalImportOnlyProof": {
+    "priorPath": "b/ux-g2-20261118/terminal/qx-terminal.O5VEIGJQ.mjs",
+    "priorSha256": "dde8cfd0ad734009a910823a5cf3d2b41e3c70cb3bdb2a4ed7ded4ccfbcf4964",
+    "newSha256": "cfb1375e381e03cbd9dcccdd5c1d95c3ac672f8a27c946bac7fe2ddeb50abcd7",
+    "bytesChanged": 24,
+    "change": "Exactly three imported chunk filenames; all other code identical",
+    "normalizedImportCodeSha256": "d6d08b1b0dc1d88582eb878e3e0e9870746872fcba9a9c94d46f8992c110554c"
+  },
+  "xTrackerByteExactPriorPath": "b/ux-g2-20261118/x-tracker/c.3JSX6SCP.mjs",
+  "authority": "Root explicitly requested independent narrow review against existing Apache4.2.3 exact-pin policy and supplied actual deployment UUID. No new guard exception or licensed Advanced Charts admission. Root alone reviews and publishes the mirror."
+}

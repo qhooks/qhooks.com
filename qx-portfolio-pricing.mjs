@@ -12,6 +12,15 @@ export function portfolioPriceQuarantined(asset,{chainId,token=asset?.address}={
  return String(chainId)==='4663'&&/^0x[0-9a-f]{40}$/i.test(String(token||''))&&String(token).toLowerCase()!=='0x5fc5360d0400a0fd4f2af552add042d716f1d168'&&String(asset?.symbol||'').trim().toUpperCase()==='USDG';
 }
 export function portfolioPriceFields(asset,{chainId,token=asset?.address,at=null,now=Date.now()}={}){
+ // A retained snapshot/browser observation cannot revive a third-party pool
+ // valuation for a token still identified as trading on its own curve.
+ if(asset?.curve?.phase==='curve'){
+  const curve=asset.curve.curve,own=(source,pool)=>source==='own-curve-state'&&typeof curve==='string'&&/^0x[0-9a-f]{40}$/i.test(curve)&&typeof pool==='string'&&pool.toLowerCase()===curve.toLowerCase();
+  const current=own(asset.priceSource,asset.pricePoolId),retained=own(asset.lastKnownPriceSource,asset.lastKnownPricePoolId);
+  asset={...asset,...current?{}:{priceUsd:null,priceAt:null,priceObservedAt:null,observedAt:null,priceSource:null,pricePoolId:null,priceEvidence:null,valueUsd:units(asset)===0?0:null,change24:null,changeAt:null,pricesRefreshing:true},
+   ...retained?{}:{lastKnownPriceUsd:null,lastKnownPriceAt:null,lastKnownPriceSource:null,lastKnownPricePoolId:null},priceReference:null,valuationAssumption:null};
+ }
+
  const sourceAt=Object.hasOwn(asset||{},'priceAt')?asset.priceAt:Object.hasOwn(asset||{},'priceObservedAt')?asset.priceObservedAt:asset?.observedAt??null;
  const out=assetPriceFields({...asset,priceAt:sourceAt},{chainId,token,at:null,now});
  if(portfolioPriceQuarantined(asset,{chainId,token}))return {...out,priceUsd:null,priceAt:null,priceSource:null,pricePoolId:null,
