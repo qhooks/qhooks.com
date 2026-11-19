@@ -130,7 +130,8 @@ export function feeSwapCall(chainId, hops, amountIn, minOut, wrap, feeOnInput, d
 }
 /// The referrer this visitor arrived with (wallet-early.js stores it from ?ref=), never the trader themselves.
 export function savedReferrer() {
-  let r = null; try { r = localStorage.getItem('qhooks:ref'); } catch {}
+  if (['pending','unavailable'].includes(globalThis.__qhooksPartnerReferral?.status)) throw new Error('Your referral link is still loading. Refresh and try again.');
+  let r = globalThis.__qhooksPartnerReferral?.referrer || null; try { const stored=localStorage.getItem('qhooks:ref');if(/^0x[0-9a-f]{40}$/.test(stored||'')&&!/^0x0{40}$/.test(stored))r=stored; } catch {}
   const me = (connectedAddress() || '').toLowerCase();
   return r && /^0x[0-9a-f]{40}$/.test(r) && r !== me ? r : null;
 }

@@ -1,0 +1,58 @@
+{
+  "status": "EXACT_SOURCE_BOUND_APACHE_SUCCESSORS_READY_FOR_ROOT_PUBLICATION",
+  "sourceRelease": "5bb05117-3b40-41ab-a3e1-43c0b454a161",
+  "sourceFreezeSha256": "5e7dc0e0a14142f1bbf5b4048d43e9c533b864dd0a4408792afe001ea0b04c1f",
+  "sourceGraphDigest": "58122c84098a712d3869016581b6c31abb74b587d1e52c4d0ab9712f3ad085b9",
+  "priorPinsPreserved": 77,
+  "totalPins": 79,
+  "license": {
+    "path": "vendor/lightweight-charts/LICENSE",
+    "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+  },
+  "standaloneApacheVersion": "4.2.3",
+  "standaloneInputSha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768",
+  "bundles": [
+    {
+      "path": "b/autonomo-registry-20261119/terminal/qx-terminal.OCNQN635.mjs",
+      "sha256": "dda538133e83267679bd97737dbcc144e7a6ca9e64aedd834ce807363e9ba5fa",
+      "bytes": 407820,
+      "brandMentions": 2,
+      "byteExactPriorPaths": [],
+      "sourceLineage": "Sealed Root canonical terminal graph with reviewed referral-default guard changes; existing LWC input/license/attribution retained. Not claimed imports-only."
+    },
+    {
+      "path": "b/autonomo-registry-20261119/x-tracker/c.3JSX6SCP.mjs",
+      "sha256": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+      "bytes": 161341,
+      "brandMentions": 2,
+      "byteExactPriorPaths": [
+        "b/compact-onboarding-r2-current-20261117/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-recurrence-20261117/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-prices-complete-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-prices-recovery-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-complete-unpriced-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-qproof-combined2-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/qproof-public-compat-root-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-cold-market-r2-root-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-e-seal2-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-g2-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ops-p1-curve-fu16-20261119/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-g3a-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-g3cg4-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-s1rel-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ops-gt-elysium-20261119/x-tracker/c.3JSX6SCP.mjs",
+        "b/terminal-intent-pulse-p0-20261119/x-tracker/c.3JSX6SCP.mjs",
+        "b/terminal-intent-pulse-p0-r2-20261119/x-tracker/c.3JSX6SCP.mjs"
+      ],
+      "sourceLineage": "Byte-exact prior Apache-containing chunk"
+    }
+  ],
+  "sourceAuthoredDeltaPins": {
+    "wallet-early.js": "680e7132a919edaf520aa3d3c5fe8ee01be3e7c4d4f81553158718a9d95b71ad",
+    "qx-swap.mjs": "ed92d333dd6342da3028710558aead7ddb9e520bf7045b39f6ce19586ab594dd",
+    "agent-source.mjs": "a855b49623ac2d49df933e7c6d095323074ec99e0d32dc9c3ea4eb6a71d8d295"
+  },
+  "policyExpansion": false,
+  "authority": "Root authorized mirror prep. No proprietary-library policy expansion; Root alone adopts LIVE metadata and publishes.",
+  "sourceReleaseReceiptSha256": "801e46fade3b4521f1500e71996c95573f8d6a5e81a842c6934d6774f14e4850"
+}

@@ -2,6 +2,7 @@
 export const AGENT_SOURCES = Object.freeze([
   "registry",
   "nomad",
+  "autonomo",
   "cursor-directory",
   "claude-plugin",
   "glama",
@@ -25,10 +26,14 @@ export const AGENT_SOURCES = Object.freeze([
 ]);
 export function agentSource(value) {
   if (typeof value !== "string") return null;
+  // Campaign names are public labels, never economic referrer wallets. Bound
+  // arbitrary partners below; the writer caps dynamic labels per UTC day.
+  if (value.length > 32) return null;
   value = value.toLowerCase();
   return AGENT_SOURCES.includes(value) ||
     /^dm-[a-z0-9_]{1,15}$/.test(value) ||
-    /^guide-[1-9][0-9]{0,2}$/.test(value)
+    /^guide-[1-9][0-9]{0,2}$/.test(value) ||
+    /^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*$/.test(value)
     ? value
     : null;
 }
