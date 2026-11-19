@@ -1,0 +1,72 @@
+{
+  "status": "SOURCE_PROVENANCE_REVIEW_PASS_ROOT_ADOPTION_PENDING",
+  "sourceRelease": "f1172965-cbca-4444-aea5-111f12708b4a",
+  "sourceWorkerSha256": "4b01601e4ee571ec1b85143a0db2c1eab6bb9a0c046dedc33b03a82383e7fd1d",
+  "sourceReleaseStatus": "LIVE_T30_WATCH_RUNNING",
+  "sourceReceiptSha256": "93677d215f0442f1efbec463f79a694aea2adec2b9def0bdf404831d9482ae3b",
+  "existingPins": 71,
+  "candidatePins": 73,
+  "newPins": {
+    "b/ops-gt-elysium-20261119/terminal/qx-terminal.J4ZW33NJ.mjs": "ceb08133f1d29cdb5f872733171d4510d46526489e31d30a029205c2b7da2ef0",
+    "b/ops-gt-elysium-20261119/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1"
+  },
+  "prior71PinsPreserved": true,
+  "standaloneVersion": "4.2.3",
+  "standaloneInputSha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768",
+  "licenseSha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823",
+  "graphs": {
+    "terminal": {
+      "manifestSha256": "d22610a0cc5973b8faf276461fb4de33f9a48f263ebf07a5537113d441ffeebd",
+      "vendorInputSha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768",
+      "parentVendorInputIdentical": true,
+      "changedInputs": {
+        "qx-display-rpc.mjs": {
+          "before": "4cd7f02fd46c15a81b60bafde1aa80f84804bc757b1bba3e97b6b0bc66d06eb5",
+          "after": "b58e37739039eeddc866c0ed9cc0cd7b885cfe7a50b2bcd01e2cc534716a5fa6"
+        },
+        "qx-elysium-direct.mjs": {
+          "before": "ee701fa777a0dc851f3dea1a5e2bed744710d680c6bbd3147d096f7ddc39723f",
+          "after": "907a7b3f2dd9f613b8dfb29b88fd50d3bae07404e30a98648fc2d9f6210064da"
+        },
+        "qx-gecko-read.mjs": {
+          "before": "f87bd5591302bcfe6cfb7064ed3cb7da54bdc2f858e5c405a0ab23a767b9411f",
+          "after": "04b36946c989157f15571a5de3141f6296536a4cb055975a76ee8801794279ad"
+        }
+      }
+    },
+    "x-tracker": {
+      "manifestSha256": "231135a402048f0e3b3a7c60c2c531120faeb2a49eb68757cfbd018aad1aa11e",
+      "vendorInputSha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768",
+      "parentVendorInputIdentical": true,
+      "changedInputs": {
+        "qx-elysium-direct.mjs": {
+          "before": "ee701fa777a0dc851f3dea1a5e2bed744710d680c6bbd3147d096f7ddc39723f",
+          "after": "907a7b3f2dd9f613b8dfb29b88fd50d3bae07404e30a98648fc2d9f6210064da"
+        },
+        "qx-gecko-read.mjs": {
+          "before": "f87bd5591302bcfe6cfb7064ed3cb7da54bdc2f858e5c405a0ab23a767b9411f",
+          "after": "04b36946c989157f15571a5de3141f6296536a4cb055975a76ee8801794279ad"
+        }
+      }
+    }
+  },
+  "checks": [
+    {
+      "path": "b/ops-gt-elysium-20261119/terminal/qx-terminal.J4ZW33NJ.mjs",
+      "sha256": "ceb08133f1d29cdb5f872733171d4510d46526489e31d30a029205c2b7da2ef0",
+      "beforePinsRefused": true,
+      "proposedExactPinAcceptedByUnchangedHelper": true,
+      "tradingviewAttributionsOnly": true
+    },
+    {
+      "path": "b/ops-gt-elysium-20261119/x-tracker/c.3JSX6SCP.mjs",
+      "sha256": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+      "beforePinsRefused": true,
+      "proposedExactPinAcceptedByUnchangedHelper": true,
+      "tradingviewAttributionsOnly": true
+    }
+  ],
+  "guardSha256": "68e9e8885b8478d85f2b126f189ccb7e32a6efc2b2eb2e6e97a71b7133159289",
+  "allowHelperSha256": "03285eca548709d395d82680b71adb767037b235cfc08b1fc343f8d6a04fc64a",
+  "review": "Only exact Apache-2.0 LWC successors: identical pinned4.2.3input/license and exact2allowed attribution mentions; x-tracker wholebytes match14priorapproved namespace outputs. Terminal changed inputs are the approved OPS browser source. No proprietaryAdvancedCharts inputs, path exclusion/helper/CI/hook/private-policy expansion. Root must review/adopt; currentmirror71policy remains unchanged."
+}

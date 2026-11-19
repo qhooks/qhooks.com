@@ -6,15 +6,16 @@
 // - the other side must be native HYPE or WHYPE; hooks must be none or on REVIEWED_HOOKS;
 // - the deepest qualifying pool (by listed USD liquidity) wins.
 import {chainById} from './chains.mjs';
+import {readGecko} from './qx-gecko-read.mjs';
 
 import {DIRECT_CHAINS, Z, INITIALIZE, REVIEWED_HOOKS, hasDirectRoute, low, sha256Hex, word, signed24, keyFromInitialize, judgeKey} from './qx-elysium-keys.mjs';
 // Moved to qx-elysium-keys.mjs (pure, Worker-safe); re-exported so callers keep importing from here.
 export {DIRECT_CHAINS, REVIEWED_HOOKS, hasDirectRoute, keyFromInitialize, judgeKey};
 async function geckoPools(token, signal) {
   try {
-    const r = await fetch('https://api.geckoterminal.com/api/v2/networks/elysium/tokens/' + token + '/pools?page=1', {headers: {accept: 'application/json'}, signal});
-    if (!r.ok) return [];
-    return ((await r.json()).data || []).filter(p => /uniswap-v4/.test(p.relationships?.dex?.data?.id || '')).map(p => ({address: low(p.attributes?.address), liquidityUsd: Number(p.attributes?.reserve_in_usd) || 0}));
+    const value = await readGecko('https://api.geckoterminal.com/api/v2/networks/elysium/tokens/' + token + '/pools?page=1', {signal});
+    if (!value) return [];
+    return (value.body.data || []).filter(p => /uniswap-v4/.test(p.relationships?.dex?.data?.id || '')).map(p => ({address: low(p.attributes?.address), liquidityUsd: Number(p.attributes?.reserve_in_usd) || 0}));
   } catch { return []; }
 }
 /// The deepest tradable pool for an outside token: {key, quote, poolId, liquidityUsd, hookNote} or {refused, detail}.

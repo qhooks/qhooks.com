@@ -2,7 +2,7 @@
 export const PUBLIC_RPC = Object.freeze({
   'https://mainnet.base.org/': '8453', 'https://arb1.arbitrum.io/rpc': '42161',
   'https://ethereum-rpc.publicnode.com/': '1', 'https://bsc-dataseed.bnbchain.org/': '56', 'https://bsc-rpc.publicnode.com/': '56',
-  'https://rpc.mainnet.chain.robinhood.com/': '4663', 'https://rpc.elysium.kinetiq.xyz/': '99901', 'https://rpc.monad.xyz/': '143'
+  'https://rpc.mainnet.chain.robinhood.com/': '4663', 'https://rpc.elysium.kinetiq.xyz/': '99901', 'https://rpc-live.elyspump.com/': '99901', 'https://rpc.monad.xyz/': '143'
 });
 export const RELAY_CHAINS = new Set(['56', '1', '8453', '42161', '4663', '99901', '143']);
 export function rpcEndpoint(input, origin = 'https://qhooks.com') {
