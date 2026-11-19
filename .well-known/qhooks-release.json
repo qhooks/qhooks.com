@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "3392ac4c-ab7c-4c1e-a4d7-4e718b93aec7",
+  "releaseId": "522af73a-cae0-4148-856a-f0d01a112069",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -244622,9 +244622,21 @@
     }
   },
   "contentDigest": "2bb21037c4aec6d0c3765942d961dc79b979ceeccbcedeba5107c539f440e34e",
-  "sourceTree": "work/qhooks-ux-s1-x402-root-rel-20261119",
-  "sourceWorkerSha256": "eb3b65eb9e4a02d2d7c87b46f1eefcab76f27daac08e834180cdf59f9356ae8a",
-  "sourceFreezeSha256": "1c606860d8066e83a93d2631808525d8fc8b291f9822d485647af0a68a183107",
-  "provenance": "Exact full eligible public mirror of Root LIVE_ACCEPTED S1 release3392ac4c-ab7c-4c1e-a4d7-4e718b93aec7, preserving actual x402 validity Worker eb3b65eb. Connected/live acceptance belongs immutable Root receipt; no successful-payment assertion.",
-  "sourceReleaseReceiptSha256": "71d168913263fd4f0fa483af2397c2cb8985838d00cb9c2cf78ecf67a0f99b18"
+  "sourceTree": "work/qhooks-x402-settle-root-rel-20261119",
+  "sourceWorkerSha256": "3756c36c6210ffd3626120f7d5045ed9f22e0669169967c9fb0c561c8df3074b",
+  "sourceFreezeSha256": "62b40c9fcb30156064b78784873c8faf617d9e6d10aa50b0e5e28f86117f2188",
+  "provenance": "Exact public source/checksum attestation for Root LIVE_ACCEPTED deployed522af73a / Worker3756c36c. Root local unpaid and180.4s watch checks passed; D1 scheduled postdeploy keeper sent row22075 records transaction submission, not independent mined-receipt confirmation. Autonomo funded standard-client production acceptance remains pending. Eligible public bytes remain unchanged from S1.",
+  "sourceReleaseReceiptSha256": "a5d26cf6ca88d537837fe353f41fab1619f7139aa19ed53133f4af137e04aa02",
+  "sourceManifestSha256": "c4e3527c73aaf64789bc7baae0a7161b4d1adf8fe2c68c5ce1a9a228bf5044c6",
+  "sourceReleaseReceiptStatus": "LIVE_ACCEPTED",
+  "financialAcceptance": {
+    "scheduledPostDeployKeeperSubmission": {
+      "state": "D1_sent_observed",
+      "rowId": 22075,
+      "txHash": "0x67e529bfada2d1d4aaddd3eb99efe4561886d36c96870dd0bab3f66338b3d517",
+      "source": "Root immutable LIVE_ACCEPTED receipt / qhooks_keeper_runs row",
+      "minedReceiptConfirmed": false
+    },
+    "fundedPartnerStandardClient": "pending"
+  }
 }
