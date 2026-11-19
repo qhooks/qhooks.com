@@ -81,7 +81,9 @@
     "b/ops-gt-elysium-20261119/terminal/qx-terminal.J4ZW33NJ.mjs": "ceb08133f1d29cdb5f872733171d4510d46526489e31d30a029205c2b7da2ef0",
     "b/ops-gt-elysium-20261119/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
     "b/terminal-intent-pulse-p0-20261119/terminal/qx-terminal.CVIKSXRQ.mjs": "714b1bdb138b415ef66e9c1b5240053991951d3fae400253e7f4afa66a8fd926",
-    "b/terminal-intent-pulse-p0-20261119/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1"
+    "b/terminal-intent-pulse-p0-20261119/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+    "b/terminal-intent-pulse-p0-r2-20261119/terminal/qx-terminal.BVIYZ7QY.mjs": "41020ec02921ca6f6b9b28f298ea7b133fcd6f7be1678f9697d4bf23a6c6d0a9",
+    "b/terminal-intent-pulse-p0-r2-20261119/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1"
   },
   "classificationSourceReleaseId": "df15e38a-fdcd-4fd2-af2c-5bed0051158b",
   "additionalReview": ".ci/lwc-f1-review.json",
@@ -92,5 +94,6 @@
   "uxQproofCombined3Review": ".ci/lwc-ux-qproof-combined3-review.json",
   "qproofPublicCompatReview": ".ci/lwc-qproof-public-compat-review.json",
   "portfolioColdMarketR2Review": ".ci/lwc-portfolio-cold-market-r2-review.json",
-  "terminalIntentPulseP0Review": ".ci/lwc-terminal-intent-pulse-p0-review.json"
+  "terminalIntentPulseP0Review": ".ci/lwc-terminal-intent-pulse-p0-review.json",
+  "terminalIntentPulseP0R2Review": ".ci/lwc-terminal-intent-pulse-p0-r2-review.json"
 }

@@ -30,7 +30,10 @@ export async function quoteHomeBuy({owner, pref, chainId, asset, amountNeeded, e
 export async function executeHomeBuy({quote, wallet, swap, market, onStep, currentOwner = () => wallet.address}, {fetchImpl = globalThis.fetch, runX1 = runCrossChainBuy, executeRelay = execute, readBalance, estimateCosts, store} = {}) {
   const context = quote.home; if (!context || !sameWallet(context.owner, wallet.address)) throw homeFailure('home_sign_in');
   if (Date.now() - context.quotedAt > 30000) throw homeFailure('home_quote_expired');
+  const assertNoPendingBuy = () => { if (pendingHomeBuy(context.owner, store)) throw homeFailure('home_buy_pending'); };
+  assertNoPendingBuy();
   return withHomeRails(context.owner, async () => {
+    assertNoPendingBuy();
     let settlement;
     const relay = async (q,w,o) => {const result = await executeRelay(q,w,{...o,fetchImpl}); settlement = result; return result;};
     try {

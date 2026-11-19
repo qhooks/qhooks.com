@@ -1,0 +1,58 @@
+{
+  "status": "EXACT_SOURCE_BOUND_APACHE_SUCCESSORS_READY_FOR_ROOT_PUBLICATION",
+  "sourceRelease": "4122d655-45b8-4def-82dd-175ede2730e8",
+  "sourceFreezeSha256": "882c97411177340ef2ac3280ab4b39003ef31dce5711ad197aa3ad4e715384ca",
+  "sourceGraphDigest": "82df95d5dd082da30c944066a2d12818237f886aa0fa3b662ca28c8d4c305082",
+  "priorPinsPreserved": 75,
+  "totalPins": 77,
+  "license": {
+    "path": "vendor/lightweight-charts/LICENSE",
+    "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+  },
+  "standaloneApacheVersion": "4.2.3",
+  "standaloneInputSha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768",
+  "oldPolicyRowsAndMetadataUnchanged": true,
+  "sourceAuthoredDeltaPins": {
+    "public/qx-home-engine.mjs": "2835c7f521fa39bf6a1d0bf92a232f760f9dafdcf991d8ca53a8a8fdcee695c1",
+    "public/qx-chain-guard.mjs": "d14654ed6f72884506ef24ace1d9adc28dd274114faaae5be1e092824d78b46f"
+  },
+  "helperSha256": "03285eca548709d395d82680b71adb767037b235cfc08b1fc343f8d6a04fc64a",
+  "guardSha256": "68e9e8885b8478d85f2b126f189ccb7e32a6efc2b2eb2e6e97a71b7133159289",
+  "bundles": [
+    {
+      "path": "b/terminal-intent-pulse-p0-r2-20261119/terminal/qx-terminal.BVIYZ7QY.mjs",
+      "bytes": 407820,
+      "sha256": "41020ec02921ca6f6b9b28f298ea7b133fcd6f7be1678f9697d4bf23a6c6d0a9",
+      "brandMentions": 2,
+      "byteExactPriorPaths": [],
+      "sourceLineage": "Sealed Root fresh terminal bundle with reviewed Home/chain guard source deltas; existing LWC input/license/attribution unchanged. Not claimed imports-only."
+    },
+    {
+      "path": "b/terminal-intent-pulse-p0-r2-20261119/x-tracker/c.3JSX6SCP.mjs",
+      "bytes": 161341,
+      "sha256": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+      "brandMentions": 2,
+      "byteExactPriorPaths": [
+        "b/compact-onboarding-r2-current-20261117/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-recurrence-20261117/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-prices-complete-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-prices-recovery-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-complete-unpriced-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-qproof-combined2-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/qproof-public-compat-root-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-cold-market-r2-root-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-e-seal2-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-g2-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ops-p1-curve-fu16-20261119/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-g3a-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-g3cg4-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-s1rel-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ops-gt-elysium-20261119/x-tracker/c.3JSX6SCP.mjs",
+        "b/terminal-intent-pulse-p0-20261119/x-tracker/c.3JSX6SCP.mjs"
+      ],
+      "sourceLineage": "Byte-exact prior Apache-containing chunk"
+    }
+  ],
+  "authority": "Root authorizes exact source-ready mirror/Apache successor preparation. New source is Root reviewed canonical14-output graph with2authored guard deltas; library source/license and exact two attribution strings unchanged. Root alone confirms LIVE metadata and publishes; no proprietary policy expansion.",
+  "sourceReleaseReceiptSha256": "50959a37f75925bf1c6f8d7515077e1b011b968ecc1b690bf95f88325461e83c"
+}

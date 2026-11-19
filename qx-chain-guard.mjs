@@ -19,6 +19,7 @@ export function tradeError(error) {
     home_invalid_slippage: 'Choose a valid price tolerance.',
     home_quote_mismatch: 'Refresh the home quote to match this trade.',
     home_quote_expired: 'Refresh the home quote before buying.',
+    home_buy_pending: 'Finish your pending Home buy or check it in your wallet before starting another.',
     home_refreshing: 'Home currency is refreshing.',
     home_gas_reserve: 'Keep enough ETH on the market chain for its network fee, then tap Finish buy.',
   };
