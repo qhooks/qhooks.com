@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "07610b18-e3e8-4491-ac9c-76d00e2e08dd",
+  "releaseId": "3cec1f86-318e-405e-bdd9-9a52b39fabe0",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -213138,8 +213138,8 @@
     }
   },
   "contentDigest": "0b0656c4e4e8527ef8976abc37039cf26bd53c6a82c9264c39db9a27e8e4bbe8",
-  "sourceTree": "work/qhooks-qproof-canonical-wire-g2-root-rel-20261118",
-  "sourceWorkerSha256": "6eb17ae7dad843bf9c8f56b9e240ab09d664eb53a2bdc41fb8d31eac652f7a91",
-  "sourceFreezeSha256": "72a5204020dbb6154d8926abec6ce62b95bb1ff54e3710bd42612390dbf6e18d",
-  "provenance": "Exact static public assets from deployed canonical-wire G2 release; excludes private library and policy metadata under the reviewed C2 policy. No Worker-generated HTTP body or paid completion claim."
+  "sourceTree": "work/qhooks-qproof-fu16-public-root-rel-20261119",
+  "sourceWorkerSha256": "896b645f27102b75147473491fa537bb5307d1dbb6eac6203615bdc3b86999f6",
+  "sourceFreezeSha256": "b34554919044ebd0057013e9ca5a4aa1456acadb5db465a7daf8e11f67d2fa25",
+  "provenance": "Exact static public assets from deployed FU16 public projection/wire release; public bytes are identical to the preceding G2 mirror. The source Worker digest advances separately. Excludes private library and policy metadata under the unchanged reviewed C2 policy. No Worker-generated HTTP body or paid completion claim."
 }
