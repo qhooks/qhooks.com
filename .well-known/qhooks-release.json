@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "f1172965-cbca-4444-aea5-111f12708b4a",
+  "releaseId": "caa14343-6ebc-4a8b-a0c4-26825a210488",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -252518,19 +252518,19 @@
     }
   },
   "contentDigest": "ab812b5489428985349f3f24a9b9a998265d81bdef465ad4f3d419983d741505",
-  "sourceTree": "work/qhooks-ops-gt-elysium-root-rel-20261119",
-  "sourceWorkerSha256": "4b01601e4ee571ec1b85143a0db2c1eab6bb9a0c046dedc33b03a82383e7fd1d",
-  "sourceManifestSha256": "85eb82a4ffc7b02f46072db59fa9c561f4a75231bf044a2ebb338bebccc99534",
-  "sourceFreezeSha256": "5e52bc9bb589b3f3cca279c965e2fdd3eaa6a708ddaee872cfcb98e05ae87fe2",
-  "sourceReleaseReceiptSha256": "1d82a524c67c62e9d93dc7df26b32a82d839a53977cf5965a79958a20fa399ec",
+  "sourceTree": "work/qhooks-x402-fresh-coalesce-ops-root-rel-20261119",
+  "sourceWorkerSha256": "bc005c39e38a57c4226a020e73796ea66f1a67e6ce4b369dca8668b51b7e8b1e",
+  "sourceManifestSha256": "17f40664e80deba3a548d4dfc848acf6b4544a1c70047e5068d979311f7d2afb",
+  "sourceFreezeSha256": "d478cb7c982fda9dc5ce40d44ffc9dba38770b3553742582250a2bd6395a37e4",
+  "sourceReleaseReceiptSha256": "04e057389ad5ac916065fd3504a4d4c9be4a4cbe65a97081f54cbd4b3835cdfa",
   "sourceReleaseReceiptStatus": "LIVE_ACCEPTED",
   "acceptance": {
-    "sourceAndLocalReleaseGates": "passed",
-    "nativeRelaySixChains": "Root PASS; unchanged read-only identity acceptance",
-    "thirtyMinuteRate": "Root final T+30 acceptance receipt observed; preserve its measured interval and provider/transport/final-route qualifications",
-    "fundedFinancialProof": "not established by this mirror"
+    "sourceAndLocalReleaseGates": "Root LIVE_ACCEPTED receipt bound",
+    "paidNativeCohort": "Root acceptance only; mirror does not independently establish native or funded execution",
+    "postDeployWatch": "Root actual acceptance receipt; no tail population claim",
+    "fundedFinancialProof": "Not independently established by source mirror"
   },
-  "provenance": "Exact static-source attestation for Root LIVE_ACCEPTED OPS f1172965 / Worker4b01601e and the final T+30 receipt. No asset bytes changed during metadata finalization. This mirror does not assert blanket provider health or funded financial success.",
+  "provenance": "Exact static-source/checksum attestation for Root LIVE_ACCEPTED paid fresh coalescing caa14343 / Workerbc005c39. All63125 eligible public assets remain identical to accepted OPS mirror3256d17. Backend/engine source remains excluded; no independent funded/mined-payment claim.",
   "apacheSuccessorPins": {
     "state": "Root approved exact two additional Apache4.2.3 successors",
     "priorPinsPreserved": 71,
