@@ -11,7 +11,9 @@ export function createDiscoveryUpdates({apply,changed=()=>{}}){
   receive(update){
    if(current?.key!==update.key){pending=null;frozen=false;for(const reason of ['pointer','focus','press'])holds.delete(reason);current=update;apply(update);notify();return;}
    if(holds.size&&current?.data?.rows?.length){
-    if(update.live&&!holds.has('manual')&&!pending){if(!frozen)shown=current;frozen=true;current=update;apply({...update,frozen:true});notify();return;}
+    // S1: values never wait. While the pointer, a press, a touch, a scroll or focus holds the list, every update for this
+    // view lands at once as {frozen:true} (numbers patch in place; order and new rows wait). Only the manual Pause queues.
+    if(!holds.has('manual')){if(!frozen)shown=current;frozen=true;pending=null;current=update;apply({...update,frozen:true});notify();return;}
     pending=update;notify();return;
    }
    current=update;apply(update);notify();

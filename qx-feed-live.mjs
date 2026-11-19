@@ -82,6 +82,36 @@ export function installLiveStyles(doc = globalThis.document) {
   style.textContent = '@keyframes qxfd-arrive{from{background:color-mix(in srgb,var(--qx-brass,#b8945a) 26%,transparent)}to{background:transparent}}'
     + '.qxfd-table tbody tr.qxfd-arrived>td{animation:qxfd-arrive 1.4s ease-out}'
     + '.qxfd-table tbody tr.qxfd-arrived>td:first-child{box-shadow:inset 2px 0 var(--qx-brass,#b8945a)}'
-    + '@media(prefers-reduced-motion:reduce){.qxfd-table tbody tr.qxfd-arrived>td{animation:none}}';
+    + '@media(prefers-reduced-motion:reduce){.qxfd-table tbody tr.qxfd-arrived>td{animation:none}}'
+    // S1 "N new" pill: fixed, so showing it moves nothing.
+    + '.qxfd-new-pill{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + var(--qa-nav-h,64px) + 10px);transform:translateX(-50%);z-index:40;min-height:32px;padding:6px 14px;border:1px solid var(--qx-brass,#b8945a);border-radius:4px;background:var(--qx-panel,#111);color:var(--qx-text,#f4f1e9);font:600 12px/1.2 inherit;letter-spacing:.02em;cursor:pointer}'
+    + '.qxfd-new-pill[hidden]{display:none}@media(pointer:coarse){.qxfd-new-pill{min-height:40px}}';
   doc.head.append(style);
+}
+
+// S1 (2026-11-18, jitter): which rows a render shows, in which order.
+// A user render (tab, sort, filters, reveal) shows `fresh` as is. A background render keeps the rows already on screen:
+// while held, or within minGapMs of the last re-rank, they stay in their places (rows that left the list keep their last
+// values); otherwise they take the fresh order. New keys never enter on a background render: they are counted in
+// `waiting` for the "N new" pill. retryAt asks for one more background render when a held-back re-rank becomes due.
+export function planRowOrder({fresh = [], domKeys = [], background = false, held = false, now = Date.now(), lastReorderAt = 0, minGapMs = 10000, known = () => null} = {}) {
+  if (!background) return {rows: fresh, reordered: false, waiting: 0, retryAt: null};
+  const onScreen = new Set(domKeys), byKey = new Map(fresh.map(vm => [vm.key, vm]));
+  const waiting = fresh.filter(vm => !onScreen.has(vm.key)).length;
+  const next = fresh.filter(vm => onScreen.has(vm.key)).map(vm => vm.key);
+  const differs = next.length !== domKeys.length || next.some((k, i) => k !== domKeys[i]);
+  if (!differs) return {rows: next.map(k => byKey.get(k)), reordered: false, waiting, retryAt: null};
+  if (held || now - lastReorderAt < minGapMs) {
+    const rows = domKeys.map(k => byKey.get(k) || known(k)).filter(Boolean);
+    return {rows, reordered: false, waiting, retryAt: held ? now + minGapMs : lastReorderAt + minGapMs};
+  }
+  return {rows: next.map(k => byKey.get(k)), reordered: true, waiting, retryAt: null};
+}
+// Holds that end `afterMs` after their reason ends (pointer leaves, finger lifts, scrolling stops, focus leaves).
+export function createHoldTimers({hold, afterMs = 3000, setTimeout: later = globalThis.setTimeout, clearTimeout: cancel = globalThis.clearTimeout} = {}) {
+  const timers = new Map();
+  return {
+    on(reason) { cancel(timers.get(reason)); timers.delete(reason); hold(reason, true); },
+    off(reason) { cancel(timers.get(reason)); timers.set(reason, later(() => { timers.delete(reason); hold(reason, false); }, afterMs)); },
+  };
 }

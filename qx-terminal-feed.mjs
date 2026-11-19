@@ -22,7 +22,7 @@ import {bindTokenAvatar} from './qx-token-avatar.mjs';
 import {WINDOWS,filterDiscovery,createMarketViews,validateDiscoveryFilters} from './qx-discovery-model.mjs';
 import {discoveryCandidate} from './qx-discovery-rank.mjs';
 import {createDiscoveryUpdates} from './qx-discovery-updates.mjs';
-import {createPollScheduler,flipMeasure,flipPlay,markArrived,installLiveStyles} from './qx-feed-live.mjs';
+import {createPollScheduler,flipMeasure,flipPlay,markArrived,installLiveStyles,planRowOrder,createHoldTimers} from './qx-feed-live.mjs';
 import {plainMarketError} from './qx-terminal-data.mjs';
 import {fetchDexPairs,pickPair,rowPatch,applyRowPatch,DEX_CHAINS} from './qx-dex-live.mjs';
 import {renderFeedFeedback,feedFeedbackStatus,feedFeedbackSource} from './qx-terminal-feed-presentation.mjs';
@@ -47,6 +47,14 @@ const el = (tag, attrs = {}, ...children) => {
 };
 const button = (label, attrs = {}) => el('button', { type: 'button', ...attrs }, label);
 const text = (node, value) => { if (node.textContent !== value) node.textContent = value; };
+// S1: row writes are no-ops when the value is already on screen (an equal setAttribute/dataset/title still queues a
+// mutation, attribute-selector style invalidation and a11y work on every render of every row).
+const setA=(node,name,value)=>{if(!node)return;const v=String(value);if(node.getAttribute(name)!==v)node.setAttribute(name,v);};
+const remA=(node,name)=>{if(node?.hasAttribute(name))node.removeAttribute(name);};
+const setD=(node,key,value)=>{if(!node)return;const v=String(value);if(node.dataset[key]!==v)node.dataset[key]=v;};
+const hide=(node,on)=>{if(node&&node.hidden!==!!on)node.hidden=!!on;};
+const setB=(node,prop,on)=>{if(node&&node[prop]!==!!on)node[prop]=!!on;};
+
 let storage;
 try { storage = window.localStorage; } catch {}
 const prefs = preferences(storage);
@@ -80,7 +88,17 @@ const columns = [
   ['holders','Holders'], ['txns', 'B / S · 24h'], ['makers', 'Wallet activity'], ['top10','Top 10'], ['dev','Dev'], ['riskgrid','Holder checks'], ['safety', 'Safety'], ['buy', 'Buy'],
 ];
 const nodes = new Map();
-let renderMode={},orderFrozen=false;installLiveStyles(document);
+let quietLoad=false,renderMode={},orderFrozen=false,lastReorderAt=0,reorderTimer=null,holdsActive=()=>false,lastView='',lastInputAt=0;
+for(const type of ['pointerdown','keydown','change','input'])document.addEventListener(type,()=>{lastInputAt=Date.now();},{capture:true,passive:true});
+// Scroll anchoring for background renders: the first row in view stays where it is on screen (WebKit has no
+// overflow-anchor; Chromium's own anchoring is kept as a second line). Rows removed or moved above it never move it.
+function listAnchor(){for(const [key,node] of nodes){const r=node.tr.getBoundingClientRect();if(r.bottom>0&&r.height)return {key,top:r.top};}return null;}
+function keepAnchor(a){const node=nodes.get(a.key);if(!node?.tr.isConnected)return;const d=node.tr.getBoundingClientRect().top-a.top;if(Math.abs(d)<0.5)return;
+ if(scroll.scrollHeight>scroll.clientHeight+1&&getComputedStyle(scroll).overflowY!=='visible')scroll.scrollTop+=d;else window.scrollBy(0,d);}installLiveStyles(document);
+// "N new" pill: fixed over the list (takes no layout space), tap shows them at their ranks and goes to the top.
+const newPill=el('button',{type:'button',class:'qxfd-new-pill',hidden:'','aria-live':'polite'});
+newPill.addEventListener('click',()=>{renderMode={reveal:true};renderRows();try{root.scrollIntoView({block:'start'});}catch{}scroll.scrollTop=0;});
+function paintNewPill(n){const show=n>0&&!root.hidden;if(newPill.hidden===show)newPill.hidden=!show;const t=n+' new';if(show&&newPill.textContent!==t){newPill.textContent=t;newPill.setAttribute('aria-label','Show '+n+' new token'+(n===1?'':'s'));}}
 const livenessView=createDiscoveryLivenessView();
 const expandedContracts=new Set();let contractProjection={active:false},contractContext='';
 const layoutControls=el('div',{class:'qxfd-layout-controls',role:'group','aria-label':'Token layout'});
@@ -166,7 +184,7 @@ const walletPanel = el('div', {class: 'qxfd-wallet-slot', hidden: ''});
 const count = el('span');
 const source = el('span');
 const heading = el('h1', {}, 'Tokens');
-panel.append(notice, scroll, empty, walletPanel);
+panel.append(notice, scroll, empty, walletPanel, newPill);
 // While a wallet is shown, the list controls (tabs, chains, sort, windows) step aside so the wallet starts at the top.
 const walletBack = button('← Tokens', { class: 'qxfd-wallet-back', hidden: '' });
 const listOptions=el('details',{class:'qxfd-list-options'},el('summary',{},'Filters'));
@@ -232,7 +250,7 @@ async function loadLaunches() {
   try {
     const r = await publicReadFetch('/api/terminal/feed?chain=all', { cache: 'no-store' });
     const j = r.ok ? await r.json() : null;
-    if (Array.isArray(j?.markets)) { allLaunches = j.markets; renderTabs(); renderRows(); setTimeout(() => { void refreshLiveRows(); }, 500); }
+    if (Array.isArray(j?.markets)) { allLaunches = j.markets; renderTabs(); if(state.tab==='launches'||!nodes.size)renderRows(); else { renderMode={background:true}; renderRows(); } setTimeout(() => { void refreshLiveRows(); }, 500); }
   } catch {}
 }
 const launchMarkets = () => allLaunches || state.markets;
@@ -368,8 +386,8 @@ function makeRow(vm) {
 function updateRow(node, vm, {refreshing=!!(state.loading||state.data?.stale||state.error||state.searchError||vm.row.stale)}={}) {
   const old = node.vm;
   const group=vm.contractGroup;node.tr.classList.toggle('qxfd-contract-group',!!group?.isRepresentative);node.tr.classList.toggle('qxfd-contract-expanded',!!group?.expanded);node.tr.classList.toggle('qxfd-contract-member',!!group&&!group.isRepresentative);
-  node.groupToggle.hidden=!group?.isRepresentative;if(group?.isRepresentative){text(node.groupCount,'+'+(group.members.length-1));node.groupToggle.setAttribute('aria-expanded',String(group.expanded));node.groupToggle.setAttribute('aria-label','+'+(group.members.length-1)+' similar contracts; same name and ticker '+vm.symbol+' on '+vm.chainName+'; '+group.members.length+' total; '+(group.expanded?'collapse':'expand'));node.groupToggle.title='Same name and ticker · '+group.members.length+' contracts. Separate token addresses, not a shared asset or issuer.';}
-  node.contractDetail.hidden=!group?.expanded;if(group?.expanded){text(node.contractName,(group.isRepresentative?'Same name and ticker · '+group.members.length+' contracts · ':'')+(vm.name||vm.symbol));text(node.contractAddress,vm.address);node.contractAddress.title=vm.address;}
+  hide(node.groupToggle,!group?.isRepresentative);if(group?.isRepresentative){text(node.groupCount,'+'+(group.members.length-1));setA(node.groupToggle,'aria-expanded',String(group.expanded));setA(node.groupToggle,'aria-label','+'+(group.members.length-1)+' similar contracts; same name and ticker '+vm.symbol+' on '+vm.chainName+'; '+group.members.length+' total; '+(group.expanded?'collapse':'expand'));setA(node.groupToggle,'title','Same name and ticker · '+group.members.length+' contracts. Separate token addresses, not a shared asset or issuer.');}
+  hide(node.contractDetail,!group?.expanded);if(group?.expanded){text(node.contractName,(group.isRepresentative?'Same name and ticker · '+group.members.length+' contracts · ':'')+(vm.name||vm.symbol));text(node.contractAddress,vm.address);setA(node.contractAddress,'title',vm.address);}
   const evidence=discoveryBadges(vm.row,{h:el,compact:true});
   // Keep canonical verdicts, links and descriptions; only their row presentation is compact.
   for(const badge of evidence.querySelectorAll('.qxd-badge')){
@@ -379,67 +397,67 @@ function updateRow(node, vm, {refreshing=!!(state.loading||state.data?.stale||st
   const summary=evidence.querySelector('summary');if(summary){summary.title=summary.textContent+' · Safety checks';summary.setAttribute('aria-label',summary.textContent+' · Safety checks');text(summary,'◇');}
   const evidenceKey=evidence.outerHTML;if(node.evidenceKey!==evidenceKey){node.evidenceKey=evidenceKey;const prior=node.cells.evidence.querySelector('details'),focused=prior?.contains(document.activeElement);if(prior?.open)evidence.querySelector('details').open=true;node.cells.evidence.replaceChildren(evidence);if(focused)evidence.querySelector('summary').focus({preventScroll:true});}
   node.tr.classList.toggle("qxfd-fund-row",!!vm.fund);
-  node.vm = vm; node.tr.__tokenVM=vm;node.watch.disabled=!api?.library||node.watch.dataset.pending==='true';
-  node.hotCount.hidden=state.tab!=='hot'||!!state.query||!vm.row.hotCount;text(node.hotCount,(vm.row.hotCount||0).toLocaleString()+' searches / opens');
+  node.vm = vm; node.tr.__tokenVM=vm;setB(node.watch,'disabled',!api?.library||node.watch.dataset.pending==='true');
+  hide(node.hotCount,state.tab!=='hot'||!!state.query||!vm.row.hotCount);text(node.hotCount,(vm.row.hotCount||0).toLocaleString()+' searches / opens');
   const watching=!!api?.library?.has(libraryAsset(vm));
-  text(node.watch,watching?'★':'☆');node.watch.setAttribute('aria-pressed',String(watching));node.watch.setAttribute('aria-label',(watching?'Remove ':'Add ')+vm.symbol+(watching?' from':' to')+' watchlist');
-  text(node.letter, vm.letter); text(node.symbol, vm.symbol); text(node.name, (vm.fund?'Index fund token · ':'')+vm.name + (founding.slots.has(vm.chainId+':'+(vm.chainId==='solana'?String(vm.address):String(vm.address).toLowerCase())) ? ' · Founding #' + founding.slots.get(vm.chainId+':'+(vm.chainId==='solana'?String(vm.address):String(vm.address).toLowerCase())) : '')); text(node.rowAge, vm.lifecycle.stage==='bonding'?'Bond '+Math.round(vm.lifecycle.progress*100)+'%':vm.lifecycle.stage==='migrated'?'Migrated · '+vm.age:vm.age);node.rowAge.dataset.stage=vm.lifecycle.stage;
-  node.name.title = vm.name;
-  if(state.tab==='hot'&&!vm.name){text(node.name,vm.address);node.name.title=vm.address;}
+  text(node.watch,watching?'★':'☆');setA(node.watch,'aria-pressed',String(watching));setA(node.watch,'aria-label',(watching?'Remove ':'Add ')+vm.symbol+(watching?' from':' to')+' watchlist');
+  text(node.letter, vm.letter); text(node.symbol, vm.symbol); text(node.name, (vm.fund?'Index fund token · ':'')+vm.name + (founding.slots.has(vm.chainId+':'+(vm.chainId==='solana'?String(vm.address):String(vm.address).toLowerCase())) ? ' · Founding #' + founding.slots.get(vm.chainId+':'+(vm.chainId==='solana'?String(vm.address):String(vm.address).toLowerCase())) : '')); text(node.rowAge, vm.lifecycle.stage==='bonding'?'Bond '+Math.round(vm.lifecycle.progress*100)+'%':vm.lifecycle.stage==='migrated'?'Migrated · '+vm.age:vm.age);setD(node.rowAge,'stage',vm.lifecycle.stage);
+  setA(node.name,'title',vm.name);
+  if(state.tab==='hot'&&!vm.name){text(node.name,vm.address);setA(node.name,'title',vm.address);}
   paintPromotion(node.boost, vm); paintFirstTradePending(node, vm, el);
-  node.open.setAttribute('aria-label', `Open ${vm.symbol}, ${vm.name || vm.address}, on ${vm.chainName}`);
+  setA(node.open,'aria-label', `Open ${vm.symbol}, ${vm.name || vm.address}, on ${vm.chainName}`);
   const href=vm.row.launch?.controller?'#m='+vm.chainId+':'+vm.row.launch.controller:'#t='+vm.chainId+':'+vm.address;
-  node.open.setAttribute('href',href);node.tr.dataset.href=href;
+  setA(node.open,'href',href);setD(node.tr,'href',href);
   const metrics=evidenceMetrics(vm.row),pct=n=>typeof n==='number'&&Number.isFinite(n)?n.toFixed(1).replace(/\.0$/,'')+'%':DASH;
   text(node.cells.top10,pct(metrics.top10Pct));text(node.cells.dev,pct(metrics.devPct));
   for(const [id,value]of Object.entries({top10:pct(metrics.top10Pct),dev:pct(metrics.devPct),snipers:metrics.sameBlock===true?'Signal':DASH,insiders:metrics.sharedFunding===true?'Signal':DASH,bundlers:DASH,holders:vm.holders})){
-    text(node.riskFields.get(id),value);node.riskFields.get(id).parentElement.title=value===DASH?'Unknown · no fresh observation':id==='snipers'?'Same-block entry signal; not a percentage or proof of sniper activity':id==='insiders'?'Shared funding signal; not a percentage or proof of insider activity':metrics.source||'Received provider observation';
+    text(node.riskFields.get(id),value);setA(node.riskFields.get(id).parentElement,'title',value===DASH?'Unknown · no fresh observation':id==='snipers'?'Same-block entry signal; not a percentage or proof of sniper activity':id==='insiders'?'Shared funding signal; not a percentage or proof of insider activity':metrics.source||'Received provider observation');
   }
-  node.cells.riskgrid.setAttribute('aria-label','Holder checks. Missing observations are unknown. Entry and funding signals are not percentages.');
+  setA(node.cells.riskgrid,'aria-label','Holder checks. Missing observations are unknown. Entry and funding signals are not percentages.');
 
-  node.chain.hidden = !vm.chainIcon;
+  hide(node.chain,!vm.chainIcon);
   if (vm.chainIcon) {
-    node.chain.setAttribute('src', '/chain-symbol-icons/' + vm.chainIcon + '.svg');
-    node.chain.alt = vm.chainName;
+    setA(node.chain,'src', '/chain-symbol-icons/' + vm.chainIcon + '.svg');
+    setA(node.chain,'alt',vm.chainName);
   }
   if(JSON.stringify(old?.avatarSources)!==JSON.stringify(vm.avatarSources)){node.unbindAvatar?.();node.unbindAvatar=bindTokenAvatar(node.logo,{},vm.avatarSources);}
   for (const key of ['move', 'volume', 'liquidity', 'makers','holders']) text(node.cells[key], vm[key]);
   const priceView=feedRowPriceView(vm,{refreshing});
-  text(node.priceValue,priceView.text);text(node.priceStatus,priceView.status);
+  text(node.priceValue,priceView.text);if(!node.unbindLiveness)text(node.priceStatus,priceView.status); // S1: once bound, the liveness view owns this label (5 s steps)
   // Batch G: RUM mark (no-op until qx-rum.mjs defines window.qxMark), once per page load, at the first painted row price.
-  if(priceView.available&&!firstRowPriceMarked){firstRowPriceMarked=true;try{globalThis.qxMark?.('first-price');}catch{}}node.cells.price.title=priceView.title;node.cells.price.dataset.priceAt=priceView.at??'';node.cells.price.dataset.unit=priceView.unit||'';node.cells.price.dataset.refreshing=String(priceView.refreshing);
-  node.cells.liquidity.dataset.known = String(vm.liquidity !== DASH);
-  node.cells.holders.dataset.known=String(vm.numeric.holders!==null);
-  node.cells.price.dataset.slickPrice='';node.cells.price.dataset.slickKey=vm.key;node.cells.price.dataset.slickValue=vm.numeric.price===null?'':String(vm.numeric.price);
+  if(priceView.available&&!firstRowPriceMarked){firstRowPriceMarked=true;try{globalThis.qxMark?.('first-price');}catch{}}setA(node.cells.price,'title',priceView.title);setD(node.cells.price,'priceAt',priceView.at??'');setD(node.cells.price,'unit',priceView.unit||'');setD(node.cells.price,'refreshing',String(priceView.refreshing));
+  setD(node.cells.liquidity,'known',String(vm.liquidity !== DASH));
+  setD(node.cells.holders,'known',String(vm.numeric.holders!==null));
+  setD(node.cells.price,'slickPrice','');setD(node.cells.price,'slickKey',vm.key);setD(node.cells.price,'slickValue',vm.numeric.price===null?'':String(vm.numeric.price));
   // Batch G: a refreshing/cached value is shown in the muted text token (AA on the row), never dimmed by opacity (2.79:1).
-  node.cells.price.style.opacity='';node.cells.mcap.style.opacity='';node.cells.price.dataset.dim=String(!!(vm.priceRefreshing||vm.row.pricesCached));node.cells.mcap.dataset.dim=String(!!(vm.capsRefreshing||vm.row.capsCached));
-  node.cells.holders.title=vm.numeric.holders===null?'The source has not provided a global holder count.':('Global holder count'+(vm.holderAge?' · updated '+vm.holderAge+' ago':''));
+  if(node.cells.price.style.opacity)node.cells.price.style.opacity='';if(node.cells.mcap.style.opacity)node.cells.mcap.style.opacity='';setD(node.cells.price,'dim',String(!!(vm.priceRefreshing||vm.row.pricesCached)));setD(node.cells.mcap,'dim',String(!!(vm.capsRefreshing||vm.row.capsCached)));
+  setA(node.cells.holders,'title',vm.numeric.holders===null?'The source has not provided a global holder count.':('Global holder count'+(vm.holderAge?' · updated '+vm.holderAge+' ago':'')));
   for (const key of ['move']) {
     node.cells[key].classList.toggle('up', vm.numeric[key] > 0);
     node.cells[key].classList.toggle('down', vm.numeric[key] < 0);
   }
-  node.cells.move.setAttribute('data-label',(WINDOWS.find(([k])=>k===state.window)?.[1]||'24h')+' change');node.cells.move.setAttribute('data-window',WINDOWS.find(([k])=>k===state.window)?.[1]||'24h');
+  setA(node.cells.move,'data-label',(WINDOWS.find(([k])=>k===state.window)?.[1]||'24h')+' change');setA(node.cells.move,'data-window',WINDOWS.find(([k])=>k===state.window)?.[1]||'24h');
   const capUnit=priceView.capUnit&&priceView.capUnit!=='USD'?priceView.capUnit:null;const capNumber=capUnit&&priceView.cap.endsWith(' '+capUnit)?priceView.cap.slice(0,-capUnit.length-1):priceView.cap;text(node.capNumber,capNumber);text(node.capUnit,capUnit?' '+capUnit:'');text(node.capKind,priceView.cap===DASH?'syncing':priceView.capKind==='FDV'?'FDV':'');
-  node.cells.mcap.setAttribute('data-label',priceView.capKind);node.cells.mcap.dataset.unit=priceView.capUnit||'';node.cells.mcap.removeAttribute('data-refreshing');node.cells.mcap.dataset.capState=priceView.cap===DASH?'syncing':'known';
+  setA(node.cells.mcap,'data-label',priceView.capKind);setD(node.cells.mcap,'unit',priceView.capUnit||'');remA(node.cells.mcap,'data-refreshing');setD(node.cells.mcap,'capState',priceView.cap===DASH?'syncing':'known');
   // Bind only after insertion. The source getter never substitutes an arrival,
   // cache or canonical-price clock for the original row/cap observation.
   node.discoveryRefreshing=refreshing;node.discoveryPriceAvailable=priceView.available;node.discoveryPriceAt=priceView.at;node.discoveryCapAvailable=priceView.cap!==DASH;
   const hidden=()=>root.hidden||!!node.tr.closest('[hidden]');
-  const stopPrice=livenessView.bind(node.priceStatus,{get:()=>({row:node.vm.row,failed:hidden()||node.discoveryRefreshing||!node.discoveryPriceAvailable||priceState(node.discoveryPriceAt).refreshing||node.discoveryPriceAt>Date.now()}),paint:(label,live)=>{text(label,node.discoveryPriceAvailable?live.label:'Price syncing');node.cells.price.dataset.refreshing=String(live.refreshing);}});
-  const stopCap=livenessView.bind(node.cells.mcap,{get:()=>{const row=node.vm.row;return {row:{observedAt:Object.hasOwn(row,'capAt')?row.capAt:row.observedAt,stale:row.stale},failed:hidden()||node.discoveryRefreshing||!node.discoveryCapAvailable||!!row.capsRefreshing};},paint:(cell,live)=>{cell.title=live.label;},fallback:(cell,live)=>{cell.title=live.label;}});
+  const stopPrice=livenessView.bind(node.priceStatus,{get:()=>({row:node.vm.row,failed:hidden()||node.discoveryRefreshing||!node.discoveryPriceAvailable||priceState(node.discoveryPriceAt).refreshing||node.discoveryPriceAt>Date.now()}),paint:(label,live)=>{text(label,node.discoveryPriceAvailable?live.label:'Price syncing');setD(node.cells.price,'refreshing',String(live.refreshing));}});
+  const stopCap=livenessView.bind(node.cells.mcap,{get:()=>{const row=node.vm.row;return {row:{observedAt:Object.hasOwn(row,'capAt')?row.capAt:row.observedAt,stale:row.stale},failed:hidden()||node.discoveryRefreshing||!node.discoveryCapAvailable||!!row.capsRefreshing};},paint:(cell,live)=>{setA(cell,'title',live.label);},fallback:(cell,live)=>{setA(cell,'title',live.label);}});
   node.unbindLiveness=()=>{stopPrice();stopCap();};
   text(node.buys, vm.buys); text(node.sells, vm.sells);
-  node.cells.txns.setAttribute('aria-label', `${vm.buys === DASH ? 'Unknown' : vm.buys} buys, ${vm.sells === DASH ? 'unknown' : vm.sells} sells in 24 hours`);
-  node.cells.makers.title=vm.row.makersKind==='unique_wallets'?'Unique wallets in the received 24h swaps.':'Provider buyer and seller activity; a wallet may be counted on both sides.';
+  setA(node.cells.txns,'aria-label', `${vm.buys === DASH ? 'Unknown' : vm.buys} buys, ${vm.sells === DASH ? 'unknown' : vm.sells} sells in 24 hours`);
+  setA(node.cells.makers,'title',vm.row.makersKind==='unique_wallets'?'Unique wallets in the received 24h swaps.':'Provider buyer and seller activity; a wallet may be counted on both sides.');
   text(node.safe, vm.safety.label);
-  node.cells.safety.removeAttribute('data-flag');node.cells.safety.removeAttribute('title');node.cells.safety.removeAttribute('aria-label');node.cells.safety.tabIndex=-1;
+  remA(node.cells.safety,'data-flag');remA(node.cells.safety,'title');remA(node.cells.safety,'aria-label');setA(node.cells.safety,'tabindex','-1');
   text(node.tip, vm.safety.title);
   const label = `${vm.quick.value} ${vm.quick.unit}`; // auditC: the bolt is a line icon drawn by CSS (.qxfd-buy::before), not an emoji
   text(node.buyValue,vm.quick.value);text(node.buyUnit,vm.quick.unit);
-  node.buy.setAttribute('aria-label', vm.quick.supported ? `Buy ${vm.symbol} with ${vm.quick.value} ${vm.quick.unit}` : `Open ${vm.symbol} in the trade ticket; quick buy is unavailable`);
-  node.buy.title = vm.quick.supported ? `Buy ${vm.symbol} with ${vm.quick.value} ${vm.quick.unit}` : 'Open the trade ticket; quick buy is unavailable for this token';
-  node.buy.hidden = vm.quick.stock || !vm.quick.supported; // no button where quick buy can't run (outside Elysium tokens)
-  node.blocked.hidden = !vm.quick.stock;
+  setA(node.buy,'aria-label', vm.quick.supported ? `Buy ${vm.symbol} with ${vm.quick.value} ${vm.quick.unit}` : `Open ${vm.symbol} in the trade ticket; quick buy is unavailable`);
+  setA(node.buy,'title',vm.quick.supported ? `Buy ${vm.symbol} with ${vm.quick.value} ${vm.quick.unit}` : 'Open the trade ticket; quick buy is unavailable for this token');
+  hide(node.buy,vm.quick.stock || !vm.quick.supported); // no button where quick buy can't run (outside Elysium tokens)
+  hide(node.blocked,!vm.quick.stock);
   const p = vm.numeric.price ?? vm.row.quoteAmounts?.price;
   const before = old?.numeric.price ?? old?.row.quoteAmounts?.price;
   if (old && typeof p === 'number' && typeof before === 'number' && p !== before) {
@@ -502,11 +520,22 @@ function renderRows() {
   // D4: while the pointer, a press or keyboard focus is on the list, a live poll changes numbers in place only:
   // rows keep their places, new tokens wait, and the order catches up when the hold ends.
   // orderFrozen lasts until the hold ends, so any other render meanwhile (live price patches, launches) keeps it too.
-  if(orderFrozen&&nodes.size){
-    const at=new Map([...tbody.children].map((tr,i)=>[tr.dataset.key,i])),byKey=new Map(rows.map(vm=>[vm.key,vm]));
-    rows=[...nodes.keys()].filter(k=>at.has(k)).sort((a,b)=>at.get(a)-at.get(b)).map(k=>byKey.get(k)||nodes.get(k).vm).filter(Boolean);
-  }
-  const motion=(mode.live||mode.released)&&!orderFrozen&&nodes.size>0&&!root.hidden,before=motion?flipMeasure(nodes):null;
+  // S1 (jitter): a background render (live poll, price patch, evidence, launches) never pushes content around:
+  //  - while the visitor touches, hovers, scrolls or focuses the list (and for 3 s after), the order holds;
+  //  - otherwise rows re-rank at most once per 10 s;
+  //  - new tokens never slide in on their own: they wait in the "N new" pill until tapped (or the next view change).
+  // Any render whose view (tab, chain, window, filters, sort, search) is unchanged and that no input just asked for is a
+  // background render: rows on screen keep their places and new rows wait for the pill. Only the pill or a view change
+  // brings rows in.
+  const view=JSON.stringify([state.tab,state.chain,state.window,state.filters,state.sort,state.query,state.layout,filterBypass]),sameView=view===lastView;lastView=view;
+  const background=!mode.reveal&&!mode.full&&nodes.size>0&&sameView&&(mode.live||mode.released||mode.background||Date.now()-lastInputAt>800);
+  const anchor=background?listAnchor():null;
+  const plan=planRowOrder({fresh:rows,domKeys:[...tbody.children].map(tr=>tr.dataset.key).filter(k=>nodes.has(k)),background,
+    held:orderFrozen||holdsActive(),now:Date.now(),lastReorderAt,minGapMs:10000,known:k=>nodes.get(k)?.vm});
+  rows=plan.rows;if(plan.reordered)lastReorderAt=Date.now();
+  paintNewPill(plan.waiting);
+  if(plan.retryAt&&!reorderTimer)reorderTimer=setTimeout(()=>{reorderTimer=null;renderMode={background:true};renderRows();},Math.max(50,plan.retryAt-Date.now()));
+  const motion=plan.reordered&&nodes.size>0&&!root.hidden,before=motion?flipMeasure(nodes):null;
   text(trendingNote,contractProjection.active?'Trending: $1K liquidity · $500 in 24h volume · 10 observed trades · drops over 90% excluded. Similar names and tickers can expand. Search or a selected sort shows the original matches.':'Search and selected sorts show the original received matches. Your custom filters still apply.');
   paintQuickPreset(rows);
   if(rows.length||state.data&&!state.loading){table.classList.toggle('qxfd-has-holders',rows.some(vm=>vm.numeric.holders!==null));applyColumnVisibility(table,rows);}
@@ -519,13 +548,13 @@ function renderRows() {
   const arrived=[];
   rows.forEach((vm, index) => {
     let node = nodes.get(vm.key);
-    if (!node) { node = makeRow(vm); nodes.set(vm.key, node); if(before)arrived.push(node.tr); }
+    if (!node) { node = makeRow(vm); nodes.set(vm.key, node); if(mode.reveal)arrived.push(node.tr); }
     if (tbody.children[index] !== node.tr) tbody.insertBefore(node.tr, tbody.children[index] || null);
     updateRow(node, vm);
   });
   pinFounding();
   if (!keep.has(focusedKey)) focusedKey = rows[Math.max(0, Math.min(rows.length - 1, previousIndex))]?.key || null;
-  for (const [key, node] of nodes) node.open.tabIndex = key === focusedKey ? 0 : -1;
+  for (const [key, node] of nodes) { const t = key === focusedKey ? 0 : -1; if (node.open.tabIndex !== t) node.open.tabIndex = t; }
   if (!root.hidden && previousFocus !== document.body && !previousFocus.isConnected && previousFocus.closest?.('tr[data-key]')) nodes.get(focusedKey)?.open.focus({ preventScroll: true });
   else if (!root.hidden && previousFocus.isConnected && document.activeElement !== previousFocus) previousFocus.focus({ preventScroll: true });
   const initialLoading = state.tab !== 'launches' && !state.data && state.loading && !state.query;
@@ -544,12 +573,13 @@ function renderRows() {
   const paused=!!activeFilters&&filterBypass===bypassKey(state);hiddenLine.hidden=!!state.query||!paused&&!(activeFilters&&hiddenCount>0);text(hiddenText,paused?'Filters paused · ':hiddenCount+' hidden by your filters · ');text(showAll,paused?'Use my filters':'Show all');if(hiddenLine.parentNode!==panel||hiddenLine.nextSibling!==scroll)panel.insertBefore(hiddenLine,scroll);
   if (!rows.length && activeFilters && hiddenLine.hidden && !state.query && !initialLoading && !state.loading) { empty.hidden = false; empty.append(widen); }else widen.remove();
   nextSteps.update({count:rows.length,loading:initialLoading||state.searching,failed:!!(state.error||state.searchError),filtered:!!activeFilters||!!state.query,kind:state.tab==='launches'?'launches':'feed',compact:!rows.length});
-  if(!nextSteps.element.hidden){if(rows.length){scroll.append(nextSteps.element);}else{empty.append(nextSteps.element);empty.hidden=false;scroll.hidden=true;}}
+  if(!nextSteps.element.hidden){if(rows.length){if(scroll.lastChild!==nextSteps.element)scroll.append(nextSteps.element);}else{empty.append(nextSteps.element);empty.hidden=false;scroll.hidden=true;}}
   if(!rows.length&&!initialLoading&&!state.loading&&!state.query&&state.tab==='trending'&&!state.error)empty.append(marketsEmpty);else marketsEmpty.remove();
   text(source, state.tab === 'launches' ? '' : [state.data?.source,state.data?.coverage?.description].filter(Boolean).join(' · '));
   scroll.scrollTop = y;
   if (window.scrollY !== pageY) window.scrollTo({ top: pageY, behavior: 'instant' });
-  if(before){flipPlay(nodes,before);for(const tr of arrived)markArrived(tr);}
+  if(anchor)keepAnchor(anchor);
+  if(before)flipPlay(nodes,before);for(const tr of arrived)markArrived(tr);
 }
 
 // Live rows: the visitor's browser refreshes the on-screen rows from DexScreener every 30 s (30 per call, per chain).
@@ -574,7 +604,7 @@ async function refreshLiveRows() {
       for (const r of rows) { const patch = rowPatch(pickPair(state.tab==='funds'?pairs.filter(p=>p.chainId===DEX_CHAINS[chainId]&&p.quoteToken?.address?.toLowerCase()===r.quote?.address):pairs, chainId, r.token.address, r.launch ? null : r.pool)); if (patch) { livePatches.set(r.launch ? launchKey(r) : rowKey(r), patch); changed = true; } }
     }
     if (changed && state.data?.rows) state.data = { ...state.data, rows: withLive(state.data.rows) };
-    if (changed) renderRows();
+    if (changed) { renderMode={background:true}; renderRows(); }
   } finally { liveRowsBusy = false; }
 }
 function repeatTokenTask(task, delay) {
@@ -589,7 +619,11 @@ const discoveryUpdates=createDiscoveryUpdates({apply:update=>{
   if(state.tab==='hot'&&!update.key?.startsWith('hot:')||state.tab!=='hot'&&update.key?.startsWith('hot:'))return;
   if(update?.data?.rows&&!update.data.hot)knownFeedRows=update.data.rows;
   if (update?.data?.rows) update = { ...update, data: { ...update.data, rows: withLive(update.data.rows) } };
-  const {live,frozen,released,...fields}=update;renderMode={live:!!live,frozen:!!frozen,released:!!released};orderFrozen=!!frozen;
+  const {live,frozen,released,...fields}=update;
+  // A load the visitor started (open, view change, Retry, back to the page) lands as a full render; the quiet 2 min
+  // reload behind a live list lands as a background render.
+  const loadDone=state.loading&&fields.loading===false;
+  renderMode={live:!!live,frozen:!!frozen,released:!!released,full:loadDone&&!quietLoad,background:loadDone&&quietLoad};if(loadDone)quietLoad=false;orderFrozen=!!frozen;
   Object.assign(state, fields); renderRows();
   if (!livePatches.size && update?.data?.rows?.length) setTimeout(() => { void refreshLiveRows(); }, 1500);
 },changed:info=>{
@@ -598,14 +632,26 @@ const discoveryUpdates=createDiscoveryUpdates({apply:update=>{
   text(arrivals,info.newTokens?info.newTokens+' new · '+(info.manual?'resume to show':'waiting'):info.manual?'Updates paused':'');
 }});
 pauseUpdates.addEventListener('click',()=>discoveryUpdates.hold('manual',pauseUpdates.getAttribute('aria-pressed')!=='true'));
-scroll.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse'&&!state.loading)discoveryUpdates.hold('pointer',true);});
-scroll.addEventListener('pointermove',event=>{if(event.pointerType==='mouse'&&!state.loading)discoveryUpdates.hold('pointer',true);});
-scroll.addEventListener('pointerdown',()=>discoveryUpdates.hold('press',true));
-scroll.addEventListener('click',()=>setTimeout(()=>discoveryUpdates.hold('press',false),0),{capture:true});
-scroll.addEventListener('pointercancel',()=>discoveryUpdates.hold('press',false));
-scroll.addEventListener('pointerleave',()=>{discoveryUpdates.hold('pointer',false);discoveryUpdates.hold('press',false);});
-scroll.addEventListener('focusin',()=>discoveryUpdates.hold('focus',true));
-scroll.addEventListener('focusout',event=>{if(!scroll.contains(event.relatedTarget))discoveryUpdates.hold('focus',false);});
+// S1: every hold ends 3.5 s after the touch, hover, scroll or focus ends (at least the 3 s asked for).
+const holds=createHoldTimers({hold:(reason,on)=>discoveryUpdates.hold(reason,on),afterMs:3500});
+holdsActive=()=>discoveryUpdates.held;
+scroll.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse'&&!state.loading)holds.on('pointer');});
+scroll.addEventListener('pointermove',event=>{if(event.pointerType==='mouse'&&!state.loading)holds.on('pointer');});
+scroll.addEventListener('pointerdown',()=>holds.on('press'));
+scroll.addEventListener('pointerup',()=>holds.off('press'));
+scroll.addEventListener('pointercancel',()=>holds.off('press'));
+scroll.addEventListener('pointerleave',()=>{holds.off('pointer');holds.off('press');});
+scroll.addEventListener('touchstart',()=>holds.on('touch'),{passive:true});
+scroll.addEventListener('touchend',()=>holds.off('touch'),{passive:true});
+scroll.addEventListener('touchcancel',()=>holds.off('touch'),{passive:true});
+for(const target of [scroll,window])target.addEventListener('scroll',()=>{if(root.hidden)return;holds.on('scroll');holds.off('scroll');},{passive:true});
+// Wheel and plain mouse events too: a wheel over a list that cannot scroll fires no scroll event, and some engines
+// (WebKit on touch-capable devices) report a mouse without pointerenter.
+scroll.addEventListener('wheel',()=>{if(root.hidden)return;holds.on('wheel');holds.off('wheel');},{passive:true});
+scroll.addEventListener('mousemove',()=>{if(!state.loading)holds.on('pointer');},{passive:true});
+scroll.addEventListener('mouseleave',()=>holds.off('pointer'),{passive:true});
+scroll.addEventListener('focusin',()=>holds.on('focus'));
+scroll.addEventListener('focusout',event=>{if(!scroll.contains(event.relatedTarget))holds.off('focus');});
 const loader = createFeedLoader(loaderOptions(update=>discoveryUpdates.receive(update)));
 const hotLoader=createHotLoader({fetcher:publicReadFetch,knownRows:()=>[...launchMarkets().map(launchRow),...knownFeedRows,...state.hits.map(searchRow)],changed:update=>discoveryUpdates.receive({...update,key:'hot:'+state.chain+':'+state.hotWindow})});
 // CSS and fonts can settle after the first cached Funds paint. Keep its selected tab visible.
@@ -854,7 +900,7 @@ root.addEventListener('focusin', event => {
   const tr = event.target.closest('tr[data-key]');
   if (!tr) return;
   focusedKey = tr.dataset.key;if(pulseMode()){pulse.focusKey(focusedKey,tr);return;}
-  for (const [key, node] of nodes) node.open.tabIndex = key === focusedKey ? 0 : -1;
+  for (const [key, node] of nodes) { const t = key === focusedKey ? 0 : -1; if (node.open.tabIndex !== t) node.open.tabIndex = t; }
 });
 function focusRow(delta) {
   if(pulseMode()){pulse.focusRow(delta);return;}
@@ -894,7 +940,8 @@ function rememberSearchResults(){
  if(!api?.library||state.wallet||state.searching||state.query.length<2||key===lastLibrarySearch)return;
  const rows=visibleRows().slice(0,8).map(libraryAsset);if(rows.length){api.library.rememberSearch(rows);lastLibrarySearch=key;}
 }
-document.addEventListener('qxt:discovery-evidence',()=>{if(!root.hidden)renderRows();});
+// S1: evidence lookups land in bursts; one background render per 500 ms at most.
+let evidenceTimer=null;document.addEventListener('qxt:discovery-evidence',()=>{if(root.hidden||evidenceTimer)return;evidenceTimer=setTimeout(()=>{evidenceTimer=null;if(!root.hidden){renderMode={background:true};renderRows();}},500);});
 document.addEventListener('qhooks:first-run-owner',event=>{
  const owner=event.detail?.owner||null;
  if(filterOwner(owner)===filterOwner(filterWallet))return;
@@ -928,7 +975,8 @@ function connectTerminal() {
     const hasLaunches = state.markets.some(m => m.live);
     if (wantedLaunch && hasLaunches) { wantedLaunch = false; setTab('launches'); }
     else if (state.tab === 'launches' && !hasLaunches) setTab('trending');
-    renderTabs(); renderRows();
+    // S1: the rail's 15 s market refresh is a background render (it must not re-rank a list being touched).
+    renderTabs(); if(state.tab!=='launches'&&nodes.size)renderMode={background:true}; renderRows();
   });
 }
 document.addEventListener('qhooks:quick-settings',()=>renderRows());
@@ -946,7 +994,7 @@ livePoll=createPollScheduler({isActive:liveView,poll:async()=>{
   if(pulseMode())return pulse.pollNext?await pulse.pollNext():'skip';
   if(state.loading)return 'busy';
   // Every 2 min a full load still runs, so lists that lean on browser-read rows (thin server answers) refresh those too.
-  if(Date.now()-lastFullLoadAt>120000){refresh();return 'busy';}
+  if(Date.now()-lastFullLoadAt>120000){quietLoad=true;refresh();return 'busy';}
   // Custom server filters make a key few others share (no colo cache reuse): those views re-read every 30 s.
   const filters=viewFilters(state,filterBypass),custom=['liquidityMin','liquidityMax','capMin','capMax','volumeMin','transactionsMin','ageMinHours','ageMaxHours','venue','hasSocials'].some(k=>filters?.[k]!==''&&filters?.[k]!=null);
   if(custom&&Date.now()-filteredPollAt<29000)return 'skip';if(custom)filteredPollAt=Date.now();

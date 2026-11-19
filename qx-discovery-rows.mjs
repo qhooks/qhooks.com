@@ -30,9 +30,10 @@ export function promotionLabel(row,now=Date.now()){
  return null;
 }
 export function paintPromotion(chip,vm,now=Date.now()){
- const label=promotionLabel(vm.row,now);chip.hidden=!label;
- if(!label){delete chip.dataset.kind;return;}
- if(chip.textContent!==label.text)chip.textContent=label.text;chip.title=label.title;chip.dataset.kind=label.kind;
+ // S1: unchanged values are not rewritten (each equal write is a DOM mutation on every row render).
+ const label=promotionLabel(vm.row,now);if(chip.hidden!==!label)chip.hidden=!label;
+ if(!label){if('kind' in chip.dataset)delete chip.dataset.kind;return;}
+ if(chip.textContent!==label.text)chip.textContent=label.text;if(chip.title!==label.title)chip.title=label.title;if(chip.dataset.kind!==label.kind)chip.dataset.kind=label.kind;
 }
 
 // ---- columns ----
