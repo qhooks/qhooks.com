@@ -71,7 +71,9 @@
     "b/ux-g2-20261118/terminal/qx-terminal.O5VEIGJQ.mjs": "dde8cfd0ad734009a910823a5cf3d2b41e3c70cb3bdb2a4ed7ded4ccfbcf4964",
     "b/ux-g2-20261118/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
     "b/ops-p1-curve-fu16-20261119/terminal/qx-terminal.QZQNGRWC.mjs": "cfb1375e381e03cbd9dcccdd5c1d95c3ac672f8a27c946bac7fe2ddeb50abcd7",
-    "b/ops-p1-curve-fu16-20261119/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1"
+    "b/ops-p1-curve-fu16-20261119/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+    "b/ux-g3a-20261118/terminal/qx-terminal.QZQNGRWC.mjs": "cfb1375e381e03cbd9dcccdd5c1d95c3ac672f8a27c946bac7fe2ddeb50abcd7",
+    "b/ux-g3a-20261118/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1"
   },
   "classificationSourceReleaseId": "df15e38a-fdcd-4fd2-af2c-5bed0051158b",
   "additionalReview": ".ci/lwc-f1-review.json",

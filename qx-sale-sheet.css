@@ -1,0 +1,27 @@
+/* G3 (2026-11-18): the portfolio sell sheet. Mounted on <body> (qx-portfolio-row-trade.mjs), outside every row, so a
+   holdings refresh never touches it. Opaque, elevated, theme tokens only. Phone: a bottom sheet over a scrim.
+   Desktop: a 360px popover anchored to the tapped preset (inline top/left from the script). */
+.qx-sale-scrim { position: fixed; inset: 0; z-index: 900; background: rgba(0, 0, 0, .6); }
+.qx-sale-scrim[hidden], .qx-sale-sheet[hidden] { display: none !important; }
+.qx-sale-sheet { position: fixed; z-index: 901; box-sizing: border-box; isolation: isolate;
+  background: var(--qa-floor-2); color: var(--qa-tx); border: 1px solid var(--qa-rule-2); box-shadow: var(--qa-shadow-pop);
+  padding: 12px 16px 16px; font-size: 14px; line-height: 1.4; }
+.qx-sale-sheet__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 8px; }
+.qx-sale-sheet__title { font-size: 15px; font-weight: 760; color: var(--qa-tx); }
+.qx-sale-sheet__close { min-width: 44px; min-height: 44px; font-size: 20px; line-height: 1; }
+.qx-sale-sheet .pf-row-sale { position: static; display: block; grid-column: auto; grid-row: auto; z-index: auto; margin: 0; padding: 0; background: none; border: 0; border-radius: 0; min-width: 0; }
+.qx-sale-sheet .pf-row-sale[hidden] { display: block; }
+.qx-sale-sheet .pf-row-sale p { margin: 0 0 8px; color: var(--qa-tx-2); }
+.qx-sale-sheet .pf-row-sale p[role="status"] { color: var(--qa-tx); font-weight: 650; }
+.qx-sale-sheet .pf-row-sale p.pf-row-sale__error { color: var(--qa-sell); }
+.qx-sale-sheet .pf-row-sale__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.qx-sale-sheet .pf-row-sale__actions .qa-btn { min-height: 44px; }
+.qx-sale-sheet .pf-row-sale__actions .qa-btn:disabled { opacity: 1; background: var(--qa-wash-2); color: var(--qa-tx-3); box-shadow: none; }
+@media (max-width: 759px) {
+  .qx-sale-sheet { left: 0; right: 0; bottom: 0; top: auto !important; width: auto; max-height: 80vh; overflow: auto;
+    border-radius: 14px 14px 0 0; border-bottom: 0; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+}
+@media (min-width: 760px) {
+  .qx-sale-scrim { display: none !important; }
+  .qx-sale-sheet { width: 360px; max-height: calc(100vh - 16px); overflow: auto; border-radius: 10px; }
+}
