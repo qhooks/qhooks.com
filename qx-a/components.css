@@ -608,3 +608,7 @@ html #qj-success-heading, html .qst-ws #qh-trade-panel h2 {
 .qa-list-buy:hover { background: var(--qa-buy); color: var(--qa-tx-on-buy); }
 .qa-list-buy:focus-visible { outline: 2px solid var(--qa-buy); outline-offset: 2px; }
 @media (pointer: coarse), (max-width: 759px) { .qa-list-buy { height: 44px; min-height: 44px; } }
+
+/* G4 (2026-11-18): gas preflight note under a blocked buy/sell/unwrap, with a 44px "Add gas" tap target */
+.qx-gas-note { margin: 8px 0; font-size: 13px; line-height: 1.35; font-weight: 600; color: var(--qa-sell); }
+.qx-gas-note .qx-gas-add { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: var(--qa-gold-hi); text-decoration: underline; text-underline-offset: 3px; }

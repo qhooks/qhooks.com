@@ -1,6 +1,7 @@
 import {createRowSale} from './qx-portfolio-sell-core.mjs';
 import {externalTradingNote} from './qx-external-trading.mjs';
 import {chainById} from './chains.mjs';
+import {gasNote} from './qx-gas-preflight.mjs';
 const EVM=/^0x[0-9a-f]{40}$/i;
 // watch-only rows (qx-portfolio-watch.mjs) are read only: never a sell, whatever else holds
 export const rowCanSell=(row,owner)=>!!row&&!row.watch&&EVM.test(owner||'')&&String(row.chainId)!=='solana'&&EVM.test(row.address||'')&&row.units>0&&!row.native&&!row.spam&&!!chainById(String(row.chainId))&&(!!row.qhooks?.controller||!externalTradingNote(String(row.chainId)));
@@ -14,7 +15,9 @@ const SHEET_CSS='/qx-sale-sheet.css';
 const anySignal=(...signals)=>{const list=signals.filter(Boolean);if(list.length<2)return list[0];if(typeof AbortSignal.any==='function')return AbortSignal.any(list);const c=new AbortController();for(const s of list){if(s.aborted){c.abort(s.reason);break;}s.addEventListener('abort',()=>c.abort(s.reason),{once:true});}return c.signal;};
 export function mountPortfolioSelling({h,getOwner,fetchImpl=globalThis.fetch,loadTicket=()=>import('./qx-terminal-trade.mjs'),doc=globalThis.document,desktop=()=>!!globalThis.matchMedia?.('(min-width: 760px)')?.matches}={}){
  const panel=h('div',{class:'pf-row-sale',role:'group','aria-label':'Sell holding'}),text=h('p',{role:'status','aria-live':'polite'}),preview=h('p',{class:'pf-row-sale__preview'}),actions=h('div',{class:'pf-row-sale__actions'}),engine=h('div',{class:'pf-row-sale__engine'});
- panel.append(text,preview,actions,engine);let list=null,ticket=null,loading=null,observed=null,returnFocus=null;
+ const gas=h('div',{class:'pf-row-sale__gas'});panel.append(text,preview,gas,actions,engine);
+ // G4: the ticket's gas preflight; when short, the sheet shows the same note with Add gas and Confirm stays disabled.
+ const paintGas=()=>{const g=ticket?.gasShort?.();gas.replaceChildren(...(g?[gasNote(h,g,{owner:getOwner()})]:[]));};let list=null,ticket=null,loading=null,observed=null,returnFocus=null;
  const title=h('b',{class:'qx-sale-sheet__title'},'Sell'),closeBtn=h('button',{type:'button',class:'qa-btn qa-btn--icon qx-sale-sheet__close','aria-label':'Close',onclick:()=>close()},'×');
  const sheet=h('div',{class:'qx-sale-sheet',role:'dialog','aria-modal':'false','aria-label':'Sell holding',hidden:true},h('div',{class:'qx-sale-sheet__head'},title,closeBtn),panel);
  const scrim=h('div',{class:'qx-sale-scrim',hidden:true,onclick:()=>close()});
@@ -35,7 +38,7 @@ export function mountPortfolioSelling({h,getOwner,fetchImpl=globalThis.fetch,loa
  async function prepare(row,percent,owner,alive,signal){
   if(!rowCanSell(row,owner))throw Error('This holding is not available for a row sell.');
   if(!ticket){loading??=loadTicket().then(m=>m.mountTicket(engine,{rowMode:true}));ticket=await loading;
-   const elements=ticket.rowElements();observed=new MutationObserver(()=>{if(sale.snapshot().phase==='submitting')text.textContent=elements.status.textContent||'Selling…';const confirm=actions.querySelector('[data-confirm]');if(confirm)confirm.disabled=elements.ready.disabled||!!sale.snapshot().requoting||!!sale.snapshot().stale;});observed.observe(elements.status,{childList:true,subtree:true,characterData:true});observed.observe(elements.ready,{attributes:true,attributeFilter:['disabled']});}
+   const elements=ticket.rowElements();observed=new MutationObserver(()=>{if(sale.snapshot().phase==='submitting')text.textContent=elements.status.textContent||'Selling…';const confirm=actions.querySelector('[data-confirm]');if(confirm)confirm.disabled=elements.ready.disabled||!!sale.snapshot().requoting||!!sale.snapshot().stale;paintGas();});observed.observe(elements.status,{childList:true,subtree:true,characterData:true});observed.observe(elements.ready,{attributes:true,attributeFilter:['disabled']});}
   const assert=()=>{if(signal?.aborted||!alive()||getOwner()?.toLowerCase()!==owner.toLowerCase())throw Error('Your wallet changed. Review the sell again.');};assert();
   if(row.qhooks?.controller){
    const data=await json('/api/markets/'+row.chainId+'/'+row.qhooks.controller,signal);assert();const p=data.pool;
@@ -64,7 +67,7 @@ export function mountPortfolioSelling({h,getOwner,fetchImpl=globalThis.fetch,loa
   if(s.phase==='error'&&!s.hash&&s.row)actions.append(button('Retry',()=>sale.retry(),'qa-btn qa-btn--primary'));
   if(['preparing','confirm','undo'].includes(s.phase))actions.append(button(s.phase==='undo'?'Undo':'Cancel',()=>sale.cancel()));
   if(s.hash){const chain=chainById(s.row.chainId),url=chain?.explorer;if(url)actions.append(h('a',{href:url.replace(/\/$/,'')+'/tx/'+s.hash,target:'_blank',rel:'noopener',class:'qa-btn'},'View tx ↗'));}
-  panel.dataset.phase=s.phase;sheet.dataset.phase=s.phase;
+  paintGas();panel.dataset.phase=s.phase;sheet.dataset.phase=s.phase;
  }});
  const changed=()=>sale.changed();doc?.addEventListener?.('qhooks:wallet-change',changed);
  return {

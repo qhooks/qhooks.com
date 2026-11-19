@@ -16,6 +16,7 @@ import {solOrderFeeCopy} from './qx-sol-referral-payout-core.mjs';
 import {sellPortion} from './qx-position-core.mjs';
 import {poolQuoteInfo} from './qx-best-pool.mjs';
 import {chainById} from './chains.mjs';
+import {createGasGate} from './qx-gas-preflight.mjs';
 import {externalTradingNote} from './qx-external-trading.mjs';
 import {quoteUsd as readQuoteUsd} from '/qx-native-usd.mjs';
 import {homePicker, homeConfig, loadHomePref, instantHomeEnabled, withHomeRails} from './qx-home-currency.mjs';
@@ -308,6 +309,12 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   const quoteMatches=c=>!!c&&!!st&&isSelection(c.selection)&&c.revision===qseq&&c.chainId===st.chainId&&c.token===st.token&&c.side===side&&c.pay===pay;
   const bindQuote=(fields,revision,owner,tolerance=tol)=>({...fields,payAsset: !st.sol && side==='buy' && pay==='homeAsset' ? homeToken(homePref) : null,homeRequired:homeSelected&&side==='buy',copyReviewId:copyReview.active?copyReview.context?.id:null,selection,revision,chainId:st.chainId,token:st.token,owner,readAt:now(),toleranceBps:Number(tolerance)});
   const quoteOwner = () => st?.sol ? solAddress() : connectedAddress();
+  // G4: gas preflight. Before any EVM buy/sell the wallet's native balance must cover gas (≈ units × gas price × 1.5);
+  // when short, the trade button stays disabled with "Not enough ETH on <chain> for gas" and one-tap Add gas, and no wallet
+  // prompt opens. Read-only; amounts, quotes and the signer are unchanged.
+  const gasBox=h('div',{class:'qxt-gas',hidden:true});if(go.parentNode)go.before(gasBox);
+  const gasGate=createGasGate({h,button:go,box:gasBox,rpc,onOk:()=>{if(!busy)refresh();},context:()=>{if(!st||st.sol||busy||recovery)return null;const owner=connectedAddress();if(!owner)return null;const c=current;return {chainId:String(st.chainId),owner,action:side==='sell'?'sell':'buy',extraWei:side==='buy'&&c?.pay==='native'&&typeof c?.a==='bigint'?c.a:0n};}});
+  for(const ev of ['qhooks:traded','focus'])(ev==='focus'?window:document).addEventListener(ev,()=>{void gasGate.recheck();});
   const sameOwner = (a,b,sol) => sol ? a===b : a?.toLowerCase()===b?.toLowerCase();
   function hasQuoteAmount() { try { return !!st&&parseUnits(amount.value,payDecimals())>0n; } catch { return false; } }
   function renderQuoteFreshness() {
@@ -899,6 +906,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
       return;
     }
     if (impactArmedAt) { armedAt = Date.now(); impactArmedAt = null; }
+    if(!st.sol&&!await gasGate.check()){const g=gasGate.short();status.textContent=g?.message||'Not enough gas for this trade.';lastSubmitError=Object.assign(Error(status.textContent),{gas:true});go.disabled=true;return;}
     const plan = st.sol ? null : ticketPlan(c);
     if (!st.sol && !plan) return;
     lock(true);
@@ -971,7 +979,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   amountDisplay.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) submit(); } });
   balance.addEventListener('click', async () => { if(busy||recovery||!st)return;const intent=selection,activeState=st,mine=++qseq;clearTimeout(timer);current=null;go.disabled=true;sellPrefillOwner=null;clearArmed();quoteLoading=false;renderQuoteFreshness(); const b = await balances(); if(!isSelection(intent)||st!==activeState||mine!==qseq)return;if (b) { setAmount( formatUnits(spendable(b), payDecimals(), payDecimals()).replace(/,/g, '')); refresh(); } });
   go.addEventListener('click', submit);
-  onWalletChange(() => { clearCosts();clearArmed(); if (pageLeaving) return; if (!busy && recovery?.pendingBuy && recovery.pendingBuy.owner.toLowerCase() !== connectedAddress()?.toLowerCase()) {recovery = null; current = null; followup.replaceChildren(); lock(false);} if (!busy&&!recovery&&!st?.sol) {paintCachedHolding();if (!rowMode&&restorePendingBuy()) return; if(sellPrefillOwner&&sellPrefillOwner.toLowerCase()!==connectedAddress()?.toLowerCase()){setAmount('');sellPrefillOwner=null;}void syncHome(true).then(() => {refresh();layout();});} });
+  onWalletChange(() => { void gasGate.recheck(); clearCosts();clearArmed(); if (pageLeaving) return; if (!busy && recovery?.pendingBuy && recovery.pendingBuy.owner.toLowerCase() !== connectedAddress()?.toLowerCase()) {recovery = null; current = null; followup.replaceChildren(); lock(false);} if (!busy&&!recovery&&!st?.sol) {paintCachedHolding();if (!rowMode&&restorePendingBuy()) return; if(sellPrefillOwner&&sellPrefillOwner.toLowerCase()!==connectedAddress()?.toLowerCase()){setAmount('');sellPrefillOwner=null;}void syncHome(true).then(() => {refresh();layout();});} });
 
   sellToCash.addEventListener('click', async () => {
     if (!st || busy||recovery) return;
@@ -1110,6 +1118,7 @@ if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} setAmount( '');s
       const receive=st.ext?xTokens():{outSym:(st.multi?current.route.pool:selectedQuote()).quoteSymbol,outDec:(st.multi?current.route.pool:selectedQuote()).quoteDecimals};
       return {id:rowReview,amount:formatUnits(current.a,st.decimals,st.decimals),preview:'Receive ≈ '+formatUnits(current.got,receive.outDec,6)+' '+receive.outSym+' · min '+formatUnits(current.minOut,receive.outDec,6),usd:tradeUsd(current),silent:!st.sol&&plan.silent,confirmRequired:!!plan.ticketConfirm||highImpact||['caution','danger'].includes(st.safety?.verdict)||!!st.hookOwner,warning:highImpact?confirmCopy('sell',current.impactPct).status:'',slippageBps:current.toleranceBps};
     },
+    gasShort:()=>gasGate.short(),recheckGas:()=>gasGate.recheck(),
     async submitSell(review,{confirmed=false}={}) {
       if(!rowMode||!rowReview||review.id!==rowReview||rowReview.used||rowReview.quote!==current||!quoteMatches(current)||side!=='sell'||now()-rowReview.at>30000)throw Error('This sell quote expired. Tap a percentage for a fresh quote.');
       assertTradeOwner(current);

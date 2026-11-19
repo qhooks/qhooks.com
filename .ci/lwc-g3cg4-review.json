@@ -1,0 +1,20 @@
+{
+  "status": "FOCUSED_APACHE_REVIEW_PASS_BOUND_ROOT_LIVE_ACCEPTED",
+  "sourceRelease": "47af031c-cb6f-4aaf-93b1-3123b8ba11c3",
+  "sourceWorkerSha256": "eb3b65eb9e4a02d2d7c87b46f1eefcab76f27daac08e834180cdf59f9356ae8a",
+  "sourceReleaseReceiptSha256": "3abc4fd6c51c9353cb4018a1f958d283c74c9776cd41d519449f2dbdb5df655a",
+  "existingPins": 67,
+  "candidatePins": 69,
+  "newPins": {
+    "b/ux-g3cg4-20261118/terminal/qx-terminal.AGH63UDO.mjs": "e3e5bcd75f1b4022f72b646152645f8e9975afb15319f26ce4dc8a6a3e9c7c0d",
+    "b/ux-g3cg4-20261118/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1"
+  },
+  "priorPinsPreserved": true,
+  "licenseSha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823",
+  "standaloneVersion": "4.2.3",
+  "standaloneInputSha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768",
+  "focusedExistingHelperAcceptedBoth": true,
+  "review": "Terminal output changes match approved G3c/G4 authored graph with exact Apache4.2.3 input; existing helper validates only its two allowed attribution mentions and full exact output SHA. x-tracker bytes reuse prior approved hash. No guard/exclusion broadening.",
+  "guardSha256": "68e9e8885b8478d85f2b126f189ccb7e32a6efc2b2eb2e6e97a71b7133159289",
+  "allowHelperSha256": "03285eca548709d395d82680b71adb767037b235cfc08b1fc343f8d6a04fc64a"
+}

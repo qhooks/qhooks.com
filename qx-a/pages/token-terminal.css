@@ -987,3 +987,39 @@ body.qa.qxt.ta-token .ta-detail-tools .qxt-identity-context :is(button,a){positi
  body.qa.qxt.ta-token #ta-top .ta-stage .ta-proof>.qa-i{flex:none}
  body.qa.qxt.ta-token #ta-top .ta-stage .ta-soc{grid-area:soc;align-self:center;margin:0}
 }
+
+/* G3 (2026-11-18, GMGN/Axiom-style desktop token page): the trade column starts at the top of the page beside the
+   stage (not below it), stays sticky, and scrolls inside itself, so Buy|Sell, the presets and the trade button are
+   on screen with zero page scroll at 1440x900 and 1280x720. The ticket is always first in the column; links/tape and
+   other cards follow it. Phone (<1100px) keeps its sticky Buy/Sell bar and sheet, untouched. */
+@media (min-width: 1100px) {
+  body.qa.qxt.ta-token #qxt-main { grid-template-areas: "disc side" "top side" "center side" "rail side"; grid-template-rows: auto auto auto 1fr; }
+  body.qa.qxt.ta-token .ta-top { margin: 0; }
+  body.qa.qxt.ta-token .qxt-side { grid-area: side; align-self: start; margin-top: 12px; max-height: calc(100vh - var(--qa-nav-h) - 24px); max-height: calc(100dvh - var(--qa-nav-h) - 24px); overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; scrollbar-width: thin; }
+  body.qa.qxt.ta-token .qxt-side > #qxt-ticket { order: -1; }
+  /* G3c: the column is a capped flex column, so its items must never shrink to fit it: a shrunk ticket (its own
+     overflow makes min-height 0) let the next card ("My position") paint over Buy|Sell at 1280x720 and squeezed the
+     ticket's sticky trade button above its toggle. Every item keeps its full height; the column scrolls instead. */
+  body.qa.qxt.ta-token .qxt-side > * { flex: none; }
+  body.qa.qxt.ta-token .qxt-side > :not(#qxt-ticket) { order: 1; }
+  body.qa.qxt.ta-token #qxt-ticket .qxt-side-toggle { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0; width: 100%; margin: 0 0 6px; box-shadow: 0 1px 0 var(--qa-rule-2); }
+  body.qa.qxt.ta-token #qxt-ticket .qxt-side-toggle button { justify-content: center; text-align: center; height: 44px; font-size: 18px; }
+  body.qa.qxt.ta-token #qxt-ticket .qxt-presets { margin: 4px 0 6px; }
+  body.qa.qxt.ta-token #qxt-ticket .qxt-amount input { font-size: 32px; }
+  body.qa.qxt.ta-token #qxt-ticket .qxt-go { margin-top: 8px; }
+}
+
+/* G3b: short desktop viewports (1280x720 and similar): the ticket's Buy|Sell, presets and action fit on screen.
+   Spacing only; nothing in the ticket is hidden. */
+@media (min-width: 1100px) and (max-height: 800px) {
+  body.qa.qxt.ta-token .qxt-side { padding: 14px 18px; margin-top: 8px; }
+  body.qa.qxt.ta-token .qxt-side::before { height: 90px; }
+  body.qa.qxt.ta-token #qxt-ticket .ta-ticket-identity { margin-bottom: 4px; }
+  body.qa.qxt.ta-token #qxt-ticket .ta-ticket-identity img { width: 28px; height: 28px; }
+  body.qa.qxt.ta-token #qxt-ticket .qxt-side-toggle button { height: 38px; font-size: 17px; }
+  body.qa.qxt.ta-token #qxt-ticket .qxt-presets { margin: 2px 0 4px; }
+  body.qa.qxt.ta-token #qxt-ticket .qxt-presets button { height: 36px; }
+  body.qa.qxt.ta-token #qxt-ticket select { height: 36px; }
+  body.qa.qxt.ta-token #qxt-ticket .qxt-amount input { font-size: 26px; padding: 2px 0 4px; }
+  body.qa.qxt.ta-token #qxt-ticket .qxt-go { height: 48px; margin-top: 6px; }
+}

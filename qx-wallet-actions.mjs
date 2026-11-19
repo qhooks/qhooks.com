@@ -1,6 +1,8 @@
 import {freshChainBalances} from './qx-balances.mjs';
 import { parseAmountInput } from './qx-amount-input.mjs';
 import { guardedSend, tradeError } from './qx-chain-guard.mjs';
+import { gasPreflight, gasNote } from './qx-gas-preflight.mjs';
+const hx = (tag, attrs = {}, ...kids) => { const n = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); n.append(...kids); return n; };
 // Account panel actions (2026-11-08): "Send" any balance on a chain (its coin, WETH/WBNB, USDC/USDG, QHooks launch
 // tokens) and "Unwrap WETH → ETH" (WETH.withdraw). Sent from the account panel's connected wallet on the row's chain
 // (a row on another chain offers "Switch to …" first). The wallet always shows its own confirmation: these never run
@@ -85,7 +87,12 @@ export function walletActions(row, { onDone = () => {}, explorer = null, wallet 
     const id = epoch, which = panel.dataset.open;
     assert ||= () => { if (!active() || id !== epoch || panel.hidden || panel.dataset.open !== which) throw Error('Wallet context changed. Close and reopen this action to review again.'); };
     button.disabled = true;
-    try { assert(); if (!wallet?.provider) throw Error('Connect your wallet first.'); const receipt = await sendFrom(wallet.provider, wallet.from, row.chainId, tx, t => { say.textContent = t; }, {rpc,assert}); done(say, receipt); return true; }
+    try { assert(); if (!wallet?.provider) throw Error('Connect your wallet first.');
+      // G4: never open a wallet prompt without gas for it. The exact tx is estimated; "≈" when estimation fails.
+      const read = rpc || (await import('/qx-chain.mjs')).rpc;
+      const gas = await gasPreflight({ chainId: row.chainId, owner: wallet.from, action: /^0x2e1a7d4d/.test(tx.data || '') ? 'unwrap' : 'swap', tx, rpc: read }); assert();
+      if (!gas.ok) { say.replaceChildren(gasNote(hx, gas, { owner: wallet.from })); button.disabled = true; const again = async () => { const g2 = await gasPreflight({ chainId: row.chainId, owner: wallet.from, action: 'unwrap', tx, rpc: read }).catch(() => null); if (g2?.ok) { globalThis.removeEventListener?.('focus', again); button.disabled = false; say.textContent = ''; } }; globalThis.addEventListener?.('focus', again); return false; }
+      const receipt = await sendFrom(wallet.provider, wallet.from, row.chainId, tx, t => { say.textContent = t; }, {rpc,assert}); done(say, receipt); return true; }
     catch (e) { say.textContent = tradeError(e); button.disabled = false; return false; }
   }
   function amountField(asset) {

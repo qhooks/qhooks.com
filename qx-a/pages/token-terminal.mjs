@@ -1,4 +1,5 @@
 import {createReadablePrice} from '/qx-readable-price.mjs';
+import { orderTicketTop, pinColumnTop } from '/qx-ticket-order.mjs';
 import{fundFor}from'/qx-fund-catalog.mjs';
 import {QPROOF_CHECK_COUNT_MEANING} from '../../qproof-check-meanings.mjs';
 import {priceLabel} from '/qx-price-presentation.mjs';
@@ -340,6 +341,9 @@ limitTab.addEventListener('click', () => limitBtn?.click());
 function placeLimit() { const t = $('qxt-ticket')?.querySelector('.qxt-side-toggle'); if (t && limitTab.parentElement !== t) t.append(limitTab); limitTab.hidden = !limitBtn || limitBtn.hidden; }
 if (limitBtn) new MutationObserver(placeLimit).observe(limitBtn, { attributes: true, attributeFilter: ['hidden'] });
 new MutationObserver(placeLimit).observe($('qxt-ticket'), { childList: true });
+// G3: Buy|Sell, presets and the holding line first; QProof summary below the trade controls (qx-ticket-order.mjs).
+if (desk.matches) pinColumnTop(side); // G3b: opens at scrollTop 0, ticket first; late cards never scroll it
+const placeTradeTop=()=>orderTicketTop($('qxt-ticket'));placeTradeTop();new MutationObserver(placeTradeTop).observe($('qxt-ticket'), { childList: true });
 
 const ticketIdentity=h('div',{class:'ta-ticket-identity'},h('img',{alt:'',width:36,height:36}),h('div',{},h('strong',{},'Token'),h('span',{},'Refreshing price')));
 let ticketMeta=null;
