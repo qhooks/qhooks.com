@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "dd427398-554d-40a6-a5c6-95f78cf5d1b5",
+  "releaseId": "a7566e41-0ee2-45bf-acc8-8d99d67936aa",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -220978,8 +220978,8 @@
     }
   },
   "contentDigest": "47545fc1bdcf241425f8a5b0f49740f740fffb12b6b27ae0e70f1f5d71b4dbfc",
-  "sourceTree": "work/qhooks-ops-p1-root-rel-20261119",
-  "sourceWorkerSha256": "f5afa605366e80b239191d226d002790d811f26462e39b224e9d97f7aeb2640f",
-  "sourceFreezeSha256": "08bdefb367733ee2e6e59a9efc7dada24ba3604519c9de142819dd7b13a00995",
-  "provenance": "Exact static public assets from deployed OPS-P1/native-curve release. Includes all eligible browser bundles under the unchanged C2 exclusions and exact Apache4.2.3 attribution pin policy. No Worker-generated HTTP body, paid completion or live CU/error-rate claim."
+  "sourceTree": "work/qhooks-x402-validity-root-rel-20261119",
+  "sourceWorkerSha256": "eb3b65eb9e4a02d2d7c87b46f1eefcab76f27daac08e834180cdf59f9356ae8a",
+  "sourceFreezeSha256": "e39c549b884d6a986c845a8ced84152353a6e57e02b532d8ef31047a351bbd31",
+  "provenance": "Exact static public assets from the deployed x402 validity Worker release; public bytes are unchanged from OPS-P1. The source freeze digest identifies the retained Root release manifest snapshot. All C2 exclusions, license pins and policy are unchanged. No served HTTP body or completed-payment claim."
 }
