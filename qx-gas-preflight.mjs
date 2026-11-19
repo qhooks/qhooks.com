@@ -60,30 +60,35 @@ export function gasNote(h, result, {owner, onAddGas = openAddGas} = {}) {
   add.addEventListener?.('click', e => { e.preventDefault?.(); void onAddGas({chainId: result.chainId, owner}); });
   return h('p', {class: 'qx-gas-note', role: 'status'}, result.message + ' ', add);
 }
-// The gate a trade/unwrap button uses. context() gives {chainId, owner, action, extraWei} for the action on screen (null
+// The gate a trade/unwrap button uses. context() gives {chainId, owner, token, action, extraWei} for the action on screen (null
 // when there is none, e.g. Solana or no wallet). check() reads, and when short disables `button` and shows the note in
 // `box`; nothing ever opens a wallet prompt. While short, any attempt to re-enable the button is turned back, and the
 // balance is re-read on recheck() (wallet change, trade, focus) and every 30 s while visible, at most 20 times.
 export function createGasGate({h, button, box, context, rpc, preflight = gasPreflight, onAddGas = openAddGas, onOk = () => {}, schedule = setTimeout, unschedule = clearTimeout, visible = () => globalThis.document?.visibilityState !== 'hidden', MutationObserver: MO = globalThis.MutationObserver}) {
-  let short = null, seq = 0, timer = null, polls = 0, applying = false, checkedKey = '', checkedAt = 0;
-  const keyOf = c => c ? c.chainId + ':' + String(c.owner).toLowerCase() + ':' + c.action : '';
-  const clear = () => { short = null; if (box) { box.hidden = true; box.replaceChildren?.(); } unschedule(timer); timer = null; polls = 0; };
-  const hold = () => { if (short && button && !button.disabled) { applying = true; button.disabled = true; applying = false; } };
+  let short = null, seq = 0, timer = null, polls = 0, applying = false, checkedKey = '', checkedAt = 0, heldByGate = false;
+  const keyOf = c => c ? JSON.stringify([String(c.chainId), String(c.owner).toLowerCase(), String(c.token ?? '').toLowerCase(), c.action ?? 'swap', String(big(c.extraWei ?? 0n))]) : '';
+  const clear = ({notify = false, release = false} = {}) => { const was = !!short; short = null; if (box) { box.hidden = true; box.replaceChildren?.(); } unschedule(timer); timer = null; polls = 0;
+    if (release && heldByGate && button?.disabled) { applying = true; button.disabled = false; applying = false; } heldByGate = false; if (notify && was) onOk(); };
+  const hold = () => { if (short && button && !button.disabled) { applying = true; heldByGate = true; button.disabled = true; applying = false; } };
   const poll = () => { unschedule(timer); timer = null; if (!short || polls >= 20) return; timer = schedule(() => { timer = null; if (visible()) { polls++; void check(); } else poll(); }, 30000); };
   async function check() {
     const c = context(), mine = ++seq;
-    if (!c) { clear(); checkedKey = ''; return true; }
-    checkedKey = keyOf(c); checkedAt = Date.now();
+    if (!c) { clear({notify: true}); checkedKey = ''; return true; }
+    const key = keyOf(c); if (short && short.key !== key) clear({notify: true});
+    checkedKey = key; checkedAt = Date.now();
     const r = await preflight({...c, rpc});
-    if (mine !== seq) return !short;
+    if (mine !== seq) return false;
+    if (keyOf(context()) !== key) { clear({notify: true}); checkedKey = ''; checkedAt = 0; return false; }
     if (r.ok) { const was = !!short; clear(); if (was) onOk(); return true; }
     short = {...r, key: keyOf(c)};
     if (box) { box.replaceChildren(gasNote(h, r, {owner: c.owner, onAddGas})); box.hidden = false; }
     hold(); poll(); return false;
   }
-  // An action that becomes available (button enabled) for a chain/owner/side not checked in the last 15 s is checked.
-  const observer = MO && button ? new MO(() => { if (applying) return; const c = context(); if (short && keyOf(c) !== short.key) { clear(); void check(); return; } hold();
+  // A context change invalidates the old result; the caller still owns quote/button readiness.
+  const observer = MO && button ? new MO(() => { if (applying) return; const c = context(); if (short && keyOf(c) !== short.key) { seq++; clear({notify: true}); checkedKey = ''; checkedAt = 0; void check(); return; } hold();
     if (!short && !button.disabled && c && (keyOf(c) !== checkedKey || Date.now() - checkedAt > 15000)) void check(); }) : null;
   observer?.observe(button, {attributes: true, attributeFilter: ['disabled']});
-  return {check, recheck: () => { polls = 0; return check(); }, short: () => short, dispose() { seq++; unschedule(timer); observer?.disconnect(); }};
+  return {check, recheck: () => { polls = 0; return check(); }, short: () => short,
+    reset({release = false} = {}) { seq++; checkedKey = ''; checkedAt = 0; clear({release}); },
+    dispose() { seq++; unschedule(timer); observer?.disconnect(); }};
 }

@@ -6,7 +6,7 @@ export function mountPulseBoard({host,el,makeLoader,makeRow,updateRow,viewModels
  if(!doc.querySelector('link[href="/qx-pulse-empty.css"]')){const css=doc.createElement('link');css.rel='stylesheet';css.href='/qx-pulse-empty.css';doc.head.append(css);}
  if(!doc.querySelector('link[href="/qx-pulse.css"]')){const css=doc.createElement('link');css.rel='stylesheet';css.href='/qx-pulse.css';doc.head.append(css);}
  const headerView=livenessView||createDiscoveryLivenessView({document:doc}),ownsHeaderView=!livenessView;
- const media=globalThis.matchMedia('(max-width:1099px)'),parts=new Map();let selected='new',enabled=false,ageTimer=null,lastMinute=0;const focusKeys=new Map();
+ const media=globalThis.matchMedia('(max-width:1099px)'),parts=new Map();let selected='new',enabled=false,ageTimer=null,pressReleaseTimer=null,lastMinute=0;const focusKeys=new Map();
  try{const saved=storage?.getItem('qhooks:discovery:pulse-stage:v1');if(PULSE_COLUMNS.some(([id])=>id===saved))selected=saved;}catch{}
  const button=(label,attrs={})=>el('button',{type:'button',...attrs},label),root=el('section',{class:'qxfd-pulse','aria-label':'Pulse',hidden:''}),toolbar=el('div',{class:'qxp-toolbar'}),nav=el('div',{class:'qxp-tabs',role:'tablist','aria-label':'Pulse stages'}),pause=button('Pause updates',{'aria-pressed':'false',class:'qxp-pause'}),paused=el('span',{class:'qxp-paused',role:'status'}),grid=el('div',{class:'qxp-grid'});
  const quickHost=el('span',{class:'qxp-quick-host'});toolbar.append(nav,quickHost,pause,paused);root.append(toolbar,grid);host.append(root);
@@ -21,7 +21,11 @@ export function mountPulseBoard({host,el,makeLoader,makeRow,updateRow,viewModels
  }
  const controller=createPulseController({makeLoader,visible, onChange:()=>paint()});
  function setHold(reason,on){if(!enabled)return;const loaded=[...parts.values()].some(p=>p.models.length);if(on&&!loaded&&reason!=='manual')return;controller.setHold(reason,on);}
- const events=[['pointerenter',e=>{if(e.pointerType==='mouse')setHold('pointer',true)}],['pointerleave',()=>setHold('pointer',false)],['focusin',()=>setHold('focus',true)],['focusout',e=>{if(!grid.contains(e.relatedTarget))setHold('focus',false)}],['pointerdown',()=>setHold('press',true)],['pointerup',()=>setHold('press',false)],['pointercancel',()=>setHold('press',false)]];
+ // Keep a touch/mouse target stable through its synthetic click. Applying a queued poll on pointerup
+ // can remove that row before the delegated click reaches the discovery root.
+ const cancelPressRelease=()=>{clearTimeout(pressReleaseTimer);pressReleaseTimer=null;};
+ const releasePress=(delay=0)=>{cancelPressRelease();pressReleaseTimer=setTimeout(()=>{pressReleaseTimer=null;setHold('press',false);},delay);};
+ const events=[['pointerenter',e=>{if(e.pointerType==='mouse')setHold('pointer',true)}],['pointerleave',()=>setHold('pointer',false)],['focusin',()=>setHold('focus',true)],['focusout',e=>{if(!grid.contains(e.relatedTarget))setHold('focus',false)}],['pointerdown',()=>{cancelPressRelease();setHold('press',true)}],['pointerup',()=>releasePress(400)],['click',()=>releasePress()],['pointercancel',()=>{cancelPressRelease();setHold('press',false)}]];
  for(const [name,fn]of events)grid.addEventListener(name,fn);
  pause.addEventListener('click',()=>controller.setHold('manual',pause.getAttribute('aria-pressed')!=='true'));
  nav.addEventListener('keydown',e=>{const ids=PULSE_COLUMNS.map(([id])=>id),at=ids.indexOf(selected),next=e.key==='ArrowRight'?(at+1)%ids.length:e.key==='ArrowLeft'?(at+ids.length-1)%ids.length:e.key==='Home'?0:e.key==='End'?ids.length-1:null;if(next===null)return;e.preventDefault();select(ids[next]);parts.get(ids[next]).tab.focus();});
@@ -58,13 +62,13 @@ export function mountPulseBoard({host,el,makeLoader,makeRow,updateRow,viewModels
  function tick(){if(!enabled||!visible())return;paintAge();const minute=Math.floor(Date.now()/60000);if(minute!==lastMinute){lastMinute=minute;paint();}}
  return {
   root,quickHost,configure,select,stage:()=>selected,render:paint,
-  setActive(value){enabled=!!value;root.hidden=!enabled;if(enabled){configure();ageTimer??=setInterval(tick,1000);}else{controller.setActive(false);clearInterval(ageTimer);ageTimer=null;}headerView.refresh();},
+  setActive(value){enabled=!!value;root.hidden=!enabled;if(enabled){configure();ageTimer??=setInterval(tick,1000);}else{cancelPressRelease();controller.setActive(false);clearInterval(ageTimer);ageTimer=null;}headerView.refresh();},
   refreshNext:()=>controller.refreshNext(),
   pollNext:()=>controller.pollNext(),
   getNode:key=>{for(const p of parts.values())if(p.nodes.has(key))return p.nodes.get(key);return null;},
   getModels:()=>[...parts.values()].filter(p=>!media.matches||p.id===selected).flatMap(p=>p.models),
   focusKey(key,tr){for(const p of parts.values())if(p.nodes.get(key)?.tr===tr){focusKeys.set(p.id,key);for(const [k,n]of p.nodes)n.open.tabIndex=k===key?0:-1;return;}},
   focusRow(delta){const p=[...parts.values()].find(p=>p.column.contains(doc.activeElement))||parts.get(selected),list=[...p.nodes.values()];if(!list.length)return;const at=list.findIndex(n=>n.tr.contains(doc.activeElement)),node=list[Math.max(0,Math.min(list.length-1,at<0?0:at+delta))];node.open.focus({preventScroll:true});node.tr.scrollIntoView({block:'nearest'});},
-  dispose(){enabled=false;for(const p of parts.values())p.unbindHeader?.();if(ownsHeaderView)headerView.dispose();controller.dispose();clearInterval(ageTimer);media.removeEventListener('change',resize);for(const [name,fn]of events)grid.removeEventListener(name,fn);for(const p of parts.values())for(const n of p.nodes.values()){n.unbindLiveness?.();n.unbindAvatar?.();}root.remove();},
+  dispose(){enabled=false;cancelPressRelease();for(const p of parts.values())p.unbindHeader?.();if(ownsHeaderView)headerView.dispose();controller.dispose();clearInterval(ageTimer);media.removeEventListener('change',resize);for(const [name,fn]of events)grid.removeEventListener(name,fn);for(const p of parts.values())for(const n of p.nodes.values()){n.unbindLiveness?.();n.unbindAvatar?.();}root.remove();},
  };
 }

@@ -22,10 +22,11 @@ import {quoteUsd as readQuoteUsd} from '/qx-native-usd.mjs';
 import {homePicker, homeConfig, loadHomePref, instantHomeEnabled, withHomeRails} from './qx-home-currency.mjs';
 import {loadLocalHome, homeTicketDefault, homeName, homeToken, homeSlippage, homeReturnNeeded} from './qx-home-core.mjs';
 import {encodeBuyFor} from './qx-pro-xbuy.mjs';
-import { tradeError } from './qx-chain-guard.mjs';
+import { tradeError, asTradeError } from './qx-chain-guard.mjs';
+import {createRouteQuoteReads} from './qx-route-quote-read.mjs';
 import {curveBuyQuote, curveNoRoute, curveFeeText, curveQuoteProblem} from './qx-curve-market.mjs';
 import { executeTicketSwap } from './qx-ticket-execution.mjs';
-import {pendingHomeBuy, dismissHomeBuy, homeBuyRecoveryView, finishHomeBuy} from './qx-home-buy-step.mjs';
+import {pendingHomeBuy, pendingHomeBuyMatches, pendingHomeBuyAge, dismissHomeBuy, homeBuyRecoveryView, finishHomeBuy} from './qx-home-buy-step.mjs';
 import {prepareTradeThesis,recordTerminalTrade} from './qx-trade-record.mjs';
 import {renderSolanaRewards,enrollSolanaReferrer,recordSolanaRewards} from './qx-solana-rewards.mjs';
 import {mountTradingSettings} from './qx-trading-settings.mjs';
@@ -97,7 +98,9 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   let priceUsd = null, armedAt = null, armTimer = null, sellCash = false, recovery = null, impactArmedAt = null;
   let sellPrefillOwner = null, pendingSellPrefill = false;
   let selection=null, selectionRevision=0, layoutRevision=0;
+  const savedRecoveries=new Map();
   let quoteLoading = false, quoteAgeTimer = null;
+  const routeReads=createRouteQuoteReads({setTimeout,clearTimeout});
   let marketPrices=[], rowReview=null, lastReceipt=null, lastSubmitError=null;
   const hub = getWalletHub(window);
   const costs=mountTicketCosts({h,now}),costReader=createTicketCostReader({rpc});
@@ -270,6 +273,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
     h('div', { class: 'qxt-side-toggle', role: 'group', ariaLabel: 'Trade side' }, ...sideBtns, sellToCash),
     payRow,
     proofBanner,risk, ...avail.elements, h('div', { class: 'qxt-amount qxt-amount-fit' }, amount, amountDisplay, usdInput, usdDisplay, unit), h('div', {class: 'qxt-usd-row'}, usdEcho, unitToggle), addFunds, funding.element, presets, out, costs.element, quoteTools, go, signIn, tradingSettings.element, status, followup, settings, h('a', {href:'/trust',class:'qxt-muted',style:'display:block;font-size:11px;padding:12px 0;text-underline-offset:3px'}, 'Trust Hub · checks, fees & contracts'));
+  const recoveryShelf=h('div',{class:'qxt-saved-recovery',hidden:true,role:'status'});card.append(recoveryShelf);
   if(!rowMode)import('/qx-oneclick.mjs').then(m => m.mountOneClickToggle(settings)).catch(() => {}); // One-click trading toggle (hidden unless an email/Google wallet is connected)
 
   const calloutContext=()=>st?{chainId:String(st.chainId),token:String(st.token).toLowerCase(),owner:connectedAddress()?.toLowerCase()}:null;
@@ -291,18 +295,21 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   const targetKey=t=>!t?'none':t.kind==='launch'?'m:'+String(t.chainId)+':'+String(t.controller).toLowerCase():'t:'+String(t.chainId)+':'+(String(t.chainId)==='solana'?String(t.address):String(t.address).toLowerCase());
   const isSelection=intent=>!!intent&&intent===selection;
   function beginSelection(target) {
-    if(busy||recovery){status.textContent=busy?'Finish the current trade before opening another token.':'Resolve the funded trade below before opening another token.';return false;}
-    clearCosts();
+    if(busy){status.textContent='Finish the current wallet action before opening another token.';return false;}
+    // Navigation releases the active ticket, never its funded recovery receipt.
+    if(recovery&&st){if(!recovery.pendingBuy)savedRecoveries.set(recoveryKey(st),{recovery,state:st,quote:current,side,pay,homeSelected,owner:quoteOwner()});recovery=null;lock(false);}
+    gasGate.reset();lastSubmitError=null;
+    clearCosts();routeReads.cancel();
     copyPrepared=null;copyReview.invalidate();
     selection=Object.freeze({revision:++selectionRevision,key:targetKey(target)});thesis.value='';tokenFeed.setMarket(null);calloutMarket='';
     clearTimeout(timer);qseq++;current=null;st=null;priceUsd=null;marketPrices=[];sellCash=false;homeSelected=false;sellPrefillOwner=null;pendingSellPrefill=false;
     funding.clear();quoteDetails.replaceChildren();followup.replaceChildren();cash.replaceChildren();risk.replaceChildren();risk.hidden=true;
     setAmount('');unit.textContent='';balance.disabled=true;avail.set('');autoNote='';paySel.replaceChildren();
     clearArmed();go.disabled=true;status.textContent='';out.textContent=target?(target.kind==='launch'?'Loading the launch…':'Loading the token…'):'Choose a token to trade.';
-    quoteLoading=false;renderQuoteFreshness();
+    quoteLoading=false;renderQuoteFreshness();offerSavedRecovery();
     return selection;
   }
-  function failSelection(intent,message,{retry}={}){if(!isSelection(intent)||busy||recovery)return false;clearTimeout(timer);qseq++;st=null;current=null;funding.clear();go.disabled=true;out.textContent=message;
+  function failSelection(intent,message,{retry}={}){if(!isSelection(intent)||busy||recovery)return false;routeReads.cancel();clearTimeout(timer);qseq++;st=null;current=null;funding.clear();go.disabled=true;out.textContent=message;
     quoteLoading=false;renderQuoteFreshness();
     if(retry){const again=h('button',{type:'button',class:'qxt-context-action'},'Retry trade setup');again.addEventListener('click',async()=>{if(!isSelection(intent)||busy||recovery)return;again.disabled=true;out.textContent='Preparing trade…';await retry();});out.append(again);}
     return true;}
@@ -313,7 +320,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   // when short, the trade button stays disabled with "Not enough ETH on <chain> for gas" and one-tap Add gas, and no wallet
   // prompt opens. Read-only; amounts, quotes and the signer are unchanged.
   const gasBox=h('div',{class:'qxt-gas',hidden:true});if(go.parentNode)go.before(gasBox);
-  const gasGate=createGasGate({h,button:go,box:gasBox,rpc,onOk:()=>{if(!busy)refresh();},context:()=>{if(!st||st.sol||busy||recovery)return null;const owner=connectedAddress();if(!owner)return null;const c=current;return {chainId:String(st.chainId),owner,action:side==='sell'?'sell':'buy',extraWei:side==='buy'&&c?.pay==='native'&&typeof c?.a==='bigint'?c.a:0n};}});
+  const gasGate=createGasGate({h,button:go,box:gasBox,rpc,onOk:()=>{if(!busy)refresh();},context:()=>{if(!st||st.sol||busy||recovery)return null;const owner=connectedAddress();if(!owner)return null;const c=current;return {chainId:String(st.chainId),token:st.token,owner,action:side==='sell'?'sell':'buy',extraWei:side==='buy'&&c?.pay==='native'&&typeof c?.a==='bigint'?c.a:0n};}});
   for(const ev of ['qhooks:traded','focus'])(ev==='focus'?window:document).addEventListener(ev,()=>{void gasGate.recheck();});
   const sameOwner = (a,b,sol) => sol ? a===b : a?.toLowerCase()===b?.toLowerCase();
   function hasQuoteAmount() { try { return !!st&&parseUnits(amount.value,payDecimals())>0n; } catch { return false; } }
@@ -322,7 +329,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
     if(shownCost){const c=shownCost.trade;if(!quoteMatches(c)||!sameOwner(c.owner,quoteOwner(),!!st?.sol)){clearCosts();}else{if(now()-c.readAt>30000)costReader.cancel();costs.tick();}}
     const hasAmount=hasQuoteAmount();
     quoteTools.hidden=!hasAmount;
-    refreshQuote.disabled=!hasAmount||quoteLoading||busy||!!recovery;
+    refreshQuote.disabled=!hasAmount||busy||!!recovery;
     const c=current;if(copyReview.active&&c){try{copyReview.assert(c,{owner:quoteOwner(),silent:silentActive()});}catch{go.disabled=true;}}
     const valid=!quoteLoading&&quoteMatches(c)&&sameOwner(c.owner,quoteOwner(),st.sol)&&Number.isFinite(c.readAt);
     quoteTime.textContent='';quoteTime.setAttribute('datetime','');quoteTime.title='';
@@ -341,21 +348,31 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
     clearCosts();current=null;go.disabled=true;out.textContent='Wallet changed. Refresh the quote.';
     return false;
   }
-  refreshQuote.addEventListener('click',()=>{if(!busy&&!recovery&&!quoteLoading&&hasQuoteAmount())refresh();});
+  refreshQuote.addEventListener('click',()=>{if(!busy&&!recovery&&hasQuoteAmount())refresh();});
   function assertSelection(c){if(!quoteMatches(c))throw new Error('This token selection changed. Review a fresh quote before trading.');}
   const selectedPool = () => st?.multi ? st.pools.find(p=>p.quote===pay) || st.pools[0] : null;
   const selectedQuote = () => selectedPool() || st;
   const payUnit = () => side === 'sell' ? st.symbol : pay === 'homeAsset' ? homeToken(homePref).symbol : pay === 'native' ? (st.sol ? 'SOL' : NATIVE[st.chainId]) : selectedQuote().quoteSymbol;
   const payDecimals = () => side === 'sell' ? st.decimals : pay === 'homeAsset' ? homeToken(homePref).decimals : pay === 'native' ? (st.sol ? 9 : 18) : selectedQuote().quoteDecimals;
+  // Identity and decimals are already established by setup. Display metadata may
+  // be cooling down after a 429; it must not block a fresh transaction balance.
+  async function tokenBalance(chainId,token,owner) {
+    const data='0x70a08231'+owner.slice(2).padStart(64,'0');
+    return BigInt(await rpc(chainId,'eth_call',[{to:token,data},'latest'],{purpose:'transaction'}));
+  }
   async function balances() {
     if (st?.sol) {
       const me = solAddress(); if (!me) return null;
       const [t, q] = await Promise.all([fetch(`/api/terminal/sol/balance/${me}?mint=${st.token}`).then(r => r.json()), fetch(`/api/terminal/sol/balance/${me}?mint=${SOL_USDC}`).then(r => r.json())]);
       return { token: BigInt(t.token || 0), quote: BigInt(q.token || 0), native: BigInt(t.sol || 0) };
     }
-    const me = connectedAddress(); if (!me || !st) return null;
-    const [t, q, n] = await Promise.all([erc20(st.chainId, st.token, me), st.quote && !st.nativePool ? erc20(st.chainId, selectedQuote().quote, me) : { balance: 0n }, rpc(st.chainId, 'eth_getBalance', [me, 'latest'])]);
-    return { token: t.balance, quote: q.balance, native: BigInt(n), home: pay === 'homeAsset' ? (await erc20(st.chainId, homeToken(homePref).address, me)).balance : 0n };
+    const me = connectedAddress(),state=st; if (!me || !state) return null;
+    const quote=state.quote&&!state.nativePool?selectedQuote().quote:null,home=pay==='homeAsset'?homeToken(homePref).address:null;
+    const [token,quoteBalance,native,homeBalance]=await Promise.all([
+      tokenBalance(state.chainId,state.token,me),quote?tokenBalance(state.chainId,quote,me):0n,
+      rpc(state.chainId,'eth_getBalance',[me,'latest'],{purpose:'transaction'}),home?tokenBalance(state.chainId,home,me):0n
+    ]);
+    return {token,quote:quoteBalance,native:BigInt(native),home:homeBalance};
   }
   const spendable = b => side === 'sell' ? b.token : pay === 'homeAsset' ? b.home : pay === 'native' ? b.native : b.quote;
   const wrappedQuote = () => !!st && !st.sol && !st.multi && !!st.quote && !st.nativePool && String(selectedQuote().quote || '').toLowerCase() === String(chainById(st.chainId)?.wrappedNative || '').toLowerCase();
@@ -446,7 +463,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   }
 
   async function layout() {
-    tradingSettings.element.hidden=!st;syncCallout();
+    tradingSettings.element.hidden=!st;syncCallout();offerSavedRecovery();
     if (!st||busy||recovery) return;
     if (st.noRoute) { out.textContent=st.noRoute; go.disabled=true; go.hidden=false; signIn.hidden=true; addFunds.hidden=true; cash.replaceChildren(); return; }
     const activeState=st,intent=selection,mine=++layoutRevision,layoutOwner=st.sol?solAddress():connectedAddress();
@@ -497,25 +514,47 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   // read; its sells and any non-native buy go through 0x, which must route them through the curve itself (never a
   // third-party pool such as AEON's 56%-fee one).
   const onCurve = () => st?.curve?.phase === 'curve';
-  async function fetchXQuote(a,tolerance=tol) {
-    if (onCurve() && st.curve.venue?.buy === 'direct' && side === 'buy' && pay === 'native' && st.curve.quote?.native) {
-      const router = await extraAddress('feeRouter', st.chainId);
-      return curveBuyQuote({c: st.curve, amountIn: a, slippageBps: tolerance, router, feeBps: FEE_BPS, rpc, formatUnits});
-    }
-    const me = connectedAddress(), { sell, buy } = xTokens();
-    const q = new URLSearchParams({ chain: st.chainId, sell, buy, amount: xSpend(a).toString(), taker: me, side, slippageBps: String(tolerance), via: 'router' });
-    const r = await fetch('/api/terminal/x/quote?' + q, { cache: 'no-store' });
-    const body = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(body.error === 'official_pool' ? (body.detail || 'Trade this token through its official QHooks pool.') + ' Open it from the terminal search.' : body.error === 'trading_off' ? 'Trading outside tokens is not switched on yet.' : body.error === 'no_route' ? 'No route for this trade right now.' : body.detail || 'No quote right now.');
-    const problem = curveQuoteProblem(st.curve, body, side); if (problem) throw new Error(problem);
-    return body;
+  const quoteReason=value=>typeof value==='string'?value.replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim().slice(0,240):'';
+  function routeFailure(error) {
+    if(error?.routeQuote)return error;
+    return Object.assign(new Error(quoteReason(error?.message)||'Could not read the route. Retry the quote.'),{routeQuote:true});
+  }
+  function routeErrorText(error) {
+    const mapped=asTradeError(error); // Preserve the standard debug/error path.
+    return error?.routeQuote?quoteReason(error.message)||mapped.message:mapped.message;
+  }
+  function showRouteFailure(error) {
+    out.textContent=routeErrorText(error);
+    if(error?.routeQuote){const retry=h('button',{type:'button',class:'qxt-context-action'},'Retry quote');retry.addEventListener('click',()=>{if(!busy&&!recovery&&hasQuoteAmount())refresh();});out.append(retry);}
+  }
+  async function fetchXQuote(a,tolerance=tol,timeoutMs=15000) {
+    const state=st,tradeSide=side,tradePay=pay,me=connectedAddress(),{sell,buy}=xTokens();
+    const direct=onCurve()&&state.curve.venue?.buy==='direct'&&tradeSide==='buy'&&tradePay==='native'&&state.curve.quote?.native;
+    const q=new URLSearchParams({chain:state.chainId,sell,buy,amount:xSpend(a).toString(),taker:me,side:tradeSide,slippageBps:String(tolerance),via:'router'});
+    try{return await routeReads.run(async signal=>{
+      if(direct){
+        const router=await extraAddress('feeRouter',state.chainId);
+        return curveBuyQuote({c:state.curve,amountIn:a,slippageBps:tolerance,router,feeBps:FEE_BPS,rpc,formatUnits});
+      }
+      const r=await fetch('/api/terminal/x/quote?'+q,{cache:'no-store',signal});
+      const body=await r.json().catch(()=>null);
+      if(!r.ok){
+        const detail=quoteReason(body?.detail)||quoteReason(body?.message);
+        const message=body?.error==='official_pool'?(detail||'Trade this token through its official QHooks pool.')+' Open it from the terminal search.':body?.error==='trading_off'?'Trading outside tokens is not switched on yet.':detail||(body?.error==='no_route'?'No route for this trade right now.':'No quote right now.');
+        const status=Number.isInteger(r.status)&&r.status>=100&&r.status<=599?r.status:null;
+        throw Object.assign(new Error(quoteReason(message).slice(0,220)+(status?' (HTTP '+status+')':'')),{routeQuote:true,status});
+      }
+      if(!body||typeof body!=='object'||Array.isArray(body)||typeof body.buyAmount!=='string'||typeof body.minBuyAmount!=='string'||!/^\d{1,78}$/.test(body.buyAmount)||!/^\d{1,78}$/.test(body.minBuyAmount))throw new Error('The route response was incomplete. Retry the quote.');
+      const problem=curveQuoteProblem(state.curve,body,tradeSide);if(problem)throw new Error(problem);
+      return body;
+    },{timeoutMs});}catch(error){throw routeFailure(error);}
   }
   async function extQuote(mine, a, read) {
     if (!connectedAddress()) { out.textContent = 'Connect a wallet to get a quote.'; return; }
     try {
       const small = a / 100n > 0n ? a / 100n : null;
       // Impact: the same route for a hundredth of the amount (fees are proportional, so they cancel out of the ratio).
-      const [q, rq] = await Promise.all([fetchXQuote(a,read.toleranceBps), small ? fetchXQuote(small,read.toleranceBps).catch(() => null) : null]);
+      const [q, rq] = await Promise.all([fetchXQuote(a,read.toleranceBps), small ? fetchXQuote(small,read.toleranceBps,4000).catch(() => null) : null]);
       if (!quoteReadIsCurrent(read)) return;
       const { outDec, outSym } = xTokens(), cut = v => side === 'sell' ? v - v * FEE_BPS / 10000n : v;
       const got = cut(BigInt(q.buyAmount)), minOut = cut(BigInt(q.minBuyAmount));
@@ -527,7 +566,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
         feeLine(st.chainId, q.direct ? ' · straight to the curve' : ' · routed by 0x',rate=>costRebate(costQuote,rate)), ...(st.curve ? [h('span', {class: 'qxt-fee qxt-curve-fee'}, curveFeeText(st.curve))] : []));
       await offerFunding(mine);
       if(quoteMatches(current))presentCosts(current,{grossOutput:BigInt(q.buyAmount),impactPct,provider:q});
-    } catch (e) { if (mine === qseq) {current=null;go.disabled=true;out.textContent = e.message;} }
+    } catch (e) { if (mine === qseq) {current=null;go.disabled=true;showRouteFailure(e);} }
   }
   async function extSubmit(c) {
     const { chainId, token } = st, s = t => { status.textContent = t; };
@@ -686,6 +725,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
     clearCosts();
     syncUsd();
     if (busy||recovery) return;
+    routeReads.cancel();
     pendingSellPrefill=false;
     clearArmed();
     clearTimeout(timer); current = null; go.disabled = true; qseq++;
@@ -699,7 +739,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
     if (!st) return;
     if(copyReview.active&&(!copyReview.context||!copyPrepared)){current=null;go.disabled=true;out.textContent='Open Copy settings to prepare this review.';return;}
     if (st.noRoute) { out.textContent=st.noRoute; current=null; go.disabled=true; return; }
-    syncProfile();
+    routeReads.cancel();syncProfile();
     if (!copyReview.active&&!st.sol && (homeSelected || homeReturnNeeded(st.chainId, homePref, homeEnabled))) tol = String(homeSlippage(tol));
     clearCosts();
     const mine = ++qseq,read={revision:mine,state:st,selection,owner:quoteOwner(),sol:!!st.sol,toleranceBps:Number(tol)}; let a;
@@ -853,24 +893,40 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
       moveBack: () => {if (busy || pending.retryable === false) return; void offerMoveBack({...pending, amount: BigInt(pending.amount)}).catch(e => {status.textContent = tradeError(e);});},
     }));
   }
+  const recoveryKey=state=>state?String(state.chainId)+':'+String(state.token).toLowerCase():'';
+  function offerSavedRecovery() {
+    if(rowMode||busy||recovery){recoveryShelf.hidden=true;return;}
+    const owner=connectedAddress(),pending=owner&&pendingHomeBuy(owner);
+    const saved=[...savedRecoveries.values()].find(item=>sameOwner(item.owner,owner,!!item.state.sol));
+    const state=pending?.market?.state||saved?.state;
+    if(!state?.token||state.sol||!/^0x[0-9a-f]{40}$/i.test(state.token)||String(state.chainId)!==String(pending?.chainId||state.chainId)){recoveryShelf.hidden=true;recoveryShelf.replaceChildren();return;}
+    const matching=pending?pendingHomeBuyMatches(pending,{owner,chainId:st?.chainId,token:st?.token}):recoveryKey(st)===recoveryKey(state);
+    const label='Saved buy of '+String(state.symbol||'token')+' on '+(CHAIN_NAME[String(state.chainId)]||String(state.chainId))+'.';
+    const age=pending&&pendingHomeBuyAge(pending,{now:now()});
+    const message=h('p',{},label+(age?.aged||age?.legacy?' Review a fresh route before continuing.':''));
+    const action=matching?h('button',{type:'button',class:'qxt-context-action'},'Review saved buy'):h('a',{class:'qxt-context-action',href:'#t='+String(state.chainId)+':'+state.token},'Open saved buy');
+    if(matching)action.addEventListener('click',()=>{
+      if(busy||recovery)return;
+      if(pending){restorePendingBuy();return;}
+      if(!saved||recoveryKey(st)!==recoveryKey(saved.state)||!sameOwner(saved.owner,quoteOwner(),!!st?.sol))return;
+      side=saved.side;pay=saved.pay;homeSelected=saved.homeSelected;
+      current=bindQuote({...saved.quote},qseq,quoteOwner());recovery=saved.recovery;savedRecoveries.delete(recoveryKey(saved.state));
+      followup.replaceChildren(recoveryView(h,recovery,()=>submit()));recoveryShelf.hidden=true;lock(false);
+    });
+    recoveryShelf.replaceChildren(message,action);recoveryShelf.hidden=false;
+  }
   function restorePendingBuy() {
-    if (busy || recovery) return false;
-    const owner = connectedAddress();
-    // The ticket is also embedded by lightweight hosts that omit optional Home recovery adapters.
-    if (!owner || typeof pendingHomeBuy !== 'function') return false;
-    const pending = pendingHomeBuy(owner), market = pending?.market;
-    if (!market?.state || market.state.sol || String(market.state.chainId) !== String(pending.chainId)) return false;
-    const state = market.state;
-    beginSelection({kind: 'external', chainId: state.chainId, address: state.token});
-    st = state; side = 'buy'; pay = market.pay; homeSelected = true; homeEnabled = true;
-    homePref = loadLocalHome(owner);
-    paySel.replaceChildren(h('option', {value: 'home'}, 'Home (' + homeName(homePref) + ')')); paySel.value = 'home';
-    setAmount( formatUnits(BigInt(pending.amountNeeded), payDecimals(), payDecimals()).replace(/,/g, '')); unit.textContent = pending.asset.symbol;
-    current = bindQuote({side, pay, a: BigInt(pending.amountNeeded), minOut: BigInt(market.minOut || 0), route: {pool: {quote: market.quoteToken}}, homeRequired: false}, qseq, owner, market.slippageBps);
-    current.homeRequired = false;
-    out.textContent = 'Finish your buy of ' + st.symbol + '.';
-    showHomeRecovery(pending); lock(false);
-    return true;
+    if (busy || recovery || !st || st.sol) return false;
+    const owner=connectedAddress(),pending=owner&&pendingHomeBuy(owner),market=pending?.market;
+    // Only an explicit press on this exact, freshly selected asset can resume.
+    if(!pendingHomeBuyMatches(pending,{owner,chainId:st.chainId,token:st.token}))return false;
+    side='buy';pay=market.pay;homeSelected=true;homeEnabled=true;
+    homePref=loadLocalHome(owner);
+    paySel.replaceChildren(h('option',{value:'home'},'Home ('+homeName(homePref)+')'));paySel.value='home';
+    setAmount(formatUnits(BigInt(pending.amountNeeded),payDecimals(),payDecimals()).replace(/,/g,''));unit.textContent=pending.asset.symbol;
+    current=bindQuote({side,pay,a:BigInt(pending.amountNeeded),minOut:BigInt(market.minOut||0),route:{pool:{quote:market.quoteToken}},homeRequired:false},qseq,owner,market.slippageBps);
+    current.homeRequired=false;out.textContent='Review your saved buy of '+st.symbol+'.';
+    showHomeRecovery(pending);recoveryShelf.hidden=true;lock(false);return true;
   }
   function queueRecord(c,receipt,extra={}) {
     if(rowMode&&c.side==='sell')lastReceipt=receipt;
@@ -906,7 +962,10 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
       return;
     }
     if (impactArmedAt) { armedAt = Date.now(); impactArmedAt = null; }
-    if(!st.sol&&!await gasGate.check()){const g=gasGate.short();status.textContent=g?.message||'Not enough gas for this trade.';lastSubmitError=Object.assign(Error(status.textContent),{gas:true});go.disabled=true;return;}
+    const gasOk=st.sol?true:await gasGate.check();
+    // A gas read may finish after navigation, amount edits or a wallet change.
+    if(!quoteMatches(c)||!sameOwner(c.owner,quoteOwner(),!!st?.sol))return;
+    if(!gasOk){const g=gasGate.short();status.textContent=g?.message||'Gas could not be checked for this trade. Retry.';lastSubmitError=Object.assign(Error(status.textContent),{gas:true});go.disabled=true;return;}
     const plan = st.sol ? null : ticketPlan(c);
     if (!st.sol && !plan) return;
     lock(true);
@@ -959,7 +1018,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
           }
         } }
       });
-    } catch (e) { lastSubmitError=e;if (recovery?.pendingBuy) showHomeRecovery(pendingHomeBuy(c.owner) || recovery.pendingBuy); status.textContent = tradeError(e); landed = !!recovery; }
+    } catch (e) { lastSubmitError=e;if (recovery?.pendingBuy) showHomeRecovery(pendingHomeBuy(c.owner) || recovery.pendingBuy); status.textContent = e?.routeQuote?routeErrorText(e):tradeError(e); landed = !!recovery; }
     finally { lock(false); if (landed) { go.disabled = true; if (recovery?.retryable === false) for (const el of followup.querySelectorAll('button')) if (!recovery.pendingBuy || el.textContent !== 'Dismiss') el.disabled = true; } else await layout(); }
     if (xchainEnabled && proceeds && (cashHome() && cashHome() !== Number(proceeds.chainId) || proceeds.asset.symbol !== cashAsset(proceeds.chainId).symbol)) {
       const home = cashHome(), button = h('button', { type: 'button', class: 'qxt-mini' }, home ? 'Move to ' + chainName(home) : 'Move proceeds to cash');
@@ -979,7 +1038,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   amountDisplay.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) submit(); } });
   balance.addEventListener('click', async () => { if(busy||recovery||!st)return;const intent=selection,activeState=st,mine=++qseq;clearTimeout(timer);current=null;go.disabled=true;sellPrefillOwner=null;clearArmed();quoteLoading=false;renderQuoteFreshness(); const b = await balances(); if(!isSelection(intent)||st!==activeState||mine!==qseq)return;if (b) { setAmount( formatUnits(spendable(b), payDecimals(), payDecimals()).replace(/,/g, '')); refresh(); } });
   go.addEventListener('click', submit);
-  onWalletChange(() => { void gasGate.recheck(); clearCosts();clearArmed(); if (pageLeaving) return; if (!busy && recovery?.pendingBuy && recovery.pendingBuy.owner.toLowerCase() !== connectedAddress()?.toLowerCase()) {recovery = null; current = null; followup.replaceChildren(); lock(false);} if (!busy&&!recovery&&!st?.sol) {paintCachedHolding();if (!rowMode&&restorePendingBuy()) return; if(sellPrefillOwner&&sellPrefillOwner.toLowerCase()!==connectedAddress()?.toLowerCase()){setAmount('');sellPrefillOwner=null;}void syncHome(true).then(() => {refresh();layout();});} });
+  onWalletChange(() => { void gasGate.recheck(); clearCosts();clearArmed(); if (pageLeaving) return; if (!busy && recovery?.pendingBuy && recovery.pendingBuy.owner.toLowerCase() !== connectedAddress()?.toLowerCase()) {recovery = null; current = null; followup.replaceChildren(); lock(false);} if (!busy&&!recovery&&!st?.sol) {paintCachedHolding();if (!rowMode)offerSavedRecovery(); if(sellPrefillOwner&&sellPrefillOwner.toLowerCase()!==connectedAddress()?.toLowerCase()){setAmount('');sellPrefillOwner=null;}void syncHome(true).then(() => {refresh();layout();});} });
 
   sellToCash.addEventListener('click', async () => {
     if (!st || busy||recovery) return;
@@ -993,9 +1052,9 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   function setSide(s) { if (busy||recovery || !['buy','sell'].includes(s) || side === s && !sellCash&&!pendingSellPrefill) return; clearArmed(); sellCash = false; side = s;homeSelected = false;autoNote = ''; // Home is chosen in the pay chip, never by switching side (2026-11-12)
 if(st?.multi){pay=s==='sell'?'auto':'native';paySel.value=pay;} setAmount( '');sellPrefillOwner=null;pendingSellPrefill=false; refresh(); layout(); }
 
-  if(!rowMode)restorePendingBuy();
+  if(!rowMode)offerSavedRecovery();
   return {
-    prepareCopyReview,beginSelection,isSelection,failSelection,repaintProof,canSelect:()=>!busy&&!recovery,
+    prepareCopyReview,beginSelection,isSelection,failSelection,repaintProof,canSelect:()=>!busy,
     async setPool(pool, meta, intent) {
       if(busy||recovery)return false;
       intent??=beginSelection({kind:'launch',chainId:pool.chainId,controller:pool.controller});

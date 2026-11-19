@@ -8,8 +8,46 @@ const storage = () => {try {return globalThis.localStorage;} catch {return null;
 const key = owner => 'qhooks:home:buy:v1:' + owner.toLowerCase();
 const min = (a, b) => a < b ? a : b;
 const inFlight = new Set();
-export function rememberHomeBuy(owner, pending, store = storage()) {
-  const record = {...pending, owner, version: 1};
+export const HOME_BUY_OFFER_MAX_AGE_MS = 30 * 60 * 1000;
+const address = value => typeof value === 'string' && /^0x[0-9a-f]{40}$/i.test(value) ? value.toLowerCase() : null;
+const chainIdOf = value => {
+  if (typeof value !== 'number' && !(typeof value === 'string' && /^(?:[1-9][0-9]*|0x[0-9a-f]+)$/i.test(value))) return null;
+  const id = Number(value); return Number.isSafeInteger(id) && HOME_CHAINS.includes(id) ? id : null;
+};
+const safeDate = value => {
+  if (typeof value !== 'number' && !(typeof value === 'string' && /^\d{4}-\d\d-\d\dT.*(?:Z|[+-]\d\d:\d\d)$/.test(value))) return null;
+  const at = typeof value === 'number' ? value : Date.parse(value);
+  return Number.isSafeInteger(at) && at > 0 && at <= 8640000000000000 ? at : null;
+};
+const clockOf = now => { try { return safeDate(typeof now === 'function' ? now() : now); } catch { return null; } };
+const positiveAmount = value => { try { return (typeof value === 'string' && /^(?:0|[1-9][0-9]{0,77})$/.test(value) || typeof value === 'bigint' || typeof value === 'number' && Number.isSafeInteger(value)) && BigInt(value) > 0n && BigInt(value) < 2n ** 256n; } catch { return false; } };
+// Age is an offer label, never permission to discard delivered funds or uncertain receipts.
+export function pendingHomeBuyAge(pending, {now = Date.now, maxAgeMs = HOME_BUY_OFFER_MAX_AGE_MS} = {}) {
+  const stamp = clockOf(now), createdAt = safeDate(pending?.createdAt), updatedAt = safeDate(pending?.updatedAt);
+  const legacy = createdAt === null, ageMs = stamp !== null && createdAt !== null && stamp >= createdAt ? stamp - createdAt : null;
+  const limit = Number.isSafeInteger(maxAgeMs) && maxAgeMs >= 0 ? maxAgeMs : null;
+  const aged = ageMs !== null && limit !== null && ageMs >= limit;
+  const unsigned = pending?.stage === 'pre-sign' && pending.funded !== true && pending.landed !== true && pending.retryable !== false && !pending.mayHaveSubmitted && !pending.receipt && !pending.transactionHash && !pending.txHash && !pending.requestId;
+  const invalidClock = stamp === null || createdAt !== null && stamp < createdAt || limit === null;
+  return {createdAt, updatedAt, ageMs, legacy, aged, expired: unsigned && !legacy && (aged || invalidClock)};
+}
+export function pendingHomeBuyMatches(pending, {owner, chainId, token} = {}, options = {}) {
+  const wallet = address(owner), target = address(token), chain = chainIdOf(chainId), state = pending?.market?.state;
+  if (!wallet || wallet === ZERO || !target || target === ZERO || chain === null || !pending || pending.version !== 1 || address(pending.owner) !== wallet || chainIdOf(pending.chainId) !== chain || !address(pending.asset?.address) || !positiveAmount(pending.amount) || !positiveAmount(pending.amountNeeded) || !state || state.sol || chainIdOf(state.chainId) !== chain || address(state.token) !== target) return false;
+  if (pending.asset.chainId !== undefined && chainIdOf(pending.asset.chainId) !== chain) return false;
+  if (pending.market.chainId !== undefined && chainIdOf(pending.market.chainId) !== chain) return false;
+  const marketChain = pending.market.chain;
+  if (marketChain !== undefined && chainIdOf(typeof marketChain === 'object' && marketChain !== null ? marketChain.chainId ?? marketChain.id : marketChain) !== chain) return false;
+  return !pendingHomeBuyAge(pending, options).expired;
+}
+export function rememberHomeBuy(owner, pending, store = storage(), {now = Date.now} = {}) {
+  const stamp = clockOf(now) ?? Date.now(); let prior = null;
+  try { prior = JSON.parse(store?.getItem(key(owner)) || 'null'); } catch {}
+  const sameTarget = prior?.version === 1 && sameWallet(prior.owner, owner) && chainIdOf(prior.chainId) === chainIdOf(pending.chainId) && address(prior.market?.state?.token) !== null && address(prior.market.state.token) === address(pending.market?.state?.token);
+  const validCreated = value => { const at = safeDate(value); return at !== null && at <= stamp; };
+  const original = sameTarget && validCreated(prior.createdAt) ? prior.createdAt : validCreated(pending.createdAt) ? pending.createdAt : null;
+  const legacy = sameTarget && !validCreated(prior.createdAt) || pending.version === 1 && sameWallet(pending.owner, owner) && !validCreated(pending.createdAt);
+  const record = {...pending, owner, version: 1, createdAt: original ?? (legacy ? null : stamp), updatedAt: stamp};
   try {store?.setItem(key(owner), JSON.stringify(record, (_, v) => typeof v === 'bigint' ? String(v) : v));} catch {}
   return record;
 }

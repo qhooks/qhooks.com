@@ -1,0 +1,62 @@
+{
+  "status": "NARROW_APACHE_SUCCESSORS_PREPARED_FOR_ROOT_REVIEW",
+  "sourceRelease": "1f4b45a2-a6ec-419e-a6eb-4bb194779023",
+  "sourceWorkerSha256": "bc005c39e38a57c4226a020e73796ea66f1a67e6ce4b369dca8668b51b7e8b1e",
+  "sourceGraphDigest": "3a2417eeacc3dc8e7ddf53154cf649c2139d0be5bc0a63c87dbabf25289e6f12",
+  "sourceFreezeSha256": "c406780ef92e3ae2ef05e4eeea60218726bd34a0c16dc2c8e21e6543b7bd25d7",
+  "existingPins": 73,
+  "candidatePins": 75,
+  "newPinCount": 2,
+  "allPriorPolicyRowsAndMetadataUnchanged": true,
+  "unconditionalAdvancedChartsPathBansUnchanged": true,
+  "guardSha256": "68e9e8885b8478d85f2b126f189ccb7e32a6efc2b2eb2e6e97a71b7133159289",
+  "helperSha256": "03285eca548709d395d82680b71adb767037b235cfc08b1fc343f8d6a04fc64a",
+  "priorPolicySha256": "1d104252060b5243821979cbb225d967bbbb714b15d79d35ab99ed1cc855cf21",
+  "candidatePolicySha256": "1582740b86ccbc84b4a95da4a9ef6c06634a3a93e66af6859b806a983a2c076b",
+  "license": {
+    "path": "vendor/lightweight-charts/LICENSE",
+    "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+  },
+  "licenseMatchesPrior": true,
+  "standaloneApacheVersion": "4.2.3",
+  "standaloneInputSha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768",
+  "bundles": [
+    {
+      "path": "b/terminal-intent-pulse-p0-20261119/terminal/qx-terminal.CVIKSXRQ.mjs",
+      "bytes": 407820,
+      "sha256": "714b1bdb138b415ef66e9c1b5240053991951d3fae400253e7f4afa66a8fd926",
+      "brandMentions": 2,
+      "allMentionsMatchExistingApacheAttributionRules": true,
+      "byteExactPriorPaths": [],
+      "terminalImportOnlyPrior": "b/ops-gt-elysium-20261119/terminal/qx-terminal.J4ZW33NJ.mjs",
+      "normalizedImportCodeSha256": "8342cd937afe1d8de77befb89ebe037120ccdea895d004820177f2f66bc72eb6"
+    },
+    {
+      "path": "b/terminal-intent-pulse-p0-20261119/x-tracker/c.3JSX6SCP.mjs",
+      "bytes": 161341,
+      "sha256": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+      "brandMentions": 2,
+      "allMentionsMatchExistingApacheAttributionRules": true,
+      "byteExactPriorPaths": [
+        "b/compact-onboarding-r2-current-20261117/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-recurrence-20261117/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-prices-complete-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-prices-recovery-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-complete-unpriced-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-qproof-combined2-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/qproof-public-compat-root-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-cold-market-r2-root-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-e-seal2-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-g2-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ops-p1-curve-fu16-20261119/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-g3a-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-g3cg4-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-s1rel-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ops-gt-elysium-20261119/x-tracker/c.3JSX6SCP.mjs"
+      ],
+      "terminalImportOnlyPrior": null,
+      "normalizedImportCodeSha256": null
+    }
+  ],
+  "authority": "Root authorized mirror preparation and exact Apache successor reconciliation; Root reviews/publishes. No new proprietary policy, Advanced Charts admission, helper commit or push."
+}
