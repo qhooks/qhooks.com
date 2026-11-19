@@ -37,7 +37,7 @@ import {resolveTradingTolerance} from './qx-trading-preferences.mjs';
 // Every quote runs through the real pool and hook, so charges are in the number shown. Trades go through the
 // platform fee router: 1% per trade, 30% of it back to the trader as cashback they claim here (40% for QHOOKS holders on Robinhood Chain).
 import { rpc, livePoolKey, parseUnits, formatUnits, erc20, send, ensureAllowance, connectedAddress, onWalletChange, NATIVE, CHAIN_NAME, h } from '/qx-chain.mjs';
-import { quotePoolRoutes, quoteSingle, nativeRoute, quoteNative, quotePayAsset, nativeHops, hookData, FEE_BPS, feeSwapCall, viaSwapCall, cashbackOf, referralLink, claimCall, savedReferrer } from '/qx-swap.mjs';
+import { quotePoolRoutes, quoteSingle, nativeRoute, quoteNative, quotePayAsset, nativeHops, hookData, hookReferralFor,assertHookReferralsCurrent,selectedHookReferralPartner,FEE_BPS, feeSwapCall, viaSwapCall, cashbackOf, referralLink, claimCall, savedReferrer } from '/qx-swap.mjs';
 import { extraAddress, isLive, setUp } from '/qx-extras.mjs';
 import { hasDirectRoute, resolveDirectPool, refusalText } from '/qx-elysium-direct.mjs';
 import { holderMinTokens, shortText } from '/qx-holder-min.mjs';
@@ -126,7 +126,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
   function presentCosts(c,{grossOutput=null,impactPct=null,provider=null}={}){
     const state=st,assets=costAssets(c),context=costContext(c,assets,state.sol?'solana':'evm');
     const route=state.sol?(provider?.route==='dbc'?'Meteora DBC':provider?.router?'Jupiter · '+provider.router:'Jupiter'):state.ext?(provider?.direct?'Direct curve':provider?.sources?.join(' → ')||'0x'):c.route?.label||'QHooks pool';
-    const record=tradeCosts({context,received:c.got,minimum:c.minOut,grossOutput,impactPct,route,solOrder:provider});
+    const record=Object.freeze({...tradeCosts({context,received:c.got,minimum:c.minOut,grossOutput,impactPct,route,solOrder:provider}),...(!state.sol&&!state.ext?{hookReferral:hookReferralFor(c.route?.pool?.key||state.key,state.chainId)}:{})});
     shownCost={record,trade:c};costs.set(record);if(costRates.has(c))costs.cashback(costRates.get(c),record);
     const alive=()=>shownCost?.record===record&&card.isConnected!==false&&st===state&&quoteMatches(c)&&sameOwner(c.owner,quoteOwner(),!!state.sol)&&now()-c.readAt<=30000;
     if(state.sol)return;
@@ -798,6 +798,9 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
 
   // One-click (qx-oneclick.mjs): when on, the server sends this trade (same router routes) with no wallet popup.
   async function tryOneClick(c, s) {
+    // The legacy server signer does not yet verify optional hook referral data.
+    // Registered hook-referral sessions use the reviewed wallet path below.
+    if(selectedHookReferralPartner())return false;
     if(copyReview.active||c.copyReviewId)return false;
     const oc = await import('/qx-oneclick.mjs').catch(() => null);
     if (!oc || !(await oc.oneClickOn().catch(() => false))) return false;
@@ -816,6 +819,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
         const s = t => { status.textContent = t; };
         const assertContext = () => assertTradeOwner(c);
         assertTradeOwner(c);
+        await assertHookReferralsCurrent(chainId,c.route?.hops||[{key}]);assertContext();
         const live = await isLive(chainId, 'feeRouter');
         assertContext();
         if (!live) { s('One-time setup of trading on ' + CHAIN_NAME[chainId] + '…'); await setUp(chainId, 'feeRouter', s, assertContext); }
@@ -825,8 +829,9 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
           let receipt;
           if (st.multi) {
             // Several pools: the chosen pool's own hops through the fee router (qx-best-pool picked the route).
+            await assertHookReferralsCurrent(chainId,c.route.hops);assertContext();
             if(c.side==='sell'||c.pay!=='native')await ensureAllowance(chainId,c.side==='sell'?token:c.payAsset?.address || c.route.pool.quote,router,c.a,s,assertContext);
-            assertTradeOwner(c);
+            await assertHookReferralsCurrent(chainId,c.route.hops);assertTradeOwner(c);
             receipt=await send(chainId,{to:router,data:feeSwapCall(chainId,c.route.hops,c.a,c.minOut,c.route.wrap,c.side==='buy',deadline),value:c.side==='buy'&&c.pay==='native'?c.a:0n},s,assertContext);
           } else receipt = await executeTicketSwap({chainId,key,token,quote:qt,nativePool:st.nativePool,router,trade:c,deadline,onStatus:s,assertContext});
           queueRecord(c,receipt);
@@ -854,14 +859,17 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
         funding.clear(); go.disabled = true;
         const reviewed = current;
         const engine = await import('./qx-home-engine.mjs');
+        // Partner hook bytes must be checked again after funds arrive.
+        // The opt-in relay path cannot perform that destination check.
+        const instant = instantHomeEnabled() && !selectedHookReferralPartner();
         let data = null;
-        if (!st.ext && (pay === 'native' || st.nativePool) && instantHomeEnabled()) {
+        if (!st.ext && (pay === 'native' || st.nativePool) && instant) {
           const path = st.multi ? reviewed.route : st.nativePool ? {hops: [{key: st.key, zeroForOne: BigInt(st.key.currency0) === 0n}], wrap: null} : nativeHops(st.chainId, st.key, st.quote, reviewed.route);
           data = encodeBuyFor({user: reviewed.owner, hops: path.hops.map(hop => ({...hop, hookData: hookData(hop.key)})), wrapNative: path.wrap, minOut: reviewed.minOut, referrer: savedReferrer(), deadline: Math.floor(Date.now() / 1000) + 900});
         }
         const asset = payAsset();
         const costs = await destinationCosts({owner: reviewed.owner, chainId: st.chainId, asset, amountNeeded: reviewed.a, spender: await extraAddress('feeRouter', st.chainId), setup: await isLive(st.chainId, 'feeRouter') ? 0 : 1});
-        const q = await engine.quoteHomeBuy({owner: reviewed.owner, pref: homePref, chainId: st.chainId, asset, amountNeeded: reviewed.a, estimatedGasCost: costs.estimatedGasCost, slippageBps: reviewed.toleranceBps, instant: instantHomeEnabled(), data});
+        const q = await engine.quoteHomeBuy({owner: reviewed.owner, pref: homePref, chainId: st.chainId, asset, amountNeeded: reviewed.a, estimatedGasCost: costs.estimatedGasCost, slippageBps: reviewed.toleranceBps, instant, data});
         if (mine !== qseq || current !== reviewed) return;
         current.home = q;
         out.append(h('span', {class: 'qhome-cost'}, engine.homeCostLine(q, {lpBps: (reviewed.route?.pool?.key || st.key)?.fee / 100 || null})));

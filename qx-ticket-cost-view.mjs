@@ -26,6 +26,10 @@ export function mountTicketCosts({h,now=Date.now}) {
     pair(full,'Route',record.route);
     pair(full,c.family==='evm'?'QHooks fee':'Platform fee',p.amount!==null?amountText(p.amount,p.asset)+' · '+(p.bps/100)+'%'+(p.included==='input'?' · within spend':p.included==='output'?' · from proceeds':' · included'):p.note||'Not itemized',p.amount!==null?amountText(p.amount,p.asset,true):'');
     pair(full,'Pool / route charges',record.pool);
+    const hook=record.hookReferral,recipient=hook?.appliedHookReferrer;
+    if(hook?.state==='applied'&&/^0x[0-9a-f]{40}$/i.test(recipient||'')&&hook.pin?.blockNumber){
+      pair(full,'Hook referral recipient',recipient.slice(0,8)+'…'+recipient.slice(-6),recipient+' · Configured share of the hook charge; snapshot at block '+hook.pin.blockNumber+'.');
+    }
     if(n.state==='loading')pair(full,'Network','Estimating…');
     else if(n.state==='estimated'){
       pair(full,'Network · '+(n.kind==='budget'?'gas-price budget':'estimate'),amountText(n.amount,n.asset),n.reason);

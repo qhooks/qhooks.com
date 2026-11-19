@@ -1,0 +1,66 @@
+{
+  "status": "EXACT_SOURCE_BOUND_APACHE_SUCCESSORS_READY_FOR_ROOT_PUBLICATION",
+  "sourceRelease": "8f4aad10-cf9e-45ba-afcd-0f046e8a166c",
+  "sourceFreezeSha256": "f9659b7c1937f617eee392fb413fc388af8d85ef0022e2beb9e374ec9fb9e05d",
+  "sourceGraphDigest": "67c3c93f462d591e7aaa01fa0c5bf61e86a34bd23dacb4b823c696acc3691397",
+  "priorPinsPreserved": 79,
+  "totalPins": 81,
+  "license": {
+    "path": "vendor/lightweight-charts/LICENSE",
+    "sha256": "70c9d5382506dd184465425c08a99ad9bd6d9ac1313c252968ba0b585e5ef823"
+  },
+  "standaloneApacheVersion": "4.2.3",
+  "standaloneInputSha256": "5e5922fbe6cf35ee72252965277b8f5089595c196b3e6c23781a6c5350a9e768",
+  "bundles": [
+    {
+      "path": "b/autonomo-hook-r2-20261119/terminal/qx-terminal.AJR754F2.mjs",
+      "sha256": "f7f56d2ce70723dbf4c020d20908c74a16551557c74252196cc448943423166e",
+      "bytes": 407845,
+      "brandMentions": 2,
+      "byteExactPriorPaths": [],
+      "sourceLineage": "Sealed Root canonical terminal graph with Root-reviewed hook-referral capability/payload changes; existing LWC input/license/attribution retained. Not claimed imports-only."
+    },
+    {
+      "path": "b/autonomo-hook-r2-20261119/x-tracker/c.3JSX6SCP.mjs",
+      "sha256": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+      "bytes": 161341,
+      "brandMentions": 2,
+      "byteExactPriorPaths": [
+        "b/compact-onboarding-r2-current-20261117/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-recurrence-20261117/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-prices-complete-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-prices-recovery-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-complete-unpriced-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-qproof-combined2-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/qproof-public-compat-root-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/portfolio-cold-market-r2-root-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-e-seal2-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-g2-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ops-p1-curve-fu16-20261119/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-g3a-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-g3cg4-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ux-s1rel-20261118/x-tracker/c.3JSX6SCP.mjs",
+        "b/ops-gt-elysium-20261119/x-tracker/c.3JSX6SCP.mjs",
+        "b/terminal-intent-pulse-p0-20261119/x-tracker/c.3JSX6SCP.mjs",
+        "b/terminal-intent-pulse-p0-r2-20261119/x-tracker/c.3JSX6SCP.mjs",
+        "b/autonomo-registry-20261119/x-tracker/c.3JSX6SCP.mjs"
+      ],
+      "sourceLineage": "Byte-exact prior Apache-containing chunk"
+    }
+  ],
+  "sourceAuthoredDeltaPins": {
+    "wallet-early.js": "72d63ba876c017b2ed75ea062c913126e8a295595955b7b108ce423969d21929",
+    "hook-referral-config.mjs": "25bbb685c37e61c5969dcdd790ab75f0d7d8ea85c29fae67e2cbe5ddbc6d25d4",
+    "hook-referral-policy.mjs": "8739c9ec7c0cf353e2d06b0ba8c1b71909b93f31540a06a5f446972601ad94cc",
+    "hook-referral-reader.mjs": "4654ac65df580ed7cd82863fe7f0db77aa093a271206ffad8b9daed71a1db128",
+    "qx-hook-referral.mjs": "ce5dc2d24a039f3ac8533ea20bd6079ac68e46f9886e490d49743d0503dbe779",
+    "qx-swap.mjs": "ae580199e6d978adb2704d0e192894096c42e1f6d1e3d0cb6064a462ee9de8bb",
+    "qx-ticket-execution.mjs": "ce035a4144f9863d2f2f4775f027ee17c7bd682d2d537842f233c418fe5e1515",
+    "qx-ticket-cost-view.mjs": "16fad8b88df5120b373d05458e7fe0b53e1841246d31ecfe808f2f4c040b8114",
+    "qx-terminal-trade.mjs": "ebff8d01d672fa4ab9604c6958974bb4cfc480e48cc4d741ab4e87f872e085a6",
+    "qx-trade-zap.mjs": "15d3e61d2586e75c6f756332e4dfd18c93b17dd82136cd3454fa182c44323f4b"
+  },
+  "policyExpansion": false,
+  "authority": "Root authorized mirror prep. No proprietary-library policy expansion; Root alone adopts LIVE metadata and publishes.",
+  "sourceReleaseReceiptSha256": "91c9354d916de3620f093240c347a7c53d5281fccdd76537952fabe2be4f5906"
+}

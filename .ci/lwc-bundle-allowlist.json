@@ -85,7 +85,9 @@
     "b/terminal-intent-pulse-p0-r2-20261119/terminal/qx-terminal.BVIYZ7QY.mjs": "41020ec02921ca6f6b9b28f298ea7b133fcd6f7be1678f9697d4bf23a6c6d0a9",
     "b/terminal-intent-pulse-p0-r2-20261119/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
     "b/autonomo-registry-20261119/terminal/qx-terminal.OCNQN635.mjs": "dda538133e83267679bd97737dbcc144e7a6ca9e64aedd834ce807363e9ba5fa",
-    "b/autonomo-registry-20261119/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1"
+    "b/autonomo-registry-20261119/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1",
+    "b/autonomo-hook-r2-20261119/terminal/qx-terminal.AJR754F2.mjs": "f7f56d2ce70723dbf4c020d20908c74a16551557c74252196cc448943423166e",
+    "b/autonomo-hook-r2-20261119/x-tracker/c.3JSX6SCP.mjs": "814a3d93dc03191e7a966e5db565328054841708e88fd965f698a232404fd0b1"
   },
   "classificationSourceReleaseId": "df15e38a-fdcd-4fd2-af2c-5bed0051158b",
   "additionalReview": ".ci/lwc-f1-review.json",

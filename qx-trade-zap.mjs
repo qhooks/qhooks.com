@@ -3,7 +3,7 @@
 // native/USDC fee tier quotes best for this amount; on WETH/WBNB-quoted chains the router wraps first.
 // Quotes run through the real pool and its hook, so block charges are included.
 import { rpc, livePoolKey, parseUnits, formatUnits, erc20, send, connectedAddress, onWalletChange, NATIVE, h } from '/qx-chain.mjs';
-import { nativeRoute, quoteNative, nativeSwapCall } from '/qx-swap.mjs';
+import { nativeRoute, quoteNative, nativeSwapCall, assertHookReferralsCurrent } from '/qx-swap.mjs';
 
 const card = document.getElementById('qtz');
 let state = null, seq = 0, qseq = 0;
@@ -39,10 +39,13 @@ function render() {
   buyBtn.addEventListener('click', async () => {
     if (!current) return; buyBtn.disabled = true; status.textContent = '';
     try {
-      const me = connectedAddress(), before = (await erc20(state.chainId, state.token, me)).balance;
+      const me = connectedAddress(), selected=state,reviewed=current;
+      const assertContext=()=>{if(state!==selected||current!==reviewed||connectedAddress()?.toLowerCase()!==me?.toLowerCase())throw Error('Refresh the quote before continuing.');};
+      const before = (await erc20(selected.chainId, selected.token, me)).balance;
       // The deadline follows the chain's clock, not this device's.
       const now = BigInt((await rpc(state.chainId, 'eth_getBlockByNumber', ['latest', false])).timestamp);
-      await send(state.chainId, { to: state.route.router, data: swapCall(current.amountIn, current.minOut, current.q, now), value: current.amountIn }, t => status.textContent = t);
+      await assertHookReferralsCurrent(selected.chainId,[{key:selected.key}]);assertContext();
+      await send(selected.chainId, { to: selected.route.router, data: swapCall(reviewed.amountIn, reviewed.minOut, reviewed.q, now), value: reviewed.amountIn }, t => status.textContent = t,assertContext);
       const after = (await erc20(state.chainId, state.token, me)).balance;
       status.textContent = 'Bought ' + formatUnits(after - before, state.decimals, 4) + ' ' + state.symbol + '.';
       amount.value = ''; refresh();

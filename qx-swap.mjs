@@ -1,11 +1,14 @@
 // Swaps through a launch pool and its hook with the chain's Universal Router: exact-in single-pool
 // trades paid from an ERC-20 (via Permit2), and buys paid in the native coin (wrapped first, or routed
 // native → USDC → token). Quotes run through the same pool and hook, so block charges are included.
-import { abi, calldata, ethCall, words, keyTuple, KEY_T, send, ensureAllowance, connectedAddress, NATIVE, MANAGER } from '/qx-chain.mjs';
+import { abi, calldata, ethCall, words, keyTuple, KEY_T, send, ensureAllowance, connectedAddress, rpc, NATIVE, MANAGER } from '/qx-chain.mjs';
 import { stockPair } from '/full-launch/packages/multichain-launch/stock-pairs.mjs';
 import {bestPool,bestSellPool,sellPoolCandidates,directPoolPlan,poolQuoteInfo,sellQuoteUsd,nativePoolPlans,poolQuoteArgs} from './qx-best-pool.mjs';
 import {chainById} from './chains.mjs';
 import { chainMap } from '/chains.mjs';
+import {extraAddress} from './qx-extras.mjs';
+import {keccakHex} from './qdrops-core.mjs';
+import {createSiteHookReferrals} from './qx-hook-referral.mjs';
 
 const Z = '0x0000000000000000000000000000000000000000';
 export const PERMIT2 = '0x000000000022d473030f116ddee9f6b43ac78ba3';
@@ -23,25 +26,47 @@ const STOCK_ROUTE = { '4663': { usdg: '0x5fc5360d0400a0fd4f2af552add042d716f1d16
 const PATH_T = '(address,uint24,int24,address,bytes)';
 const ADDRESS_THIS = '0x0000000000000000000000000000000000000002';
 
-/// Blocks pools credit the referrer kept from a ?ref= link; other pools get empty hook data.
-export function hookData(key) {
-  try {
-    const ref = localStorage.getItem('qhooks:referrer:v1') || savedReferrer(); // a launch's referral block credits the same referrer
-    if (ref && /^0x[0-9a-f]{40}$/.test(ref) && (BigInt(key.hooks) & 16383n) === 10956n) return '0x' + ref.slice(2).padStart(64, '0');
-  } catch {}
-  return '0x';
+// The selected partner is established by slug lineage + current registry,
+// then proven against the pool's native code/config and the trader's binding.
+const hookReferrals=createSiteHookReferrals({getTrader:connectedAddress});
+const poolIdOf=key=>keccakHex(Uint8Array.from(abi([KEY_T],[keyTuple(key)]).slice(2).match(/../g),v=>parseInt(v,16)));
+async function hookContext(chainId,key,poolId){
+ const selected=hookReferrals.needsContext(key);
+ return {chainId:String(chainId),key,poolId:poolId||poolIdOf(key),manager:MANAGER[chainId],
+  ...(selected?{router:await extraAddress('feeRouter',chainId),rpc:calls=>Promise.all(calls.map(([method,params])=>rpc(chainId,method,params,{purpose:'transaction',signal:AbortSignal.timeout(5000)})))}:{})};
 }
+async function prepareHookData(chainId,key,poolId){return hookReferrals.prepare(await hookContext(chainId,key,poolId));}
+const chainHookData=(chainId,key,forSwap=false)=>hookReferrals.data(String(chainId),key,{forSwap});
+export function hookData(key,chainId){
+ return chainHookData(chainId??(hookReferrals.needsContext(key)?hookReferrals.stampedChain(key):'legacy'),key,true);
+}
+export function selectedHookReferralPartner(){
+ const s=hookReferrals.selection();
+ if(!hookReferrals.selectedPartner())return null;
+ if(['pending','unavailable'].includes(s.status)&&s.stateSlug===s.slug)throw Error('Your referral link is still loading. Refresh and try again.');
+ return s.slug;
+}
+export function hookReferralFor(key,chainId){
+ try{return hookReferrals.metadata(String(chainId??hookReferrals.stampedChain(key)),key);}
+ catch{return {state:'unavailable',blocking:true,reason:'context_stale',appliedHookReferrer:null};}
+}
+export async function assertHookReferralsCurrent(chainId,hops){
+ const seen=new Set();
+ for(const hop of hops){const id=poolIdOf(hop.key);if(seen.has(id)||!hookReferrals.needsContext(hop.key))continue;seen.add(id);await hookReferrals.assertCurrent(await hookContext(chainId,hop.key,id));}
+}
+const markHookQuote=(chainId,key,data)=>hookReferrals.markQuoted(String(chainId),key,data);
 
 /// What `amountIn` of one side of `key` buys of the other, through the pool and its hook.
 export async function quoteSingle(chainId, key, zeroForOne, amountIn) {
-  const r = await ethCall(chainId, ROUTES[chainId].quoter, calldata('0xaa9d21cb', [`(${KEY_T},bool,uint128,bytes)`], [[keyTuple(key), zeroForOne, amountIn, hookData(key)]]), connectedAddress() || undefined);
-  return BigInt(r.slice(0, 66));
+  const {data}=await prepareHookData(chainId,key);
+  const r = await ethCall(chainId, ROUTES[chainId].quoter, calldata('0xaa9d21cb', [`(${KEY_T},bool,uint128,bytes)`], [[keyTuple(key), zeroForOne, amountIn, data]]), connectedAddress() || undefined);
+  markHookQuote(chainId,key,data);return BigInt(r.slice(0, 66));
 }
 
 function singleParams(chainId, key, zeroForOne, amountIn, minOut) {
   return ROUTES[chainId].extended
-    ? abi([`(${KEY_T},bool,uint128,uint128,uint256,bytes)`], [[keyTuple(key), zeroForOne, amountIn, minOut, 0n, hookData(key)]])
-    : abi([`(${KEY_T},bool,uint128,uint128,bytes)`], [[keyTuple(key), zeroForOne, amountIn, minOut, hookData(key)]]);
+    ? abi([`(${KEY_T},bool,uint128,uint128,uint256,bytes)`], [[keyTuple(key), zeroForOne, amountIn, minOut, 0n, chainHookData(chainId,key,true)]])
+    : abi([`(${KEY_T},bool,uint128,uint128,bytes)`], [[keyTuple(key), zeroForOne, amountIn, minOut, chainHookData(chainId,key,true)]]);
 }
 
 /// Router calldata for an exact-in single-pool swap paid from an ERC-20 the router pulls through Permit2.
@@ -78,7 +103,8 @@ const plainKey = (a, b, fee, tickSpacing) => { const [c0, c1] = BigInt(a) < BigI
 
 /// Best native-coin route into `token`: wrap then the launch pool, or native → USDC (best fee tier) → launch pool.
 export async function quoteNative(chainId, key, token, quoteToken, amountIn, symbol) {
-  const route = nativeRoute(chainId, quoteToken), from = connectedAddress() || undefined, data = hookData(key);
+  const {data}=await prepareHookData(chainId,key);
+  const route = nativeRoute(chainId, quoteToken), from = connectedAddress() || undefined;
   if (route.stock) {
     const stock = stockPair(chainId, route.stock);
     const tries = await Promise.all(route.ethTiers.flatMap(([f1, t1]) => route.stockTiers.map(async ([f2, t2]) => {
@@ -88,7 +114,7 @@ export async function quoteNative(chainId, key, token, quoteToken, amountIn, sym
     })));
     const best = tries.filter(Boolean).sort((a, b) => (b.out > a.out ? 1 : -1))[0];
     if (!best) throw new Error('No route for this amount');
-    return { out: best.out, path: best.path, label: NATIVE[chainId] + ' → USDG → ' + stock.symbol + ' → ' + symbol };
+    markHookQuote(chainId,key,data);return { out: best.out, path: best.path, label: NATIVE[chainId] + ' → USDG → ' + stock.symbol + ' → ' + symbol };
   }
   if (route.wrap) {
     const out = await quoteSingle(chainId, key, key.currency0 === quoteToken, amountIn);
@@ -101,12 +127,14 @@ export async function quoteNative(chainId, key, token, quoteToken, amountIn, sym
   }));
   const best = tries.filter(Boolean).sort((a, b) => (b.out > a.out ? 1 : -1))[0];
   if (!best) throw new Error('No route for this amount');
-  return { out: best.out, path: best.path, label: NATIVE[chainId] + ' → ' + (route.hopSymbol || 'USDC') + ' (' + best.fee / 10000 + '% pool) → ' + symbol };
+  markHookQuote(chainId,key,data);return { out: best.out, path: best.path, label: NATIVE[chainId] + ' → ' + (route.hopSymbol || 'USDC') + ' (' + best.fee / 10000 + '% pool) → ' + symbol };
 }
 
 /// Router calldata for a native-coin buy; send it with value = amountIn.
 export function nativeSwapCall(chainId, key, token, quoteToken, amountIn, minOut, q, deadline) {
   const route = nativeRoute(chainId, quoteToken);
+  const data=chainHookData(chainId,key,true);
+  if(!route.wrap&&q.path.at(-1)?.[4]!==data)throw Error('Referral data changed. Refresh the quote.');
   if (route.wrap) {
     const v4 = abi(['bytes', 'bytes[]'], ['0x060b0f', [singleParams(chainId, key, key.currency0 === quoteToken, amountIn, minOut), abi(['address', 'uint256', 'bool'], [route.wrap, amountIn, false]), abi(['address', 'uint256'], [token, minOut])]]);
     return calldata('0x3593564c', ['bytes', 'bytes[]', 'uint256'], ['0x0b10', [abi(['address', 'uint256'], [ADDRESS_THIS, amountIn]), v4], deadline]);
@@ -125,8 +153,13 @@ export {FEE_BPS};
 const HOP_T = `(${KEY_T},bool,bytes)`;
 /// Router calldata for an exact-in swap through `hops` ([{ key, zeroForOne }]); `wrap` wraps native value first.
 export function feeSwapCall(chainId, hops, amountIn, minOut, wrap, feeOnInput, deadline, referrer = savedReferrer()) {
+  for(const hop of hops){
+    chainHookData(chainId,hop.key,true);
+    const m=hookReferralFor(hop.key,chainId);
+    if(m.state==='applied'&&String(referrer||Z).toLowerCase()!==m.appliedHookReferrer)throw Error('Referral choice changed. Refresh the quote.');
+  }
   return calldata('0xf5ec7c4b', ['address', HOP_T + '[]', 'uint128', 'uint128', 'address', 'bool', 'uint16', 'uint256', 'address'],
-    [MANAGER[chainId], hops.map(x => [keyTuple(x.key), x.zeroForOne, hookData(x.key)]), amountIn, minOut, wrap || Z, feeOnInput, FEE_BPS, deadline, referrer || Z]);
+    [MANAGER[chainId], hops.map(x => [keyTuple(x.key), x.zeroForOne, chainHookData(chainId,x.key,true)]), amountIn, minOut, wrap || Z, feeOnInput, FEE_BPS, deadline, referrer || Z]);
 }
 /// The referrer this visitor arrived with (wallet-early.js stores it from ?ref=), never the trader themselves.
 export function savedReferrer() {
@@ -163,25 +196,30 @@ export async function quotePoolRoutes(chainId, pools, token, amountIn, side, nat
  const chain = chainById(chainId), eligible = side==='sell'?sellPoolCandidates(chain,pools,nativeUsd,native?null:quoteToken):native ? pools : pools.filter(p => p.quote.toLowerCase() === quoteToken?.toLowerCase()&&(poolQuoteInfo(chain,p).kind!=='custom'||sellQuoteUsd(chain,p,nativeUsd)>0));
  const plans = eligible.flatMap(pool => side==='sell'?[directPoolPlan(pool,token)]:native ? nativePoolPlans(chain, pool, token) : [directPoolPlan(pool,token,'buy')]);
  const quotes = await Promise.all(plans.map(async plan => {
-  try { const a = poolQuoteArgs(plan, amountIn, hookData), r = await ethCall(chainId, chain.contracts.quoter, calldata(a.selector,a.types,a.values),connectedAddress()||undefined);
+  try {
+   const contexts=await Promise.all(plan.hops.map(h=>prepareHookData(chainId,h.key,h.key===plan.pool.key?(plan.pool.id||plan.pool.poolId):undefined)));
+   const data=k=>contexts[plan.hops.findIndex(h=>h.key===k)].data;
+   const a = poolQuoteArgs(plan, amountIn, data), r = await ethCall(chainId, chain.contracts.quoter, calldata(a.selector,a.types,a.values),connectedAddress()||undefined);
+   plan.hops.forEach((h,i)=>markHookQuote(chainId,h.key,contexts[i].data));
    const symbol=poolQuoteInfo(chain,plan.pool).quoteSymbol;return {...plan,out:BigInt(r.slice(0,66)),...(side==='sell'?{quoteUsd:sellQuoteUsd(chain,plan.pool,nativeUsd)}:{}),label:(side==='sell'?'Receive '+symbol+' · ':'')+'via '+symbol+' pool'};
-  } catch { return null; }
+  } catch(error) { if(error?.code==='hook_referral_unavailable')throw error;return null; }
  }));
  const best = side==='sell'?bestSellPool(quotes,{chain,nativeUsd,pools,quoteToken:native?null:quoteToken}):bestPool(quotes);if(!best)throw Error('No route for this amount');return best;
 }
 
 // Same-chain home USDC uses the existing v4 quoter and QFeeRouter route.
 export async function quotePayAsset(chainId, key, token, quoteToken, asset, amountIn) {
+  const {data}=await prepareHookData(chainId,key);
   if (asset.toLowerCase() === quoteToken.toLowerCase()) return {out: await quoteSingle(chainId,key,key.currency0.toLowerCase() === asset.toLowerCase(),amountIn), hops:[{key,zeroForOne:key.currency0.toLowerCase() === asset.toLowerCase()}]};
   const tries = await Promise.all(TIERS.map(async ([fee,tickSpacing]) => {
     const bridge = plainKey(asset,quoteToken,fee,tickSpacing);
     try {
-      const path = [[quoteToken,fee,tickSpacing,Z,'0x'],[token,key.fee,key.tickSpacing,key.hooks,hookData(key)]];
+      const path = [[quoteToken,fee,tickSpacing,Z,'0x'],[token,key.fee,key.tickSpacing,key.hooks,data]];
       const r = await ethCall(chainId,ROUTES[chainId].quoter,calldata('0xca253dc9',[`(address,${PATH_T}[],uint128)`],[[asset,path,amountIn]]),connectedAddress() || undefined);
       return {out:BigInt(r.slice(0,66)),hops:[{key:bridge,zeroForOne:bridge.currency0.toLowerCase() === asset.toLowerCase()},{key,zeroForOne:key.currency0.toLowerCase() === quoteToken.toLowerCase()}],label:'USDC → ' + token};
     } catch { return null; }
   }));
   const best = tries.filter(Boolean).sort((a,b) => a.out > b.out ? -1 : 1)[0];
   if (!best) throw Error('No route for this home asset');
-  return best;
+  markHookQuote(chainId,key,data);return best;
 }
