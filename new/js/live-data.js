@@ -136,6 +136,34 @@
     });
   }
   function rewards(w) { return A.get("/api/qhooks/rewards?wallet=" + encodeURIComponent(String(w).toLowerCase())); }
+  /* QHOOKS holder tier on Robinhood Chain: wallet + staked + locked against the on-chain minimum (server-cached 60 s).
+     {ok, total, wallet, staked, locked, threshold, holder (true/false/null), tier, rhHolder (what the RH router pays on)}. */
+  function holderTier(w) {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(String(w || ""))) return Promise.resolve({ ok: false });
+    return A.get("/api/qhooks/holder-tier?wallet=" + String(w).toLowerCase()).then(function (r) {
+      var b = r.body || {};
+      if (!r.ok || !b.balances) return { ok: false, status: r.status };
+      return { ok: true, total: N.num(b.balances.total), wallet: N.num(b.balances.wallet), staked: N.num(b.balances.staked), locked: N.num(b.balances.locked),
+        threshold: N.num(b.threshold), holder: typeof b.holder === "boolean" ? b.holder : null, tier: b.tier || null,
+        rhHolder: b.cashback ? !!b.cashback.robinhoodHolder : null, refreshing: !!b.refreshing };
+    });
+  }
+  /* Saved wallet groups for the signed-in owner (the QHooks sign-in session shared with qhooks.com). */
+  var SKEY = "qhooks:board-session:v1";
+  function session() { try { var s = JSON.parse(localStorage.getItem(SKEY) || "null"); return s && s.token ? s : null; } catch (e) { return null; } }
+  function groupsCall(method, body) {
+    var s = session();
+    if (!s) return Promise.resolve({ ok: false, needsSignIn: true, groups: [] });
+    var ctl = new AbortController(), t = setTimeout(function () { ctl.abort(); }, 12000);
+    var init = { method: method, cache: "no-store", signal: ctl.signal, headers: { accept: "application/json", authorization: "Bearer " + s.token } };
+    if (body) { init.body = JSON.stringify(body); init.headers["content-type"] = "application/json"; }
+    return fetch(window.QH_API + "/api/wallets/groups", init).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (b) {
+        return r.ok ? { ok: true, groups: b.groups || [], limits: b.limits || null, updatedAt: b.updatedAt || null } : { ok: false, needsSignIn: r.status === 401, status: r.status, error: b.error || null, groups: [] };
+      });
+    }).catch(function () { return { ok: false, groups: [] }; }).then(function (res) { clearTimeout(t); return res; });
+  }
+  var groups = { get: function () { return groupsCall("GET"); }, set: function (list) { return groupsCall("PUT", { groups: list }); } };
   function search(q) {
     return A.get("/api/terminal/x/search?q=" + encodeURIComponent(q)).then(function (r) {
       return r.ok && r.body && Array.isArray(r.body.results) ? { ok: true, tokens: r.body.results.map(N.hit).map(remember) } : { ok: false, tokens: [] };
@@ -171,7 +199,7 @@
   window.QHLive = {
     state: state, find: find, remember: remember, feed: feed, launches: launches, token: token, header: header,
     candles: candles, holders: holders, qproof: qproof, portfolio: portfolio, positions: positions, activity: activity,
-    rewards: rewards, holdings: holdings, trades: trades, search: search, natives: natives, quote: quote, prepareTrade: prepareTrade,
+    rewards: rewards, holderTier: holderTier, groups: groups, holdings: holdings, trades: trades, search: search, natives: natives, quote: quote, prepareTrade: prepareTrade,
     prepareLaunch: prepareLaunch, wallet: wallet, watch: watch, connect: connect, family: family,
     all: function () { return Object.keys(reg).map(function (k) { return reg[k]; }); }
   };

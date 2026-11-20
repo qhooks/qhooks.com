@@ -14,7 +14,7 @@
     ".well-known/qhooks-release.json",
     "README.md"
   ],
-  "releaseId": "882ffe55-29e7-49b4-a6a5-dae132660640",
+  "releaseId": "471bf1e8-c886-4edf-acd2-6b12f1f38477",
   "files": {
     ".well-known/assetlinks.json": {
       "sha256": "c050db9daa7f0c6ea2110ab00b609a2a99970d7366c708a84844a8f6e0928ba0",
@@ -273725,8 +273725,8 @@
       "bytes": 9524
     },
     "new/js/community-data.js": {
-      "sha256": "7c65f5b28377a88960fb6680965b8c2d23b3eb9bea917e39beda49fbdcf57357",
-      "bytes": 12381
+      "sha256": "f22c70799514933a06a1c43d11cbb26440fdaa42b4abbec4fd98abd71a9b781c",
+      "bytes": 12409
     },
     "new/js/community-style.js": {
       "sha256": "d17bd8a46b79e740b295154d9467663b02a9246201e357f842d8e9e2ce90e737",
@@ -273805,12 +273805,12 @@
       "bytes": 5289
     },
     "new/js/live-data.js": {
-      "sha256": "ca4e3f335aa2dcfe4301faad8b4ce4281a9e722c9eba60b7eceebaef75a15b86",
-      "bytes": 11435
+      "sha256": "17df2b4821117a46767d15b23cabdbda392eae07617865a31e39cebc4a84c768",
+      "bytes": 13856
     },
     "new/js/live-norm.js": {
-      "sha256": "34c6bcaa56f19ae2e2cf06336078e704b5a4ad7d792a721210bde5fdae014e27",
-      "bytes": 11155
+      "sha256": "cb15c9fb5322ff49cbb792c54616ee6bba38cc7cd34a8a8096cf516a43f493ee",
+      "bytes": 11864
     },
     "new/js/live-pulse.js": {
       "sha256": "82349e66bfd59c2d749a3ca6c9b340ef84ce7d76d1ca8612a69b576201f26074",
@@ -273821,8 +273821,8 @@
       "bytes": 1887
     },
     "new/js/live-social.js": {
-      "sha256": "195120e8551c8ad8b674f0f72b4e1f74a3c0f35205bffb021ccce20556ccf4dd",
-      "bytes": 8673
+      "sha256": "c6747a727ebf7857a639534e535e620ac38a78d22b5c1759a4b0d0448441cc07",
+      "bytes": 9030
     },
     "new/js/live-token-tabs.js": {
       "sha256": "31492f745d4efd44026c041ccd5033960bc6699ef55b1da50f14c6632fd868ee",
@@ -273929,8 +273929,8 @@
       "bytes": 8560
     },
     "new/js/rewards.js": {
-      "sha256": "ec53b1a75dad9a3d9d75e4e9874cba482ad346b1830ea8c07cdd305f341526a9",
-      "bytes": 6674
+      "sha256": "265cc2af7219bce21e5e08a88ef1e181fe93771aaeb4fe841f556f713d374306",
+      "bytes": 7195
     },
     "new/js/search.js": {
       "sha256": "eae22e0dc4de564e42e2bbdf4eb7195e847aa55d20f9388c0de120aed0afe528",
@@ -284481,24 +284481,24 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "995d4afc09b4a253bef504f0017ade894e58122465f7744bcda0ee4bd52d1dc3",
-  "sourceTree": "work/qhooks-newsite3-rel-20261120",
-  "sourceWorkerSha256": "ffe349063fb4ab394f13cbdb4c4c5fcc0fae5b3c79eb9122859341b58ff07a4b",
+  "contentDigest": "ad30d1ddb67207de2a175bc350ef96883e345a28981c47d434c053f678ee5f15",
+  "sourceTree": "work/qhooks-ecofill-claude-20261120",
+  "sourceWorkerSha256": "3751f6cda248813f6dcc4fe7ecb45d4119c6d186aeb489592f5c36bf37c69fd3",
   "sourceManifestSha256": null,
   "sourceFreezeSha256": null,
   "all14ArtifactDigest": null,
   "sourcePatchSha256": null,
-  "sourceReleaseReceiptSha256": "4c260b16b14e3fd3c8ff195d0ebcf9da909a908dfca217114cc6219bff5e5f32",
-  "sourceReleaseReceiptStatus": "LIVE_NEWSITE_VERIFIED",
+  "sourceReleaseReceiptSha256": "c3fb7d272aaba4c97d5b473a2fddb437c535930fa676a8a58a4465874bd74200",
+  "sourceReleaseReceiptStatus": "LIVE_ECOFILL_VERIFIED",
   "acceptance": {
-    "sourceAndLocalReleaseGates": "One file changed (new/js/pulse-row.js, eco-rebuild 1a24aa0); worker byte-identical; 188 routes, 0 dropped.",
+    "sourceAndLocalReleaseGates": "Five /new js files changed (eco-rebuild 0c383c2); server data fill; 188 routes, 0 dropped.",
     "connectedWebKit": "Real-domain browser pass at 1440 (9 pages); 390 on edge preview.",
     "postDeployWatch": {
       "status": "OBSERVED_WATCH_CRITERION_MET",
-      "seconds": 90,
-      "events": 236,
+      "seconds": 120,
+      "events": 112,
       "exceptions": 0,
-      "scheduledOk": 2,
+      "scheduledOk": 4,
       "sampled": true,
       "globalHealthClaim": false
     },
@@ -284512,8 +284512,8 @@
     "policyExpansion": false
   },
   "priorReleaseAttestation": {
-    "releaseId": "5ff7e890-5d67-4f0d-b239-7d467047fd7b",
-    "contentDigest": "26f201521387470c5188ae707409a520a561150d13729ce377c7dffaead4f47f",
-    "sourceReleaseReceiptSha256": "013173999a8e15b992f74481179d4d8ef0b561736be46718e6735f957be2254f"
+    "releaseId": "882ffe55-29e7-49b4-a6a5-dae132660640",
+    "contentDigest": "995d4afc09b4a253bef504f0017ade894e58122465f7744bcda0ee4bd52d1dc3",
+    "sourceReleaseReceiptSha256": "4c260b16b14e3fd3c8ff195d0ebcf9da909a908dfca217114cc6219bff5e5f32"
   }
 }

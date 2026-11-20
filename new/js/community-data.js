@@ -99,7 +99,7 @@ window.CommunityData = (function () {
     }).then(function (r) {
       if (r && r.ok) live.calls = r.rows.map(function (c) {
         var t = tokenFor(c.chainId, c.address);
-        return { id: c.id, live: true, caller: sh(c.wallet), wallet: c.wallet, token: t, at: c.at, note: c.note, kind: c.kind, entryPrice: c.entryPrice, nowPrice: c.nowPrice || t.price || null };
+        return { id: c.id, live: true, caller: sh(c.wallet), wallet: c.wallet, token: t, at: c.at, note: c.note, kind: c.kind, entryPrice: c.entryPrice, entryMc: c.entryMc || null, nowPrice: c.nowPrice || t.price || null };
       });
       emit(); if (r && r.ok) names();
     });

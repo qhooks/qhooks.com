@@ -37,7 +37,7 @@ window.Rewards = (function () {
       (s ? s.rows.map(function (c) { return '<div class="rw-row"><span>' + F.esc(c[0]) + "</span><b>" + money(c[1]) + '<em> earned · ' + money(c[2]) + " to claim</em></b></div>"; }).join("") : '<div class="rw-row"><span>Per chain</span><b>—</b></div>') + "</div>" +
       '<div class="rw-card"><h2>Referrals</h2><p class="rw-line">Bring traders, get 20% of their fee</p><div class="rw-ref"><code>' + F.esc(link || "Connect to get your link") + '</code><button class="rw-copy"' + (link ? "" : " disabled") + ">Copy</button></div>" +
       '<div class="rw-row"><span>Referral earnings</span><b>' + (s ? money(s.ref) : "—") + "</b></div></div>" +
-      '<div class="rw-card"><h2>QHOOKS holder tier</h2><div class="rw-row"><span>Your QHOOKS (wallet + staked + locked)</span><b>—</b></div><div class="rw-row"><span>Next tier</span><b>100K for 40% on Robinhood Chain</b></div><a class="rw-link" href="https://qhooks.com/stake">Stake or lock QHOOKS</a></div>' +
+      '<div class="rw-card"><h2>QHOOKS holder tier</h2><div class="rw-row"><span>Your QHOOKS (wallet + staked + locked)</span><b class="rw-tier">—</b></div><div class="rw-row"><span>Next tier</span><b>100K for 40% on Robinhood Chain</b></div><a class="rw-link" href="https://qhooks.com/stake">Stake or lock QHOOKS</a></div>' +
       '<div class="rw-card"><h2>Competitions</h2><div class="rw-row"><span>This week</span><b>PnL, Return, Perps boards</b></div><div class="rw-row"><span>Your rank</span><b>—</b></div><a class="rw-link" href="https://qhooks.com/compete">See standings</a></div>' +
       "</section></div>";
     var cp = root.querySelector(".rw-copy");
@@ -50,11 +50,20 @@ window.Rewards = (function () {
     var L = window.QHLive, w = L && L.wallet();
     shell(root, null, w, null);
     if (!w) return;
+    /* Holder tier (server: /api/qhooks/holder-tier, cached 60 s); filled in place so it survives the rewards re-render. */
+    var tierText = null;
+    function paintTier() { var el = root.querySelector(".rw-tier"); if (el && tierText) el.textContent = tierText; }
+    if (L.holderTier) L.holderTier(w).then(function (t) {
+      if (!root.isConnected || !t.ok) return;
+      tierText = t.total != null ? window.QHFmt.num(t.total) + " QHOOKS" : "Refreshing";
+      paintTier();
+    });
     Promise.all([L.rewards(w), L.natives()]).then(function (r) {
       if (!root.isConnected) return;
       var res = r[0];
       if (!res.ok || !res.body) { root.querySelector(".rw-sub").textContent = "Rewards are unavailable right now. Open this page again in a moment."; return; }
       shell(root, sum(res.body, r[1] || {}), w, res.body.referralLink || null);
+      paintTier();
       var f = root.querySelector(".rw-fresh"); if (f) f.textContent = "· " + window.QHFmt.fresh(res.body.observedAt);
     });
   }

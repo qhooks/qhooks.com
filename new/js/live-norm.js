@@ -1,6 +1,8 @@
 /* live-norm.js: turns live qhooks.com answers into the token shape the screens already use
    (symbol, name, address, ageSec, price, mcap, liquidity, volume, holders, top10, qProof, candles, trades ...).
-   Unknown numbers stay null so every screen shows an em dash, never a made-up value. Written by Claude. */
+   Unknown numbers stay null so every screen shows an em dash, never a made-up value. Written by Claude.
+   Server-filled fields (eco-fill): feed rows carry qproof {level,label,checkedAt} from stored reports, holders (our index
+   or the stored report), feeTierPct and fees24hUsd (24h volume x the pool's LP fee tier); each is null when unknown. */
 (function () {
   "use strict";
   var CHAINS = {
@@ -34,6 +36,12 @@
     return "Not checked";
   }
 
+  /* Stored QProof verdict sent with a feed row: {level, label, checkedAt} or null (never checked). */
+  function stored(o, q) {
+    if (!q || !q.level) return;
+    o.qProof = verdict(q.level); o.qProofLabel = q.label || null; o.qProofAt = Date.parse(q.checkedAt || "") || null;
+  }
+
   function base(chainId, address, kind) {
     var c = chain(chainId);
     return {
@@ -41,7 +49,7 @@
       native: c.native, address: addrKey(chainId, address), href: href(chainId, address),
       symbol: "", name: "", logo: null, ageSec: null, price: null, mcap: null, liquidity: null, volume: null,
       change24: null, holders: null, top10: null, dev: null, sniper: null, insider: null, bundler: null,
-      buys: null, sells: null, qProof: "Not checked", badge: "", stage: null, progress: null,
+      buys: null, sells: null, qProof: "Not checked", qProofAt: null, fees: null, feeTier: null, badge: "", stage: null, progress: null,
       candles: [], trades: [], observedAt: 0
     };
   }
@@ -55,6 +63,8 @@
     o.liquidity = num(r.liquidityUsd); o.volume = num((r.volumeUsd || {}).h24); o.change24 = pct((r.change || {}).h24);
     o.buys = num(tx.buys); o.sells = num(tx.sells); o.stage = lc.stage || null; o.progress = pct(lc.progress);
     if (r.safety && (r.safety.level || r.safety.verdict)) o.qProof = verdict(r.safety.level || r.safety.verdict);
+    stored(o, r.qproof);
+    o.holders = num(r.holders); o.fees = num(r.fees24hUsd); o.feeTier = num(r.feeTierPct);
     o.observedAt = num(r.priceAt) || num(r.observedAt) || 0;
     if (o.stage === "bonding" && o.progress != null) o.badge = "";
     return o;
@@ -68,6 +78,7 @@
     o.ageSec = ageFrom(m.launchedAt || m.listedAt); o.price = num(s.priceUsd); o.mcap = num(s.mcapUsd);
     o.volume = num(s.volume24Usd); o.change24 = pct(s.change24); o.holders = num(s.holders); o.top10 = pct(s.top10);
     o.buys = num(s.buys24); o.sells = num(s.sells24); o.observedAt = num(s.priceAt) || 0;
+    stored(o, m.qproof);
     var graduated = (m.pools || []).indexOf("graduated") >= 0 || m.bonded === true;
     o.stage = graduated ? "migrated" : "bonding";
     o.progress = m.progressBps != null ? num(m.progressBps) / 100 : null;

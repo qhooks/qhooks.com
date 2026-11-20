@@ -59,8 +59,10 @@
         return { ok: true, at: r.at, rows: b.calls.map(function (c) {
           var bd = c.board || {}, addr = bd.address || bd.controller || "", ch = String(bd.chainId || "");
           var cl = c.call || {};
+          /* entryPriceUsd / entryMcapUsd: recorded at call time (server eco-fill); null when not recorded. */
           return { id: c.id, wallet: c.author, kind: c.kind, note: c.text || "", at: N.num(c.createdAt) || 0, chainId: ch, address: addr,
-            boardKind: bd.kind, href: N.href(ch, addr), entryPrice: N.num(cl.price), nowPrice: N.num(cl.nowPrice), tx: c.receipt && c.receipt.tx };
+            boardKind: bd.kind, href: N.href(ch, addr), entryPrice: N.num(cl.entryPriceUsd != null ? cl.entryPriceUsd : cl.price), entryMc: N.num(cl.entryMcapUsd),
+            nowPrice: N.num(cl.nowPrice != null ? cl.nowPrice : cl.priceNow), tx: c.receipt && c.receipt.tx };
         }) };
       });
     }, fresh);
@@ -106,7 +108,8 @@
         var m = b.board || {};
         return { ok: true, meta: { symbol: m.symbol || "", name: m.name || "", logo: N.img(m.logo) }, posts: b.posts.filter(function (p) { return !p.hidden; }).map(function (p) {
           return { id: p.id, wallet: p.author, kind: p.kind, text: p.text || "", at: N.num(p.createdAt) || 0, badges: p.badges || [],
-            entryPrice: p.call ? N.num(p.call.price) : null, nowPrice: p.call ? N.num(p.call.priceNow) : null };
+            entryPrice: p.call ? N.num(p.call.entryPriceUsd != null ? p.call.entryPriceUsd : p.call.price) : null, entryMc: p.call ? N.num(p.call.entryMcapUsd) : null,
+            nowPrice: p.call ? N.num(p.call.priceNow) : null };
         }) };
       });
     });
