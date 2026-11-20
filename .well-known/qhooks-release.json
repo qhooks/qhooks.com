@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "aa812097-2c80-4398-9fb4-f41684d7dfe7",
+  "releaseId": "08f2e9c6-b50f-46e3-809a-aea5e12af834",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,8 +41,12 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "576771f971369b0e54c8addf4838086ed0a07cd49b8add12eb821e1f72866c31",
-      "bytes": 129
+      "sha256": "b016d3289258ba4124c85e4b1f6a711007b300af5a84d076b6201308f0543f6a",
+      "bytes": 5961
+    },
+    "_redirects": {
+      "sha256": "e7b86d99b595a5ba8777c205bedc3f86b689fb47d7220d81eed9d21d8e255de5",
+      "bytes": 26
     },
     "adaptive-liquidity.html": {
       "sha256": "c03b2ded384543623e8b3f013ae95898966d30be539988be7e3156b32c65e9fc",
@@ -273769,8 +273773,8 @@
       "bytes": 1100
     },
     "new/index.html": {
-      "sha256": "627c023555ebdb986bcdd1a1fc9d760235d8d748cca5de64a4c1e36ceea465c7",
-      "bytes": 926
+      "sha256": "4fc06f4ec3d22317caa26b0cdf13ee162d592ee932612aae2fcd05b8d7076791",
+      "bytes": 1074
     },
     "new/js/perps-book.js": {
       "sha256": "5711cdbfcd0818ebbe6b040efd77efcecb92f7ffd9d538a950ed017e791550ec",
@@ -284329,5 +284333,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "f31a1a2e921df98e409e172c57f487b70503080757fbd2bf6dd185d6b511707f"
+  "contentDigest": "74b2edaf3c4188300cdbba9a59f65d9882e9df19146561e0df734732267538db"
 }
