@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "7795f198-8ad8-4032-882a-b3de2a620427",
+  "releaseId": "aa812097-2c80-4398-9fb4-f41684d7dfe7",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -273708,17 +273708,49 @@
       "sha256": "0238ea9322d763191730c14a66a5ab70f11744487e93c0e8fe948fb4b92109c4",
       "bytes": 5712
     },
-    "new/app.0c944dff10.js": {
-      "sha256": "0c944dff10779ffbbd72905379e8fc7096aa38ba78e6ab85f5789657ffa5d895",
-      "bytes": 383771
+    "new/app.740c5107dc.css": {
+      "sha256": "740c5107dc9bd0a6958d75242c37cc8e357806bf4bfe426f9cbefe8930e7b677",
+      "bytes": 64441
     },
-    "new/app.ce6ae36ddd.css": {
-      "sha256": "ce6ae36ddd6241a8c326f89000e51fe59d3fc83f70b54ebf1dd24ff6c38728a4",
-      "bytes": 64263
+    "new/app.dfaa518cd1.js": {
+      "sha256": "dfaa518cd13641c6b70598f4c5d7309135740008f1bdcf11a47a1e80d22a8aaa",
+      "bytes": 384007
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
       "bytes": 90096
+    },
+    "new/brand/chains/NOTICE.txt": {
+      "sha256": "2c432717265841c2e84b9cd5712b4d29c7176e1eaeaeb397b7bc7f411f956724",
+      "bytes": 492
+    },
+    "new/brand/chains/arbitrum.svg": {
+      "sha256": "d8dd79169cdfdd8820796ecc98f5343710b04d95c8ea4b629da065ea2b6e63e7",
+      "bytes": 1407
+    },
+    "new/brand/chains/base.svg": {
+      "sha256": "692a4b03e55fe10c98a7036eb908555e14237d53a8691eb1de5862c2b5f4ef31",
+      "bytes": 296
+    },
+    "new/brand/chains/bnb.svg": {
+      "sha256": "bb4eaf7fb18772d69ea632322598b13d6df59313798398a13efec1646ad5e0f0",
+      "bytes": 737
+    },
+    "new/brand/chains/elysium.svg": {
+      "sha256": "f2f79dff20bcb348a411781f5d8ae8ea69247315d3b08e9c59e1ad80114e8d72",
+      "bytes": 271
+    },
+    "new/brand/chains/ethereum.svg": {
+      "sha256": "c262a17068419a73c94b55c4468b0e63e0c0a14420fec77e41ecd94355cd3e1b",
+      "bytes": 882
+    },
+    "new/brand/chains/robinhood.svg": {
+      "sha256": "39f1f51c2721aa81a9b8ec307cfd763840c9ab735b8101923ee02294894edb82",
+      "bytes": 801
+    },
+    "new/brand/chains/solana.svg": {
+      "sha256": "65edaf18e4c2b2b75c483403ee44a5606e5599bb1f6bd7b5fc901643e520b490",
+      "bytes": 471
     },
     "new/brand/hook-studded-192.png": {
       "sha256": "1b7db53ccc18d8ec5ec1f0111558d54730ffd4c2f0e3df785fbcb90362e7f4fe",
@@ -273737,7 +273769,7 @@
       "bytes": 1100
     },
     "new/index.html": {
-      "sha256": "7b0b17a3d3752fc44b86ac7ec2c3d5c76ac0a974f3af091e6a10fc50d913b214",
+      "sha256": "627c023555ebdb986bcdd1a1fc9d760235d8d748cca5de64a4c1e36ceea465c7",
       "bytes": 926
     },
     "new/js/perps-book.js": {
@@ -284297,5 +284329,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "bf98ad85d3edbcdfc1295ce6ee06522475337a3eb04f2288826a8ebd9a6b533e"
+  "contentDigest": "f31a1a2e921df98e409e172c57f487b70503080757fbd2bf6dd185d6b511707f"
 }
