@@ -221,3 +221,22 @@ h1,h2,.lx-h1,.sx h1,.po-title,.dc-tab,.pf-tab,.po-tab,.cm-tab,.token-symbol{font
   .pulse-row-right .pulse-volume{display:none!important}
   .pulse-row-right .pulse-buy-btn{height:34px!important;min-height:34px!important}
 }
+
+/* ── Pulse opening line on phone ────────────────────────────── */
+.eco-open{display:none}
+@media (max-width:767px){
+  .eco-open{display:block;padding:14px 12px 4px;font-family:var(--display);font-weight:700;font-size:21px;line-height:1.15;letter-spacing:-.015em;color:var(--tx)}
+  .eco-open span{color:var(--gold);transition:opacity .18s ease-out}
+}
+
+/* Strip: the pill for the page you are on is the highlighted one (tester: "pill does not get highlighted when
+   moving between them"). Rewards keeps its hook glyph and gold figure but is only filled when you are on Rewards. */
+.eco a.eco-gold{border-color:var(--line);background:var(--s1)}
+.eco a[aria-current="page"],.eco a.eco-gold[aria-current="page"]{border-color:var(--gold);background:var(--gold-a);color:var(--gold-2)}
+.eco a[aria-current="page"] b{color:var(--gold-2)}
+
+/* The hook render as the hook mark, in the strip and on hook badges. */
+/* The render is dark bronze, made for a lit hero; at icon size on graphite it is lifted so it reads as gold. */
+.qh-hook{display:block;flex:none;height:20px;width:auto;margin:-3px 0;filter:brightness(2.6) saturate(1.25) contrast(.92)}
+.hk-badge .qh-hook{height:14px;margin:-2px 0}
+@media (max-width:767px){.eco .qh-hook{height:24px}}

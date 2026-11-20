@@ -47,9 +47,12 @@
     var short = line ? line.split(' on ')[0] : '';
     var glyph = window.QHBrand ? window.QHBrand.hook : '';
     injectStyle();
+    /* Randall, 2026-11-20: "30% back" on every row turned into wallpaper, since it applies to every trade. Rows
+       now carry a badge only when there is a hook to speak of: a token's own hook, or a QHooks launch (which
+       runs the standard hook). Everything else gets no badge; the cashback line lives in the strip and at the trade. */
     if (!h) {
-      if (!short) return '';
-      return '<a class="hk-badge hk-low" href="#/rewards" title="' + line + '">' + glyph + short + '</a>';
+      if (!token || token.kind !== 'qhooks') return '';
+      return '<a class="hk-badge hk-low" href="#/hook/std" title="Launched on QHooks with the standard hook' + (line ? ': ' + line : '') + '">' + glyph + 'QHooks hook</a>';
     }
     var risk = getRiskClass(h.risk), id = h.id || 'std', name = h.name || 'Standard';
     var std = id === 'std' || id === 'standard' || name === 'Standard';

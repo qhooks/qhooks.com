@@ -5,7 +5,8 @@
    Money wording uses the approved line from QHBlocks only. No template literals. */
 (function () {
   "use strict";
-  var HOOK = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M7 1v6.2a2.6 2.6 0 0 1-5.2 0V6.4"/></svg>';
+  /* The real QHooks hook (the live site's render), not a drawn glyph. Tester request via Randall, 2026-11-20. */
+  var HOOK = '<img class="qh-hook" src="brand/hook-96.png" alt="" aria-hidden="true">';
   var WORDS = ["builders", "callers", "holders", "traders"], wi = 0;
   var TITLES = { pulse: "Pulse", discover: "Discover", launch: "Launch", perps: "Perps", community: "Community", agents: "Agents", portfolio: "Portfolio", rewards: "Rewards", token: "Token", wallet: "Wallet", hooks: "Hook Studio", hook: "Hook", more: "More" };
 
@@ -39,6 +40,13 @@
     var box = document.createElement("div"); box.innerHTML = strip();
     var el = box.firstChild; el.setAttribute("data-at", location.hash);
     main.insertBefore(el, main.firstChild);
+    /* Phone has no room for the line in the strip, so Pulse opens with it: one line, then straight into the tokens. */
+    var seg = (location.hash || "#/pulse").replace(/^#\//, "").split(/[/?]/)[0];
+    if (seg === "pulse" || seg === "") {
+      var l = document.createElement("div"); l.className = "eco-open";
+      l.innerHTML = 'For the next generation of token <span>' + WORDS[wi] + "</span>";
+      main.insertBefore(l, el.nextSibling);
+    }
     title();
   }
   var pending = false;
@@ -46,9 +54,9 @@
     .observe(document.documentElement, { childList: true, subtree: true });
   window.addEventListener("hashchange", function () { setTimeout(mount, 0); });
   setInterval(function () {
-    var s = document.querySelector(".eco-line span"); if (!s || document.hidden) return;
-    s.style.opacity = "0";
-    setTimeout(function () { wi = (wi + 1) % WORDS.length; s.textContent = WORDS[wi]; s.style.opacity = "1"; }, 180);
+    var all = document.querySelectorAll(".eco-line span, .eco-open span"); if (!all.length || document.hidden) return;
+    all.forEach(function (s) { s.style.opacity = "0"; });
+    setTimeout(function () { wi = (wi + 1) % WORDS.length; all.forEach(function (s) { s.textContent = WORDS[wi]; s.style.opacity = "1"; }); }, 180);
   }, 3200);
   window.QHBrand = { hook: HOOK };
 })();

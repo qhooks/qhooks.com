@@ -14,7 +14,7 @@
     ".well-known/qhooks-release.json",
     "README.md"
   ],
-  "releaseId": "9faf166f-ae58-436a-b605-b2c6d218da21",
+  "releaseId": "1af12881-3962-4fff-899e-6513484dbd05",
   "files": {
     ".well-known/assetlinks.json": {
       "sha256": "c050db9daa7f0c6ea2110ab00b609a2a99970d7366c708a84844a8f6e0928ba0",
@@ -273709,12 +273709,16 @@
       "bytes": 5712
     },
     "new/brand.css": {
-      "sha256": "c27831d8528b63513c4cc08ec2017a777c88b37c2a4edfd97df0f4ed68ea1bff",
-      "bytes": 16378
+      "sha256": "4f20949ed539eec1e5a3a4875112452973742f03f8c13a768d136d9a811c0f1f",
+      "bytes": 17684
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
       "bytes": 90096
+    },
+    "new/brand/hook-96.png": {
+      "sha256": "4d446541b3269e15413184488103e3380e7cc059ec0c3c7914732bab7b1a8ffc",
+      "bytes": 5560
     },
     "new/brand/qh-mark.jpg": {
       "sha256": "e7beee93129ed3f92c18c4625364e213507132261d5c754b005c4a5a1955ee91",
@@ -273725,16 +273729,20 @@
       "bytes": 15166
     },
     "new/index.html": {
-      "sha256": "08d792482b73191779bcb7116c49cff941654d2e73c9da8e09ab06d97dca6d5e",
-      "bytes": 2599
+      "sha256": "115484966ab6cd1cdb6f36608832107414eb7f191e1f91d7a78ec515782f439a",
+      "bytes": 2640
+    },
+    "new/js/after-trade.js": {
+      "sha256": "d0d4d2a98fc4cbc5f61b7ae17d06d478fb0be824ab8ce7534a8bca02ba78f19b",
+      "bytes": 3501
     },
     "new/js/agents.js": {
       "sha256": "f000a21e356fec13789d11237ca07ab5620bd5265b09aec33ece93d5e84d8cfa",
       "bytes": 4191
     },
     "new/js/brand.js": {
-      "sha256": "a416faa5b33d0e6ae18971280f0ea763e44df024ef679c750f1516a72b2d46d2",
-      "bytes": 3162
+      "sha256": "e42d3d5ca898d13d5bb9de8338a794dbdb8e19194a1f841d8650f184d4793927",
+      "bytes": 3719
     },
     "new/js/community-cards.js": {
       "sha256": "68b88175f6e519ebab83d173a4b5538e727c68cf3e439ff3684461d733914d2e",
@@ -273753,8 +273761,8 @@
       "bytes": 10322
     },
     "new/js/community.js": {
-      "sha256": "3d2aa27ed11ec5c2ec5f58b2b36ae5d6a3bed4aba3b0bbf8974a7ddc479f3814",
-      "bytes": 7193
+      "sha256": "fd351f96213cf919f0cb3b1c36e4a422b9b4da5f12190d8be060dc1066608f51",
+      "bytes": 7617
     },
     "new/js/data.js": {
       "sha256": "00b581e8d9d8cded6db0be06dfc247a5596617082458d564a39af24c2ee1168d",
@@ -273773,12 +273781,12 @@
       "bytes": 4981
     },
     "new/js/flows.js": {
-      "sha256": "76488ed871e718c27b3ef5c81546917d71c277288a6279907e8bbae6062b411f",
-      "bytes": 8319
+      "sha256": "426156f5a3bec9ad6381048e929ccb0b0c77b0d9d12a35ca524ff9b580f370e7",
+      "bytes": 8748
     },
     "new/js/hook-badge.js": {
-      "sha256": "8688fdedc8cfd4ca1ac6483d444bb965cd69145a0311ef59b4236e10f499eb03",
-      "bytes": 2711
+      "sha256": "035d925d0fec5824c26815ab533f337ac8cf35ffc1709363215bb047df6758db",
+      "bytes": 3148
     },
     "new/js/hook-blocks.js": {
       "sha256": "ff30d443fe1aa40b657519a7e1e40279545faad7fc97035dca91250bdd7e08d5",
@@ -273937,8 +273945,8 @@
       "bytes": 10066
     },
     "new/js/profile-rh.js": {
-      "sha256": "859495b7d0de07872d1c1502141e1e5d625ff89ac65be272d987a823a88aac35",
-      "bytes": 9078
+      "sha256": "d50773a163342a70c3da027c94c852e39fbe1a8ed98a0ba8cccea3950f4b0b06",
+      "bytes": 10274
     },
     "new/js/pulse-row.js": {
       "sha256": "b5b924a7806cdb3e39de671b06cf2efef300f4f332ca8127a372a7a80b039a4c",
@@ -284517,22 +284525,22 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "f1354b0c9b0a6a32e46d2085621147175b43ece359bfecf7d8204d8c556c8264",
-  "sourceTree": "work/qhooks-newsite8-rel-20261120",
+  "contentDigest": "734d036e5caad928b86db9add28e69f585de308470dc36c630221ff5f52d04b0",
+  "sourceTree": "work/qhooks-newsite9-rel-20261120",
   "sourceWorkerSha256": "3751f6cda248813f6dcc4fe7ecb45d4119c6d186aeb489592f5c36bf37c69fd3",
   "sourceManifestSha256": null,
   "sourceFreezeSha256": null,
   "all14ArtifactDigest": null,
   "sourcePatchSha256": null,
-  "sourceReleaseReceiptSha256": "c9f1d952db754f829efc90cbe4d0394914a44a1e38ff786bfd1d9e3d32b883bf",
+  "sourceReleaseReceiptSha256": "fd1c0cdb72ddf97d61f0ca57fa13f00d665b650cbedd436b76cbc3c074119675",
   "sourceReleaseReceiptStatus": "LIVE_NEWSITE_VERIFIED",
   "acceptance": {
-    "sourceAndLocalReleaseGates": "/new from eco-rebuild aeb67b2; worker byte-identical; 188 routes, 0 dropped.",
+    "sourceAndLocalReleaseGates": "/new from eco-rebuild 01bc0f9; worker byte-identical; 188 routes, 0 dropped.",
     "connectedWebKit": "Real-domain browser pass at 1440 (9 pages); 390 on edge preview.",
     "postDeployWatch": {
       "status": "OBSERVED_WATCH_CRITERION_MET",
       "seconds": 90,
-      "events": 86,
+      "events": 239,
       "exceptions": 0,
       "scheduledOk": 1,
       "sampled": true,
@@ -284548,8 +284556,8 @@
     "policyExpansion": false
   },
   "priorReleaseAttestation": {
-    "releaseId": "790ec7da-0b2c-41b6-a7ae-64b97bf4a409",
-    "contentDigest": "f4e2abf16ac307bbfe5dbbf21a8e78c6c04b6bc7db02c623657cc35f7b1527c8",
-    "sourceReleaseReceiptSha256": "3315f48dd1ab3ff4b34263ff6c99de1dbb909f332db423e895c5f203151a1e78"
+    "releaseId": "9faf166f-ae58-436a-b605-b2c6d218da21",
+    "contentDigest": "f1354b0c9b0a6a32e46d2085621147175b43ece359bfecf7d8204d8c556c8264",
+    "sourceReleaseReceiptSha256": "c9f1d952db754f829efc90cbe4d0394914a44a1e38ff786bfd1d9e3d32b883bf"
   }
 }

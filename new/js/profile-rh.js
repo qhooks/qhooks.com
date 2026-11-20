@@ -14,20 +14,26 @@ window.QHProfileRH = (function () {
   function tok(a, sym) { return '<a class="prh-tok" href="#/token/' + CHAIN + "/" + F.esc(a) + '">' + F.esc(sym || F.short(a)) + "</a>"; }
   function wal(a) { return '<a class="q-addr-link" href="#/wallet/' + F.esc(a) + '">' + F.esc(F.short(a)) + "</a>"; }
 
-  function draw(box, p) {
-    var s = p.summary || {}, cov = p.coverage || {};
+  var WINS = [["7d", "7D"], ["30d", "30D"], ["all", "All"]];
+  function draw(box, p, win) {
+    win = win || "all";
+    var s = p.summary || {}, cov = p.coverage || {}, per = (s.periods || {})[win] || {};
     var hs = (p.holdings || []).filter(function (h) { return !h.lookalike && Number(h.valueUsd) >= 0.01; }).sort(function (a, b) { return b.valueUsd - a.valueUsd; });
     var trades = (p.trades || []).slice().sort(function (a, b) { return b.ts - a.ts; });
     var known = s.closedWithKnownPnl || 0, closed = s.closedPositions || 0;
     var partial = s.realizedPartial ? "Some buys came in by transfer, so cost is unknown" : "";
     var labels = (p.labels || []).slice(0, 3).map(function (l) { return '<span class="prh-label">' + F.esc(l.text) + "</span>"; }).join("");
     var fund = p.funder && p.funder.known && p.funder.funder ? '<span class="prh-label">First funded by ' + wal(p.funder.funder) + "</span>" : "";
-    var h = '<div class="prh-bar"><b>On Robinhood Chain</b><span class="prh-cov">Read from ' + F.int(cov.txs) + " transactions" + (p.kind === "contract" ? " · contract" : "") + "</span></div>" +
+    /* Realized PnL follows the 7D / 30D / All switch (summary.periods); roi and winRate are fractions, null means unknown. */
+    var realized = win === "all" && !("realizedUsd" in per) ? s.realizedUsd : per.realizedUsd;
+    var rsub = F.ok(realized) ? (F.ok(per.roi) ? F.pct(per.roi * 100, true) + " on cost · " : "") + F.int(per.sells) + " sells" : (per.sells === 0 && win !== "all" ? "No sells in this period" : partial);
+    var h = '<div class="prh-bar"><b>On Robinhood Chain</b><span class="prh-cov">Read from ' + F.int(cov.txs) + " transactions" + (p.kind === "contract" ? " · contract" : "") + '</span><div class="prh-wins">' +
+      WINS.map(function (x) { return '<button type="button" data-w="' + x[0] + '"' + (x[0] === win ? ' class="on"' : "") + ">" + x[1] + "</button>"; }).join("") + "</div></div>" +
       '<div class="prh-stats">' +
       stat("Holdings", F.usd(s.holdingsValueUsd), "", hs.length + " tokens") +
-      stat("Realized PnL", signed(s.realizedUsd), cls(s.realizedUsd), F.ok(s.realizedUsd) ? "" : partial) +
+      stat("Realized PnL", signed(realized), cls(realized), rsub) +
       stat("Unrealized", signed(s.unrealizedUsd), cls(s.unrealizedUsd)) +
-      stat("Win rate", F.ok(s.winRate) ? F.pct(Number(s.winRate) <= 1 ? s.winRate * 100 : s.winRate) : F.DASH, "", closed ? known + " of " + closed + " closed with known cost" : "No closed positions") +
+      stat("Win rate", F.ok(s.winRate) ? F.pct(s.winRate * 100) : F.DASH, "", closed ? known + " of " + closed + " closed with known cost" : "No closed positions") +
       stat("Bought", F.usd(s.buyUsd), "", F.int(s.buys) + " buys") +
       stat("Sold", F.usd(s.sellUsd), "", F.int(s.sells) + " sells") +
       stat("Avg hold", hold(s.avgHoldSec), "", F.int(s.tokensTraded) + " tokens traded") + "</div>" +
@@ -42,6 +48,7 @@ window.QHProfileRH = (function () {
           "</span><span>" + F.usd(t.usd) + '</span><span><a class="prh-tx" href="' + SCAN + "/tx/" + F.esc(t.tx) + '" target="_blank" rel="noopener">Tx</a></span></div>';
       }).join("") + (trades.length > 20 ? '<div class="prh-more">' + (trades.length - 20) + " earlier trades</div>" : "") : '<div class="prh-note">No swaps found for this wallet on Robinhood Chain.</div>') + "</div></div>";
     box.innerHTML = h; box.style.display = "";
+    box.querySelectorAll(".prh-wins button").forEach(function (b) { b.onclick = function () { draw(box, p, b.getAttribute("data-w")); }; });
   }
 
   function mount(box, w) {
@@ -74,6 +81,8 @@ window.QHProfileRH = (function () {
     ".prh-stat{padding:10px 12px;border-right:1px solid var(--line);min-width:0;display:flex;flex-direction:column;gap:3px}.prh-stat:last-child{border-right:0}" +
     ".prh-stat span{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);white-space:nowrap}.prh-stat b{font-family:var(--display,inherit);font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}" +
     ".prh-stat em{font-style:normal;font-size:10.5px;color:var(--mut);line-height:1.3}.prh-up{color:var(--up)}.prh-dn{color:var(--dn)}.prh-mut{color:var(--mut)}" +
+    ".prh-wins{display:flex;gap:4px;margin-left:auto}.prh-wins button{height:26px;padding:0 10px;border:1px solid var(--line);background:transparent;color:var(--mut);border-radius:8px;font-size:11px;cursor:pointer}.prh-wins button.on{border-color:var(--acc);color:var(--acc)}.prh-cov{margin-left:8px}" +
+    "@media (max-width:767px){.prh-wins button{height:40px;min-width:44px}}" +
     ".prh-labels{display:flex;gap:6px;flex-wrap:wrap}.prh-label{font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:3px 10px}.prh-label a{color:var(--tx)}" +
     ".prh-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.prh-card{border:1px solid var(--line);border-radius:8px;min-width:0;overflow:hidden}" +
     ".prh-h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);padding:8px 12px;border-bottom:1px solid var(--line)}" +

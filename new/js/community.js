@@ -70,10 +70,13 @@ window.Community = (function () {
 
   /* Make a call: one sheet, token + one line, posted at the current market cap. */
   function openSheet(addr, done) {
-    var toks = window.QH_TOKENS || [], C = K();
+    var toks = (window.QH_TOKENS || []).slice(0), C = K(), want = String(addr || "").toLowerCase();
+    /* Opened from a token page: that token leads the list and is selected, even when it is not in the feed list. (Fable) */
+    var cur = want && window.QHLive && window.QHLive.find ? window.QHLive.find(addr) : null;
+    if (cur && cur.symbol) { toks = [cur].concat(toks.filter(function (t) { return String(t.address).toLowerCase() !== want; })); }
     var old = document.querySelector(".cm-sheet-wrap"); if (old) old.remove();
     var w = document.createElement("div"); w.className = "cm-sheet-wrap";
-    var opts = toks.slice(0, 40).map(function (t) { return '<option value="' + C.esc(t.address) + '"' + (t.address === addr ? " selected" : "") + ">" + C.esc(t.symbol) + " · " + C.usd(t.mcap) + " MC · " + C.esc(t.chain || "") + "</option>"; }).join("");
+    var opts = toks.slice(0, 40).map(function (t) { return '<option value="' + C.esc(t.address) + '"' + (String(t.address).toLowerCase() === want ? " selected" : "") + ">" + C.esc(t.symbol) + " · " + C.usd(t.mcap) + " MC · " + C.esc(t.chain || "") + "</option>"; }).join("");
     w.innerHTML = '<form class="cm-sheet" role="dialog" aria-label="Make a call"><div class="cm-h">MAKE A CALL</div>' +
       '<label class="cm-lbl">Token<select class="cm-input cm-sel">' + opts + "</select></label>" +
       '<label class="cm-lbl">Why (optional)<textarea class="cm-input cm-ta" maxlength="160" placeholder="One line on why you like it"></textarea></label>' +

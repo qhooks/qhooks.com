@@ -1,7 +1,7 @@
 /* Connective flows (contract 1.2.3, 1.3.3, v1.1 #7 and #10). Written by Claude.
    Adds the one-ecosystem actions to screens after they render: token action bar,
    gas check + MEV line on the trade panel, Lock/Stake/Share on
-   positions, Follow/Copy on wallet pages. Idempotent; actions toast until wired. */
+   positions, Follow/Copy on wallet pages. Idempotent. Every action does the real thing or is not shown. */
 (function () {
   "use strict";
   function toast(text) {
@@ -17,6 +17,12 @@
     if (onClick) b.addEventListener("click", function (e) { if (!href) e.preventDefault(); onClick(e); });
     return b;
   }
+  function ext(a) { a.target = "_blank"; a.rel = "noopener"; return a; }
+  /* Share says "Link copied" only once the browser confirms the copy; otherwise it says how to copy it by hand. */
+  function share() {
+    var url = location.href, ok = function () { toast("Link copied"); }, no = function () { toast("Copy the link from the address bar"); };
+    try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok, no); else no(); } catch (x) { no(); }
+  }
   function tokenAddr() { var m = location.hash.match(/^#\/token\/(?:[^/?]+\/)?([^/?]+)/); return m ? decodeURIComponent(m[1]) : ""; }
   function sym() {
     var a = tokenAddr(), lt = window.QHLive && window.QHLive.find(a);
@@ -28,11 +34,12 @@
     var head = document.querySelector(".token-header");
     if (head && !head.querySelector(".fl-bar")) {
       var a = tokenAddr(), bar = document.createElement("div"); bar.className = "fl-bar";
-      bar.appendChild(btn("Set alert", "", function () { toast("Alert set: you'll hear when " + sym() + " moves 10%"); }));
-      bar.appendChild(btn("Make a call", "", function () { toast("Call posted at the current market cap"); }));
+      /* No button claims something that did not happen (Fable, 2026-11-20). "Set alert" is gone until a real
+         alert exists; "Make a call" opens the real call sheet for this token and is hidden when that is not loaded. */
+      if (window.Community && window.Community.openSheet) bar.appendChild(btn("Make a call", "", function () { window.Community.openSheet(a); }));
       bar.appendChild(btn("Launch one like this", "fl-acc", null, "#/launch?like=" + a));
       bar.appendChild(btn("Run an agent on this token", "fl-acc", null, "#/agents?token=" + a));
-      bar.appendChild(btn("Share", "", function () { try { navigator.clipboard.writeText(location.href); } catch (x) {} toast("Link copied"); }));
+      bar.appendChild(btn("Share", "", share));
       head.appendChild(bar);
     }
     if (innerWidth < 768 && !document.querySelector(".fl-sticky")) {
@@ -73,9 +80,9 @@
     document.querySelectorAll(".q-table-actions").forEach(function (cell) {
       if (cell.querySelector(".fl-btn")) return;
       var row = cell.parentElement, isQ = row && /QHOOKS/.test(row.textContent);
-      cell.appendChild(btn("Lock", "fl-sm", function () { toast("Lock opens QLocks for this position"); }));
-      if (isQ) cell.appendChild(btn("Stake", "fl-sm fl-acc", function () { toast("Stake QHOOKS: 40% back on Robinhood Chain at 100K"); }));
-      cell.appendChild(btn("Share", "fl-sm", function () { toast("PnL card copied"); }));
+      /* Lock and Stake open the live pages; the "PnL card" share is gone because no card exists yet. */
+      cell.appendChild(ext(btn("Lock", "fl-sm", null, "https://qhooks.com/qlocks")));
+      if (isQ) cell.appendChild(ext(btn("Stake", "fl-sm fl-acc", null, "https://qhooks.com/stake")));
     });
   }
   function wallet() {
@@ -89,8 +96,8 @@
       if (on) D.untrack(who); else D.track(who);
       e.target.textContent = on ? "Follow" : "Following"; toast(on ? "Stopped following" : "Following: this wallet's trades show in Community, Tracked");
     }));
-    bar.appendChild(btn("Copy trades", "", null, "https://qhooks.com/copy?w=" + encodeURIComponent(who)));
-    bar.appendChild(btn("Share", "", function () { try { navigator.clipboard.writeText(location.href); } catch (x) {} toast("Link copied"); }));
+    bar.appendChild(ext(btn("Copy trades", "", null, "https://qhooks.com/copy?w=" + encodeURIComponent(who))));
+    bar.appendChild(btn("Share", "", share));
     h.appendChild(bar);
   }
   var pending = false;
