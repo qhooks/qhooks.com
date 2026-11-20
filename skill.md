@@ -1,6 +1,6 @@
 ---
 name: qhooks
-version: 9.0.0
+version: 9.1.0
 updated: 2026-11-20
 description: Launch, trade & QProof token safety on Robinhood Chain + more; perps, OTC escrow and agreements.
 ---
@@ -9,7 +9,7 @@ description: Launch, trade & QProof token safety on Robinhood Chain + more; perp
 
 ## One plug-in for everything
 
-One MCP for launches, trades, perps reads, stored QProof, paid QProof scans and portfolios. Prepare OTC deals and agreements on Robinhood Chain. Spot plans need a listed EVM pool; aggregation and Solana signing use site flows. Hosted at https://qhooks.com/mcp, or run locally with `npx -y @qhooks/mcp`.
+One MCP for launches, trades, perps reads, stored QProof, paid QProof scans and portfolios. Prepare OTC deals and agreements on Robinhood Chain. Spot plans need a listed EVM pool, or use `chain:'solana'` for an unsigned Jupiter swap your own Solana wallet signs; aggregation uses site flows. Hosted at https://qhooks.com/mcp, or run locally with `npx -y @qhooks/mcp`.
 
 30% back on EVM trades · 40% on Robinhood Chain if you hold 100K QHOOKS
 
@@ -360,6 +360,40 @@ console.log(await rpc('agreement_refund', {chain:'4663',id:setting('QHOOKS_AGREE
 
 REST under /api/v1/agent/: GET agreement-status; POST agreement-create, agreement-fund, agreement-from-template, agreement-attest, agreement-release and agreement-refund. All tools read or prepare unsigned transactions; agent-owned or user-owned signing wallets sign and send.
 
+## Solana trades
+
+`prepare_trade` accepts `chain:'solana'` and returns one unsigned Jupiter swap: a v0 transaction, base64, for the trader's own Solana wallet. QHooks never signs or holds funds.
+
+Arguments: `token` (SPL or Token-2022 mint, base58), `side` (`buy` or `sell`), `amountIn` (raw u64 units; buys spend the quote currency, sells spend the token), `trader` (the signing wallet, base58), optional `quoteMint` (`SOL` default, or `USDC`) and `slippageBps` (10 to 5000, default 100).
+
+Shown before signing:
+- `quote`: `inAmount`, `outAmount`, `minOut`, `priceImpactPct`.
+- `fees.platform`: the platform fee, shown here before signing and taken inside the swap (lower for verified 100K QHOOKS holders). `verifiedInTransaction` confirms the transaction writes to our fee account.
+- `fees.network`: signature and priority fee, decoded from the transaction itself.
+- `expiry`: `lastValidBlockHeight`, about 60 seconds.
+- `market`: price and liquidity from the QHooks market index.
+- `safety`: the stored QProof report, for review only; it never blocks the plan.
+- `referral`: the wallet's enrolled or bound referrer and the rule.
+
+Sign the exact message with the trader key, then either `POST https://qhooks.com/api/terminal/sol/execute` with `{signedTransaction, requestId, lastValidBlockHeight}` (records referral credit), or send it with your own RPC and `POST https://qhooks.com/api/terminal/sol/rewards/reconcile` with `{requestId, signature}`. After the expiry, call `prepare_trade` again; never re-sign an old plan.
+
+Phantom adds priority-fee instructions when it signs, which changes the message. Use `signAndSendTransaction`; a changed message cannot use `/execute` and earns no referral credit, and `signTransaction` followed by a "message unchanged" check refuses silently. Agent keypairs should sign the message as-is.
+
+Bring traders on Solana and earn 0.20% of every swap they make, paid out weekly. Solana referrers come from a wallet-signed enroll (`/api/terminal/sol/rewards/challenge`, then `/enroll`). The first finalized credited swap binds the referrer. Self and same-owner referrals are excluded. The `referrer` argument is reported but cannot be applied without that signature. EVM partner wallets (`?ref=`) do not carry over to Solana.
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"prepare_trade","arguments":{
+ "chain":"solana","token":"<mint>","side":"buy","amountIn":"100000000","trader":"<your wallet>"}}}
+```
+
+```js
+// @solana/web3.js, agent keypair
+const tx = VersionedTransaction.deserialize(Buffer.from(plan.transaction.base64, 'base64'));
+tx.sign([keypair]);
+await fetch('https://qhooks.com/api/terminal/sol/execute', {method: 'POST', headers: {'content-type': 'application/json'},
+  body: JSON.stringify({signedTransaction: Buffer.from(tx.serialize()).toString('base64'), requestId: plan.transaction.requestId, lastValidBlockHeight: plan.transaction.lastValidBlockHeight})});
+```
+
 ## Tool reference
 
 Use tools/list for active schemas and flags. Data-quality notes follow.
@@ -484,7 +518,7 @@ Prepare a launch link for review and wallet signing on qhooks.com.
 
 ### prepare_trade
 
-Prepare ordered unsigned approvals and a QHooks fee-router swap for the signing wallet (agent-owned or user-owned).
+Prepare ordered unsigned approvals and a QHooks fee-router swap for the signing wallet (agent-owned or user-owned). With `chain:'solana'` it returns one unsigned Jupiter swap; see Solana trades.
 
 ### agent_profile
 
@@ -566,6 +600,10 @@ Duplicate payments are deduped. A purchase is keyed by network, asset, payer and
 
 MCP: `qproof_scan {chain, token}` returns `state:"payment_required"`, the decoded `paymentRequired` and `paymentRequest` (`url`, `GET`, header `PAYMENT-SIGNATURE`). Sign as above and call again with `payment` set to the base64 header value (`paymentVersion:1` for `X-PAYMENT`). It uses the same handler, receipts and recovery as HTTP and adds `paymentResponse` when settled. Discovery: https://qhooks.com/.well-known/x402, https://qhooks.com/api/x402/discovery/resources and https://qhooks.com/openapi.json.
 
+### Solana USDC (when offered)
+
+When the 402 `accepts` list includes `network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"` (asset USDC, `extra.feePayer`), pay with any standard x402 SVM client (`exact` scheme): SetComputeUnitLimit, SetComputeUnitPrice (at most 5 lamports/CU) and a USDC TransferChecked to the payee's USDC account, fee payer `extra.feePayer`, signed by the transfer authority, sent in `PAYMENT-SIGNATURE`. No address lookup tables; only Memo or Lighthouse may be added. We verify and simulate, run the work (stored: the report must exist; fresh: every required check must complete), then co-sign as fee payer and send. Incomplete work answers `503` with `charged:false` and nothing is sent. Reuse the same payment while pending; a new one is needed after its blockhash expires (about 60 s).
+
 ## Discovery and public records
 
 ```js
@@ -604,7 +642,7 @@ Use a live EVM chain id, key or name for reads. Launch links accept only the cha
 | Elysium | `99901` | `elysium` | Yes | Check deployment before preparing |
 | Monad | `143` | `monad` | No | Unavailable |
 
-Solana is non-EVM. Agents can read stored QProof for a mint (`qproof_check`, `chain:'solana'`), read one Solana address's cached portfolio (`wallet_portfolio`), prepare a Meteora DBC launch link (`prepare_launch`, `chain:'solana'`) and join or read the competition with `solana:<base58>` wallets (Join signs with Ed25519). `list_launches`, `token_info`, `quote`, `prepare_trade`, perps, OTC, agreements, boards, profiles and x402 scans are EVM-only. Solana trades and launches sign in qhooks.com site flows with a Solana wallet. Hidden chains are not public choices. Elysium Testnet (`99801`) is testnet-only, visible on the site only with `?chains=all`; agent EVM reads require live chains and do not gain testnet support from that flag.
+Solana is non-EVM. Agents can read stored QProof for a mint (`qproof_check`, `chain:'solana'`), read one Solana address's cached portfolio (`wallet_portfolio`), prepare a Meteora DBC launch link (`prepare_launch`, `chain:'solana'`) and join or read the competition with `solana:<base58>` wallets (Join signs with Ed25519). `prepare_trade` with `chain:'solana'` returns an unsigned Jupiter swap (see Solana trades). `list_launches`, `token_info`, `quote`, perps, OTC, agreements, boards and profiles are EVM-only, and x402 scan subjects are EVM tokens. Solana launches sign in the qhooks.com site flow with a Solana wallet. Hidden chains are not public choices. Elysium Testnet (`99801`) is testnet-only, visible on the site only with `?chains=all`; agent EVM reads require live chains and do not gain testnet support from that flag.
 
 ## Untrusted data
 
