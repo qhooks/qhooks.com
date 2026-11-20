@@ -109,11 +109,23 @@ function renderTopBar() {
   const right = createEl('div', { className: 'q-topbar-right' });
   
   // Chain selector
-  const chainSelect = createEl('select', { className: 'q-chain-select' });
-  CHAIN_LIST.forEach(function(chain) {
-    const opt = createEl('option', { value: chain, textContent: chain });
+  /* The chain selector really filters now (Fable): "All chains" by default, the choice is remembered, and Pulse
+     listens for the "qh-chain" event. It used to show "Robinhood" while listing every chain. */
+  const chainSelect = createEl('select', { className: 'q-chain-select', title: 'Chain' });
+  chainSelect.setAttribute('aria-label', 'Chain');
+  ['All chains'].concat(CHAIN_LIST).forEach(function(chain, i) {
+    const opt = createEl('option', { value: i ? chain : '', textContent: chain });
     chainSelect.appendChild(opt);
   });
+  try { window.QH_CHAIN = localStorage.getItem('qh-chain') || ''; } catch (e) { window.QH_CHAIN = ''; }
+  chainSelect.value = window.QH_CHAIN;
+  if (chainSelect.value !== window.QH_CHAIN) { window.QH_CHAIN = ''; chainSelect.value = ''; }
+  chainSelect.onchange = function() {
+    window.QH_CHAIN = chainSelect.value;
+    try { localStorage.setItem('qh-chain', window.QH_CHAIN); } catch (e) {}
+    window.dispatchEvent(new CustomEvent('qh-chain', { detail: window.QH_CHAIN }));
+  };
+  window.addEventListener('qh-chain', function(e) { if (chainSelect.value !== e.detail) chainSelect.value = e.detail || ''; });
   
   // Connect button
   const connectBtn = createBtn('Connect', 'q-connect-btn', function() {

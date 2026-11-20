@@ -5,8 +5,8 @@
    Money wording uses the approved line from QHBlocks only. No template literals. */
 (function () {
   "use strict";
-  /* The real QHooks hook (the live site's render), not a drawn glyph. Tester request via Randall, 2026-11-20. */
-  var HOOK = '<img class="qh-hook" src="brand/hook-96.png" alt="" aria-hidden="true">';
+  /* The studded QHooks hook render (supplied by a tester through Randall, 2026-11-20, cut out with tools/key-hook.mjs). */
+  var HOOK = '<img class="qh-hook" src="brand/hook-studded-192.png" alt="" aria-hidden="true">';
   var WORDS = ["builders", "callers", "holders", "traders"], wi = 0;
   var TITLES = { pulse: "Pulse", discover: "Discover", launch: "Launch", perps: "Perps", community: "Community", agents: "Agents", portfolio: "Portfolio", rewards: "Rewards", token: "Token", wallet: "Wallet", hooks: "Hook Studio", hook: "Hook", more: "More" };
 
@@ -19,7 +19,10 @@
     function a(href, label, text, gold) {
       return '<a href="' + href + '"' + (gold ? ' class="eco-gold"' : "") + (here.indexOf(href) === 0 ? ' aria-current="page"' : "") + ">" + (gold ? HOOK : "") + label + " <b>" + text + "</b></a>";
     }
-    return '<nav class="eco" aria-label="QHooks">' +
+    /* Phone has no room for the chain selector in the top bar, so it leads the strip there. */
+    var chains = ["Robinhood", "Base", "Solana", "BNB", "Ethereum", "Arbitrum", "Elysium"], cur = window.QH_CHAIN || "";
+    var sel = '<select class="eco-chain" aria-label="Chain"><option value="">All chains</option>' + chains.map(function (c) { return '<option' + (c === cur ? " selected" : "") + ">" + c + "</option>"; }).join("") + "</select>";
+    return '<nav class="eco" aria-label="QHooks">' + sel +
       a("#/rewards", "Rewards", back(), true) +
       a("#/hooks/studio", "Hooks", "Build yours") +
       a("#/launch", "Launch", "Start a token") +
@@ -40,11 +43,14 @@
     var box = document.createElement("div"); box.innerHTML = strip();
     var el = box.firstChild; el.setAttribute("data-at", location.hash);
     main.insertBefore(el, main.firstChild);
+    var cs = el.querySelector(".eco-chain");
+    if (cs) cs.onchange = function () { window.QH_CHAIN = cs.value; try { localStorage.setItem("qh-chain", cs.value); } catch (x) {} window.dispatchEvent(new CustomEvent("qh-chain", { detail: cs.value })); };
     /* Phone has no room for the line in the strip, so Pulse opens with it: one line, then straight into the tokens. */
     var seg = (location.hash || "#/pulse").replace(/^#\//, "").split(/[/?]/)[0];
     if (seg === "pulse" || seg === "") {
       var l = document.createElement("div"); l.className = "eco-open";
-      l.innerHTML = 'For the next generation of token <span>' + WORDS[wi] + "</span>";
+      /* The hook sits beside the line, never under the words. */
+      l.innerHTML = '<div class="eco-open-t">For the next generation of token <span>' + WORDS[wi] + '</span></div><img class="eco-open-h" src="brand/hook-studded-192.png" alt="" aria-hidden="true">';
       main.insertBefore(l, el.nextSibling);
     }
     title();

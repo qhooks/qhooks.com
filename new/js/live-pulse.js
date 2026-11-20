@@ -96,12 +96,15 @@
       var l = d.lists, own = l.launches || [];
       var curve = own.filter(function (t) { return t.stage !== "migrated"; });
       var moved = own.filter(function (t) { return t.stage === "migrated"; });
-      cols.new.show((l.newPairs || []).slice(0, 40), d.observedAt);
-      cols.final.show(merge([curve, l.bonding || []]).sort(byProgress).slice(0, 40), d.observedAt);
-      cols.migrated.show(merge([moved, l.migrated || []]).slice(0, 40), d.observedAt);
+      /* Chain filter from the top bar (window.QH_CHAIN = a chain name, or empty for all chains). (Fable) */
+      var want = window.QH_CHAIN || "", pick = function (list) { return want ? list.filter(function (t) { return t.chain === want; }) : list; };
+      cols.new.show(pick(l.newPairs || []).slice(0, 40), d.observedAt);
+      cols.final.show(pick(merge([curve, l.bonding || []])).sort(byProgress).slice(0, 40), d.observedAt);
+      cols.migrated.show(pick(merge([moved, l.migrated || []])).slice(0, 40), d.observedAt);
     }
     function onLive(e) { show(e.detail); }
     window.addEventListener("qhlive", onLive);
+    window.addEventListener("qh-chain", function onChain() { if (!root.isConnected) { window.removeEventListener("qh-chain", onChain); return; } if (L.latest && L.latest()) show(L.latest()); });
     if (L.latest && L.latest()) show(L.latest());
     if (L.start) L.start();
     var t = setInterval(function () { if (!root.isConnected) { clearInterval(t); return; } COLS.forEach(function (c) { cols[c].clock(); }); }, 1000);

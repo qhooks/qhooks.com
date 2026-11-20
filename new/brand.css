@@ -225,7 +225,7 @@ h1,h2,.lx-h1,.sx h1,.po-title,.dc-tab,.pf-tab,.po-tab,.cm-tab,.token-symbol{font
 /* ── Pulse opening line on phone ────────────────────────────── */
 .eco-open{display:none}
 @media (max-width:767px){
-  .eco-open{display:block;padding:14px 12px 4px;font-family:var(--display);font-weight:700;font-size:21px;line-height:1.15;letter-spacing:-.015em;color:var(--tx)}
+  .eco-open{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 2px 12px;font-family:var(--display);font-weight:700;font-size:21px;line-height:1.15;letter-spacing:-.015em;color:var(--tx)}
   .eco-open span{color:var(--gold);transition:opacity .18s ease-out}
 }
 
@@ -237,6 +237,68 @@ h1,h2,.lx-h1,.sx h1,.po-title,.dc-tab,.pf-tab,.po-tab,.cm-tab,.token-symbol{font
 
 /* The hook render as the hook mark, in the strip and on hook badges. */
 /* The render is dark bronze, made for a lit hero; at icon size on graphite it is lifted so it reads as gold. */
-.qh-hook{display:block;flex:none;height:20px;width:auto;margin:-3px 0;filter:brightness(2.6) saturate(1.25) contrast(.92)}
-.hk-badge .qh-hook{height:14px;margin:-2px 0}
-@media (max-width:767px){.eco .qh-hook{height:24px}}
+.qh-hook{display:block;flex:none;height:22px;width:auto;margin:-4px 0;filter:brightness(1.35) saturate(1.15)}
+.hk-badge .qh-hook{height:15px;margin:-2px 0}
+@media (max-width:767px){.eco .qh-hook{height:26px}}
+
+/* Chain selector: top bar on desktop, first in the strip on phone. */
+.eco-chain{display:none}
+@media (max-width:767px){
+  .eco-chain{display:block;flex:none;height:32px;padding:0 26px 0 12px;border-radius:999px;border:1px solid var(--line);background:var(--s1);color:var(--tx);font:inherit;font-size:12px;font-weight:600;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--mut) 50%),linear-gradient(135deg,var(--mut) 50%,transparent 50%);background-position:calc(100% - 14px) 14px,calc(100% - 9px) 14px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+}
+
+.eco-open-h{height:58px;width:auto;flex:none;filter:brightness(1.2)}
+.eco-open-t{min-width:0}
+
+/* Phone column header: the switcher above already names the column, so the title steps aside and the search
+   box gets its room (tester: "Final stretch search box is squished"). */
+@media (max-width:767px){
+  .pulse-col-title{display:none}
+  .pulse-col-search{min-width:120px}
+}
+
+/* ── Depth (tester via Randall, 2026-11-20: "doesn't have depth") ─────────────────────────────
+   The live qhooks.com system (qx-ds.css) is not flat: metal gold on primary actions, a lit top edge, a soft
+   shadow under raised things. This brings that treatment in. It replaces the earlier "no gradients, no shadows"
+   reading of the contract for the brand surfaces only; data rows and tables stay flat and fast to scan. */
+:root{
+  --gold-metal:linear-gradient(180deg,#ecd3a4 0%,#d6b176 46%,#bd9456 100%);
+  --gold-edge:inset 0 1px 0 rgba(255,255,255,.42),inset 0 -1px 0 rgba(60,38,8,.35),0 6px 18px -8px rgba(210,173,114,.55);
+  --lift:inset 0 1px 0 rgba(255,255,255,.055),0 1px 0 rgba(0,0,0,.5),0 10px 24px -14px rgba(0,0,0,.9);
+  --lift-sm:inset 0 1px 0 rgba(255,255,255,.06),0 1px 2px rgba(0,0,0,.5);
+  --raised:linear-gradient(180deg,#171b19 0%,#101312 100%);
+}
+/* Primary actions: metal gold. */
+.q-connect-btn,.cm-make,.la-panel .la-go.la-connect,.q-portfolio .la-go.la-connect,.at-gold{background:var(--gold-metal)!important;box-shadow:var(--gold-edge);text-shadow:0 1px 0 rgba(255,255,255,.25)}
+.q-connect-btn:hover,.cm-make:hover{filter:brightness(1.06)}
+.q-connect-btn:active,.cm-make:active{transform:translateY(1px);box-shadow:inset 0 1px 2px rgba(60,38,8,.5)}
+/* Top bar and strip sit above the page. */
+.q-topbar{background:linear-gradient(180deg,#101312 0%,#0b0d0c 100%);box-shadow:0 1px 0 rgba(255,255,255,.03),0 10px 24px -18px rgba(0,0,0,1)}
+.q-mark{box-shadow:0 0 0 1px rgba(0,0,0,.6),0 4px 10px -4px rgba(0,0,0,.9)}
+.eco{background:#0a0c0b}
+.eco a,.eco-chain{background:var(--raised);box-shadow:var(--lift-sm)}
+.eco a[aria-current="page"]{background:linear-gradient(180deg,rgba(210,173,114,.2) 0%,rgba(210,173,114,.08) 100%);box-shadow:inset 0 1px 0 rgba(255,236,196,.22),0 1px 2px rgba(0,0,0,.5)}
+.eco a.eco-gold{border-color:rgba(210,173,114,.38);background:linear-gradient(180deg,#1d1a13 0%,#12110d 100%);box-shadow:inset 0 1px 0 rgba(255,236,196,.14),0 1px 2px rgba(0,0,0,.6),0 8px 18px -12px rgba(210,173,114,.5)}
+.qh-hook,.eco-open-h{filter:brightness(1.35) saturate(1.15) drop-shadow(0 2px 3px rgba(0,0,0,.8))}
+.eco-open-h{filter:brightness(1.2) drop-shadow(0 6px 10px rgba(0,0,0,.9)) drop-shadow(0 0 14px rgba(210,173,114,.18))}
+/* Panels are raised cards with a lit top edge. */
+.pulse-col,.dt-table,.po-start,.prh,.prf-head,.prf-pnl,.lx-card,.sx-card,.token-qproof,.la-panel,.cm-side,.wc-sheet,.at-box{background:var(--raised);box-shadow:var(--lift)}
+.pulse-col-header{background:transparent;box-shadow:inset 0 -1px 0 var(--line)}
+/* Phone column switcher: a recessed track with a raised active segment. */
+@media (max-width:767px){
+  .pulse-mtabs{background:#080a09;box-shadow:inset 0 1px 3px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.04)}
+  .pulse-mtab.active{background:linear-gradient(180deg,#232825 0%,#181c1a 100%)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),inset 0 -2px 0 var(--gold),0 2px 6px rgba(0,0,0,.6)!important}
+}
+/* Token coins and buy buttons catch a little light. */
+.pulse-tile,.pulse-tile-img{box-shadow:0 0 0 1px rgba(0,0,0,.55),0 4px 10px -4px rgba(0,0,0,.9)}
+.pulse-buy-btn{background:linear-gradient(180deg,rgba(76,195,138,.2) 0%,rgba(76,195,138,.1) 100%)!important;box-shadow:inset 0 1px 0 rgba(160,255,210,.14),0 1px 2px rgba(0,0,0,.5)}
+.pulse-buy-btn:hover,.pulse-buy-btn:active{background:var(--up)!important}
+.tp-go,.fl-sticky .fl-buy,.lx-go{box-shadow:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(0,40,20,.35),0 8px 18px -10px rgba(76,195,138,.55)}
+.fl-sticky{box-shadow:0 -12px 24px -14px rgba(0,0,0,1)}
+.q-bottom-nav{box-shadow:0 -1px 0 rgba(255,255,255,.03),0 -12px 24px -16px rgba(0,0,0,1)}
+.hk-badge{box-shadow:inset 0 1px 0 rgba(255,236,196,.12)}
+.pulse-qproof{box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.q-search,.q-chain-select,.pulse-col-search,.pulse-quick-buy-input,.q-search-toggle,.q-balance{box-shadow:inset 0 1px 2px rgba(0,0,0,.7),0 1px 0 rgba(255,255,255,.035)}
+@media (max-width:767px){
+  .eco-chain{background:linear-gradient(45deg,transparent 50%,var(--mut) 50%) calc(100% - 14px) 14px/5px 5px no-repeat,linear-gradient(135deg,var(--mut) 50%,transparent 50%) calc(100% - 9px) 14px/5px 5px no-repeat,var(--raised)}
+}

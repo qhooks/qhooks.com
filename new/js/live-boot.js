@@ -9,12 +9,18 @@
   var L = window.QHLive, last = null, poller = null;
   var LIST_ROUTES = /^#\/(pulse|discover|community|more)?($|[/?])/;
 
+  var IDS = { Robinhood: "4663", Base: "8453", Solana: "solana", BNB: "56", Ethereum: "1", Arbitrum: "42161", Elysium: "99901" };
+  function chainId() { return IDS[window.QH_CHAIN || ""] || ""; }
+  window.addEventListener("qh-chain", function () { if (poller) poller.now(); });
   function onList() { var h = location.hash || "#/pulse"; return LIST_ROUTES.test(h); }
   function read() {
     if (!onList() && last) return Promise.resolve({ ok: true, body: last, same: true });
-    return Promise.all([L.feed("trending"), L.feed("new"), L.feed("bonding"), L.feed("migrated"), L.launches()]).then(function (r) {
+    /* With a chain picked in the top bar, read that chain's own lists so its columns are full, not the slice
+       of it that happens to sit in the all-chain lists. (Fable) */
+    var c = chainId();
+    return Promise.all([L.feed("trending", c), L.feed("new", c), L.feed("bonding", c), L.feed("migrated", c), L.launches()]).then(function (r) {
       var trend = r[0];
-      var stand = trend.ok && !trend.tokens.length ? L.feed("volume") : Promise.resolve(null);
+      var stand = trend.ok && !trend.tokens.length ? L.feed("volume", c) : Promise.resolve(null);
       return stand.then(function (v) {
         var lists = { trending: v && v.ok ? v.tokens : trend.tokens, trendingStandIn: !!(v && v.ok), newPairs: r[1].tokens, bonding: r[2].tokens, migrated: r[3].tokens, launches: r[4].tokens };
         var ok = r.some(function (x) { return x.ok; }), obs = 0;

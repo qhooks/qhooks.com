@@ -14,7 +14,7 @@
     ".well-known/qhooks-release.json",
     "README.md"
   ],
-  "releaseId": "1af12881-3962-4fff-899e-6513484dbd05",
+  "releaseId": "01ffa127-cb4b-43fd-a6c8-1ca68003e758",
   "files": {
     ".well-known/assetlinks.json": {
       "sha256": "c050db9daa7f0c6ea2110ab00b609a2a99970d7366c708a84844a8f6e0928ba0",
@@ -273709,16 +273709,20 @@
       "bytes": 5712
     },
     "new/brand.css": {
-      "sha256": "4f20949ed539eec1e5a3a4875112452973742f03f8c13a768d136d9a811c0f1f",
-      "bytes": 17684
+      "sha256": "e3d04c91e11d052aab202172720264d5c5597c72ce828520d480fd772e9adb1c",
+      "bytes": 23020
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
       "bytes": 90096
     },
-    "new/brand/hook-96.png": {
-      "sha256": "4d446541b3269e15413184488103e3380e7cc059ec0c3c7914732bab7b1a8ffc",
-      "bytes": 5560
+    "new/brand/hook-studded-192.png": {
+      "sha256": "1b7db53ccc18d8ec5ec1f0111558d54730ffd4c2f0e3df785fbcb90362e7f4fe",
+      "bytes": 16915
+    },
+    "new/brand/hook-studded-512.png": {
+      "sha256": "84ae0661e010ad1efbb2a99ca370ce2366fca90c25263e65577201301d7df469",
+      "bytes": 90999
     },
     "new/brand/qh-mark.jpg": {
       "sha256": "e7beee93129ed3f92c18c4625364e213507132261d5c754b005c4a5a1955ee91",
@@ -273741,8 +273745,8 @@
       "bytes": 4191
     },
     "new/js/brand.js": {
-      "sha256": "e42d3d5ca898d13d5bb9de8338a794dbdb8e19194a1f841d8650f184d4793927",
-      "bytes": 3719
+      "sha256": "f087a5509dcdef8934d93982d1d6ba71638f887251adfa00db8ba2462f589cee",
+      "bytes": 4622
     },
     "new/js/community-cards.js": {
       "sha256": "68b88175f6e519ebab83d173a4b5538e727c68cf3e439ff3684461d733914d2e",
@@ -273825,8 +273829,8 @@
       "bytes": 6802
     },
     "new/js/live-boot.js": {
-      "sha256": "14da488d33b7a2f40d49b615846ca260fe9146f1888188f428b680bb739082b9",
-      "bytes": 2738
+      "sha256": "b6d8059f62af113fba730d64f47d87e4bcd6511be44982171e91db427d29dd8c",
+      "bytes": 3232
     },
     "new/js/live-chart.js": {
       "sha256": "092c9f9832f848ee520b6833a0d3246d4b38679a37446fa037d8b2e4570af275",
@@ -273841,8 +273845,8 @@
       "bytes": 11871
     },
     "new/js/live-pulse.js": {
-      "sha256": "ba8396788eda30126063f5d201ddf88d747431551ede10af22247d2dc8e86bea",
-      "bytes": 7584
+      "sha256": "65b9608f0650f8d1d7124f8772bbea39c9f1b7849149fb715cf6a7354952faed",
+      "bytes": 8049
     },
     "new/js/live-search.js": {
       "sha256": "25dc70685a292b2420898ce5016a0a538fc0226ed265f17565e297b59fbaf4b1",
@@ -273869,8 +273873,8 @@
       "bytes": 9643
     },
     "new/js/main.js": {
-      "sha256": "129ee0603116fbcbe3f53f53d0cacf12161566622308a1d931180eaf615d1fc1",
-      "bytes": 14326
+      "sha256": "89d60c9ccec211eb7df11e9c95d6ae718ad4379082872b28e70987cd7aeb764f",
+      "bytes": 15248
     },
     "new/js/oneclick.js": {
       "sha256": "8def96711582d1fe5ef826f519ef1fb2de4d865235debc96eac86f81c3f6eb2c",
@@ -274009,8 +274013,8 @@
       "bytes": 3947
     },
     "new/js/wallet-connect.js": {
-      "sha256": "78bbaed79deb8d232237a1b39e5707ebbcaf9be9ffa7eff3a91158a0524ae7ef",
-      "bytes": 16302
+      "sha256": "33e860d9ce91585d92a6fe864d55698e04105df2754e1f0175cf929996f35b72",
+      "bytes": 16463
     },
     "new/js/wallet-page.js": {
       "sha256": "8819423f655e2ee439087d43b5cd0a8547d619fe73135006861df5171e0661f9",
@@ -284525,24 +284529,24 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "734d036e5caad928b86db9add28e69f585de308470dc36c630221ff5f52d04b0",
-  "sourceTree": "work/qhooks-newsite9-rel-20261120",
+  "contentDigest": "50a26f01e372ad2bcea4f69411f93f5233f9fed14f14c48b33aa1ea34aba9dde",
+  "sourceTree": "work/qhooks-newsite10-rel-20261120",
   "sourceWorkerSha256": "3751f6cda248813f6dcc4fe7ecb45d4119c6d186aeb489592f5c36bf37c69fd3",
   "sourceManifestSha256": null,
   "sourceFreezeSha256": null,
   "all14ArtifactDigest": null,
   "sourcePatchSha256": null,
-  "sourceReleaseReceiptSha256": "fd1c0cdb72ddf97d61f0ca57fa13f00d665b650cbedd436b76cbc3c074119675",
+  "sourceReleaseReceiptSha256": "5682663f08be79cd0720455ff8a18640e169ec2ad40b1568115c5530f8dd5942",
   "sourceReleaseReceiptStatus": "LIVE_NEWSITE_VERIFIED",
   "acceptance": {
-    "sourceAndLocalReleaseGates": "/new from eco-rebuild 01bc0f9; worker byte-identical; 188 routes, 0 dropped.",
+    "sourceAndLocalReleaseGates": "/new from eco-rebuild 0ed5a91; worker byte-identical; 188 routes, 0 dropped.",
     "connectedWebKit": "Real-domain browser pass at 1440 (9 pages); 390 on edge preview.",
     "postDeployWatch": {
       "status": "OBSERVED_WATCH_CRITERION_MET",
       "seconds": 90,
-      "events": 239,
+      "events": 223,
       "exceptions": 0,
-      "scheduledOk": 1,
+      "scheduledOk": 4,
       "sampled": true,
       "globalHealthClaim": false
     },
@@ -284556,8 +284560,8 @@
     "policyExpansion": false
   },
   "priorReleaseAttestation": {
-    "releaseId": "9faf166f-ae58-436a-b605-b2c6d218da21",
-    "contentDigest": "f1354b0c9b0a6a32e46d2085621147175b43ece359bfecf7d8204d8c556c8264",
-    "sourceReleaseReceiptSha256": "c9f1d952db754f829efc90cbe4d0394914a44a1e38ff786bfd1d9e3d32b883bf"
+    "releaseId": "1af12881-3962-4fff-899e-6513484dbd05",
+    "contentDigest": "734d036e5caad928b86db9add28e69f585de308470dc36c630221ff5f52d04b0",
+    "sourceReleaseReceiptSha256": "fd1c0cdb72ddf97d61f0ca57fa13f00d665b650cbedd436b76cbc3c074119675"
   }
 }

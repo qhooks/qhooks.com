@@ -141,6 +141,8 @@
     root.hidden = false; root.dataset.family = family || ""; paint();
     return new Promise(function (res) { if (pending) pending(null); pending = res; });
   }
+  /* The sheet never follows the user to another screen. (Fable) */
+  window.addEventListener("hashchange", function () { if (root && !root.hidden) close(); });
   function close(keep) { if (root) root.hidden = true; if (!keep && pending) { var p = pending; pending = null; p(null); } }
   function onClick(e) {
     if (e.target === root || e.target.closest(".wc-x")) { close(); return; }
