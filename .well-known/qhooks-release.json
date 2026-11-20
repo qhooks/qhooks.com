@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "releaseId": "43f69917-5019-4528-903c-fad08cb37ffb",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -14,7 +15,6 @@
     ".well-known/qhooks-release.json",
     "README.md"
   ],
-  "releaseId": "2b8f1750-17e9-4a76-9185-ab362e86f53e",
   "files": {
     ".well-known/assetlinks.json": {
       "sha256": "c050db9daa7f0c6ea2110ab00b609a2a99970d7366c708a84844a8f6e0928ba0",
@@ -279348,6 +279348,10 @@
       "sha256": "4ea71c52760348772810553db8bba122cf3123b95dac1b210d10f759346b0e8d",
       "bytes": 4496
     },
+    "qhooks-logo-128.jpg": {
+      "sha256": "e583b85245627a80dbcd6be4772006ebfff06a8e09d228af1d7fbf5ac7f193bb",
+      "bytes": 3225
+    },
     "qhooks-logo.jpg": {
       "sha256": "e7b3a6c5e32917ac7f3db4f83395936a7ffbe3716dee43a710b0458dc2ae1153",
       "bytes": 153825
@@ -284293,39 +284297,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "64656c14e3b5c8c944407240ac74e77db5d6d30df5db05897828b8bb7c46fa92",
-  "sourceTree": "work/qhooks-newsite12-rel-20261120",
-  "sourceWorkerSha256": "3751f6cda248813f6dcc4fe7ecb45d4119c6d186aeb489592f5c36bf37c69fd3",
-  "sourceManifestSha256": null,
-  "sourceFreezeSha256": null,
-  "all14ArtifactDigest": null,
-  "sourcePatchSha256": null,
-  "sourceReleaseReceiptSha256": "d9868594fe73608d9cf03194288739058205eb08fcc630d72763702ff9633377",
-  "sourceReleaseReceiptStatus": "LIVE_NEWSITE_VERIFIED",
-  "acceptance": {
-    "sourceAndLocalReleaseGates": "/new = minified+hashed bundle of eco-rebuild 57bf66e (bundle.mjs + check-dist.mjs passed); 188 routes, 0 dropped.",
-    "connectedWebKit": "Real-domain browser pass at 1440 (9 pages); 390 on edge preview.",
-    "postDeployWatch": {
-      "status": "OBSERVED_WATCH_CRITERION_MET",
-      "seconds": 90,
-      "events": 205,
-      "exceptions": 0,
-      "scheduledOk": 2,
-      "sampled": true,
-      "globalHealthClaim": false
-    },
-    "fundedFinancialProof": "No funded calls. In-page signing uses the visitor wallet."
-  },
-  "provenance": "Static public-source/checksum attestation for the /new soft launch (rebuild front end). TradingView exclusions, prior assets and license checks preserved. Backend code and credentials excluded. qx-terminal.mjs kept at the allowlisted authored source (the wallet-link edit is not used by the served /b/ terminal bundles and will be reverted in the next release).",
-  "apacheSuccessorPins": {
-    "priorPinsPreserved": 79,
-    "totalPins": 81,
-    "reviewSha256": "920555289123b4d1285d8ed55c316baf7efa4a7d6012a70b82eab09038808fab",
-    "policyExpansion": false
-  },
-  "priorReleaseAttestation": {
-    "releaseId": "fb86c9bd-341f-4e5f-9a4e-2573d637dc2a",
-    "contentDigest": "52cc05b76c159a73d8a15b4fa69400b4b55e1620c9092cab1fbe10192c064756",
-    "sourceReleaseReceiptSha256": "d165e57dc248625c7324534ed4073cdd88bacbd2f03a99ff1a6969bfacee4475"
-  }
+  "contentDigest": "06d81163db6444e4443285586d5739ffa01fc3d2d83aa164fcafb44e5144d91c"
 }
