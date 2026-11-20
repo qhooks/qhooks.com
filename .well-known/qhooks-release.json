@@ -283481,8 +283481,8 @@
       "bytes": 55457
     },
     "qx-terminal.mjs": {
-      "sha256": "7d2e89dcd0cfd62b8d9c1a21a65236f053fa02618b80949998c17440144edfe8",
-      "bytes": 143166
+      "sha256": "44917480c2f0ac8192d47bd7f6be6306e80fa5be89763ec9bd0c3f46849b92db",
+      "bytes": 142771
     },
     "qx-terms.mjs": {
       "sha256": "54e39bff2750779ef519ac65c331361e25ecb95ace8e59e1bf2792eb74b87ef8",
@@ -284521,7 +284521,7 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "79f52a6e9a2f5623e28e5fa3c7916953a05eab9c5d22f78cee9a01fb41cb78cd",
+  "contentDigest": "f4e2abf16ac307bbfe5dbbf21a8e78c6c04b6bc7db02c623657cc35f7b1527c8",
   "sourceTree": "work/qhooks-walletprofiles2-rel-20261120",
   "sourceWorkerSha256": "3751f6cda248813f6dcc4fe7ecb45d4119c6d186aeb489592f5c36bf37c69fd3",
   "sourceManifestSha256": null,
@@ -284544,7 +284544,7 @@
     },
     "fundedFinancialProof": "No funded calls. In-page signing uses the visitor wallet."
   },
-  "provenance": "Static public-source/checksum attestation for the /new soft launch (rebuild front end). TradingView exclusions, prior assets and license checks preserved. Backend code and credentials excluded.",
+  "provenance": "Static public-source/checksum attestation for the /new soft launch (rebuild front end). TradingView exclusions, prior assets and license checks preserved. Backend code and credentials excluded. qx-terminal.mjs kept at the allowlisted authored source (the wallet-link edit is not used by the served /b/ terminal bundles and will be reverted in the next release).",
   "apacheSuccessorPins": {
     "priorPinsPreserved": 79,
     "totalPins": 81,

@@ -745,9 +745,7 @@ function untrack(addr) { delete state.tracked[addr]; saveTracked(); }
 function who(chainId, addr, extra = null, systemLabel = null) {
   if (!addr) return h('td', {}, '—');
   const label = systemLabel||labelFor(addr), tracked = !!state.tracked[addr], person = !label || tracked;
-  // Robinhood Chain addresses open the wallet page; the explorer stays one tap away as a small trailing link.
-  const walletPage = String(chainId) === '4663' && /^0x[0-9a-f]{40}$/i.test(addr);
-  return h('td', {}, walletPage ? h('a', { href: '/wallet/4663/' + addr.toLowerCase(), class: 'qxt-wallet-link', title: 'Open wallet profile' }, short(addr)) : link(chainId, '/address/' + addr, short(addr)), walletPage ? link(chainId, '/address/' + addr, '↗') : null,memberIdentity(String(chainId)==='solana'?'solana:'+addr:addr,{supplement:true,className:'qmi-inline'}), label ? (tracked ? h('button', { type: 'button', class: 'qxt-tag tracked qxt-tag-open', title: 'Open wallet card', onclick: () => openWallet(chainId, addr) }, label) : h('span', { class: 'qxt-tag' }, label)) : null, extra,
+  return h('td', {}, link(chainId, '/address/' + addr, short(addr)),memberIdentity(String(chainId)==='solana'?'solana:'+addr:addr,{supplement:true,className:'qmi-inline'}), label ? (tracked ? h('button', { type: 'button', class: 'qxt-tag tracked qxt-tag-open', title: 'Open wallet card', onclick: () => openWallet(chainId, addr) }, label) : h('span', { class: 'qxt-tag' }, label)) : null, extra,
     person && !tracked && addr !== state.me ? h('button', { type: 'button', class: 'qxt-track', title: 'Track this wallet', onclick: () => track(addr) }, '+ Track') : null);
 }
 const tradeTape=createTradeTape();
