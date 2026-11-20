@@ -14,7 +14,7 @@
     ".well-known/qhooks-release.json",
     "README.md"
   ],
-  "releaseId": "29b85446-a089-49c2-85e8-8b75dc8e515d",
+  "releaseId": "74fddbc4-a7be-492f-97e3-b88f0cc6f77a",
   "files": {
     ".well-known/assetlinks.json": {
       "sha256": "c050db9daa7f0c6ea2110ab00b609a2a99970d7366c708a84844a8f6e0928ba0",
@@ -273725,8 +273725,8 @@
       "bytes": 15166
     },
     "new/index.html": {
-      "sha256": "d2b8477f654e0a1e2d34e1bb9ee572cb031d6678c0c9bc5e61cc4d735e64e52c",
-      "bytes": 2515
+      "sha256": "721248e5e68c65c65b6a78488d06cfea9495ace851ed86804e003a16def5940b",
+      "bytes": 2559
     },
     "new/js/agents.js": {
       "sha256": "f000a21e356fec13789d11237ca07ab5620bd5265b09aec33ece93d5e84d8cfa",
@@ -273737,16 +273737,20 @@
       "bytes": 3162
     },
     "new/js/community-cards.js": {
-      "sha256": "9ba56030be3f988a402bf542ba720d8d58932bb088938b00fb610b8d817d796c",
-      "bytes": 9537
+      "sha256": "68b88175f6e519ebab83d173a4b5538e727c68cf3e439ff3684461d733914d2e",
+      "bytes": 10974
     },
     "new/js/community-data.js": {
-      "sha256": "f22c70799514933a06a1c43d11cbb26440fdaa42b4abbec4fd98abd71a9b781c",
-      "bytes": 12409
+      "sha256": "4aca3e63483034e1897461c12401bc616f99512cf065c5ff981ea4050bce7e2f",
+      "bytes": 12901
+    },
+    "new/js/community-fill.js": {
+      "sha256": "39f29f78db45a286942017030fe2f6508b21d5b61f0ab740f666038ce8df3519",
+      "bytes": 7464
     },
     "new/js/community-style.js": {
-      "sha256": "db556f647585cfa316c219c6f06bd9c8939f00494cf7b69fee26a4690f75c714",
-      "bytes": 10083
+      "sha256": "826b3e4d89d0017d5465e92e9fe741f4eb4bd27d53142614d4bc84b3a13f57f4",
+      "bytes": 10322
     },
     "new/js/community.js": {
       "sha256": "3d2aa27ed11ec5c2ec5f58b2b36ae5d6a3bed4aba3b0bbf8974a7ddc479f3814",
@@ -273841,8 +273845,8 @@
       "bytes": 9030
     },
     "new/js/live-token-tabs.js": {
-      "sha256": "aae67de967fd8c7c97979bd607cd0bd1e2461b9378633018c0685d27f58c2d67",
-      "bytes": 9104
+      "sha256": "5a1cce3c7c278ce89ea7c440f6f84e4bd4718dc7a993e4837ad6cbb1ed93e205",
+      "bytes": 9317
     },
     "new/js/live-token.js": {
       "sha256": "f1f8f8d65c26c3a00c01330e7cb29f1d8d4f9c1bc4c5f7a91578871e043d9647",
@@ -284497,24 +284501,24 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "535b821897c967f768ca60b10a06e02d7a97f0f8a0e9624db34bfc0e4d60ffbd",
-  "sourceTree": "work/qhooks-newsite5-rel-20261120",
+  "contentDigest": "9b169c7db1646c5f10ab5360994bfa7d3e01479d6aa475e4f21c131933f47579",
+  "sourceTree": "work/qhooks-callentry-port-rel-20261120",
   "sourceWorkerSha256": "3751f6cda248813f6dcc4fe7ecb45d4119c6d186aeb489592f5c36bf37c69fd3",
   "sourceManifestSha256": null,
   "sourceFreezeSha256": null,
   "all14ArtifactDigest": null,
   "sourcePatchSha256": null,
-  "sourceReleaseReceiptSha256": "12089e752b0389694c7fec2bcd0f3dbc9ad02f469fbc3c79ef5d5a9109eca79a",
-  "sourceReleaseReceiptStatus": "LIVE_NEWSITE_BRAND_VERIFIED",
+  "sourceReleaseReceiptSha256": "81f9aea4df4a4c7a7197a3efc89777392281f905a00c0f0962c1c384bae757f1",
+  "sourceReleaseReceiptStatus": "LIVE_CALLENTRY_VERIFIED",
   "acceptance": {
-    "sourceAndLocalReleaseGates": "4 /new files changed (eco-rebuild b1df5d7); worker byte-identical; 188 routes, 0 dropped.",
+    "sourceAndLocalReleaseGates": "6 /new files (eco-rebuild 7976ee7, released as ad0897af) + server call-entry backfill (74fddbc4); 188 routes, 0 dropped.",
     "connectedWebKit": "Real-domain browser pass at 1440 (9 pages); 390 on edge preview.",
     "postDeployWatch": {
       "status": "OBSERVED_WATCH_CRITERION_MET",
-      "seconds": 90,
-      "events": 171,
+      "seconds": 150,
+      "events": 575,
       "exceptions": 0,
-      "scheduledOk": 3,
+      "scheduledOk": 6,
       "sampled": true,
       "globalHealthClaim": false
     },
@@ -284528,8 +284532,8 @@
     "policyExpansion": false
   },
   "priorReleaseAttestation": {
-    "releaseId": "12f0e58a-d97f-4e0b-abe7-4b2e609deb14",
-    "contentDigest": "30399ba47f3ac565eeeb25d2b724bfad84caefd6c91b59db802fd4d3a5071065",
-    "sourceReleaseReceiptSha256": "45b7fe02f039fe86792d3d208712c2fa5f1e69f32fd2a8fbd1ad917b93599fe8"
+    "releaseId": "29b85446-a089-49c2-85e8-8b75dc8e515d",
+    "contentDigest": "535b821897c967f768ca60b10a06e02d7a97f0f8a0e9624db34bfc0e4d60ffbd",
+    "sourceReleaseReceiptSha256": "12089e752b0389694c7fec2bcd0f3dbc9ad02f469fbc3c79ef5d5a9109eca79a"
   }
 }

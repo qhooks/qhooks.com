@@ -31,14 +31,29 @@ window.CommunityCards = (function () {
   function qp(t) { var q = t.qProof || "Not checked"; return '<span class="pulse-qproof pulse-qproof-' + q.toLowerCase().replace(" ", "-") + '">' + esc(q) + "</span>"; }
   function hook(t) { return window.HookBadge ? window.HookBadge.inRow(t) : ""; }
   function buyBtn(t) { if (t.href) return '<a class="cm-buy" href="' + esc(t.href) + '">Trade</a>'; return '<button class="cm-buy" data-buy="' + esc(t.address) + '" aria-label="Buy">' + size(t) + " " + native(t) + "</button>"; }
+  /* A wallet's public name (community profile) with the short address beside it; the short address alone otherwise. */
+  function person(addr, fallback, prefix) {
+    var v = window.CommunityFill && addr ? window.CommunityFill.label(addr) : null;
+    if (!v) return walletLink(fallback || short(addr), addr);
+    return '<a class="cm-who" href="#/wallet/' + esc(addr) + '">' + (v.image ? '<img class="cm-av" src="' + esc(v.image) + '" alt="" loading="lazy">' : "") + esc((prefix || "") + (v.name || short(addr))) + "</a>" + (v.name ? '<span class="cm-mut cm-addr">' + short(addr) + "</span>" : "");
+  }
   function walletLink(name, addr) { return addr ? '<a class="cm-who" href="#/wallet/' + esc(addr) + '">' + esc(name) + "</a>" : '<span class="cm-who">' + esc(name) + "</span>"; }
 
+  function liveNums(c) {
+    var v = window.CommunityFill.values(c), cls = v.multiple >= 1 ? "cm-up" : "cm-dn";
+    var nowPx = v.nowPx ? '<small class="cm-px">' + px(v.nowPx) + "</small>" : "";
+    if (!v.nowMc && !v.nowPx) return "";
+    if (!v.entryMc && !v.entryPx) return '<span class="cm-solo">Now ' + (v.nowMc ? usd(v.nowMc) + " MC" : px(v.nowPx)) + "</span>" + (v.nowMc ? nowPx : "");
+    var useMc = v.entryMc && v.nowMc;
+    return "<span><i>Entry</i>" + (useMc ? usd(v.entryMc) + " MC" : px(v.entryPx)) + "</span><span><i>Now</i>" + (useMc ? usd(v.nowMc) + " MC" : px(v.nowPx)) + "</span>" +
+      (useMc ? nowPx.replace("cm-px", "cm-px cm-px-d") : "") + (v.multiple ? '<b class="' + cls + '">' + mult(v.multiple) + "</b>" : "");
+  }
   function callCard(c) {
-    var t = c.token, m = window.CommunityData.multiple(c), cls = m >= 1 ? "cm-up" : "cm-dn";
-    var nums = c.live ? "<span><i>Entry</i>" + (c.entryPrice ? px(c.entryPrice) : "—") + "</span><span><i>Now</i>" + (c.nowPrice ? px(c.nowPrice) : "—") + "</span>" + (m ? '<b class="' + cls + '">' + mult(m) + "</b>" : '<b class="cm-mut">' + (c.kind === "buy" ? "Bought" : "Called") + "</b>")
-      : "<span><i>Entry</i>" + usd(c.entryMc) + "</span><span><i>Now</i>" + usd(t.mcap) + '</span><b class="' + cls + '">' + mult(m) + "</b>";
+    var t = c.live && window.CommunityFill ? window.CommunityFill.apply(c.token) : c.token, m = window.CommunityData.multiple(c), cls = m >= 1 ? "cm-up" : "cm-dn";
+    var nums = c.live ? liveNums(c) : "<span><i>Entry</i>" + usd(c.entryMc) + " MC</span><span><i>Now</i>" + usd(t.mcap) + ' MC</span><b class="' + cls + '">' + mult(m) + "</b>";
+    var verb = c.kind === "buy" ? "bought" : "called";
     return '<article class="cm-call">' + tile(t, 40) +
-      '<div class="cm-call-body"><div class="cm-call-top">' + walletLink(c.caller, c.wallet) + '<span class="cm-mut">called</span><a class="cm-sym" href="' + esc(th(t)) + '">' + esc(t.symbol) + "</a>" + '<span class="cm-mut">' + ago(c.at) + "</span>" + '<span class="cm-chips">' + qp(t) + hook(t) + "</span></div>" +
+      '<div class="cm-call-body"><div class="cm-call-top">' + (c.live ? person(c.wallet) : walletLink(c.caller, c.wallet)) + '<span class="cm-mut">' + verb + '</span><a class="cm-sym" href="' + esc(th(t)) + '">' + esc(t.symbol) + "</a>" + '<span class="cm-mut">' + ago(c.at) + "</span>" + '<span class="cm-chips">' + qp(t) + hook(t) + "</span></div>" +
       (c.note ? '<p class="cm-note">' + esc(c.note) + "</p>" : "") +
       '<div class="cm-call-nums">' + nums + '<span class="cm-chain">' + esc(t.chain || "") + "</span>" + buyBtn(t) + "</div></div></article>";
   }
@@ -51,7 +66,7 @@ window.CommunityCards = (function () {
     return '<div class="cm-lb cm-lb-head"><span>#</span><span>Trader</span>' + h("pnl", "PnL 7d") + h("winRate", "Win rate") + h("trades", "Trades") + "</div>";
   }
   function leaderRowLive(x, i) {
-    return '<div class="cm-lb"><span class="cm-mut">' + (i + 1) + '</span><span class="cm-lb-who">' + walletLink(x.caller, x.wallet) + "</span>" +
+    return '<div class="cm-lb"><span class="cm-mut">' + (i + 1) + '</span><span class="cm-lb-who">' + person(x.wallet, x.caller) + "</span>" +
       '<b class="' + (x.pnl >= 0 ? "cm-up" : "cm-dn") + '">' + (x.pnl >= 0 ? "+" : "-") + usd(Math.abs(x.pnl || 0)) + "</b><b>" + (x.winRate == null ? "—" : Math.round(x.winRate * 100) + "%") + "</b><b>" + x.trades + "</b></div>";
   }
   function leaderRow(x, i) {
@@ -72,7 +87,8 @@ window.CommunityCards = (function () {
     var trades = w.trades.length ? w.trades.map(function (tr) {
       return '<div class="cm-wt"><span class="' + (tr.side === "buy" ? "cm-up" : "cm-dn") + '">' + (tr.side === "buy" ? "Bought" : "Sold") + '</span><a class="cm-sym" href="' + esc(th(tr.token)) + '">' + esc(tr.token.symbol) + "</a><b>" + (tr.usd == null ? "—" : usd(tr.usd)) + '</b><span class="cm-mut">' + ago(tr.at) + "</span></div>";
     }).join("") : '<div class="cm-wt cm-mut">' + esc(w.note || "No trades on QHooks markets yet") + "</div>";
-    return '<div class="cm-wallet"><div class="cm-wallet-h">' + walletLink(w.label, w.address) + '<span class="cm-mut cm-addr">' + short(w.address) + "</span></div>" + trades + "</div>";
+    var named = window.CommunityFill && window.CommunityFill.label(w.address), top = /^Top trader /.test(w.label || "") ? "Top trader " : "";
+    return '<div class="cm-wallet"><div class="cm-wallet-h">' + (named ? person(w.address, w.label, top) : walletLink(w.label, w.address) + '<span class="cm-mut cm-addr">' + short(w.address) + "</span>") + "</div>" + trades + "</div>";
   }
   function trackedPanel(list, isSample) {
     return '<section class="cm-tracked"><div class="cm-h">TRACKED WALLETS<span class="cm-mut">' + list.length + "</span>" + (isSample ? sample() : "") + "</div>" +

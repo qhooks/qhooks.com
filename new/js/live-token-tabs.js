@@ -52,16 +52,20 @@
 
   var LEVEL = { danger: "Danger", caution: "Watch", watch: "Watch", clear: "Clear", unknown: "Not checked", incomplete: "Not checked", info: "" };
   function chip(v) { return "<span class='pulse-qproof pulse-qproof-" + String(v || "Not checked").toLowerCase().replace(" ", "-") + "'>" + F.esc(v || "Not checked") + "</span>"; }
-  /* QProof in numbers, under the token header (Fable): what a trader keeps on a round trip and the four facts
-     that decide it. Read from the stored report's key numbers; a fact with no reading is left out, never guessed. */
+  /* QProof in numbers, under the token header (Fable): the facts about the token itself that decide whether it is
+     safe to hold. Read from the stored report's key numbers; a fact with no reading is left out, never guessed. */
   function facts(n) {
     var old = document.querySelector(".lt-facts"); if (old) old.remove();
     var head = document.querySelector(".lt-page .token-header"); if (!n || !head) return;
     var out = [];
     function add(label, value, tone) { out.push("<div class='lt-fact" + (tone ? " lt-fact-" + tone : "") + "'><span>" + label + "</span><b>" + value + "</b></div>"); }
-    if (F.ok(n.roundTripReturnPct)) add("Round trip keeps", Number(n.roundTripReturnPct).toFixed(1) + "%", n.roundTripReturnPct >= 90 ? "up" : n.roundTripReturnPct >= 75 ? "warn" : "dn");
+    /* Randall, 2026-11-20: a "round trip keeps 93.6%" figure reads as if QHooks takes the rest. The strip states
+       facts about the token itself only: can you sell, does the token tax you, is the liquidity locked. */
     if (n.sellable === true || n.sellable === false) add("Sells", n.sellable ? "Open" : "Blocked", n.sellable ? "up" : "dn");
-    if (F.ok(n.buyChargePct) && F.ok(n.sellChargePct)) add("Cost in / out", F.pct(n.buyChargePct) + " / " + F.pct(n.sellChargePct));
+    if (F.ok(n.buyTaxPct) && F.ok(n.sellTaxPct)) {
+      var none = Number(n.buyTaxPct) === 0 && Number(n.sellTaxPct) === 0;
+      add("Token tax", none ? "None" : F.pct(n.buyTaxPct) + " buy / " + F.pct(n.sellTaxPct) + " sell", none ? "up" : (Math.max(n.buyTaxPct, n.sellTaxPct) >= 10 ? "dn" : "warn"));
+    }
     if (F.ok(n.lpLockedPct)) add("LP locked", F.pct(n.lpLockedPct), n.lpLockedPct >= 95 ? "up" : n.lpLockedPct > 0 ? "warn" : "dn");
     if (n.mintable === true || n.mintable === false) add("Mint", n.mintable ? "Open" : "Off", n.mintable ? "warn" : "up");
     if (n.ownerRenounced === true || n.ownerRenounced === false) add("Owner", n.ownerRenounced ? "Renounced" : "Active", n.ownerRenounced ? "up" : "warn");

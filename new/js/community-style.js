@@ -27,7 +27,8 @@
     ".cm-note{margin:0;font-size:13px;line-height:1.4;color:var(--tx);overflow-wrap:anywhere}" +
     ".cm-call-nums{display:flex;align-items:center;gap:14px;font-size:13px;font-variant-numeric:tabular-nums}" +
     ".cm-call-nums i{font-style:normal;color:var(--mut);font-size:11px;margin-right:5px;letter-spacing:.04em;text-transform:uppercase}" +
-    ".cm-call-nums>b{font-size:15px}.cm-chain{color:var(--mut);font-size:11px}" +
+    ".cm-call-nums>b{font-size:15px}.cm-chain{color:var(--mut);font-size:11px}.cm-px{color:var(--mut);font-size:12px}" +
+    ".cm-who{display:inline-flex;align-items:center;gap:6px}.cm-av{width:18px;height:18px;border-radius:3px;object-fit:cover;flex:none}.cm-call-top .cm-addr{color:var(--mut)}" +
     ".cm-buy{margin-left:auto;height:32px;padding:0 12px;border:1px solid var(--up);background:rgba(76,195,138,.1);color:var(--up);border-radius:4px;font-weight:600;font-size:12px;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}" +
     ".cm-buy:hover{background:var(--up);color:#04140c}" +
     ".cm-sub{margin:0;padding:10px 16px;font-size:12px;color:var(--mut)}" +
@@ -67,7 +68,7 @@
     ".cm-trow{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:6px 10px;padding:10px 12px}.cm-trow>.cm-tile{grid-row:1/3}" +
     ".cm-trow-id{grid-column:2;grid-row:1}.cm-trow-n:nth-child(3){grid-column:2;grid-row:2;flex-direction:row;gap:4px;align-items:center;min-width:0}" +
     ".cm-trow-n:nth-child(4){grid-column:3;grid-row:1;min-width:0}.cm-trow .cm-buy{grid-column:3;grid-row:2;margin:0}" +
-    ".cm-call-nums{gap:8px;flex-wrap:nowrap}.cm-call-nums i,.cm-chain{display:none}.cm-call-nums span+span::before{content:'\\2192  ';color:var(--mut)}" +
+    ".cm-call-nums{gap:8px;flex-wrap:nowrap}.cm-call-nums i,.cm-chain{display:none}.cm-call-nums span+span::before{content:'\\2192  ';color:var(--mut)}.cm-px-d{display:none}" +
     ".cm-wallet,.cm-h{padding-left:12px;padding-right:12px}.cm-track,.cm-cform{padding:0 12px 12px}.cm-who,.cm-sym{display:inline-flex;align-items:center;min-height:44px;margin:-12px 0}" +
     ".cm-tile{min-width:44px;min-height:44px}.token-tabs{height:auto}.token-tab{min-height:44px;display:flex;align-items:center}.cm-wt{align-items:center;min-height:44px}" +
     ".cm-sheet-wrap{align-items:flex-end}.cm-sheet{border-radius:8px 8px 0 0;padding-bottom:24px}.cm-sheet-act button{height:48px;flex:1}}";

@@ -52,7 +52,7 @@ window.CommunityData = (function () {
   }
   function base() { if (!memo || !memo.calls.length) memo = build(); return memo; }
   function multiple(c) {
-    if (c.live) return c.entryPrice && c.nowPrice ? c.nowPrice / c.entryPrice : 0;
+    if (c.live) return window.CommunityFill ? window.CommunityFill.values(c).multiple : 0;
     return c.entryMc ? (c.token.mcap || 0) / c.entryMc : 0;
   }
   function allCalls() { return posted.concat(base().calls); }
@@ -99,14 +99,21 @@ window.CommunityData = (function () {
     }).then(function (r) {
       if (r && r.ok) live.calls = r.rows.map(function (c) {
         var t = tokenFor(c.chainId, c.address);
-        return { id: c.id, live: true, caller: sh(c.wallet), wallet: c.wallet, token: t, at: c.at, note: c.note, kind: c.kind, entryPrice: c.entryPrice, entryMc: c.entryMc || null, nowPrice: c.nowPrice || t.price || null };
+        return { id: c.id, live: true, caller: sh(c.wallet), wallet: c.wallet, token: t, at: c.at, note: c.note, kind: c.kind, boardKind: c.boardKind, entryPrice: c.entryPrice, entryMc: c.entryMc || null, nowPrice: c.nowPrice || t.price || null };
       });
-      emit(); if (r && r.ok) names();
+      emit(); if (r && r.ok) { names(); fill(); }
     });
     A.leaders("7d").then(function (r) {
       if (r.ok) live.leaders = r.rows.map(function (x) { return { live: true, caller: sh(x.wallet), wallet: x.wallet, pnl: x.pnl, winRate: x.winRate, trades: x.trades, volume: x.volume, calls: x.trades }; });
-      emit(); loadWallets();
+      emit(); loadWallets(); fill();
     });
+  }
+  /* Display names for callers, traders and tracked wallets, and "now" numbers for call tokens (community-fill.js). */
+  function fill() {
+    var F = window.CommunityFill; if (!F) return;
+    var ws = (live.calls || []).map(function (c) { return c.wallet; }).concat((live.leaders || []).slice(0, 20).map(function (x) { return x.wallet; }), trackedList());
+    F.names(ws, emit);
+    if (live.calls) F.prices(live.calls, emit);
   }
   /* Calls on tokens outside the market lists: take the symbol and logo from the token's own board (one read each). */
   function names() {
@@ -137,7 +144,7 @@ window.CommunityData = (function () {
           }) };
         });
       });
-    })).then(function (ws) { live.wallets = ws; live.walletsTop = top; emit(); });
+    })).then(function (ws) { live.wallets = ws; live.walletsTop = top; emit(); fill(); });
   }
   /* The boards list says whether a token has a launch board or a token board; wait for it (one shared read). */
   function boardFor(chainId, addr, kind, cb) {
