@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "e0879d49-4ff4-4b90-a5f2-0d170b298d2d",
+  "releaseId": "922e5dac-e012-4b9a-bd8f-589ec2d80123",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,7 +41,7 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "6d749dd765016b5fe5ffe75c9d2dc852ca3e577157b3b3bd730daa437c817b32",
+      "sha256": "938861ef8f310729aa2c9c1a28480f9e3e052dcd79197e1c3bcf2031e07dcdbe",
       "bytes": 5961
     },
     "_redirects": {
@@ -273712,13 +273712,13 @@
       "sha256": "0238ea9322d763191730c14a66a5ab70f11744487e93c0e8fe948fb4b92109c4",
       "bytes": 5712
     },
-    "new/app.1e0783a3df.js": {
-      "sha256": "1e0783a3df9f4c57d769015ed8de9be49b3b4c42a2f3bed8b96fb610d9883978",
-      "bytes": 385011
-    },
     "new/app.e6e19e190b.css": {
       "sha256": "e6e19e190b057be956907b902b44cb51453b8a17d0d8c77c26731cde21118c67",
       "bytes": 65200
+    },
+    "new/app.fbad8ff8d4.js": {
+      "sha256": "fbad8ff8d4b5e5e2a020a15aaed65502cabfa3c7eab83e3515c1459e4982a92a",
+      "bytes": 385059
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
@@ -273773,7 +273773,7 @@
       "bytes": 1100
     },
     "new/index.html": {
-      "sha256": "737f31efe3c5ef3aa4087ff3393b830ce21cd7df81b3f9f56ed61dacdaf58576",
+      "sha256": "74ed225b2ec760df34c7cabce989c256b08d1c5eaeeacd22ca3a45df9c3cfef0",
       "bytes": 1074
     },
     "new/js/perps-book.js": {
@@ -284333,5 +284333,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "131dad1bfe94a89d74213a8445afc2eb11fa0efd067a1e05eac525aafaedbcfc"
+  "contentDigest": "6e08aada3aa287a586d0c78e615331b19dab5ea50c775ee4a00be1b01183d34e"
 }
