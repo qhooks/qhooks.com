@@ -258,7 +258,7 @@ export async function openCard(wallet, { windowKey = '30d', chainId = null, acro
       api('/api/wallets/alerts').then(j => { const p = (j.prefs || []).find(x => x.wallet === wallet) || (j.prefs || []).find(x => x.wallet === '*'); if (p) sel.value = p.mode; }, () => {});
       sel.addEventListener('change', () => api('/api/wallets/alerts/prefs', { method: 'POST', body: JSON.stringify({ wallet, mode: sel.value }) }).catch(() => {}));
       return sel; })()) : null;
-    const links = el('div', { class: 'qpw-io' }, followBtn, copyLink, alertPick, explorer ? el('a', { class: 'qpw-btn', href: explorer + '/address/' + wallet, target: '_blank', rel: 'noopener' }, 'Explorer') : null);
+    const links = el('div', { class: 'qpw-io' }, followBtn, copyLink, alertPick, String(chainId || '4663') === '4663' ? el('a', { class: 'qpw-btn', href: '/wallet/4663/' + wallet }, 'Full profile') : null, explorer ? el('a', { class: 'qpw-btn', href: explorer + '/address/' + wallet, target: '_blank', rel: 'noopener' }, 'Explorer') : null);
     sheet.replaceChildren(el('div', { class: 'qpw-sheet-in' }, head, links, windows, body)); // Follow and Copy trades up top
     if (!sheet.open) sheet.showModal();
     // Every chain, every token (sampled pools): PnL line, holdings, best and worst, recent trades. Above the QHooks-market detail.

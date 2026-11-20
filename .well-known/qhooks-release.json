@@ -14,7 +14,7 @@
     ".well-known/qhooks-release.json",
     "README.md"
   ],
-  "releaseId": "0a6a511f-e8d7-4c54-bef6-3d4719a623e8",
+  "releaseId": "790ec7da-0b2c-41b6-a7ae-64b97bf4a409",
   "files": {
     ".well-known/assetlinks.json": {
       "sha256": "c050db9daa7f0c6ea2110ab00b609a2a99970d7366c708a84844a8f6e0928ba0",
@@ -282801,8 +282801,8 @@
       "bytes": 2300
     },
     "qx-pro-wallets.mjs": {
-      "sha256": "ef3ab9bd84fc079ba4b9c6050e089482aae66b6cedef3fce6989c18508de8762",
-      "bytes": 27964
+      "sha256": "38397deec43a1704118a6c2e550c0355a269ed1536a6a37fcec67c0aea7df3e7",
+      "bytes": 28089
     },
     "qx-pro-xbuy.mjs": {
       "sha256": "6daa21f7b49ab580c6f0d3c66f20835639cd35cefdcd164858431e67fa39d965",
@@ -283481,8 +283481,8 @@
       "bytes": 55457
     },
     "qx-terminal.mjs": {
-      "sha256": "44917480c2f0ac8192d47bd7f6be6306e80fa5be89763ec9bd0c3f46849b92db",
-      "bytes": 142771
+      "sha256": "7d2e89dcd0cfd62b8d9c1a21a65236f053fa02618b80949998c17440144edfe8",
+      "bytes": 143166
     },
     "qx-terms.mjs": {
       "sha256": "54e39bff2750779ef519ac65c331361e25ecb95ace8e59e1bf2792eb74b87ef8",
@@ -283819,6 +283819,14 @@
     "qx-wallet-pnl.mjs": {
       "sha256": "97bba1a5e2548432b464e2ae1586428aebfa453d3100abda27cf7539df5109de",
       "bytes": 44208
+    },
+    "qx-wallet-profile.css": {
+      "sha256": "46cd250fb7dfdf95c453be410655a97393c4fb181f598abafad9be2af1e2c885",
+      "bytes": 8804
+    },
+    "qx-wallet-profile.mjs": {
+      "sha256": "a72645f5fe117349017ecdeb07017dbee57cb11e43e4cc9abb3051e6a1bc48ba",
+      "bytes": 18966
     },
     "qx-x-attachment.mjs": {
       "sha256": "08797ebaac8d53a601ab89fd4e9b40450d5793c6afdae89dcc4a324abd9d7df3",
@@ -284456,6 +284464,10 @@
       "sha256": "53d0c021362042b3f3b927e5c62713d7a3dbd7550ee8f2de0ab64c34e4f7e4c6",
       "bytes": 1203
     },
+    "wallet-profile.html": {
+      "sha256": "dba7f7ec4a5daef737a3a70ce0763cfd7837e66ba5737938ae6e28f11a7849a1",
+      "bytes": 5402
+    },
     "wallet-rpc-compat.mjs": {
       "sha256": "f0922d36371786cb5dbf3d1e94291ab199b5b1e0911a60746e274711c4f6a162",
       "bytes": 870
@@ -284509,24 +284521,24 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "dc6f9a8daaf8771995ca1afbf5ea199e70562b5ece156a224d3392a7c31bf6c6",
-  "sourceTree": "work/qhooks-newsite7-rel-20261120",
+  "contentDigest": "79f52a6e9a2f5623e28e5fa3c7916953a05eab9c5d22f78cee9a01fb41cb78cd",
+  "sourceTree": "work/qhooks-walletprofiles2-rel-20261120",
   "sourceWorkerSha256": "3751f6cda248813f6dcc4fe7ecb45d4119c6d186aeb489592f5c36bf37c69fd3",
   "sourceManifestSha256": null,
   "sourceFreezeSha256": null,
   "all14ArtifactDigest": null,
   "sourcePatchSha256": null,
-  "sourceReleaseReceiptSha256": "ef9c458775b9e7e13d2face491c7316f4c78e48b120e0d99194b8d019f4c582c",
-  "sourceReleaseReceiptStatus": "LIVE_NEWSITE_VERIFIED",
+  "sourceReleaseReceiptSha256": "3315f48dd1ab3ff4b34263ff6c99de1dbb909f332db423e895c5f203151a1e78",
+  "sourceReleaseReceiptStatus": "LIVE_WALLET_PROFILES_VERIFIED",
   "acceptance": {
-    "sourceAndLocalReleaseGates": "/new from eco-rebuild 1fcfe0e; worker byte-identical; 188 routes, 0 dropped.",
+    "sourceAndLocalReleaseGates": "Wallet profile page (wallet-profile.html, qx-wallet-profile.mjs/.css) + terminal link edits; worker adds WalletProfiles DO; 188 routes, 0 dropped.",
     "connectedWebKit": "Real-domain browser pass at 1440 (9 pages); 390 on edge preview.",
     "postDeployWatch": {
       "status": "OBSERVED_WATCH_CRITERION_MET",
-      "seconds": 90,
-      "events": 111,
+      "seconds": 120,
+      "events": 158,
       "exceptions": 0,
-      "scheduledOk": 3,
+      "scheduledOk": 4,
       "sampled": true,
       "globalHealthClaim": false
     },
@@ -284540,8 +284552,8 @@
     "policyExpansion": false
   },
   "priorReleaseAttestation": {
-    "releaseId": "74fddbc4-a7be-492f-97e3-b88f0cc6f77a",
-    "contentDigest": "9b169c7db1646c5f10ab5360994bfa7d3e01479d6aa475e4f21c131933f47579",
-    "sourceReleaseReceiptSha256": "81f9aea4df4a4c7a7197a3efc89777392281f905a00c0f0962c1c384bae757f1"
+    "releaseId": "0a6a511f-e8d7-4c54-bef6-3d4719a623e8",
+    "contentDigest": "dc6f9a8daaf8771995ca1afbf5ea199e70562b5ece156a224d3392a7c31bf6c6",
+    "sourceReleaseReceiptSha256": "ef9c458775b9e7e13d2face491c7316f4c78e48b120e0d99194b8d019f4c582c"
   }
 }
