@@ -167,3 +167,18 @@ h1,h2,.lx-h1,.sx h1,.po-title,.dc-tab,.pf-tab,.po-tab,.cm-tab,.token-symbol{font
 /* Quick-buy buttons carry the amount only: green is buy, red is sell (Randall, 2026-11-20). */
 .pulse-row-right .pulse-buy-btn{min-width:84px}
 .cm-buy{background:var(--up-a)!important;border:1px solid transparent!important;color:var(--up)!important;border-radius:var(--r)!important;font-weight:700}
+
+/* ── Token page: QProof in numbers ──────────────────────────── */
+.lt-facts{display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.lt-facts::-webkit-scrollbar{display:none}
+.lt-facts-k{display:flex;align-items:center;padding:0 12px;font:600 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-2);background:var(--gold-a);border-right:1px solid var(--line);flex:none}
+.lt-fact{display:flex;flex-direction:column;justify-content:center;gap:3px;padding:8px 14px;border-right:1px solid var(--line);flex:none;min-height:44px}
+.lt-fact span{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);white-space:nowrap}
+.lt-fact b{font-family:var(--display);font-weight:700;font-size:15px;line-height:1;white-space:nowrap;color:var(--tx)}
+.lt-fact-up b{color:var(--up)}.lt-fact-warn b{color:var(--gold-2)}.lt-fact-dn b{color:var(--dn)}
+.lt-fact:first-of-type b{font-size:18px}
+.lt-facts{min-height:58px}
+/* Live link chips carry their own text (X, Site, TG); show it instead of an empty box. */
+.token-social:not([title]){font-size:10px;color:var(--mut);border-radius:999px;padding:0 8px;line-height:18px}
+.token-social:not([title])::before{content:none}
+.token-social:not([title]):hover{color:var(--tx)}

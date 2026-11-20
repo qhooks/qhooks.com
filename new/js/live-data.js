@@ -105,7 +105,7 @@
       var v = rep.verdict || {}, level = v.level || rep.level;
       t.qProof = N.verdict(level);
       return { ok: true, state: b.state, verdict: t.qProof, label: v.label || null, headline: v.headline || rep.headline || "", url: rep.url || null,
-        checkedAt: Date.parse(b.checkedAt || rep.completedAt || "") || null, checks: (rep.checks || []).slice(0) };
+        checkedAt: Date.parse(b.checkedAt || rep.completedAt || "") || null, checks: (rep.checks || []).slice(0), numbers: b.keyNumbers || null };
     });
   }
 

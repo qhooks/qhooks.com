@@ -52,6 +52,24 @@
 
   var LEVEL = { danger: "Danger", caution: "Watch", watch: "Watch", clear: "Clear", unknown: "Not checked", incomplete: "Not checked", info: "" };
   function chip(v) { return "<span class='pulse-qproof pulse-qproof-" + String(v || "Not checked").toLowerCase().replace(" ", "-") + "'>" + F.esc(v || "Not checked") + "</span>"; }
+  /* QProof in numbers, under the token header (Fable): what a trader keeps on a round trip and the four facts
+     that decide it. Read from the stored report's key numbers; a fact with no reading is left out, never guessed. */
+  function facts(n) {
+    var old = document.querySelector(".lt-facts"); if (old) old.remove();
+    var head = document.querySelector(".lt-page .token-header"); if (!n || !head) return;
+    var out = [];
+    function add(label, value, tone) { out.push("<div class='lt-fact" + (tone ? " lt-fact-" + tone : "") + "'><span>" + label + "</span><b>" + value + "</b></div>"); }
+    if (F.ok(n.roundTripReturnPct)) add("Round trip keeps", Number(n.roundTripReturnPct).toFixed(1) + "%", n.roundTripReturnPct >= 90 ? "up" : n.roundTripReturnPct >= 75 ? "warn" : "dn");
+    if (n.sellable === true || n.sellable === false) add("Sells", n.sellable ? "Open" : "Blocked", n.sellable ? "up" : "dn");
+    if (F.ok(n.buyChargePct) && F.ok(n.sellChargePct)) add("Cost in / out", F.pct(n.buyChargePct) + " / " + F.pct(n.sellChargePct));
+    if (F.ok(n.lpLockedPct)) add("LP locked", F.pct(n.lpLockedPct), n.lpLockedPct >= 95 ? "up" : n.lpLockedPct > 0 ? "warn" : "dn");
+    if (n.mintable === true || n.mintable === false) add("Mint", n.mintable ? "Open" : "Off", n.mintable ? "warn" : "up");
+    if (n.ownerRenounced === true || n.ownerRenounced === false) add("Owner", n.ownerRenounced ? "Renounced" : "Active", n.ownerRenounced ? "up" : "warn");
+    if (!out.length) return;
+    var el = document.createElement("div"); el.className = "lt-facts";
+    el.innerHTML = "<div class='lt-facts-k'>QProof</div>" + out.join("");
+    head.parentNode.insertBefore(el, head.nextSibling);
+  }
   function qproof(panel, t) {
     panel.innerHTML = "<div class='tq-head'>QProof " + chip("Not checked") + "</div><div class='lt-q-note'>Reading the stored report</div>";
     window.QHLive.qproof(t).then(function (r) {
@@ -69,6 +87,7 @@
       }).join("") + "</ul><div class='lt-q-foot'>" + (r.checkedAt ? "Checked " + F.age((Date.now() - r.checkedAt) / 1000) + " ago" : "") +
         (r.url ? " · <a href='" + F.esc(r.url) + "' target='_blank' rel='noopener'>Full report</a>" : "") + "</div>";
       var head = document.querySelector(".lt-head-q"); if (head) head.innerHTML = chip(r.verdict);
+      facts(r.numbers);
     });
   }
 

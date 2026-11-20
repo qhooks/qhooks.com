@@ -14,7 +14,7 @@
     ".well-known/qhooks-release.json",
     "README.md"
   ],
-  "releaseId": "12f0e58a-d97f-4e0b-abe7-4b2e609deb14",
+  "releaseId": "29b85446-a089-49c2-85e8-8b75dc8e515d",
   "files": {
     ".well-known/assetlinks.json": {
       "sha256": "c050db9daa7f0c6ea2110ab00b609a2a99970d7366c708a84844a8f6e0928ba0",
@@ -273709,8 +273709,8 @@
       "bytes": 5712
     },
     "new/brand.css": {
-      "sha256": "1455ba8222c4bf694e64302ec5514721b79efc814fb3853d49b840ee9049df73",
-      "bytes": 12228
+      "sha256": "193bbeec946363f6e9a09fa010f836345c19a7448c565656ae04c9938cbfc3d4",
+      "bytes": 13644
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
@@ -273821,8 +273821,8 @@
       "bytes": 5289
     },
     "new/js/live-data.js": {
-      "sha256": "17df2b4821117a46767d15b23cabdbda392eae07617865a31e39cebc4a84c768",
-      "bytes": 13856
+      "sha256": "8ecc9a97ffc5dbde5edddfa70407a82a7e9142e5b21ebbf945b62f8e2aafecd3",
+      "bytes": 13887
     },
     "new/js/live-norm.js": {
       "sha256": "cb15c9fb5322ff49cbb792c54616ee6bba38cc7cd34a8a8096cf516a43f493ee",
@@ -273841,12 +273841,12 @@
       "bytes": 9030
     },
     "new/js/live-token-tabs.js": {
-      "sha256": "c2e9ed38469928812f12364da255789f270a4f52366820462f3557daa1097bd1",
-      "bytes": 7386
+      "sha256": "aae67de967fd8c7c97979bd607cd0bd1e2461b9378633018c0685d27f58c2d67",
+      "bytes": 9104
     },
     "new/js/live-token.js": {
-      "sha256": "66ee5bc632d8e373096bfd3c872b5e3107a42c6ec0b23d8a8ae0fcd5221479fc",
-      "bytes": 10083
+      "sha256": "f1f8f8d65c26c3a00c01330e7cb29f1d8d4f9c1bc4c5f7a91578871e043d9647",
+      "bytes": 10398
     },
     "new/js/live-trade.js": {
       "sha256": "86d03453b5ba1e71550280960ec2786daeca6c330a36133a2ac7e7931f77765b",
@@ -284497,24 +284497,24 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "30399ba47f3ac565eeeb25d2b724bfad84caefd6c91b59db802fd4d3a5071065",
-  "sourceTree": "work/qhooks-newsite4-rel-20261120",
+  "contentDigest": "535b821897c967f768ca60b10a06e02d7a97f0f8a0e9624db34bfc0e4d60ffbd",
+  "sourceTree": "work/qhooks-newsite5-rel-20261120",
   "sourceWorkerSha256": "3751f6cda248813f6dcc4fe7ecb45d4119c6d186aeb489592f5c36bf37c69fd3",
   "sourceManifestSha256": null,
   "sourceFreezeSha256": null,
   "all14ArtifactDigest": null,
   "sourcePatchSha256": null,
-  "sourceReleaseReceiptSha256": "45b7fe02f039fe86792d3d208712c2fa5f1e69f32fd2a8fbd1ad917b93599fe8",
+  "sourceReleaseReceiptSha256": "12089e752b0389694c7fec2bcd0f3dbc9ad02f469fbc3c79ef5d5a9109eca79a",
   "sourceReleaseReceiptStatus": "LIVE_NEWSITE_BRAND_VERIFIED",
   "acceptance": {
-    "sourceAndLocalReleaseGates": "40 /new files changed or added (eco-rebuild a2d744b brand pass); worker byte-identical; 188 routes, 0 dropped.",
+    "sourceAndLocalReleaseGates": "4 /new files changed (eco-rebuild b1df5d7); worker byte-identical; 188 routes, 0 dropped.",
     "connectedWebKit": "Real-domain browser pass at 1440 (9 pages); 390 on edge preview.",
     "postDeployWatch": {
       "status": "OBSERVED_WATCH_CRITERION_MET",
       "seconds": 90,
-      "events": 185,
+      "events": 171,
       "exceptions": 0,
-      "scheduledOk": 4,
+      "scheduledOk": 3,
       "sampled": true,
       "globalHealthClaim": false
     },
@@ -284528,8 +284528,8 @@
     "policyExpansion": false
   },
   "priorReleaseAttestation": {
-    "releaseId": "471bf1e8-c886-4edf-acd2-6b12f1f38477",
-    "contentDigest": "ad30d1ddb67207de2a175bc350ef96883e345a28981c47d434c053f678ee5f15",
-    "sourceReleaseReceiptSha256": "c3fb7d272aaba4c97d5b473a2fddb437c535930fa676a8a58a4465874bd74200"
+    "releaseId": "12f0e58a-d97f-4e0b-abe7-4b2e609deb14",
+    "contentDigest": "30399ba47f3ac565eeeb25d2b724bfad84caefd6c91b59db802fd4d3a5071065",
+    "sourceReleaseReceiptSha256": "45b7fe02f039fe86792d3d208712c2fa5f1e69f32fd2a8fbd1ad917b93599fe8"
   }
 }

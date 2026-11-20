@@ -47,7 +47,7 @@
     var t = L.find(where.chain, where.addr) || Object.assign(N.feedRow({ chainId: where.chain, token: { address: where.addr, symbol: "", name: "" } }), { kind: "pending" });
     wrap.innerHTML = shell(t);
     var main = wrap.querySelector(".token-main"), body = wrap.querySelector(".lt-tabbody"), canvas = wrap.querySelector("canvas");
-    var tab = "trades", tstate = {}, tf = 60, bars = [], mc = false, loaded = false, side = null, autoTf = true;
+    var tab = "trades", tstate = {}, tf = 60, bars = [], mc = false, loaded = false, side = null, autoTf = true, best = null;
     function paintHeader() {
       var row = main.querySelector(".token-stats-row"), html = stats(t);
       if (row && row.innerHTML !== html) row.innerHTML = html;
@@ -68,7 +68,11 @@
         /* Default timeframe: the shortest with about 40 moving bars, else 1h. Stops once the user picks one. (Fable) */
         if (autoTf) {
           var ix = 0; TFS.forEach(function (x, i) { if (x[1] === tf) ix = i; });
-          if (QHChart.moving(bars) < 40 && ix < 3) { tf = TFS[ix + 1][1]; markTf(); return readBars(); }
+          var mv = QHChart.moving(bars);
+          if (!best || mv > best.mv) best = { tf: tf, mv: mv };
+          if (mv < 40 && ix < 3) { tf = TFS[ix + 1][1]; markTf(); return readBars(); }
+          /* Nothing reached 40: settle on whichever timeframe moved most, not on an empty 1h. */
+          if (best && best.tf !== tf && best.mv > mv) { tf = best.tf; autoTf = false; markTf(); return readBars(); }
           if (bars.length) autoTf = false;
         }
         var nt = wrap.querySelector(".lt-chart-note"); if (nt) nt.textContent = r.fromTrades ? "Built from recent trades" : "";
