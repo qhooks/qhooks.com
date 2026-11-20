@@ -1,6 +1,6 @@
 {
   "name": "com.qhooks/mcp",
-  "version": "8.1.0",
+  "version": "9.0.0",
   "endpoint": "https://qhooks.com/mcp",
   "skill": "https://qhooks.com/skill.md",
   "tools": [
@@ -1457,6 +1457,303 @@
         "idempotentHint": true,
         "openWorldHint": true
       },
+      "securitySchemes": [
+        {
+          "type": "noauth"
+        }
+      ],
+      "_meta": {
+        "securitySchemes": [
+          {
+            "type": "noauth"
+          }
+        ]
+      }
+    },
+    {
+      "name": "qwallet_status",
+      "description": "Read an owner's QWallet on Robinhood Chain: verified verifier/pool runtime, post-quantum key enrollment, nonce and per-asset balances, wallet balances and allowances, and the next setup step. Read-only.",
+      "annotations": {
+        "title": "Read a QWallet",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chain": {
+            "type": "string",
+            "enum": [
+              "4663"
+            ],
+            "description": "Robinhood Chain (4663). Other chains use qhooks.com/qwallets in a browser."
+          },
+          "owner": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "verifier": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "pool": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "publicKey": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{64}$",
+            "description": "The owner's SLH-DSA-SHA2-128s public key (32 bytes, 0x-hex). Generated and kept by the agent; never send a secret key."
+          },
+          "tokens": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{40}$"
+            },
+            "description": "ERC-20 asset policy fixed at pool deployment. Default: [USDG]. Pass the same list for every later call on that pool."
+          }
+        },
+        "required": [
+          "owner"
+        ],
+        "additionalProperties": false
+      },
+      "title": "Read a QWallet",
+      "securitySchemes": [
+        {
+          "type": "noauth"
+        }
+      ],
+      "_meta": {
+        "securitySchemes": [
+          {
+            "type": "noauth"
+          }
+        ]
+      }
+    },
+    {
+      "name": "prepare_qwallet_setup",
+      "description": "Prepare the next QWallet setup step for the owner wallet, unsigned: deploy the verifier, deploy the pool (fixed pinned bytecode), then enrollment of the owner's post-quantum key as EIP-712 typed data plus the exact SLH-DSA message. Call again after each receipt with the new addresses. Never signs or sends.",
+      "annotations": {
+        "title": "Prepare QWallet setup",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chain": {
+            "type": "string",
+            "enum": [
+              "4663"
+            ],
+            "description": "Robinhood Chain (4663). Other chains use qhooks.com/qwallets in a browser."
+          },
+          "owner": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "verifier": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "pool": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "publicKey": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{64}$",
+            "description": "The owner's SLH-DSA-SHA2-128s public key (32 bytes, 0x-hex). Generated and kept by the agent; never send a secret key."
+          },
+          "tokens": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{40}$"
+            },
+            "description": "ERC-20 asset policy fixed at pool deployment. Default: [USDG]. Pass the same list for every later call on that pool."
+          }
+        },
+        "required": [
+          "owner"
+        ],
+        "additionalProperties": false
+      },
+      "title": "Prepare QWallet setup",
+      "securitySchemes": [
+        {
+          "type": "noauth"
+        }
+      ],
+      "_meta": {
+        "securitySchemes": [
+          {
+            "type": "noauth"
+          }
+        ]
+      }
+    },
+    {
+      "name": "prepare_qwallet_deposit",
+      "description": "Prepare unsigned deposit transactions into an enrolled QWallet: an exact ERC-20 approval when the allowance is short, then depositNative or depositToken. Deposits need no post-quantum signature.",
+      "annotations": {
+        "title": "Prepare a QWallet deposit",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chain": {
+            "type": "string",
+            "enum": [
+              "4663"
+            ],
+            "description": "Robinhood Chain (4663). Other chains use qhooks.com/qwallets in a browser."
+          },
+          "owner": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "verifier": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "pool": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "publicKey": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{64}$",
+            "description": "The owner's SLH-DSA-SHA2-128s public key (32 bytes, 0x-hex). Generated and kept by the agent; never send a secret key."
+          },
+          "asset": {
+            "type": "string",
+            "description": "ETH (native) or an ERC-20 address in the pool policy."
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,77}$",
+            "description": "Raw integer units of the asset (USDG has 6 decimals; ETH 18)."
+          },
+          "tokens": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{40}$"
+            },
+            "description": "ERC-20 asset policy fixed at pool deployment. Default: [USDG]. Pass the same list for every later call on that pool."
+          }
+        },
+        "required": [
+          "owner",
+          "verifier",
+          "pool",
+          "publicKey",
+          "asset",
+          "amount"
+        ],
+        "additionalProperties": false
+      },
+      "title": "Prepare a QWallet deposit",
+      "securitySchemes": [
+        {
+          "type": "noauth"
+        }
+      ],
+      "_meta": {
+        "securitySchemes": [
+          {
+            "type": "noauth"
+          }
+        ]
+      }
+    },
+    {
+      "name": "prepare_qwallet_withdraw",
+      "description": "Prepare a QWallet withdrawal: EIP-712 typed data for the owner wallet plus the exact message for the owner's SLH-DSA key, valid 15 minutes. Both signatures are required on-chain; recipient, asset and amount are bound. Never signs or sends.",
+      "annotations": {
+        "title": "Prepare a QWallet withdrawal",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chain": {
+            "type": "string",
+            "enum": [
+              "4663"
+            ],
+            "description": "Robinhood Chain (4663). Other chains use qhooks.com/qwallets in a browser."
+          },
+          "owner": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "verifier": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "pool": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "publicKey": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{64}$",
+            "description": "The owner's SLH-DSA-SHA2-128s public key (32 bytes, 0x-hex). Generated and kept by the agent; never send a secret key."
+          },
+          "asset": {
+            "type": "string",
+            "description": "ETH (native) or an ERC-20 address in the pool policy."
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,77}$",
+            "description": "Raw integer units of the asset (USDG has 6 decimals; ETH 18)."
+          },
+          "recipient": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "tokens": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{40}$"
+            },
+            "description": "ERC-20 asset policy fixed at pool deployment. Default: [USDG]. Pass the same list for every later call on that pool."
+          }
+        },
+        "required": [
+          "owner",
+          "verifier",
+          "pool",
+          "publicKey",
+          "asset",
+          "amount",
+          "recipient"
+        ],
+        "additionalProperties": false
+      },
+      "title": "Prepare a QWallet withdrawal",
       "securitySchemes": [
         {
           "type": "noauth"
