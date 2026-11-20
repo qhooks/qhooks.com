@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "6c499750-5263-4122-b09b-bc5e21efa774",
+  "releaseId": "07b38f80-55ce-4c2e-9e03-8252018c9d05",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,12 +41,12 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "abe8bab148a33006aa0f5a61fac675bf18b36568a7cd1623d0629054bd34d2a0",
+      "sha256": "37b4aa3cb6f8adec0af378a276661ce4f019fe34faf6f613aa67451290b141a9",
       "bytes": 5961
     },
     "_redirects": {
-      "sha256": "e7b86d99b595a5ba8777c205bedc3f86b689fb47d7220d81eed9d21d8e255de5",
-      "bytes": 26
+      "sha256": "76c39fdfdd1d7b4bcea32ff43d71225f87132610d46f7c5e685b874db100b94b",
+      "bytes": 41
     },
     "adaptive-liquidity.html": {
       "sha256": "c03b2ded384543623e8b3f013ae95898966d30be539988be7e3156b32c65e9fc",
@@ -273712,13 +273712,13 @@
       "sha256": "0238ea9322d763191730c14a66a5ab70f11744487e93c0e8fe948fb4b92109c4",
       "bytes": 5712
     },
-    "new/app.7f0fbbcd0c.js": {
-      "sha256": "7f0fbbcd0cf2d84cd888234b56200deb22b911aaa32bc496975ddf529ac928d2",
-      "bytes": 396433
+    "new/app.2648b4f6e6.js": {
+      "sha256": "2648b4f6e6e9eee0dc441280fed23ae05e433688dfbf373581c2db23028cb4fb",
+      "bytes": 404115
     },
-    "new/app.f4f19497d1.css": {
-      "sha256": "f4f19497d1700ac27c5349ca858ca1323105214044cd6630570f465b3d95ffe0",
-      "bytes": 65380
+    "new/app.b32198bb29.css": {
+      "sha256": "b32198bb29baf4411a1eb6e2089ba765a3e9465af3cae68879e1542a066616a6",
+      "bytes": 67536
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
@@ -273773,7 +273773,7 @@
       "bytes": 1100
     },
     "new/index.html": {
-      "sha256": "8844992710a693d7fea066fd70496f80481cefdeaeae6e3fb979b7b48d868dcd",
+      "sha256": "29c5a1d40df950f5657485526cd9851eb9be4a0daadc71c134b1fb9239b44ba7",
       "bytes": 1074
     },
     "new/js/perps-book.js": {
@@ -284333,5 +284333,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "07056e4e8df31796fbbd7062f3b54c02142cc8cb4f117d9801b5d214a531590e"
+  "contentDigest": "f298f1cb3ef5e6852deceff4cdd37d71d57a309a44fc0865f95e95a3fba5b9ab"
 }
