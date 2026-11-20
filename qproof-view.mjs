@@ -43,7 +43,7 @@ export function ensureQProofStyles(doc=globalThis.document){if(doc?.head&&!doc.g
 // pool hook answers (Robinhood Chain), shown by renderQProofHolders/renderQProofHooks.
 export function readQProofPresentation(value){
  const report=value?.report??value??null,source=isPresentation(value)?value:isPresentation(report)?report:null,v=source?.verdict;
- if(!source||!v||!LEVELS.has(v.level)||!text(v.label,80))return{ready:false,report,verdict:{level:'incomplete',label:'Not fully checked',reason:'The latest verdict is not available yet.',flags:[],counts:{},evidence:[]},freshness:{checkedAt:null,ageSec:null,block:null,slot:null,stale:true},keyNumbers:emptyNumbers(),keyEvidence:{},checks:normalizeQProofChecks(Array.isArray(value?.checks)?value.checks:report?.checks),notChecked:[],holders:[],links:{}};
+ if(!source||!v||!LEVELS.has(v.level)||!text(v.label,80))return{ready:false,report,verdict:{level:'incomplete',label:'Partly checked',reason:'The latest verdict is not available yet.',flags:[],counts:{},evidence:[]},freshness:{checkedAt:null,ageSec:null,block:null,slot:null,stale:true},keyNumbers:emptyNumbers(),keyEvidence:{},checks:normalizeQProofChecks(Array.isArray(value?.checks)?value.checks:report?.checks),notChecked:[],holders:[],links:{}};
  const displayVerdict=qproofCheckDisplayCopy({detail:v.reason});
  const numbers=readKeyNumbers(source.keyNumbers??report?.keyNumbers);
  const checks=normalizeQProofChecks(Array.isArray(source.checks)?source.checks:report?.checks);
@@ -124,8 +124,8 @@ export function qproofHolderView(value){
 }
 export function qproofHookView(value){
  const report=value?.report??value,x=report?.poolHooks??value?.poolHooks;if(!x||!Array.isArray(x.pools)||!x.pools.length)return null;
- const LEVEL={danger:'Danger',watch:'Watch',clear:'Clear',incomplete:'Not fully checked'};
- return{note:text(x.coverageNote,200)||null,pools:x.pools.slice(0,12).map(p=>({hook:text(p.hook,64)||null,short:p.hook?shortAddress(p.hook):null,hookUrl:safeLink(p.hookUrl),level:LEVEL[p.level]?p.level:p.level==='info'?'clear':'incomplete',levelLabel:LEVEL[p.level]||(p.level==='info'?'Clear':'Not fully checked'),identity:text(p.identity?.line,160)||null,
+ const LEVEL={danger:'Danger',watch:'Watch',clear:'Clear',incomplete:'Partly checked'};
+ return{note:text(x.coverageNote,200)||null,pools:x.pools.slice(0,12).map(p=>({hook:text(p.hook,64)||null,short:p.hook?shortAddress(p.hook):null,hookUrl:safeLink(p.hookUrl),level:LEVEL[p.level]?p.level:p.level==='info'?'clear':'incomplete',levelLabel:LEVEL[p.level]||(p.level==='info'?'Clear':'Partly checked'),identity:text(p.identity?.line,160)||null,
   answers:['sells','cut','fees','upgrade'].map((key,i)=>{const a=(Array.isArray(p.answers)?p.answers:[]).find(a=>a?.key===key)||{};return{key,label:['Sells','Cut','Fees','Upgrade'][i],known:a.known===true,headline:text(a.headline,300)||'Not checked: this report does not include this answer.',detail:a.known===true?text(a.detail,1200)||null:null,evidence:Array.isArray(a.evidence)?a.evidence:[]};})}))};
 }
 function holderRowEl(h,r){

@@ -9,7 +9,7 @@ export function discoveryBadges(row,{h,compact=false}={}){
  if(v.agent?.ready)add('Agent-ready','Route capability: '+v.agent.route+' · Your wallet still signs.','/agents');
  const risk=v.qproof?.label||'Checks';
  const detail=h('details',{class:'qxd-checks'+(v.qproof?.level==='danger'?' down':v.qproof?.level==='watch'?' warn':'')},h('summary',{'aria-label':'Safety checks'},compact?risk:'Safety checks'));
- const table=h('dl',{});for(const [name,value]of [['QProof',v.qproof?v.qproof.label+' · '+v.qproof.reason:'Not fully checked'],['LP position',v.lp?'Locked · observed launch position':'Not verified for this pool'],['Anti-snipe',v.guard?v.guard.active?'On · opening guard':'Opening guard inactive':'Not observed'],['Agent route',v.agent?v.agent.ready?'Available · wallet signs':'Not available':'Not verified']])table.append(h('div',{},h('dt',{},name),h('dd',{},value)));
+ const table=h('dl',{});for(const [name,value]of [['QProof',v.qproof?v.qproof.label+' · '+v.qproof.reason:'Partly checked'],['LP position',v.lp?'Locked · observed launch position':'Not verified for this pool'],['Anti-snipe',v.guard?v.guard.active?'On · opening guard':'Opening guard inactive':'Not observed'],['Agent route',v.agent?v.agent.ready?'Available · wallet signs':'Not available':'Not verified']])table.append(h('div',{},h('dt',{},name),h('dd',{},value)));
  detail.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();detail.open=false;detail.querySelector('summary').focus();}});
  detail.append(h('div',{class:'qxd-checks-panel'},table,h('a',{href:proof},'Check with QProof →')));return h('div',{class:'qxd-badges'+(compact?' qxd-compact':'')},...items,detail);
 }

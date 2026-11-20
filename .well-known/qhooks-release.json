@@ -14,7 +14,7 @@
     ".well-known/qhooks-release.json",
     "README.md"
   ],
-  "releaseId": "01ffa127-cb4b-43fd-a6c8-1ca68003e758",
+  "releaseId": "517056a7-7d02-44c1-a32f-46a9991ebcc9",
   "files": {
     ".well-known/assetlinks.json": {
       "sha256": "c050db9daa7f0c6ea2110ab00b609a2a99970d7366c708a84844a8f6e0928ba0",
@@ -279621,8 +279621,8 @@
       "bytes": 9742
     },
     "qproof-view.mjs": {
-      "sha256": "47a41353b8b7c0d8933572aa67333adb909cbac487043a3cd6f86d7c2317338b",
-      "bytes": 18183
+      "sha256": "afd82e9b2b6e0f2dac1b31f86a5f445d82a87357f00e9d7970b312532a9ba4af",
+      "bytes": 18174
     },
     "qproof.html": {
       "sha256": "93a9996fdd02b322e1f1bf56bce22bd0e8fb8e5101408208b076f3d3164b0a3e",
@@ -281725,8 +281725,8 @@
       "bytes": 3811
     },
     "qx-discovery-badges.mjs": {
-      "sha256": "580f0b26b8de04f69f2c6fb360bcff2f0fc2330ff9230f57e54987a55ac8c35f",
-      "bytes": 2411
+      "sha256": "20032b264de4a8fe0a51885e53e8b041fc6d1a40d208e18dc667c8c3c6b51283",
+      "bytes": 2408
     },
     "qx-discovery-columns.css": {
       "sha256": "adc6b76227ad5838fd5ce89b6eba4871f054f70a8798ee59f9bbaaa394e14bcd",
@@ -282529,8 +282529,8 @@
       "bytes": 5537
     },
     "qx-news-t4-core.mjs": {
-      "sha256": "9e89dc16b3cfb7f47a9435470d672a25c0842d23034d91e520233bf04163c4dc",
-      "bytes": 1844
+      "sha256": "f100073cbba4a6e8d55434c44fe146c3f26c4194e7a7fa0435e44fc142cb4222",
+      "bytes": 1841
     },
     "qx-news-t4.css": {
       "sha256": "b3e058fcb71dbc5304b75ba036ac70ffbaf29849bda6cbf05145488d6a66feda",
@@ -284529,24 +284529,24 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "50a26f01e372ad2bcea4f69411f93f5233f9fed14f14c48b33aa1ea34aba9dde",
-  "sourceTree": "work/qhooks-newsite10-rel-20261120",
+  "contentDigest": "a74963c7646f95dadca3c02e8fe11da5fbdfc92e1ac057098ff58d435dc8223f",
+  "sourceTree": "work/qhooks-qplabels-rel-20261120",
   "sourceWorkerSha256": "3751f6cda248813f6dcc4fe7ecb45d4119c6d186aeb489592f5c36bf37c69fd3",
   "sourceManifestSha256": null,
   "sourceFreezeSha256": null,
   "all14ArtifactDigest": null,
   "sourcePatchSha256": null,
-  "sourceReleaseReceiptSha256": "5682663f08be79cd0720455ff8a18640e169ec2ad40b1568115c5530f8dd5942",
-  "sourceReleaseReceiptStatus": "LIVE_NEWSITE_VERIFIED",
+  "sourceReleaseReceiptSha256": "a3e88cfc22cb4d3cc3f73a16a1c18742a9db96786d6c0bf2e1c3ab1eaeb2fe6c",
+  "sourceReleaseReceiptStatus": "LIVE_QPROOF_LABELS_VERIFIED",
   "acceptance": {
-    "sourceAndLocalReleaseGates": "/new from eco-rebuild 0ed5a91; worker byte-identical; 188 routes, 0 dropped.",
+    "sourceAndLocalReleaseGates": "3 public files: QProof label wording; worker fast-feed partial labels; 188 routes, 0 dropped.",
     "connectedWebKit": "Real-domain browser pass at 1440 (9 pages); 390 on edge preview.",
     "postDeployWatch": {
       "status": "OBSERVED_WATCH_CRITERION_MET",
       "seconds": 90,
-      "events": 223,
+      "events": 162,
       "exceptions": 0,
-      "scheduledOk": 4,
+      "scheduledOk": 3,
       "sampled": true,
       "globalHealthClaim": false
     },
@@ -284560,8 +284560,8 @@
     "policyExpansion": false
   },
   "priorReleaseAttestation": {
-    "releaseId": "1af12881-3962-4fff-899e-6513484dbd05",
-    "contentDigest": "734d036e5caad928b86db9add28e69f585de308470dc36c630221ff5f52d04b0",
-    "sourceReleaseReceiptSha256": "fd1c0cdb72ddf97d61f0ca57fa13f00d665b650cbedd436b76cbc3c074119675"
+    "releaseId": "01ffa127-cb4b-43fd-a6c8-1ca68003e758",
+    "contentDigest": "50a26f01e372ad2bcea4f69411f93f5233f9fed14f14c48b33aa1ea34aba9dde",
+    "sourceReleaseReceiptSha256": "5682663f08be79cd0720455ff8a18640e169ec2ad40b1568115c5530f8dd5942"
   }
 }

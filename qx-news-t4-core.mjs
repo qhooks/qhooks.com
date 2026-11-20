@@ -12,5 +12,5 @@ export function proofCard(report,subject,now=Date.now()){
  if(counts.danger)level='danger';else if(counts.caution&&level==='clear')level='caution';
  const at=Date.parse(report.retrievedAt||report.completedAt||''),fresh=Number.isFinite(at)&&at<=now&&now-at<=900000;
  if(level==='clear'&&(!report.checks.length||!fresh||report.status!=='observed'||report.checks.some(c=>c.status==='unknown'&&c.required!==false)))level='unknown';
- return {level,counts,at:Number.isFinite(at)?at:null,fresh,title:({danger:'Red flags',caution:'Look first',clear:'No red flags',unknown:'Not fully checked'})[level],url:/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(report.id||'')?'/qproof/'+report.id:'/qproof?'+new URLSearchParams({chain:subject.chain,q:subject.address})};
+ return {level,counts,at:Number.isFinite(at)?at:null,fresh,title:({danger:'Red flags',caution:'Look first',clear:'No red flags',unknown:'Partly checked'})[level],url:/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(report.id||'')?'/qproof/'+report.id:'/qproof?'+new URLSearchParams({chain:subject.chain,q:subject.address})};
 }
