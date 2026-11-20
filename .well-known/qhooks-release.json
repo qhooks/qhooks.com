@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "574ef1d2-3437-416d-b8c5-a1553b35b4fc",
+  "releaseId": "7795f198-8ad8-4032-882a-b3de2a620427",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -273708,13 +273708,13 @@
       "sha256": "0238ea9322d763191730c14a66a5ab70f11744487e93c0e8fe948fb4b92109c4",
       "bytes": 5712
     },
-    "new/app.1ff9aa9f6e.js": {
-      "sha256": "1ff9aa9f6e6f774b11f338a6a9128ab73ba9019c6a6e9239f327644ed876e944",
-      "bytes": 375939
+    "new/app.0c944dff10.js": {
+      "sha256": "0c944dff10779ffbbd72905379e8fc7096aa38ba78e6ab85f5789657ffa5d895",
+      "bytes": 383771
     },
-    "new/app.e0e4c74890.css": {
-      "sha256": "e0e4c74890794c185ffb93f3fabd629a87d59c252646a968e74d2d10ce9dd1ab",
-      "bytes": 63420
+    "new/app.ce6ae36ddd.css": {
+      "sha256": "ce6ae36ddd6241a8c326f89000e51fe59d3fc83f70b54ebf1dd24ff6c38728a4",
+      "bytes": 64263
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
@@ -273737,8 +273737,8 @@
       "bytes": 1100
     },
     "new/index.html": {
-      "sha256": "444ac671277430bf5783b90c7421defc7f88f978cd329d3255071ef19ee7d657",
-      "bytes": 737
+      "sha256": "7b0b17a3d3752fc44b86ac7ec2c3d5c76ac0a974f3af091e6a10fc50d913b214",
+      "bytes": 926
     },
     "new/js/perps-book.js": {
       "sha256": "5711cdbfcd0818ebbe6b040efd77efcecb92f7ffd9d538a950ed017e791550ec",
@@ -273788,9 +273788,9 @@
       "sha256": "c5edcf5d4627cf936cc58928d5277813a9da139429e3a3dd1c4cf3cf88840c02",
       "bytes": 2173
     },
-    "new/main.e540ac7c9e.js": {
-      "sha256": "e540ac7c9e6625f233953312db8707e7edafc4e24d38b65523fcd2aeb0cbb2dd",
-      "bytes": 28351
+    "new/main.c06af27d9a.js": {
+      "sha256": "c06af27d9aa447971798f836cd12e94df1fd5820036cbc207a54bc532a675711",
+      "bytes": 27813
     },
     "news.html": {
       "sha256": "0ea37f854247b290c998912397021cf4da0c77acc5e7f175d63e1a89c90e9c0b",
@@ -284297,5 +284297,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "7521fd1aaad309355eb6944b1f72b9e3adce29f4a6af8d7466b530b82460e0d0"
+  "contentDigest": "bf98ad85d3edbcdfc1295ce6ee06522475337a3eb04f2288826a8ebd9a6b533e"
 }
