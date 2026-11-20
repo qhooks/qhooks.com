@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "08f2e9c6-b50f-46e3-809a-aea5e12af834",
+  "releaseId": "e0879d49-4ff4-4b90-a5f2-0d170b298d2d",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,7 +41,7 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "b016d3289258ba4124c85e4b1f6a711007b300af5a84d076b6201308f0543f6a",
+      "sha256": "6d749dd765016b5fe5ffe75c9d2dc852ca3e577157b3b3bd730daa437c817b32",
       "bytes": 5961
     },
     "_redirects": {
@@ -273712,13 +273712,13 @@
       "sha256": "0238ea9322d763191730c14a66a5ab70f11744487e93c0e8fe948fb4b92109c4",
       "bytes": 5712
     },
-    "new/app.740c5107dc.css": {
-      "sha256": "740c5107dc9bd0a6958d75242c37cc8e357806bf4bfe426f9cbefe8930e7b677",
-      "bytes": 64441
+    "new/app.1e0783a3df.js": {
+      "sha256": "1e0783a3df9f4c57d769015ed8de9be49b3b4c42a2f3bed8b96fb610d9883978",
+      "bytes": 385011
     },
-    "new/app.dfaa518cd1.js": {
-      "sha256": "dfaa518cd13641c6b70598f4c5d7309135740008f1bdcf11a47a1e80d22a8aaa",
-      "bytes": 384007
+    "new/app.e6e19e190b.css": {
+      "sha256": "e6e19e190b057be956907b902b44cb51453b8a17d0d8c77c26731cde21118c67",
+      "bytes": 65200
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
@@ -273773,7 +273773,7 @@
       "bytes": 1100
     },
     "new/index.html": {
-      "sha256": "4fc06f4ec3d22317caa26b0cdf13ee162d592ee932612aae2fcd05b8d7076791",
+      "sha256": "737f31efe3c5ef3aa4087ff3393b830ce21cd7df81b3f9f56ed61dacdaf58576",
       "bytes": 1074
     },
     "new/js/perps-book.js": {
@@ -273824,9 +273824,9 @@
       "sha256": "c5edcf5d4627cf936cc58928d5277813a9da139429e3a3dd1c4cf3cf88840c02",
       "bytes": 2173
     },
-    "new/main.c06af27d9a.js": {
-      "sha256": "c06af27d9aa447971798f836cd12e94df1fd5820036cbc207a54bc532a675711",
-      "bytes": 27813
+    "new/main.c82ca24126.js": {
+      "sha256": "c82ca241268f1ef5e39a3b81b2505e8afa37f5df32cfcd90e97d381a11ac38ab",
+      "bytes": 28091
     },
     "news.html": {
       "sha256": "0ea37f854247b290c998912397021cf4da0c77acc5e7f175d63e1a89c90e9c0b",
@@ -284333,5 +284333,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "74b2edaf3c4188300cdbba9a59f65d9882e9df19146561e0df734732267538db"
+  "contentDigest": "131dad1bfe94a89d74213a8445afc2eb11fa0efd067a1e05eac525aafaedbcfc"
 }
