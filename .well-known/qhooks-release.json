@@ -14,7 +14,7 @@
     ".well-known/qhooks-release.json",
     "README.md"
   ],
-  "releaseId": "28586b61-2272-4bb2-acfe-d3144d7200d0",
+  "releaseId": "677254c6-1ae6-4b8e-b08e-4dd6c80b948b",
   "files": {
     ".well-known/assetlinks.json": {
       "sha256": "c050db9daa7f0c6ea2110ab00b609a2a99970d7366c708a84844a8f6e0928ba0",
@@ -25,8 +25,8 @@
       "bytes": 32
     },
     ".well-known/qhooks-agent.json": {
-      "sha256": "496c760733cee70c0f1b1c9825a975a05dff4b680cb6ea3e7a94bf36797dcec0",
-      "bytes": 51001
+      "sha256": "d914f901a427e3b9bcb6b56ad7a895518a50bc0485150ef00d7c40df02035bf2",
+      "bytes": 60461
     },
     ".well-known/security.txt": {
       "sha256": "0fcdac7aa41275acb935293d51659db568edb1eb32c0e4185b610c01d3b87e77",
@@ -259925,8 +259925,8 @@
       "bytes": 1519
     },
     "skill.md": {
-      "sha256": "4d9919d431337f4a1d54eb671ee06ff6758898f431a75f572d6c78a50e820213",
-      "bytes": 27893
+      "sha256": "ee6c5c2315a8cd7632175004a5f46912ee3e5892af3c4369a46b554fa6d156eb",
+      "bytes": 43409
     },
     "sol-launch-setup.html": {
       "sha256": "9eeb20afe15352ae89efeb6b0fcedcd4b78066b05181558531ad56ea662d5cad",
@@ -284185,33 +284185,30 @@
       "bytes": 5350
     }
   },
-  "contentDigest": "cb93a318a62c0b3db156b4bd5bc58b5ced528d1521f99e9c477daaff2aba26cb",
-  "sourceTree": "work/qhooks-x402scan-static-root-rel-20261119",
-  "sourceWorkerSha256": "5e64ad9863f0f5a07edef2234ad8b3099e6889090ec0d8a2d427080ab249ac21",
-  "sourceManifestSha256": "0885c7fff4fcf87b8c4d6509ae5ca860e2387c578e7b0aa91adbb1b01924aa7a",
-  "sourceFreezeSha256": "0885c7fff4fcf87b8c4d6509ae5ca860e2387c578e7b0aa91adbb1b01924aa7a",
-  "all14ArtifactDigest": "67c3c93f462d591e7aaa01fa0c5bf61e86a34bd23dacb4b823c696acc3691397",
+  "contentDigest": "dfd0fe49d75b6c29c8bb519ddfba65140e47177ada92803df267c8bdbecca687",
+  "sourceTree": "work/qhooks-qwalletagents2-rel-20261120",
+  "sourceWorkerSha256": "90f70d2944f3fc3cafd21c1edb25344b9110bffe5c27922b7f1c4d722f6e4e42",
+  "sourceManifestSha256": null,
+  "sourceFreezeSha256": null,
+  "all14ArtifactDigest": null,
   "sourcePatchSha256": null,
-  "sourceReleaseReceiptSha256": "a207c46b8f7568404e532817a233ace8ec2bcf089afad7d842a8507aa7ac45dc",
-  "sourceReleaseReceiptStatus": "LIVE_X402SCAN_DISCOVERY_VERIFIED",
+  "sourceReleaseReceiptSha256": "197dbb01233799881eec22eb01532bb0b5bc2c16c4219819c5d2434e145c7fc1",
+  "sourceReleaseReceiptStatus": "LIVE_QWALLETAGENTS_VERIFIED",
   "acceptance": {
-    "sourceAndLocalReleaseGates": "Three static additions only. Worker, server, all existing public assets and page graphs byte-identical; 188 routes unchanged; exact draft GET/HEAD JSON checks and live readback accepted.",
-    "connectedWebKit": "Reused unchanged sealed CURRENT artifacts; no new browser run.",
+    "sourceAndLocalReleaseGates": "Two public files changed (skill.md v9, .well-known/qhooks-agent.json 9.0.0); all other public assets byte-identical to the prior mirror. Worker adds QWallet agent tools; 188 routes, 0 dropped.",
+    "connectedWebKit": "No browser-visible page changed; no new browser run.",
     "postDeployWatch": {
       "status": "OBSERVED_WATCH_CRITERION_MET",
-      "seconds": 60.389,
-      "observedSpanSeconds": 55.041,
-      "fetches": 82,
-      "fetch5xx": 0,
+      "seconds": 120,
+      "events": 117,
       "exceptions": 0,
-      "keeperLeaseBusy": 0,
-      "scheduledOk": 4,
+      "scheduledOk": 5,
       "sampled": true,
       "globalHealthClaim": false
     },
-    "fundedFinancialProof": "No funded calls. Discovery documents are not settlement proof."
+    "fundedFinancialProof": "No funded calls. QWallet tools are unsigned preparations."
   },
-  "provenance": "Exact static public-source/checksum attestation for the accepted x402scan discovery files. TradingView exclusions, prior assets, normal hooks and license checks preserved. Backend code and credentials excluded.",
+  "provenance": "Static public-source/checksum attestation for skill.md v9 and the agent card (QWallets for agents). TradingView exclusions, prior assets and license checks preserved. Backend code and credentials excluded.",
   "apacheSuccessorPins": {
     "priorPinsPreserved": 79,
     "totalPins": 81,
@@ -284219,8 +284216,8 @@
     "policyExpansion": false
   },
   "priorReleaseAttestation": {
-    "releaseId": "8f4aad10-cf9e-45ba-afcd-0f046e8a166c",
-    "contentDigest": "1784462be84b72449339f8795a4d468e8b0491d105ba036c094280122ff15af8",
-    "sourceReleaseReceiptSha256": "91c9354d916de3620f093240c347a7c53d5281fccdd76537952fabe2be4f5906"
+    "releaseId": "28586b61-2272-4bb2-acfe-d3144d7200d0",
+    "contentDigest": "cb93a318a62c0b3db156b4bd5bc58b5ced528d1521f99e9c477daaff2aba26cb",
+    "sourceReleaseReceiptSha256": "a207c46b8f7568404e532817a233ace8ec2bcf089afad7d842a8507aa7ac45dc"
   }
 }
