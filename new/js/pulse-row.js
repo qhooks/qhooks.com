@@ -72,9 +72,9 @@ window.PulseRow = (function () {
 
     // Calculate 24h change
     var change = token.change24 != null && isFinite(token.change24) ? token.change24 : get24hChange(candles);
-    var cid = token.chainId || token.chain_id || "", link = token.href || ("#/token/" + (cid ? encodeURIComponent(String(cid)) + "/" : "") + addr), unit = token.native || "ETH";
+    var cid = token.chainId || token.chain_id || "", link = token.href || ("#/token/" + (cid ? encodeURIComponent(String(cid)) + "/" : "") + addr), unit = token.chainId === "solana" ? "SOL" : token.native || "ETH";
     var letter = esc(sym.charAt(0).toUpperCase() || "?");
-    var tile = token.logo ? "<img class='pulse-tile pulse-tile-img' src='" + esc(token.logo) + "' alt='' loading='lazy' data-l='" + letter + "'>" : null;
+    var tile = token.logo ? "<img class='pulse-tile pulse-tile-img' " + (window.QHLazy ? "data-src" : "src") + "='" + esc(token.logo) + "' alt='' decoding='async' width='44' height='44' data-l='" + letter + "'>" : null;
     var chainTag = CHAIN_TAG[token.chainId] || CHAIN_TAG[token.chain] || String(token.chain || "").slice(0, 3).toUpperCase();
     var nB = isFinite(token.buys) && token.buys != null ? token.buys : null, nS = isFinite(token.sells) && token.sells != null ? token.sells : null;
     if (nB == null && !token.live && token.trades) { nB = token.trades.filter(function (x) { return x.type === "buy"; }).length; nS = token.trades.length - nB; }
@@ -142,7 +142,7 @@ window.PulseRow = (function () {
       "<div class='pulse-fees'>F " + formatUSD(fees) + "</div>" +
       (press != null ? "<div class='pulse-press' title='Buys " + nB + " / Sells " + nS + "'><i style='width:" + press + "%'></i></div>" : "<div class='pulse-press pulse-press-none'></div>") +
       "</div>" +
-      "<button class='pulse-buy-btn' data-addr='" + esc(addr) + "' data-href='" + esc(link) + "' title='Quick buy' aria-label='Buy 0.01 " + esc(unit) + "'>0.01 " + esc(unit) + "</button>" +
+      "<button class='pulse-buy-btn' type='button' data-addr='" + esc(addr) + "' data-href='" + esc(link) + "' data-unit='" + esc(unit) + "' title='Quick buy' aria-label='Buy 0.01 " + esc(unit) + "'>0.01 " + esc(unit) + "</button>" +
       "</div>" +
 
       "</a>";
