@@ -77,7 +77,7 @@ window.DiscoverLive = (function () {
     "a.lv-row:hover{background:var(--s2)}.lv-head{height:28px;color:var(--mut);font-size:11px}" +
     ".lv-usd,.lv-qty,.lv-mc,.lv-who{text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lv-who{color:var(--mut)}.lv-age{color:var(--mut)}.lv-side{font-weight:600}" +
     ".lv-tok{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
-    "@keyframes lvIn{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}.lv-in{animation:lvIn .15s ease-out;background:rgba(245,181,68,.05)}" +
+    "@keyframes lvIn{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}.lv-in{animation:lvIn .15s ease-out;background:rgba(210,173,114,.05)}" +
     "@media (max-width:767px){.lv-row{grid-template-columns:40px 38px minmax(0,1fr) 72px 64px;height:44px;padding:0 10px;gap:6px}.lv-head{height:28px}.lv-qty,.lv-who{display:none}.lv-hint{display:none}}";
   document.head.appendChild(css);
   return { render: render };

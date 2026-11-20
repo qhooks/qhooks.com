@@ -137,7 +137,7 @@ window.PulseRow = (function () {
       "<div class='pulse-fees'>F " + formatUSD(fees) + "</div>" +
       (press != null ? "<div class='pulse-press' title='Buys " + nB + " / Sells " + nS + "'><i style='width:" + press + "%'></i></div>" : "<div class='pulse-press pulse-press-none'></div>") +
       "</div>" +
-      "<button class='pulse-buy-btn' data-addr='" + esc(addr) + "' data-href='" + esc(link) + "' title='Quick buy'>Buy 0.01 " + esc(unit) + "</button>" +
+      "<button class='pulse-buy-btn' data-addr='" + esc(addr) + "' data-href='" + esc(link) + "' title='Quick buy' aria-label='Buy 0.01 " + esc(unit) + "'>0.01 " + esc(unit) + "</button>" +
       "</div>" +
 
       "</a>";

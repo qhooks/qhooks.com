@@ -33,7 +33,7 @@ window.Rewards = (function () {
       '<div class="rw-sub">' + (w ? F.esc(F.short(w)) + ' <span class="rw-fresh"></span>' : "Connect a wallet to see what you have earned") + '</div></div>' +
       (w ? '<a class="rw-claim" href="https://qhooks.com/me" target="_blank" rel="noopener">Claim all</a>' : '<button class="rw-claim rw-connect">Connect</button>') + "</section>" +
       '<section class="rw-grid">' +
-      '<div class="rw-card"><h2>Cashback</h2><p class="rw-line">30% back on EVM trades · 40% on Robinhood Chain if you hold 100K QHOOKS</p>' +
+      '<div class="rw-card"><h2>Cashback</h2><p class="rw-line">30% back on trades · 40% on Robinhood Chain if you hold 100K QHOOKS</p>' +
       (s ? s.rows.map(function (c) { return '<div class="rw-row"><span>' + F.esc(c[0]) + "</span><b>" + money(c[1]) + '<em> earned · ' + money(c[2]) + " to claim</em></b></div>"; }).join("") : '<div class="rw-row"><span>Per chain</span><b>—</b></div>') + "</div>" +
       '<div class="rw-card"><h2>Referrals</h2><p class="rw-line">Bring traders, get 20% of their fee</p><div class="rw-ref"><code>' + F.esc(link || "Connect to get your link") + '</code><button class="rw-copy"' + (link ? "" : " disabled") + ">Copy</button></div>" +
       '<div class="rw-row"><span>Referral earnings</span><b>' + (s ? money(s.ref) : "—") + "</b></div></div>" +
@@ -75,7 +75,7 @@ window.Rewards = (function () {
   var css = document.createElement("style");
   css.textContent =
     ".rw-wrap{padding:16px;max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:12px}" +
-    ".rw-top{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--s1);border:1px solid rgba(245,181,68,.4);border-radius:8px;padding:16px}" +
+    ".rw-top{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--s1);border:1px solid rgba(210,173,114,.4);border-radius:8px;padding:16px}" +
     ".rw-k{font-size:11px;letter-spacing:.06em;color:var(--mut)}.rw-big{font-size:30px;font-weight:600;color:var(--acc);font-variant-numeric:tabular-nums}.rw-sub{font-size:12px;color:var(--mut);margin-top:2px}" +
     ".rw-claim{height:40px;border:0;border-radius:6px;background:var(--acc);color:#140d00;font-weight:600;padding:0 18px;cursor:pointer;display:inline-flex;align-items:center;text-decoration:none;white-space:nowrap}" +
     ".rw-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.rw-card{background:var(--s1);border:1px solid var(--line);border-radius:8px;padding:14px}" +

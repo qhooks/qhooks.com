@@ -74,7 +74,7 @@
 
   var css = document.createElement("style");
   css.textContent = ".lt-note{padding:14px 12px;color:var(--mut);font-size:12px}.lt-tx{color:var(--mut)}.lt-label{color:var(--acc);font-size:11px}" +
-    "@keyframes ltnew{from{background:rgba(46,229,157,.14)}to{background:transparent}}.lt-new{animation:ltnew .6s ease-out}" +
+    "@keyframes ltnew{from{background:rgba(76,195,138,.14)}to{background:transparent}}.lt-new{animation:ltnew .6s ease-out}" +
     ".lt-q-note{font-size:12px;color:var(--mut);margin:0 0 6px}.lt-q-link,.lt-q-foot a{color:var(--acc);font-size:12px;text-decoration:none}.lt-q-foot{font-size:11px;color:var(--mut);margin-top:6px}" +
     ".token-side .tq-checks li{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:6px;height:auto;min-height:28px;padding:4px 0}.tq-checks li em{font-style:normal;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
     ".tq-checks li a{color:var(--acc);font-size:11px;text-decoration:none}.tq-checks li b{font-size:11px}.lt-q-danger{color:var(--dn)}.lt-q-caution,.lt-q-watch{color:var(--acc)}.lt-q-clear{color:var(--up)}.lt-q-unknown{color:var(--mut)}";

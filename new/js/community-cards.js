@@ -30,7 +30,7 @@ window.CommunityCards = (function () {
   function sample() { return '<span class="cm-sample">Sample data</span>'; }
   function qp(t) { var q = t.qProof || "Not checked"; return '<span class="pulse-qproof pulse-qproof-' + q.toLowerCase().replace(" ", "-") + '">' + esc(q) + "</span>"; }
   function hook(t) { return window.HookBadge ? window.HookBadge.inRow(t) : ""; }
-  function buyBtn(t) { if (t.href) return '<a class="cm-buy" href="' + esc(t.href) + '">Trade</a>'; return '<button class="cm-buy" data-buy="' + esc(t.address) + '">Buy ' + size(t) + " " + native(t) + "</button>"; }
+  function buyBtn(t) { if (t.href) return '<a class="cm-buy" href="' + esc(t.href) + '">Trade</a>'; return '<button class="cm-buy" data-buy="' + esc(t.address) + '" aria-label="Buy">' + size(t) + " " + native(t) + "</button>"; }
   function walletLink(name, addr) { return addr ? '<a class="cm-who" href="#/wallet/' + esc(addr) + '">' + esc(name) + "</a>" : '<span class="cm-who">' + esc(name) + "</span>"; }
 
   function callCard(c) {

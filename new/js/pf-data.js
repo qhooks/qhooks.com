@@ -7,9 +7,9 @@ window.PfData = (function () {
   var V = window.QHView, memo = null;
   var BUCKETS = [
     { l: ">500%", lo: 500, hi: Infinity, c: "var(--up)" },
-    { l: "200-500%", lo: 200, hi: 500, c: "rgba(46,229,157,.7)" },
-    { l: "0-200%", lo: 0, hi: 200, c: "rgba(46,229,157,.4)" },
-    { l: "0 to -50%", lo: -50, hi: 0, c: "rgba(255,77,94,.5)" },
+    { l: "200-500%", lo: 200, hi: 500, c: "rgba(76,195,138,.7)" },
+    { l: "0-200%", lo: 0, hi: 200, c: "rgba(76,195,138,.4)" },
+    { l: "0 to -50%", lo: -50, hi: 0, c: "rgba(242,105,92,.5)" },
     { l: "<-50%", lo: -Infinity, hi: -50, c: "var(--dn)" }
   ];
 

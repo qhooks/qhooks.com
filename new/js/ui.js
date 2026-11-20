@@ -7,9 +7,9 @@ const COLORS = {
   '#23262d':  'line',
   '#e8eaed':  'text',
   '#8a8f98':  'muted',
-  '#2ee59d':  'up',
-  '#ff4d5e':  'dn',
-  '#f5b544':  'acc',
+  '#4cc38a':  'up',
+  '#f2695c':  'dn',
+  '#d2ad72':  'acc',
 };
 
 // Compact USD: $3.05K, $1.2M, $2.5B
@@ -58,9 +58,9 @@ function shortAddress(addr) {
 // QProof chip color
 function qproofColor(verdict) {
   switch (verdict) {
-    case 'Clear': return '#2ee59d';
-    case 'Watch': return '#f5b544';
-    case 'Danger': return '#ff4d5e';
+    case 'Clear': return '#4cc38a';
+    case 'Watch': return '#d2ad72';
+    case 'Danger': return '#f2695c';
     default: return '#555a64';
   }
 }
@@ -77,15 +77,15 @@ function badgeColor(badge) {
 
 // MC color by size
 function mcapColor(mcap) {
-  if (mcap >= 10000000) return '#2ee59d';
-  if (mcap >= 1000000) return '#f5b544';
+  if (mcap >= 10000000) return '#4cc38a';
+  if (mcap >= 1000000) return '#d2ad72';
   return '#8a8f98';
 }
 
 // Stat icon color (red when high)
 function statColor(val, threshold) {
   threshold = threshold || 30;
-  return val > threshold ? '#ff4d5e' : '#8a8f98';
+  return val > threshold ? '#f2695c' : '#8a8f98';
 }
 
 // Symbol tile color (deterministic from name)

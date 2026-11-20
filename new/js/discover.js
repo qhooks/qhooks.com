@@ -33,6 +33,7 @@ window.Discover = (function () {
       var rows = picked(all);
       tabsEl.innerHTML = TABS.map(function (t) {
         var n = t.id === "live" ? "" : (t.only ? rows.filter(t.only) : rows).length;
+        if (n === 0 && t.id !== state.tab) return ""; /* an empty list is not offered as a tab (Fable) */
         return '<button class="dc-tab' + (t.id === state.tab ? " on" : "") + '" role="tab" data-t="' + t.id + '">' + t.l + (n !== "" ? ' <small>' + n + "</small>" : "") + "</button>";
       }).join("");
       tabsEl.querySelectorAll(".dc-tab").forEach(function (b) {

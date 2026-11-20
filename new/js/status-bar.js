@@ -29,7 +29,7 @@
   function mount() {
     if (bar) return;
     bar = document.createElement("div"); bar.className = "sb-bar";
-    bar.innerHTML = "<span class='sb-cell'><i class='sb-dot'></i><b id='sb-live'>Refreshing</b></span>" + cell("Latency", "sb-ms") +
+    bar.innerHTML = "<span class='sb-brand'>QHooks</span><span class='sb-cell'><i class='sb-dot'></i><b id='sb-live'>Refreshing</b></span>" + cell("Latency", "sb-ms") +
       "<span class='sb-sp'></span>" + cell("SOL", "sb-SOL") + cell("ETH", "sb-ETH") + cell("HYPE", "sb-HYPE");
     document.body.appendChild(bar);
     paint(); setInterval(paint, 1000);

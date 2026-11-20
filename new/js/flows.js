@@ -109,14 +109,14 @@
   css.textContent =
     ".fl-bar{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}" +
     ".fl-btn{display:inline-flex;align-items:center;height:30px;padding:0 10px;border:1px solid var(--line);background:var(--s2);color:var(--tx);border-radius:4px;font-size:12px;text-decoration:none;cursor:pointer}" +
-    ".fl-acc{border-color:rgba(245,181,68,.45);color:var(--acc)}.fl-sm{height:24px;padding:0 8px;font-size:11px;margin-left:4px}" +
+    ".fl-acc{border-color:rgba(210,173,114,.45);color:var(--acc)}.fl-sm{height:24px;padding:0 8px;font-size:11px;margin-left:4px}" +
     ".fl-live{font-size:11px;color:var(--up);margin-left:8px;align-self:center}" +
     ".fl-gas{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--mut);margin:6px 0}.fl-mev{display:flex;gap:6px;align-items:center}" +
     ".fl-oneclick a,.fl-oc{color:var(--acc)}.fl-oc{background:none;border:0;padding:0 4px;min-height:44px;font:inherit;cursor:pointer;text-decoration:underline}" +
     ".fl-toasts{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:60}" +
     ".fl-toast{background:var(--s2);border:1px solid var(--line);color:var(--tx);padding:8px 12px;border-radius:6px;font-size:12px}" +
     ".fl-sticky{position:fixed;left:0;right:0;bottom:56px;display:flex;gap:8px;padding:8px 12px;background:var(--bg);border-top:1px solid var(--line);z-index:40}" +
-    ".fl-sticky .fl-btn{flex:1;justify-content:center;height:48px;font-size:15px;font-weight:600}.fl-buy{background:var(--up);color:#04140c;border-color:var(--up)}.fl-sell{background:rgba(255,77,94,.14);color:var(--dn);border-color:rgba(255,77,94,.4)}" +
+    ".fl-sticky .fl-btn{flex:1;justify-content:center;height:48px;font-size:15px;font-weight:600}.fl-buy{background:var(--up);color:#04140c;border-color:var(--up)}.fl-sell{background:rgba(242,105,92,.14);color:var(--dn);border-color:rgba(242,105,92,.4)}" +
     "@media (max-width:767px){.token-page{padding-bottom:72px}.token-type-cell,.token-trader-cell,.token-age-cell{white-space:nowrap}.token-amount-cell{display:none}" +
     ".fl-btn{height:44px}.fl-sm{height:44px;min-width:56px}.fl-bar{overflow-x:auto;flex-wrap:nowrap}.fl-bar .fl-btn{flex:0 0 auto}}";
   document.head.appendChild(css);

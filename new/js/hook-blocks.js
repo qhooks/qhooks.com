@@ -3,7 +3,7 @@
    Money rule: rates are "set at launch" except the two approved lines (cashback, referrals). */
 window.QHBlocks = (function () {
   "use strict";
-  var CASHBACK = "30% back on EVM trades · 40% on Robinhood Chain if you hold 100K QHOOKS";
+  var CASHBACK = "30% back on trades · 40% on Robinhood Chain if you hold 100K QHOOKS";
   var REFERRAL = "Bring traders, get 20% of their fee";
   var B = [
     { id: "cashback", group: "rewards", name: "Cashback", when: "After swap", risk: "low",

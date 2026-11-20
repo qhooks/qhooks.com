@@ -115,7 +115,7 @@
   css.textContent = ".lt-avatar{object-fit:cover;padding:0}.lt-chain{font-size:10px;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--mut)}" +
     ".lt-fresh,.lt-chart-note{font-size:11px;color:var(--mut);margin-left:auto;white-space:nowrap}.lt-head-q{display:flex}.token-social{text-decoration:none}" +
     ".lt-page .token-stat-value.dt-up{color:var(--up)}.lt-page .token-stat-value.dt-dn{color:var(--dn)}" +
-    ".pulse-qproof-partial{color:var(--acc);border-color:rgba(245,181,68,.3)}.lt-page .q-addr-link{white-space:nowrap}" +
+    ".pulse-qproof-partial{color:var(--acc);border-color:rgba(210,173,114,.3)}.lt-page .q-addr-link{white-space:nowrap}" +
     "@media (max-width:767px){.lt-page,.lt-page .token-main,.lt-page .token-header{max-width:100vw;min-width:0}.lt-page .token-stats-row{min-width:0;max-width:100%;overflow-x:auto;flex-wrap:nowrap}.lt-page{overflow-x:hidden}}";
   document.head.appendChild(css);
   window.LiveToken = { render: render, parse: parse };

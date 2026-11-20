@@ -82,7 +82,9 @@ function renderTopBar() {
   const left = createEl('div', { className: 'q-topbar-left' });
   
   // Logo
-  const logo = createEl('div', { className: 'q-logo', textContent: 'Q' });
+  // QH mark + wordmark (Fable): the name is on every page.
+  const logo = createEl('div', { className: 'q-logo', title: 'QHooks' });
+  logo.innerHTML = '<img class="q-mark" src="brand/qh-mark.jpg" alt="" width="30" height="30"><span class="q-word">QHooks</span>';
   logo.onclick = function() { navigateTo('#/pulse'); };
   
   // Nav links

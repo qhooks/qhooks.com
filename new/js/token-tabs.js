@@ -11,9 +11,9 @@ window.TokenTabs = (function() {
     line: '#23262d',
     text: '#e8eaed',
     muted: '#8a8f98',
-    up: '#2ee59d',
-    dn: '#ff4d5e',
-    acc: '#f5b544',
+    up: '#4cc38a',
+    dn: '#f2695c',
+    acc: '#d2ad72',
   };
 
   var TABS = [

@@ -162,8 +162,8 @@ function renderHeader(address) {
   pnlBadge.style.padding = '4px 8px';
   pnlBadge.style.borderRadius = '4px';
   pnlBadge.style.fontSize = '12px';
-  pnlBadge.style.background = 'rgba(46,229,157,0.15)';
-  pnlBadge.style.color = '#2ee59d';
+  pnlBadge.style.background = 'rgba(76,195,138,0.15)';
+  pnlBadge.style.color = '#4cc38a';
   pnlBadge.textContent = '+2.4%';
   
   totalRow.appendChild(totalLabel);
@@ -224,7 +224,7 @@ function renderTradesTable(trades) {
     // Side cell
     const sideCell = document.createElement('div');
     sideCell.style.fontSize = '12px';
-    sideCell.style.color = trade.side === 'buy' ? '#2ee59d' : '#ff4d5e';
+    sideCell.style.color = trade.side === 'buy' ? '#4cc38a' : '#f2695c';
     sideCell.textContent = trade.side.toUpperCase();
     
     // Amount cell (right-aligned)
@@ -319,7 +319,7 @@ function renderLaunchedTokens(tokens) {
     
     const mcap = document.createElement('div');
     mcap.style.fontSize = '11px';
-    mcap.style.color = token.mcap >= 1000000 ? '#2ee59d' : '#f5b544';
+    mcap.style.color = token.mcap >= 1000000 ? '#4cc38a' : '#d2ad72';
     mcap.textContent = compactUSD(token.mcap);
     
     right.appendChild(age);

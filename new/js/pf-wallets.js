@@ -69,7 +69,7 @@ window.PfWallets = (function () {
     ".pw-sum{padding:12px;display:flex;flex-direction:column;gap:4px;border-bottom:1px solid var(--line)}.pw-kv{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;font-size:12px;color:var(--mut)}.pw-kv b{color:var(--tx);font-weight:600;font-variant-numeric:tabular-nums}.pw-kv b.qv-up{color:var(--up)}.pw-kv b.qv-dn{color:var(--dn)}" +
     ".pw-acts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;padding:12px}" +
     ".pw-act{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 10px;border:1px solid var(--line);background:var(--s2);color:var(--tx);border-radius:4px;cursor:pointer;text-align:left}" +
-    ".pw-act b{font-size:13px;font-weight:600}.pw-act small{font-size:11px;color:var(--mut)}.pw-act:hover{border-color:rgba(245,181,68,.5)}" +
+    ".pw-act b{font-size:13px;font-weight:600}.pw-act small{font-size:11px;color:var(--mut)}.pw-act:hover{border-color:rgba(210,173,114,.5)}" +
     "@media (max-width:900px){.pw-grid{grid-template-columns:1fr}}" +
     "@media (max-width:767px){.pw-row{grid-template-columns:minmax(0,1fr) 90px 92px;min-height:52px}.pw-row>.pw-n:nth-child(3),.pw-row>.pw-n:nth-child(4){display:none}" +
     ".pw-cbx input{width:20px;height:20px}.pw-cbx{min-height:44px}.pw-gh{height:44px}.pw-add button{height:44px}.pw-acts{grid-template-columns:1fr 1fr}.pw-act{min-height:52px}.pw-nm{flex-direction:column;gap:0}.pw-ad{line-height:18px}}";

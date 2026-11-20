@@ -11,18 +11,18 @@ window.TokenQProof = (function() {
     line: '#23262d',
     text: '#e8eaed',
     muted: '#8a8f98',
-    up: '#2ee59d',
-    dn: '#ff4d5e',
-    acc: '#f5b544',
+    up: '#4cc38a',
+    dn: '#f2695c',
+    acc: '#d2ad72',
   };
 
   function render(verdict) {
     var verdictColor;
     var verdictBg;
     switch (verdict) {
-      case 'Clear': verdictColor = C.up; verdictBg = 'rgba(46,229,157,0.15)'; break;
-      case 'Watch': verdictColor = C.acc; verdictBg = 'rgba(245,181,68,0.15)'; break;
-      case 'Danger': verdictColor = C.dn; verdictBg = 'rgba(255,77,94,0.15)'; break;
+      case 'Clear': verdictColor = C.up; verdictBg = 'rgba(76,195,138,0.15)'; break;
+      case 'Watch': verdictColor = C.acc; verdictBg = 'rgba(210,173,114,0.15)'; break;
+      case 'Danger': verdictColor = C.dn; verdictBg = 'rgba(242,105,92,0.15)'; break;
       default: verdictColor = C.muted; verdictBg = 'rgba(138,143,152,0.15)';
     }
 

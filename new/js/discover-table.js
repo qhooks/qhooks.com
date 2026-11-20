@@ -70,12 +70,14 @@ window.DiscoverTable = (function () {
       var body = rows.length ? rows.map(function (r) {
         return '<a class="dt-row" href="' + V.esc(r.href) + '">' + cols.map(function (c) {
           return '<span class="dt-c dt-k-' + c.k + (c.left ? " dt-left" : "") + '">' + cell(r, c.k) + "</span>";
-        }).join("") + '<span class="dt-c dt-k-buy"><button class="pulse-buy-btn dt-buy" data-sym="' + V.esc(r.sym) + '"><span class="dt-bw">Buy </span>0.01 ' + V.esc(r.native) + "</button></span></a>";
+        }).join("") + '<span class="dt-c dt-k-buy"><button class="pulse-buy-btn dt-buy" data-sym="' + V.esc(r.sym) + '" aria-label="Buy ' + V.esc(r.sym) + '">0.01 ' + V.esc(r.native) + "</button></span></a>";
       }).join("") : '<div class="dt-empty">No tokens on these chains in this tab yet.</div>';
       var custom = st.k !== def.k || st.dir !== def.dir;
       var chip = '<div class="dt-sortchip">Sorted by ' + V.esc(labelOf[st.k] || st.k) + (st.dir < 0 ? ", high first" : ", low first") +
         (custom ? ' <button class="dt-reset">Reset</button>' : "") + "</div>";
-      container.innerHTML = chip + '<div class="dt-table' + (opts.extra ? " dt-hasx" : "") + '">' + head + body + "</div>";
+      /* No chart data on any row: drop the Chart column instead of a column of dashes. (Fable) */
+      var hasSpark = rows.some(function (r) { return r.spark && r.spark.length > 1; });
+      container.innerHTML = chip + '<div class="dt-table' + (opts.extra ? " dt-hasx" : "") + (hasSpark ? "" : " dt-nospark") + '">' + head + body + "</div>";
       var rs = container.querySelector(".dt-reset");
       if (rs) rs.onclick = function () { st.k = def.k; st.dir = def.dir; draw(); };
       container.querySelectorAll("button.dt-h").forEach(function (b) {

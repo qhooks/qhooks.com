@@ -6,7 +6,7 @@
    panel sits over the seeded sample. Every tab that shows pf-data.js numbers carries the "Sample data" tag. */
 window.Portfolio = (function () {
   "use strict";
-  var V = window.QHView, tab = "spot", chains = {};
+  var V = window.QHView, tab = "spot", chains = {}, example = false;
   var TABS = [["spot", "Spot"], ["wallets", "Wallets"], ["perps", "Perpetuals"], ["compare", "Compare"]];
 
   function render(root) {
@@ -31,12 +31,12 @@ window.Portfolio = (function () {
           drawChips(); drawBody();
         };
       });
-      chipsEl.style.display = tab === "spot" && !live() ? "" : "none";
+      chipsEl.style.display = tab === "spot" && !live() && example ? "" : "none";
     }
     function drawBody() {
       root.querySelectorAll(".po-tab").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-t") === tab); });
       body.innerHTML = "";
-      var sample = tab === "wallets" || (tab === "spot" && !live());
+      var sample = tab === "wallets" || (tab === "spot" && !live() && example);
       tagEl.style.display = sample ? "" : "none";
       tagEl.textContent = tab === "wallets" ? "Sample data · multi-wallet groups open with wallet sign-in" : "Sample data · connect or watch a wallet to see yours";
       if (tab === "spot" && window.QHAccount) {
@@ -44,7 +44,22 @@ window.Portfolio = (function () {
         window.QHAccount.portfolio(acct);
         if (live()) return;
       }
+      /* Not connected: a real empty state that says what the page gives you. The sample account only shows
+         after an explicit "See an example", and carries the Sample data tag while it does. (Fable) */
+      if (tab === "spot" && !example) {
+        var em = document.createElement("div"); em.className = "po-start";
+        em.innerHTML = '<div class="po-start-h">Your QHooks portfolio</div>' +
+          '<ul class="po-start-l"><li><b>One balance</b><span>Every chain you trade on, added up in one number.</span></li>' +
+          '<li><b>PnL you can read</b><span>Realized PnL, win rate and a day-by-day calendar.</span></li>' +
+          '<li><b>What QHooks paid you</b><span>Cashback and referral earnings, with what is ready to claim.</span></li></ul>' +
+          '<button type="button" class="po-start-x">See an example</button>';
+        body.appendChild(em);
+        em.querySelector(".po-start-x").onclick = function () { example = true; drawChips(); drawBody(); };
+        return;
+      }
       if (tab === "spot") {
+        var hide = document.createElement("button"); hide.type = "button"; hide.className = "po-start-x po-start-hide"; hide.textContent = "Hide the example";
+        hide.onclick = function () { example = false; drawChips(); drawBody(); }; body.appendChild(hide);
         var sum = document.createElement("div"), pos = document.createElement("div");
         body.appendChild(sum); body.appendChild(pos);
         window.PfSummary.render(sum, data);
@@ -68,7 +83,7 @@ window.Portfolio = (function () {
   css.textContent =
     ".po-page{display:flex;flex-direction:column;gap:8px;min-width:0}.po-body{display:flex;flex-direction:column;gap:8px;min-width:0}.po-body>div{min-width:0}" +
     ".po-top{display:flex;align-items:center;border-bottom:1px solid var(--line)}.po-tabs{display:flex;gap:18px;overflow-x:auto;scrollbar-width:none}" +
-    ".po-sample{margin-left:auto;font-size:11px;font-weight:600;color:var(--acc);border:1px solid rgba(245,181,68,.45);border-radius:4px;padding:2px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}" +
+    ".po-sample{margin-left:auto;font-size:11px;font-weight:600;color:var(--acc);border:1px solid rgba(210,173,114,.45);border-radius:4px;padding:2px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}" +
     ".po-tab{flex:0 0 auto;background:none;border:0;border-bottom:2px solid transparent;color:var(--mut);font-size:16px;font-weight:600;padding:8px 0;cursor:pointer}.po-tab.on{color:var(--tx);border-bottom-color:var(--acc)}" +
     ".po-empty{background:var(--s1);border:1px solid var(--line);border-radius:8px;padding:16px;font-size:13px;color:var(--mut)}.po-empty a{color:var(--acc);margin-left:6px}" +
     ".po-cmp{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.po-in{flex:1;min-width:220px;height:36px;background:var(--s2);border:1px solid var(--line);border-radius:4px;color:var(--tx);padding:0 10px;font-size:13px}" +

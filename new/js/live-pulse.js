@@ -112,9 +112,9 @@
     ".lp-pill{display:block;width:calc(100% - 20px);margin:6px 10px;height:28px;border:1px solid var(--acc);background:var(--s2);color:var(--acc);border-radius:4px;font-size:12px;cursor:pointer}" +
     ".pulse-tile-img{object-fit:cover;padding:0;background:var(--s2)}.pulse-tile-wrap{position:relative;line-height:0}" +
     ".pulse-chain-tag{position:absolute;right:-2px;bottom:-2px;font-size:8px;line-height:12px;font-weight:700;letter-spacing:.04em;padding:0 3px;background:var(--bg,#0b0c0e);color:var(--mut);border:1px solid var(--line);border-radius:3px}" +
-    ".pulse-press{background:rgba(255,77,94,.55);overflow:hidden}.pulse-press i{display:block;height:100%;background:var(--up)}.pulse-press-none{background:var(--line)}" +
+    ".pulse-press{background:rgba(242,105,92,.55);overflow:hidden}.pulse-press i{display:block;height:100%;background:var(--up)}.pulse-press-none{background:var(--line)}" +
     ".pulse-mc-band0{color:var(--mut)}.pulse-mc-band1{color:var(--mut)}.pulse-mc-band2{color:var(--acc)}.pulse-mc-band3{color:var(--up)}.pulse-mc-band4{color:#7ad7ff}" +
-    "@keyframes lpflash{from{background:rgba(46,229,157,.18)}to{background:transparent}}.lp-flash{animation:lpflash .6s ease-out}";
+    "@keyframes lpflash{from{background:rgba(76,195,138,.18)}to{background:transparent}}.lp-flash{animation:lpflash .6s ease-out}";
   document.head.appendChild(css);
   window.LivePulse = { attach: attach };
 })();

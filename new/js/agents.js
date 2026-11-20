@@ -38,7 +38,7 @@ window.Agents = (function () {
     ".ag-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}.ag-card{background:var(--s1);border:1px solid var(--line);border-radius:8px;padding:14px}" +
     ".ag-card h2{font-size:14px;margin:0 0 8px}.ag-row{display:grid;grid-template-columns:44px 1fr auto;gap:8px;font-size:12px;padding:8px 0;border-top:1px solid var(--line)}" +
     ".ag-age{color:var(--mut)}.ag-row b{font-variant-numeric:tabular-nums}.ag-partners{display:flex;gap:6px;flex-wrap:wrap}" +
-    ".ag-partners span{border:1px solid rgba(245,181,68,.4);color:var(--acc);border-radius:4px;padding:4px 10px;font-size:12px}.ag-small{font-size:12px;color:var(--mut)}" +
+    ".ag-partners span{border:1px solid rgba(210,173,114,.4);color:var(--acc);border-radius:4px;padding:4px 10px;font-size:12px}.ag-small{font-size:12px;color:var(--mut)}" +
     "@media (max-width:767px){.ag-grid{grid-template-columns:1fr}.ag-install{flex-direction:column;align-items:stretch}}";
   document.head.appendChild(css);
   return { render: render };

@@ -39,7 +39,7 @@
 .pulse-price,.pulse-volume{font-size:11px;line-height:14px}
 
 /* Quick buy: flat, hard-edged, fills on hover and press. */
-.pulse-buy-btn{background:transparent;border:1px solid rgba(46,229,157,.5);border-radius:4px;font-size:11px;letter-spacing:.02em;transition:background .14s ease-out,color .14s ease-out}
+.pulse-buy-btn{background:transparent;border:1px solid rgba(76,195,138,.5);border-radius:4px;font-size:11px;letter-spacing:.02em;transition:background .14s ease-out,color .14s ease-out}
 /* lightning glyph removed: no emoji-like icons (Claude) */
 .pulse-buy-btn:hover,.pulse-buy-btn:active{background:var(--up);color:#06110c}
 
@@ -49,7 +49,7 @@
 
 /* Column headers: brutalist label. */
 .pulse-col-title{text-transform:uppercase;font-size:11px;letter-spacing:.06em;font-weight:600}
-.pulse-preset.active{background:rgba(245,181,68,.1)}
+.pulse-preset.active{background:rgba(210,173,114,.1)}
 
 /* ── Pulse, phone ───────────────────────────────────────────── */
 @media (max-width:767px){
@@ -185,7 +185,6 @@
 .q-search-toggle{display:none}
 @media (max-width:767px){
   .q-search-toggle{display:flex;align-items:center;justify-content:center;width:44px;height:36px;background:transparent;border:1px solid var(--line);border-radius:4px;color:var(--tx);cursor:pointer;padding:0}
-  .q-topbar{position:relative}
   .q-topbar.q-search-open .q-search{display:block!important;position:absolute;left:52px;right:10px;top:8px;z-index:6;max-width:none;margin:0}
   .q-topbar.q-search-open .q-search input{width:100%;height:36px;font-size:16px}
   .q-topbar.q-search-open .q-topbar-right{visibility:hidden}

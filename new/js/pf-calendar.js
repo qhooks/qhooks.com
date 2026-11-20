@@ -31,7 +31,7 @@ window.PfCalendar = (function () {
       if (v == null) cls += " pc-fut";
       else if (v !== 0) {
         var a = 0.12 + 0.6 * Math.sqrt(Math.abs(v) / (max || 1));
-        style = ' style="background:' + (v > 0 ? "rgba(46,229,157," : "rgba(255,77,94,") + a.toFixed(2) + ')"';
+        style = ' style="background:' + (v > 0 ? "rgba(76,195,138," : "rgba(242,105,92,") + a.toFixed(2) + ')"';
       }
       if (isThis && day === today) cls += " pc-today";
       cells += '<span class="' + cls + '"' + style + ' title="' + (v == null ? "" : V.usd(v)) + '"><i>' + day + "</i><b>" + short(v) + "</b></span>";

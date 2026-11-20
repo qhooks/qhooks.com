@@ -1,0 +1,169 @@
+/* brand.css: the QHooks brand layer (Fable, 2026-11-20). Loaded last.
+   Randall on the first build: "No qhooks branding / no qhooks feel / very square blocky / generic terminal".
+   This file carries the live site's identity into the rebuild: graphite + bone + gold, Archivo display type,
+   the QH mark, softer shapes, and the ecosystem strip. Density and structure are unchanged.
+   Rules kept: no gradients, no orbit or node motifs, no italics, no emojis. */
+
+@font-face{font-family:"Archivo";src:url(brand/archivo.woff2) format("woff2");font-weight:100 900;font-stretch:62% 125%;font-style:normal;font-display:swap}
+
+:root{
+  --bg:#0b0d0c; --s1:#111413; --s2:#181c1a; --line:#232826;
+  --tx:#f1eee6; --mut:#8a938e;
+  --up:#4cc38a; --dn:#f2695c;
+  --acc:#d2ad72; --gold:#d2ad72; --gold-2:#e1c18d; --on-gold:#17130b;
+  --gold-a:rgba(210,173,114,.12); --up-a:rgba(76,195,138,.13); --dn-a:rgba(242,105,92,.13);
+  --r-panel:12px; --r:8px; --r-chip:6px;
+  --display:"Archivo",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+}
+html,body{background:var(--bg);color:var(--tx)}
+
+/* ── Top bar: mark + wordmark ───────────────────────────────── */
+.q-topbar{background:var(--bg);border-bottom:1px solid var(--line)}
+.q-logo{border:0;width:auto;height:auto;display:flex;align-items:center;gap:8px;font-size:0;cursor:pointer}
+.q-mark{width:30px;height:30px;border-radius:50%;display:block;border:1px solid #3a3f3c}
+.q-word{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:-.01em;color:var(--tx);line-height:1}
+.q-word i{font-style:normal;color:var(--gold)}
+.q-nav-link{font-size:13px}
+.q-nav-link.active::after{background:var(--gold);height:2px;border-radius:2px}
+.q-search,.q-chain-select{border-radius:var(--r);background:var(--s1)}
+.q-connect-btn{background:var(--gold)!important;color:var(--on-gold)!important;border:0!important;border-radius:var(--r)!important;font-family:var(--display);font-weight:700;letter-spacing:0}
+.q-connect-btn:hover{background:var(--gold-2)!important}
+.q-earned{border-color:rgba(210,173,114,.4);border-radius:var(--r)}
+.q-balance,.q-search-toggle{border-radius:var(--r)!important}
+
+/* ── Ecosystem strip: the QHooks layer, on every screen ─────── */
+.eco{display:flex;align-items:center;gap:6px;height:38px;padding:0 12px;border-bottom:1px solid var(--line);background:var(--bg);overflow-x:auto;scrollbar-width:none;white-space:nowrap}
+.eco::-webkit-scrollbar{display:none}
+.eco a{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;background:var(--s1);border:1px solid var(--line);color:var(--mut);font-size:11.5px;text-decoration:none;flex:none;transition:border-color .14s ease-out,color .14s ease-out}
+.eco a b{color:var(--tx);font-weight:600}
+.eco a:hover{border-color:#3d4340;color:var(--tx)}
+.eco a.eco-gold{border-color:rgba(210,173,114,.45);background:var(--gold-a)}
+.eco a.eco-gold b{color:var(--gold-2)}
+.eco svg{width:11px;height:11px;flex:none;color:var(--gold)}
+.eco-line{margin-left:auto;padding-left:16px;font-family:var(--display);font-weight:700;font-size:13px;color:var(--tx);letter-spacing:-.005em;flex:none}
+.eco-line span{color:var(--gold);display:inline-block;min-width:62px;transition:opacity .18s ease-out}
+@media (max-width:1100px){.eco-line{display:none}}
+@media (max-width:767px){.eco{height:44px;padding:0 10px}.eco a{height:32px;padding:0 12px;font-size:12px}}
+
+/* ── Shapes: softer, not boxy ───────────────────────────────── */
+.pulse-col,.q-card,.la-panel,.dt-wrap,.pf-card,.po-card,.pp-card,.lx-card,.sx-card,.token-qproof,.cm-side,.sx-lib,.lx-blocks{border-radius:var(--r-panel)}
+.pulse-columns{gap:10px;padding:10px}
+.pulse-col{background:var(--s1);border-color:var(--line)}
+.pulse-col-header{background:var(--s1)}
+.pulse-col-title{font-family:var(--display);font-weight:700;font-size:12px;letter-spacing:.08em}
+.pulse-col-search,.pulse-quick-buy-input{border-radius:var(--r-chip);background:var(--bg)}
+.pulse-preset,.pulse-filter-btn{border-radius:var(--r-chip)}
+.pulse-preset.active,.pulse-filter-btn.active{border-color:var(--gold);background:var(--gold-a);color:var(--gold-2)}
+.pulse-row{border-bottom-color:var(--line)}
+.pulse-row:hover{background:var(--s2)}
+
+/* Token coins: round, softened for degens. */
+.pulse-tile,.pulse-tile-img{border-radius:50%!important}
+.pulse-tile-wrap{border-radius:50%}
+.pulse-chain-tag{border-radius:999px!important;right:-4px!important;bottom:-1px!important;padding:0 4px!important;background:var(--bg)!important}
+.token-avatar,.token-header img{border-radius:50%!important}
+.pulse-symbol{font-size:15px;font-weight:700;letter-spacing:0}
+.pulse-age{color:var(--mut)}
+.pulse-address{opacity:.55}
+
+/* Buy: a filled soft button instead of an outlined box. */
+.pulse-buy-btn{background:var(--up-a)!important;border:1px solid transparent!important;color:var(--up)!important;border-radius:var(--r)!important;font-weight:700}
+.pulse-buy-btn::before{content:none!important}
+.pulse-buy-btn:hover,.pulse-buy-btn:active{background:var(--up)!important;color:#06140d!important}
+.pulse-press{border-radius:2px;background:rgba(242,105,92,.5)!important}
+.pulse-press i{background:var(--up)!important}
+.pulse-mc-band2{color:var(--gold-2)!important}.pulse-mc-band3{color:var(--up)!important}
+
+/* QProof: the brand mark in use. Rectangle, mono, quiet until it has a verdict. */
+.pulse-qproof{border-radius:4px}
+.pulse-qproof-clear{color:var(--up);border-color:rgba(76,195,138,.45);background:var(--up-a)}
+.pulse-qproof-watch{color:var(--gold-2);border-color:rgba(210,173,114,.5);background:var(--gold-a)}
+.pulse-qproof-danger{color:var(--dn);border-color:rgba(242,105,92,.5);background:var(--dn-a)}
+.pulse-qproof-not-checked{color:#737b77;border-color:var(--line);background:transparent}
+
+/* Hook badge: says what the hook does for you. Gold, with the hook glyph. */
+.hk-badge{display:inline-flex!important;align-items:center;gap:4px;border-radius:999px!important;border-color:rgba(210,173,114,.45)!important;background:var(--gold-a)!important;color:var(--gold-2)!important;font-weight:600;padding:0 7px 0 6px!important;line-height:16px}
+.hk-badge svg{width:9px;height:9px;flex:none}
+.hk-badge.hk-medium{border-color:rgba(227,169,79,.6)!important}
+.hk-badge.hk-high{border-color:rgba(242,105,92,.6)!important;color:var(--dn)!important;background:var(--dn-a)!important}
+
+/* Phone column switcher: one segmented control, not three boxes. */
+@media (max-width:767px){
+  .pulse-mtabs{gap:0!important;margin:8px 10px 0;padding:3px!important;background:var(--s1);border:1px solid var(--line);border-radius:10px}
+  .pulse-mtab{border:0!important;background:transparent!important;border-radius:7px!important;min-height:38px!important;height:38px!important;font-family:var(--display);font-weight:700;font-size:13px}
+  .pulse-mtab.active{background:var(--s2)!important;color:var(--tx)!important;box-shadow:inset 0 -2px 0 var(--gold)}
+  .pulse-columns{padding:8px 10px 0!important}
+  .pulse-col{border-radius:var(--r-panel)}
+}
+
+/* Buttons, chips, inputs across screens. */
+.fl-btn,.lx-btn,.lx-pill,.cm-btn,.pp-act button,.dt-chip,.dc-chip,.po-chip,.sx-tab,.sx-add,.sx-rm,.lw-btn,.la-go,.tp-amt,.token-tf-btn,.token-chart-mode,.tp-tabs button,.tp-presets button{border-radius:var(--r)!important}
+.fl-btn.fl-acc{border-color:rgba(210,173,114,.5);color:var(--gold-2)}
+.tp-go,.lx-go,.fl-sticky .fl-btn{border-radius:10px!important;font-family:var(--display);font-weight:700}
+.token-tf-btn.active,.token-chart-mode.active,.tp-tabs button.active,.tp-presets button.active{border-color:var(--gold);background:var(--gold-a);color:var(--gold-2)}
+.token-tab.active{border-bottom-color:var(--gold)}
+.cm-make{border-radius:var(--r)!important;background:var(--gold)!important;border-color:var(--gold)!important;color:var(--on-gold)!important;font-family:var(--display);font-weight:700}
+.q-bottom-nav{background:var(--bg);border-top:1px solid var(--line)}
+.q-bottom-nav-item.active{color:var(--gold-2)!important}
+
+/* Display type on page titles and headline numbers. */
+h1,h2,.lx-h1,.sx h1,.po-title,.dc-tab,.pf-tab,.po-tab,.cm-tab,.token-symbol{font-family:var(--display)}
+.token-stat:first-child .token-stat-value,.po-big,.pf-big{font-family:var(--display);font-weight:700;letter-spacing:-.01em}
+
+/* Footer status bar carries the name. */
+.sb-brand{font-family:var(--display);font-weight:700;color:var(--tx);font-size:12px;letter-spacing:0}
+.sb-dot{border-radius:50%}
+.sb-bar{background:var(--bg)}
+
+/* Full-height screens make room for the ecosystem strip (38px desktop). */
+@media (min-width:768px){
+  .pulse-columns.pulse-columns{height:calc(100vh - 56px - 28px - 38px)}
+  .q-token-wrap.q-token-wrap{height:calc(100vh - 56px - 28px - 38px)}
+}
+@media (min-width:1101px){.pz-term.pz-term{height:calc(100vh - 56px - 28px - 38px)}}
+
+/* ── Discover ───────────────────────────────────────────────── */
+.dt-table{border-radius:var(--r-panel)!important}
+.dt-nospark .dt-k-spark{display:none!important}
+@media (min-width:1181px){
+  .dt-table.dt-nospark .dt-row.dt-row{grid-template-columns:minmax(200px,1.7fr) 44px 1fr .9fr .9fr 1fr .8fr .9fr 196px 128px}
+  .dt-table.dt-nospark.dt-hasx .dt-row.dt-row{grid-template-columns:minmax(200px,1.7fr) 44px 96px 1fr .9fr .9fr 1fr .8fr .9fr 196px 128px}
+}
+@media (min-width:768px) and (max-width:1180px){
+  .dt-table.dt-nospark .dt-row.dt-row{grid-template-columns:minmax(170px,2fr) .9fr .8fr .9fr .8fr 96px}
+  .dt-table.dt-nospark.dt-hasx .dt-row.dt-row{grid-template-columns:minmax(170px,2fr) 90px .9fr .8fr .9fr .8fr 96px}
+}
+@media (max-width:767px){
+  .dt-table.dt-nospark .dt-row.dt-row{grid-template-columns:minmax(0,1fr) 88px 84px}
+  .dt-table.dt-nospark.dt-hasx .dt-row.dt-row{grid-template-columns:minmax(0,1fr) 72px 80px 84px}
+  .dt-row>:first-child{overflow:visible}
+  .dt-mchips{flex-wrap:nowrap}
+}
+.dc-tab small{font-family:-apple-system,system-ui,sans-serif;font-weight:400}
+.qv-chip{border-radius:999px!important}
+@media (max-width:767px){.qv-chip{min-height:34px!important;height:34px!important;padding:0 14px!important}}
+.qv-chip.on{border-color:var(--gold)!important;background:var(--gold-a)!important;color:var(--gold-2)!important}
+
+/* ── Portfolio: empty state before a wallet is known ────────── */
+.po-start{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-panel);padding:20px 18px 16px}
+.po-start-h{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:-.01em;margin-bottom:12px}
+.po-start-l{list-style:none;margin:0 0 14px;padding:0;border-top:1px solid var(--line)}
+.po-start-l li{display:grid;grid-template-columns:170px minmax(0,1fr);gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px}
+.po-start-l b{font-weight:600;color:var(--tx)}
+.po-start-l span{color:var(--mut)}
+.po-start-x{height:36px;padding:0 14px;background:transparent;border:1px solid var(--line);border-radius:var(--r);color:var(--mut);font:inherit;font-size:12px;cursor:pointer}
+.po-start-x:hover{color:var(--tx);border-color:#3d4340}
+.po-start-hide{align-self:flex-start}
+.po-sample{border-color:rgba(210,173,114,.45)!important;border-radius:999px!important;padding:2px 10px!important}
+.q-portfolio .la-panel{border-radius:var(--r-panel)!important}
+.q-portfolio .la-go.la-connect,.la-panel .la-go.la-connect{background:var(--gold)!important;color:var(--on-gold)!important;font-family:var(--display);font-weight:700;border-radius:var(--r)!important}
+.la-panel.la-panel h2{font-family:var(--display);letter-spacing:.06em}
+@media (max-width:767px){
+  .po-start-l li{grid-template-columns:1fr;gap:2px}
+  .po-start-x{min-height:44px}
+  .po-top{flex-wrap:wrap}.po-sample{margin:0 0 6px!important;max-width:100%}
+}
+
+/* Quick-buy buttons carry the amount only: green is buy, red is sell (Randall, 2026-11-20). */
+.pulse-row-right .pulse-buy-btn{min-width:84px}
+.cm-buy{background:var(--up-a)!important;border:1px solid transparent!important;color:var(--up)!important;border-radius:var(--r)!important;font-weight:700}

@@ -3,7 +3,7 @@
    The last bar follows the header price so chart and header always tick from the same read. */
 (function () {
   "use strict";
-  var C = { bg: "#121419", line: "#23262d", mut: "#8a8f98", up: "#2ee59d", dn: "#ff4d5e", acc: "#f5b544" };
+  var C = { bg: "#0b0d0c", line: "#1d2220", mut: "#8a938e", up: "#4cc38a", dn: "#f2695c", acc: "#d2ad72" };
 
   function label(v) {
     if (!(v > 0)) return "";
@@ -62,7 +62,7 @@
     });
     var last = list[list.length - 1].close, ly = y(last);
     ctx.setLineDash([3, 3]); ctx.strokeStyle = C.acc; ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(cw, ly); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = C.acc; ctx.fillRect(cw, ly - 8, right, 16); ctx.fillStyle = "#140d00"; ctx.fillText(label(last * mult), cw + 4, ly + 3);
+    ctx.fillStyle = C.acc; ctx.fillRect(cw, ly - 8, right, 16); ctx.fillStyle = "#17130b"; ctx.fillText(label(last * mult), cw + 4, ly + 3);
     ctx.fillStyle = C.mut; ctx.textAlign = "left";
     var t0 = new Date(list[0].time), t1 = new Date(list[list.length - 1].time);
     if (list.length > 6) ctx.fillText(t0.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }), Math.max(4, start), h - 6);

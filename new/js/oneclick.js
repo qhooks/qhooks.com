@@ -136,7 +136,7 @@
   css.textContent = ".oc-what{font-size:13px;color:var(--mut);margin:4px 0 10px;line-height:1.45}.oc-lim{display:flex;gap:10px;flex-wrap:wrap}.oc-lim label{display:flex;align-items:center;gap:6px;font-size:13px;flex:1;min-width:140px}" +
     ".oc-lim input{flex:1;min-width:0;height:44px;background:var(--s2);border:1px solid var(--line);border-radius:6px;color:var(--tx);padding:0 10px;font-size:14px}" +
     ".oc-cap{font-size:11px;color:var(--mut);margin:6px 0 10px}.oc-go{width:100%;min-height:48px;border:0;border-radius:8px;background:var(--up);color:#04140c;font-weight:600;font-size:15px;cursor:pointer}" +
-    ".oc-row{display:flex;gap:8px}.oc-sec,.oc-off{flex:1;min-height:44px;border-radius:6px;border:1px solid var(--line);background:var(--s2);color:var(--tx);cursor:pointer;font-size:13px}.oc-off{color:var(--dn);border-color:rgba(255,77,94,.4)}" +
+    ".oc-row{display:flex;gap:8px}.oc-sec,.oc-off{flex:1;min-height:44px;border-radius:6px;border:1px solid var(--line);background:var(--s2);color:var(--tx);cursor:pointer;font-size:13px}.oc-off{color:var(--dn);border-color:rgba(242,105,92,.4)}" +
     ".oc-state{font-size:13px;color:var(--up);margin-bottom:10px}.oc-body p{font-size:13px;margin:0 0 10px}";
   document.head.appendChild(css);
 

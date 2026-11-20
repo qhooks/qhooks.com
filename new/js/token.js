@@ -23,9 +23,9 @@ window.Token = (function () {
     line:     "#23262d",
     text:     "#e8eaed",
     muted:    "#8a8f98",
-    up:       "#2ee59d",
-    dn:       "#ff4d5e",
-    acc:      "#f5b544",
+    up:       "#4cc38a",
+    dn:       "#f2695c",
+    acc:      "#d2ad72",
   };
 
   /* ── Timeframes ──────────────────────────────────────────────────── */
@@ -82,9 +82,9 @@ window.Token = (function () {
     var color;
     var bg;
     switch (verdict) {
-      case "Clear": color = C.up; bg = "rgba(46,229,157,0.15)"; break;
-      case "Watch": color = C.acc; bg = "rgba(245,181,68,0.15)"; break;
-      case "Danger": color = C.dn; bg = "rgba(255,77,94,0.15)"; break;
+      case "Clear": color = C.up; bg = "rgba(76,195,138,0.15)"; break;
+      case "Watch": color = C.acc; bg = "rgba(210,173,114,0.15)"; break;
+      case "Danger": color = C.dn; bg = "rgba(242,105,92,0.15)"; break;
       default: color = C.muted; bg = "rgba(138,143,152,0.15)";
     }
     return "<span class='token-qproof' style='color:" + color + ";background:" + bg + "'>" + verdict + "</span>";
