@@ -14,7 +14,7 @@
     ".well-known/qhooks-release.json",
     "README.md"
   ],
-  "releaseId": "790ec7da-0b2c-41b6-a7ae-64b97bf4a409",
+  "releaseId": "9faf166f-ae58-436a-b605-b2c6d218da21",
   "files": {
     ".well-known/assetlinks.json": {
       "sha256": "c050db9daa7f0c6ea2110ab00b609a2a99970d7366c708a84844a8f6e0928ba0",
@@ -273725,8 +273725,8 @@
       "bytes": 15166
     },
     "new/index.html": {
-      "sha256": "721248e5e68c65c65b6a78488d06cfea9495ace851ed86804e003a16def5940b",
-      "bytes": 2559
+      "sha256": "08d792482b73191779bcb7116c49cff941654d2e73c9da8e09ab06d97dca6d5e",
+      "bytes": 2599
     },
     "new/js/agents.js": {
       "sha256": "f000a21e356fec13789d11237ca07ab5620bd5265b09aec33ece93d5e84d8cfa",
@@ -273933,8 +273933,12 @@
       "bytes": 7118
     },
     "new/js/profile-page.js": {
-      "sha256": "e79ca0f26c1e7e15da06a90ecaf0f72cef237c770e6ce5380c6ee122b0383adb",
-      "bytes": 9835
+      "sha256": "0e00dc6140be1516fc6e915abed0dd26328accaddb2eac1f89da2c4e2ff93dd9",
+      "bytes": 10066
+    },
+    "new/js/profile-rh.js": {
+      "sha256": "859495b7d0de07872d1c1502141e1e5d625ff89ac65be272d987a823a88aac35",
+      "bytes": 9078
     },
     "new/js/pulse-row.js": {
       "sha256": "b5b924a7806cdb3e39de671b06cf2efef300f4f332ca8127a372a7a80b039a4c",
@@ -273955,14 +273959,6 @@
     "new/js/search.js": {
       "sha256": "eae22e0dc4de564e42e2bbdf4eb7195e847aa55d20f9388c0de120aed0afe528",
       "bytes": 8723
-    },
-    "new/js/shots/community-fix-after-1440.png": {
-      "sha256": "85900e692ab7d76c7e06e12d41da7aa78c3e71f6f0f87283f4b60bed3583a840",
-      "bytes": 204988
-    },
-    "new/js/shots/community-fix-after-390.png": {
-      "sha256": "eb3112489bd9ab22531198a76d47004df6e339a1381de3ab4be4e192b2a9152d",
-      "bytes": 84857
     },
     "new/js/status-bar.js": {
       "sha256": "2fce25da951825db7f1d14719251b874a3a5154011213f11cc5b988fd6ec8d66",
@@ -284521,24 +284517,24 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "f4e2abf16ac307bbfe5dbbf21a8e78c6c04b6bc7db02c623657cc35f7b1527c8",
-  "sourceTree": "work/qhooks-walletprofiles2-rel-20261120",
+  "contentDigest": "f1354b0c9b0a6a32e46d2085621147175b43ece359bfecf7d8204d8c556c8264",
+  "sourceTree": "work/qhooks-newsite8-rel-20261120",
   "sourceWorkerSha256": "3751f6cda248813f6dcc4fe7ecb45d4119c6d186aeb489592f5c36bf37c69fd3",
   "sourceManifestSha256": null,
   "sourceFreezeSha256": null,
   "all14ArtifactDigest": null,
   "sourcePatchSha256": null,
-  "sourceReleaseReceiptSha256": "3315f48dd1ab3ff4b34263ff6c99de1dbb909f332db423e895c5f203151a1e78",
-  "sourceReleaseReceiptStatus": "LIVE_WALLET_PROFILES_VERIFIED",
+  "sourceReleaseReceiptSha256": "c9f1d952db754f829efc90cbe4d0394914a44a1e38ff786bfd1d9e3d32b883bf",
+  "sourceReleaseReceiptStatus": "LIVE_NEWSITE_VERIFIED",
   "acceptance": {
-    "sourceAndLocalReleaseGates": "Wallet profile page (wallet-profile.html, qx-wallet-profile.mjs/.css) + terminal link edits; worker adds WalletProfiles DO; 188 routes, 0 dropped.",
+    "sourceAndLocalReleaseGates": "/new from eco-rebuild aeb67b2; worker byte-identical; 188 routes, 0 dropped.",
     "connectedWebKit": "Real-domain browser pass at 1440 (9 pages); 390 on edge preview.",
     "postDeployWatch": {
       "status": "OBSERVED_WATCH_CRITERION_MET",
-      "seconds": 120,
-      "events": 158,
+      "seconds": 90,
+      "events": 86,
       "exceptions": 0,
-      "scheduledOk": 4,
+      "scheduledOk": 1,
       "sampled": true,
       "globalHealthClaim": false
     },
@@ -284552,8 +284548,8 @@
     "policyExpansion": false
   },
   "priorReleaseAttestation": {
-    "releaseId": "0a6a511f-e8d7-4c54-bef6-3d4719a623e8",
-    "contentDigest": "dc6f9a8daaf8771995ca1afbf5ea199e70562b5ece156a224d3392a7c31bf6c6",
-    "sourceReleaseReceiptSha256": "ef9c458775b9e7e13d2face491c7316f4c78e48b120e0d99194b8d019f4c582c"
+    "releaseId": "790ec7da-0b2c-41b6-a7ae-64b97bf4a409",
+    "contentDigest": "f4e2abf16ac307bbfe5dbbf21a8e78c6c04b6bc7db02c623657cc35f7b1527c8",
+    "sourceReleaseReceiptSha256": "3315f48dd1ab3ff4b34263ff6c99de1dbb909f332db423e895c5f203151a1e78"
   }
 }

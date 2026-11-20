@@ -21,6 +21,7 @@ window.QHProfile = (function () {
       '<div class="prf-idt"><div class="prf-addr"><b title="' + F.esc(w) + '">' + F.esc(F.short(w)) + '</b><button class="prf-copy" aria-label="Copy address">Copy</button>' +
       (mine ? '<span class="prf-you">You</span>' : "") + '<span class="prf-tags"></span></div>' +
       '<div class="prf-meta"><span class="prf-chains"></span><span class="prf-seen">First seen ' + F.DASH + '</span><span class="prf-fresh">Reading</span><button class="prf-refresh">Refresh</button></div></div></div></header>' +
+      '<section class="prh" style="display:none"></section>' + /* Robinhood Chain profile from our on-chain index, shown first (Fable) */
       '<section class="prf-pnl"><div class="prf-bar"><b>PnL on QHooks markets</b><div class="prf-wins">' + WINS.map(function (x) { return '<button data-w="' + x[0] + '">' + x[1] + "</button>"; }).join("") + "</div></div>" +
       '<div class="prf-stats"></div><div class="prf-best"></div></section><div class="prf-body"></div></div>';
     function q(s) { return root.querySelector(s); }
@@ -61,6 +62,7 @@ window.QHProfile = (function () {
       if (!p.ok) return;
       q(".prf-tags").innerHTML = (p.handle ? '<span class="prf-tag">' + F.esc(p.handle) + "</span>" : "") + p.tags.slice(0, 4).map(function (t) { return '<span class="prf-tag">' + F.esc(t.label || t) + "</span>"; }).join("");
     });
+    if (window.QHProfileRH && L.family(w) === "evm") window.QHProfileRH.mount(q(".prh"), w);
     var body = q(".prf-body");
     wallet = window.QHWalletView.render(body, w, { embedded: true,
       onTotals: function (t, ids) {
