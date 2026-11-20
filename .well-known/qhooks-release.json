@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "43f69917-5019-4528-903c-fad08cb37ffb",
+  "releaseId": "a8643a40-293b-437d-9aa5-84fd8d2eace4",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -273712,9 +273712,9 @@
       "sha256": "1da49ca45d5454bb20b705233d4ec63a1d2cb0aceba4bc2eab884d58961fdb50",
       "bytes": 63181
     },
-    "new/app.c08698e297.js": {
-      "sha256": "c08698e2979732a81ce43e65841ff240ed8b8b0d1fba7373b4abf2432db5fbbc",
-      "bytes": 335649
+    "new/app.e1b3a613bc.js": {
+      "sha256": "e1b3a613bc6b956ae5fecbfdbbfc323ed77052600ff680dea89525df23d7dd9c",
+      "bytes": 336337
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
@@ -273737,7 +273737,7 @@
       "bytes": 944
     },
     "new/index.html": {
-      "sha256": "21d12a819022da3b0142c62c5a5d86efdb94eb0ff9c9dd1fee4792bcf339d37d",
+      "sha256": "dc1ca8fb33b8f48676a55634e39bb638cbda01e758fee5c962896f7b5d032a6a",
       "bytes": 737
     },
     "new/js/perps-book.js": {
@@ -284297,5 +284297,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "06d81163db6444e4443285586d5739ffa01fc3d2d83aa164fcafb44e5144d91c"
+  "contentDigest": "4183bbc1cacd5a05494e59e46861dccbb994dd9aa2547475ce21a668af30ff8a"
 }
