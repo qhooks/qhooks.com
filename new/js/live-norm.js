@@ -32,7 +32,7 @@
     if (level === "clear" || level === "safe" || level === "pass") return "Clear";
     if (level === "watch" || level === "caution" || level === "warn") return "Watch";
     if (level === "danger" || level === "fail" || level === "high") return "Danger";
-    if (level === "incomplete" || level === "partial") return "Partial";
+    if (level === "incomplete" || level === "partial") return "Partly checked";
     return "Not checked";
   }
 

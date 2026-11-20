@@ -90,11 +90,16 @@ window.PulseRow = (function () {
 
     // Stats with red when >30%
     var isRed = function(v) { return v >= 30 ? "pulse-stat-red" : ""; };
-    var statTop10 = top10 > 1 ? "<span class='pulse-stat " + isRed(top10) + "'>Top10 " + top10.toFixed(0) + "%</span>" : "";
-    var statDev = dev > 1 ? "<span class='pulse-stat " + isRed(dev) + "'>Dev " + dev.toFixed(0) + "%</span>" : "";
-    var statSniper = sniper > 1 ? "<span class='pulse-stat " + isRed(sniper) + "'>Snipers " + sniper.toFixed(0) + "%</span>" : "";
-    var statBundler = bundler > 1 ? "<span class='pulse-stat " + isRed(bundler) + "'>Bundlers " + bundler.toFixed(0) + "%</span>" : "";
-    var statHolders = holders > 0 ? "<span class='pulse-stat'>Holders " + holders.toLocaleString() + "</span>" : "";
+    /* Compact stat pairs on one line (Fable, tight rows): a holders glyph and short labels, full names in tooltips. */
+    var PPL = "<svg viewBox='0 0 12 12' width='10' height='10' fill='currentColor' aria-hidden='true'><rect x='1' y='7' width='6' height='4' rx='2'/><rect x='2.5' y='1.5' width='3' height='4' rx='1.5'/><rect x='8' y='7.5' width='3' height='3.5' rx='1.5'/><rect x='8.2' y='3.3' width='2.4' height='3' rx='1.2'/></svg>";
+    var statTop10 = top10 > 1 ? "<span class='pulse-stat " + isRed(top10) + "' title='Top 10 holders'>T10 " + top10.toFixed(0) + "%</span>" : "";
+    var statDev = dev > 1 ? "<span class='pulse-stat " + isRed(dev) + "' title='Dev holds'>Dev " + dev.toFixed(0) + "%</span>" : "";
+    var statSniper = sniper > 1 ? "<span class='pulse-stat " + isRed(sniper) + "' title='Snipers hold'>Snp " + sniper.toFixed(0) + "%</span>" : "";
+    var statBundler = bundler > 1 ? "<span class='pulse-stat " + isRed(bundler) + "' title='Bundlers hold'>Bnd " + bundler.toFixed(0) + "%</span>" : "";
+    var statHolders = holders > 0 ? "<span class='pulse-stat pulse-stat-h' title='Holders'>" + PPL + holders.toLocaleString() + "</span>" : "";
+    /* Bonding progress under the coin: how far along the curve this token is. Not shown once migrated. */
+    var pg = token.progress != null && isFinite(token.progress) && token.stage !== "migrated" ? Math.max(0, Math.min(100, Number(token.progress))) : null;
+    var progEl = "<div class='pulse-prog' title='Bonding progress'>" + (pg != null ? "<i><u style='width:" + pg.toFixed(0) + "%'></u></i><b>" + pg.toFixed(0) + "%</b>" : "") + "</div>";
 
     // First letter for tile
     var firstLetter = sym.charAt(0).toUpperCase() || "?";
@@ -108,7 +113,7 @@ window.PulseRow = (function () {
       // LEFT: 64px square tile
       "<div class='pulse-row-left'>" +
       "<div class='pulse-tile-wrap'>" + (tile || "<div class='pulse-tile'>" + firstLetter + "</div>") + (chainTag ? "<span class='pulse-chain-tag'>" + esc(chainTag) + "</span>" : "") + "</div>" +
-      "<div class='pulse-address'>" + esc(addr) + "</div>" +
+      progEl + "<div class='pulse-address'>" + esc(addr) + "</div>" +
       "</div>" +
 
       // MIDDLE: symbol/name/QProof/age/stats
@@ -131,7 +136,7 @@ window.PulseRow = (function () {
       // RIGHT: price/MC + buy button
       "<div class='pulse-row-right'>" +
       "<div class='pulse-row-price-block'>" +
-      "<div class='pulse-price'>" + formatUSD(price) + (change !== null ? " <span class='pulse-change " + getChangeClass(change) + "'>" + getChangeSign(change) + change.toFixed(2) + "%</span>" : "") + "</div>" +
+      "<div class='pulse-price'>" + formatUSD(price) + (change !== null ? " <span class='pulse-change " + getChangeClass(change) + "'>" + getChangeSign(change) + change.toFixed(Math.abs(change) >= 100 ? 0 : 1) + "%</span>" : "") + "</div>" +
       "<div class='pulse-volume'>V " + formatUSD(volume) + "</div>" +
       "<div class='pulse-mcap pulse-mc-band" + band + "'>MC " + formatUSD(mcap) + "</div>" +
       "<div class='pulse-fees'>F " + formatUSD(fees) + "</div>" +

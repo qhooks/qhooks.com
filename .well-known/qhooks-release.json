@@ -14,7 +14,7 @@
     ".well-known/qhooks-release.json",
     "README.md"
   ],
-  "releaseId": "74fddbc4-a7be-492f-97e3-b88f0cc6f77a",
+  "releaseId": "0a6a511f-e8d7-4c54-bef6-3d4719a623e8",
   "files": {
     ".well-known/assetlinks.json": {
       "sha256": "c050db9daa7f0c6ea2110ab00b609a2a99970d7366c708a84844a8f6e0928ba0",
@@ -273709,8 +273709,8 @@
       "bytes": 5712
     },
     "new/brand.css": {
-      "sha256": "193bbeec946363f6e9a09fa010f836345c19a7448c565656ae04c9938cbfc3d4",
-      "bytes": 13644
+      "sha256": "c27831d8528b63513c4cc08ec2017a777c88b37c2a4edfd97df0f4ed68ea1bff",
+      "bytes": 16378
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
@@ -273829,12 +273829,12 @@
       "bytes": 13887
     },
     "new/js/live-norm.js": {
-      "sha256": "cb15c9fb5322ff49cbb792c54616ee6bba38cc7cd34a8a8096cf516a43f493ee",
-      "bytes": 11864
+      "sha256": "bfb2c35fa4abf89899522eec4b4c887b913b8a71b5a4f6cad30eadc8c96cc3c7",
+      "bytes": 11871
     },
     "new/js/live-pulse.js": {
-      "sha256": "c1b56376a91c036e4021060870988d227f2f783e9e95b9cb7b91765976e62d8e",
-      "bytes": 7569
+      "sha256": "ba8396788eda30126063f5d201ddf88d747431551ede10af22247d2dc8e86bea",
+      "bytes": 7584
     },
     "new/js/live-search.js": {
       "sha256": "25dc70685a292b2420898ce5016a0a538fc0226ed265f17565e297b59fbaf4b1",
@@ -273937,8 +273937,8 @@
       "bytes": 9835
     },
     "new/js/pulse-row.js": {
-      "sha256": "dd13b40a98ebd2a8152e8ad391eb70e04c43008e911b7c42cb551bcdb0e5de62",
-      "bytes": 8558
+      "sha256": "b5b924a7806cdb3e39de671b06cf2efef300f4f332ca8127a372a7a80b039a4c",
+      "bytes": 9584
     },
     "new/js/pulse.js": {
       "sha256": "4fcd15e8986eabe85a2970f11f8c4f9936f27b2e4845bbb2bfed7190eaf61525",
@@ -273955,6 +273955,14 @@
     "new/js/search.js": {
       "sha256": "eae22e0dc4de564e42e2bbdf4eb7195e847aa55d20f9388c0de120aed0afe528",
       "bytes": 8723
+    },
+    "new/js/shots/community-fix-after-1440.png": {
+      "sha256": "85900e692ab7d76c7e06e12d41da7aa78c3e71f6f0f87283f4b60bed3583a840",
+      "bytes": 204988
+    },
+    "new/js/shots/community-fix-after-390.png": {
+      "sha256": "eb3112489bd9ab22531198a76d47004df6e339a1381de3ab4be4e192b2a9152d",
+      "bytes": 84857
     },
     "new/js/status-bar.js": {
       "sha256": "2fce25da951825db7f1d14719251b874a3a5154011213f11cc5b988fd6ec8d66",
@@ -273997,8 +274005,8 @@
       "bytes": 3947
     },
     "new/js/wallet-connect.js": {
-      "sha256": "f1ca9e9336cd5d519bb7a498fb58183566191ec6418c07a5d8f5c2b3bcff22a1",
-      "bytes": 15395
+      "sha256": "78bbaed79deb8d232237a1b39e5707ebbcaf9be9ffa7eff3a91158a0524ae7ef",
+      "bytes": 16302
     },
     "new/js/wallet-page.js": {
       "sha256": "8819423f655e2ee439087d43b5cd0a8547d619fe73135006861df5171e0661f9",
@@ -284501,24 +284509,24 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "9b169c7db1646c5f10ab5360994bfa7d3e01479d6aa475e4f21c131933f47579",
-  "sourceTree": "work/qhooks-callentry-port-rel-20261120",
+  "contentDigest": "dc6f9a8daaf8771995ca1afbf5ea199e70562b5ece156a224d3392a7c31bf6c6",
+  "sourceTree": "work/qhooks-newsite7-rel-20261120",
   "sourceWorkerSha256": "3751f6cda248813f6dcc4fe7ecb45d4119c6d186aeb489592f5c36bf37c69fd3",
   "sourceManifestSha256": null,
   "sourceFreezeSha256": null,
   "all14ArtifactDigest": null,
   "sourcePatchSha256": null,
-  "sourceReleaseReceiptSha256": "81f9aea4df4a4c7a7197a3efc89777392281f905a00c0f0962c1c384bae757f1",
-  "sourceReleaseReceiptStatus": "LIVE_CALLENTRY_VERIFIED",
+  "sourceReleaseReceiptSha256": "ef9c458775b9e7e13d2face491c7316f4c78e48b120e0d99194b8d019f4c582c",
+  "sourceReleaseReceiptStatus": "LIVE_NEWSITE_VERIFIED",
   "acceptance": {
-    "sourceAndLocalReleaseGates": "6 /new files (eco-rebuild 7976ee7, released as ad0897af) + server call-entry backfill (74fddbc4); 188 routes, 0 dropped.",
+    "sourceAndLocalReleaseGates": "/new from eco-rebuild 1fcfe0e; worker byte-identical; 188 routes, 0 dropped.",
     "connectedWebKit": "Real-domain browser pass at 1440 (9 pages); 390 on edge preview.",
     "postDeployWatch": {
       "status": "OBSERVED_WATCH_CRITERION_MET",
-      "seconds": 150,
-      "events": 575,
+      "seconds": 90,
+      "events": 111,
       "exceptions": 0,
-      "scheduledOk": 6,
+      "scheduledOk": 3,
       "sampled": true,
       "globalHealthClaim": false
     },
@@ -284532,8 +284540,8 @@
     "policyExpansion": false
   },
   "priorReleaseAttestation": {
-    "releaseId": "29b85446-a089-49c2-85e8-8b75dc8e515d",
-    "contentDigest": "535b821897c967f768ca60b10a06e02d7a97f0f8a0e9624db34bfc0e4d60ffbd",
-    "sourceReleaseReceiptSha256": "12089e752b0389694c7fec2bcd0f3dbc9ad02f469fbc3c79ef5d5a9109eca79a"
+    "releaseId": "74fddbc4-a7be-492f-97e3-b88f0cc6f77a",
+    "contentDigest": "9b169c7db1646c5f10ab5360994bfa7d3e01479d6aa475e4f21c131933f47579",
+    "sourceReleaseReceiptSha256": "81f9aea4df4a4c7a7197a3efc89777392281f905a00c0f0962c1c384bae757f1"
   }
 }

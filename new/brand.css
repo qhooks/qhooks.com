@@ -182,3 +182,42 @@ h1,h2,.lx-h1,.sx h1,.po-title,.dc-tab,.pf-tab,.po-tab,.cm-tab,.token-symbol{font
 .token-social:not([title]){font-size:10px;color:var(--mut);border-radius:999px;padding:0 8px;line-height:18px}
 .token-social:not([title])::before{content:none}
 .token-social:not([title]):hover{color:var(--tx)}
+
+/* ── Connect sheet ──────────────────────────────────────────── */
+.wc-opt{border-radius:var(--r)!important}
+.wc-opt img{border-radius:6px;flex:none}
+.wc-opt img[src^="brand/"]{border-radius:50%}
+
+/* ── Pulse tight rows (Randall: "build your best suggestions", 2026-11-20) ──────────────
+   104px -> 84px on desktop, 96px -> 88px on phone. The address under the coin gives way to bonding progress;
+   stats sit on one line; change and volume share a line. More tokens per screen, same information. */
+.pulse-row{height:84px!important;grid-template-columns:52px minmax(0,1fr) 128px!important;gap:10px!important;padding:8px 10px!important;align-items:start}
+.pulse-row-left{gap:3px!important;align-items:center}
+.pulse-tile,.pulse-tile-img{width:44px!important;height:44px!important;font-size:17px!important}
+.pulse-address{display:none!important}
+.pulse-prog{display:flex;align-items:center;gap:4px;width:52px;justify-content:center}
+.pulse-prog:empty{display:none}
+.pulse-prog i{display:block;flex:1;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.pulse-prog u{display:block;height:100%;background:var(--gold);text-decoration:none}
+.pulse-prog b{font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--gold-2)}
+.pulse-row-middle{gap:3px!important;padding-top:0!important;justify-content:flex-start}
+.pulse-row-top{row-gap:3px!important}
+.pulse-row-stats{flex-wrap:nowrap!important;overflow:hidden;gap:0 9px!important;max-height:15px;line-height:15px}
+.pulse-stat{white-space:nowrap;font-size:11px}
+.pulse-stat-h{display:inline-flex;align-items:center;gap:3px;color:var(--tx)}
+.pulse-stat-h svg{color:var(--mut)}
+.pulse-row-right{gap:3px!important;height:100%}
+.pulse-row-right .pulse-row-price-block{row-gap:0!important;column-gap:7px!important;align-items:baseline}
+.pulse-row-right .pulse-mcap{line-height:17px}
+.pulse-row-right .pulse-price{flex:0 0 auto!important;line-height:14px!important}
+.pulse-row-right .pulse-price .pulse-change{display:inline!important}
+.pulse-row-right .pulse-fees{display:none!important}
+.pulse-row-right .pulse-press{margin-top:3px!important}
+.pulse-row-right .pulse-buy-btn{height:24px!important;min-height:24px!important;align-self:stretch;margin-top:auto}
+@media (max-width:767px){
+  .pulse-row{height:88px!important;grid-template-columns:48px minmax(0,1fr) 92px!important;gap:9px!important}
+  .pulse-tile,.pulse-tile-img{width:42px!important;height:42px!important}
+  .pulse-prog{width:48px}
+  .pulse-row-right .pulse-volume{display:none!important}
+  .pulse-row-right .pulse-buy-btn{height:34px!important;min-height:34px!important}
+}

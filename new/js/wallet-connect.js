@@ -111,6 +111,9 @@
     var m = root && root.querySelector(".wc-msg"); if (!m) return;
     m.innerHTML = F.esc(text || "") + (local ? ' <a href="https://qhooks.com/terminal" target="_blank" rel="noopener">Open qhooks.com</a>' : "");
   }
+  /* A plain phone glyph in brand gold, as a data image so opt() can treat it like any wallet icon. */
+  var PHONE_ICON = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#181c1a"/><rect x="8" y="4.5" width="8" height="15" rx="2" fill="none" stroke="#d2ad72" stroke-width="1.6"/><path d="M11 16.8h2" stroke="#d2ad72" stroke-width="1.6" stroke-linecap="round"/></svg>');
+  var OPEN_ICON = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#181c1a"/><path d="M9.5 14.5l5-5M10.5 9.5h4v4" fill="none" stroke="#d2ad72" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>');
   function opt(k, id, title, sub, icon) {
     return '<button type="button" class="wc-opt" data-k="' + k + '"' + (id ? ' data-id="' + F.esc(id) + '"' : "") + ">" +
       (icon ? '<img src="' + F.esc(icon) + '" alt="" width="24" height="24">' : '<i class="wc-dot"></i>') + "<span><b>" + F.esc(title) + "</b>" + (sub ? "<em>" + F.esc(sub) + "</em>" : "") + "</span></button>";
@@ -120,12 +123,12 @@
     var h = "", c = cur, inj = injected();
     if (c) h += '<div class="wc-me"><div><b>' + F.esc(F.short(c.address)) + "</b><em>" + F.esc(c.name) + " · " + (c.family === "solana" ? "Solana" : "EVM chains") + '</em></div><button type="button" class="wc-sec" data-k="out">Disconnect</button></div>' +
       '<div class="wc-row"><a class="wc-sec" href="#/portfolio" data-k="go">Portfolio</a><button type="button" class="wc-sec" data-k="oc">One-click trading</button></div><div class="wc-lab">Switch wallet</div>';
-    h += opt("privy", "", "Email or Google", "Your QHooks wallet. One-click trading works with it.");
+    h += opt("privy", "", "Email or Google", "Your QHooks wallet. One-click trading works with it.", "brand/qh-mark.jpg"); /* icons added by Fable: tester saw empty squares */
     h += '<div class="wc-lab">Browser wallet</div>';
     h += inj.length ? inj.map(function (d) { return opt("inj", d.info.uuid, d.info.name, "Signs each trade in the wallet", d.info.icon); }).join("") : '<div class="wc-none">No browser wallet on this device.</div>';
-    h += opt("wc", "", "Any phone wallet", "WalletConnect: pick your wallet app, or scan from desktop");
+    h += opt("wc", "", "Any phone wallet", "WalletConnect: pick your wallet app, or scan from desktop", PHONE_ICON);
     h += '<div class="wc-lab">Solana</div>';
-    h += sol.length ? sol.map(function (w) { return opt("sol", w.name, w.name, "Solana trades", w.icon); }).join("") : '<a class="wc-opt" href="' + F.esc(phantomLink()) + '" rel="noopener"><i class="wc-dot"></i><span><b>Open in Phantom</b><em>Phantom is not in this browser</em></span></a>';
+    h += sol.length ? sol.map(function (w) { return opt("sol", w.name, w.name, "Solana trades", w.icon); }).join("") : '<a class="wc-opt" href="' + F.esc(phantomLink()) + '" rel="noopener"><img src="' + OPEN_ICON + '" alt="" width="24" height="24"><span><b>Open in Phantom</b><em>Phantom is not in this browser</em></span></a>';
     root.querySelector(".wc-body").innerHTML = h;
   }
   function open(family) {

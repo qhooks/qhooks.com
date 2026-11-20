@@ -9,7 +9,7 @@
 (function () {
   "use strict";
   var COLS = ["new", "final", "migrated"];
-  var PARTS = [".pulse-row-right .pulse-price", ".pulse-row-right .pulse-volume", ".pulse-row-right .pulse-mcap", ".pulse-row-right .pulse-fees", ".pulse-row-right .pulse-press", ".pulse-row-stats", ".pulse-age", ".pulse-qproof"];
+  var PARTS = [".pulse-row-right .pulse-price", ".pulse-row-right .pulse-volume", ".pulse-row-right .pulse-mcap", ".pulse-row-right .pulse-fees", ".pulse-row-right .pulse-press", ".pulse-row-stats", ".pulse-age", ".pulse-qproof", ".pulse-prog"];
 
   function el(html) { var d = document.createElement("div"); d.innerHTML = html; return d.firstElementChild; }
   function byProgress(a, b) { return (b.progress || 0) - (a.progress || 0); }
