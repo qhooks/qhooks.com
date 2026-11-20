@@ -14,7 +14,7 @@
     ".well-known/qhooks-release.json",
     "README.md"
   ],
-  "releaseId": "5ff7e890-5d67-4f0d-b239-7d467047fd7b",
+  "releaseId": "882ffe55-29e7-49b4-a6a5-dae132660640",
   "files": {
     ".well-known/assetlinks.json": {
       "sha256": "c050db9daa7f0c6ea2110ab00b609a2a99970d7366c708a84844a8f6e0928ba0",
@@ -273917,8 +273917,8 @@
       "bytes": 9834
     },
     "new/js/pulse-row.js": {
-      "sha256": "776bf7bec6e33761d283ee695f149358c38401a35b3bcbfd1c53288e9e06b192",
-      "bytes": 8210
+      "sha256": "b71b83fbac6b484cc8e00ab174909a649fc2e668748a07a501aabdaa31b55593",
+      "bytes": 8522
     },
     "new/js/pulse.js": {
       "sha256": "4fcd15e8986eabe85a2970f11f8c4f9936f27b2e4845bbb2bfed7190eaf61525",
@@ -284481,24 +284481,24 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "26f201521387470c5188ae707409a520a561150d13729ce377c7dffaead4f47f",
-  "sourceTree": "work/qhooks-newsite2-rel-20261120",
+  "contentDigest": "995d4afc09b4a253bef504f0017ade894e58122465f7744bcda0ee4bd52d1dc3",
+  "sourceTree": "work/qhooks-newsite3-rel-20261120",
   "sourceWorkerSha256": "ffe349063fb4ab394f13cbdb4c4c5fcc0fae5b3c79eb9122859341b58ff07a4b",
   "sourceManifestSha256": null,
   "sourceFreezeSha256": null,
   "all14ArtifactDigest": null,
   "sourcePatchSha256": null,
-  "sourceReleaseReceiptSha256": "013173999a8e15b992f74481179d4d8ef0b561736be46718e6735f957be2254f",
+  "sourceReleaseReceiptSha256": "4c260b16b14e3fd3c8ff195d0ebcf9da909a908dfca217114cc6219bff5e5f32",
   "sourceReleaseReceiptStatus": "LIVE_NEWSITE_VERIFIED",
   "acceptance": {
-    "sourceAndLocalReleaseGates": "71 new static files under new/ (eco-rebuild app@dba3296); all prior public assets byte-identical. 188 routes, 0 dropped.",
+    "sourceAndLocalReleaseGates": "One file changed (new/js/pulse-row.js, eco-rebuild 1a24aa0); worker byte-identical; 188 routes, 0 dropped.",
     "connectedWebKit": "Real-domain browser pass at 1440 (9 pages); 390 on edge preview.",
     "postDeployWatch": {
       "status": "OBSERVED_WATCH_CRITERION_MET",
-      "seconds": 120,
-      "events": 267,
+      "seconds": 90,
+      "events": 236,
       "exceptions": 0,
-      "scheduledOk": 4,
+      "scheduledOk": 2,
       "sampled": true,
       "globalHealthClaim": false
     },
@@ -284512,8 +284512,8 @@
     "policyExpansion": false
   },
   "priorReleaseAttestation": {
-    "releaseId": "1c44e1f9-bfab-4f26-8813-a846dd2115b3",
-    "contentDigest": "4df7e94231dcbc3f683c80bdbb301bd65a188049a258c0a7eff6b7aee079d994",
-    "sourceReleaseReceiptSha256": "911341444568cceb360bde74f2485ff8364b055d1ac3cf2a5d2e1cb8bdbd69e1"
+    "releaseId": "5ff7e890-5d67-4f0d-b239-7d467047fd7b",
+    "contentDigest": "26f201521387470c5188ae707409a520a561150d13729ce377c7dffaead4f47f",
+    "sourceReleaseReceiptSha256": "013173999a8e15b992f74481179d4d8ef0b561736be46718e6735f957be2254f"
   }
 }
