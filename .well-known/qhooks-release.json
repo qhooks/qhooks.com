@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "631570e0-25be-4d41-83fd-b1f5865168b1",
+  "releaseId": "9218450d-ab3e-4327-8d67-bd373305a449",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,8 +41,8 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "0ccbf2ef09d65f8a52043041f4f6043f23ee8ba711c7e0eb8bd3745358954b6e",
-      "bytes": 9562
+      "sha256": "7dac74f26031a857be9b53e83943e77d7ca630455c7ead03f85db3e6aef918bd",
+      "bytes": 9564
     },
     "_redirects": {
       "sha256": "b0064a6e748cb4421e4ff024a6219ff6600077feec61978bcd07fb0bd7a87010",
@@ -272401,7 +272401,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "24e7ef627781566e81c46a4610796d0f89cf26b96207fd4568952eb79fb42fd9",
+      "sha256": "72233c1d14fd8142245685b2faf7385f00b0e96c09fae86bbcff22feb3f6568f",
       "bytes": 2372
     },
     "hook-marketplace.html": {
@@ -273724,9 +273724,9 @@
       "sha256": "1618e7b5304ad76f59f440f8fe7e62676adb43b6bb24f830e0fc5b6ab910cdf3",
       "bytes": 76102
     },
-    "new/app.5a81c28cff.js": {
-      "sha256": "525b6dcf38caf46085d91760f39a539c4c945eebabc3c2e48651bb87b77f3137",
-      "bytes": 513717
+    "new/app.7f34f2a531.js": {
+      "sha256": "23333d42b0135a90e066d39966293e9921bcd3be2498dd16cdb6bf975ccc9d5d",
+      "bytes": 515111
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
@@ -273781,7 +273781,7 @@
       "bytes": 1382
     },
     "new/index.html": {
-      "sha256": "fc0e3889bd08adf21e48344ec2bd83a0789b68143069a15c7b92a0e2e2513c76",
+      "sha256": "d9c4d6c94df36be96037052606c8610e0ba9a53e053c5b1e7d019334ae640068",
       "bytes": 1150
     },
     "new/js/perps-book.js": {
@@ -284377,5 +284377,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "cbd165f4d00f7db28532bf318aa9ebca4583a94c344b22737bc8003639bd6acf"
+  "contentDigest": "2e1b14b7a48dac3ae2262e242aa17fda1f03290f1f0bda0c4e3a323b0bb3516d"
 }
