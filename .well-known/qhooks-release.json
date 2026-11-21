@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "9c024b22-bfeb-4e34-b859-f1a6655917a9",
+  "releaseId": "7ac6bd9a-dd8e-45cb-a903-ea67fc32f2ff",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,8 +41,8 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "6f4bc7244d375d21a528a23eca70d0938c95cfe0747997d4d8c7477b4443a060",
-      "bytes": 9568
+      "sha256": "5a0ad5b53c808e4a35193660e73a8433773c0a94b39521be01de3d2455636fcd",
+      "bytes": 9570
     },
     "_redirects": {
       "sha256": "b0064a6e748cb4421e4ff024a6219ff6600077feec61978bcd07fb0bd7a87010",
@@ -272401,7 +272401,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "2974ed068e4ba75cfaae5c63973fdc9ab0488251362f3c460444d51e7a52e85a",
+      "sha256": "d0d38c10ad3377ee647d4bdb26bcc02945ac49df2362a6209513148cce3ad918",
       "bytes": 2372
     },
     "hook-marketplace.html": {
@@ -273724,9 +273724,9 @@
       "sha256": "1618e7b5304ad76f59f440f8fe7e62676adb43b6bb24f830e0fc5b6ab910cdf3",
       "bytes": 76102
     },
-    "new/app.b7415252f0.js": {
-      "sha256": "ea1735b11cdd370b8bbd7db5af8ba5dc8667d527de9716a01ca136969ad2b93d",
-      "bytes": 525736
+    "new/app.c44bf7bddc.js": {
+      "sha256": "d4837a847eefd8fb83144110f878597d374c62bc2c9ea82fda2a332caa1bbae2",
+      "bytes": 529120
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
@@ -273781,7 +273781,7 @@
       "bytes": 1382
     },
     "new/index.html": {
-      "sha256": "1888b46dfcae938572bc28820b1b7da58a523af8562c50c5aed3b03e33f2e8e7",
+      "sha256": "dbdb2c312ce3e6a8980fdb8f78d0c2f5980ea56ce2252bc217dab1cd4a114029",
       "bytes": 1150
     },
     "new/js/perps-book.js": {
@@ -273832,9 +273832,9 @@
       "sha256": "c5edcf5d4627cf936cc58928d5277813a9da139429e3a3dd1c4cf3cf88840c02",
       "bytes": 2173
     },
-    "new/main.0de13f3038.js": {
-      "sha256": "18c841c106d0f361d40e7e9aa77ac5a39af6412e0311fd5063f11b3401e5387c",
-      "bytes": 29072
+    "new/main.22f4af3909.js": {
+      "sha256": "7cadbe75e1dfc190cdf879141ad662f1d9705e0fbb6fbfcad085300d136da88e",
+      "bytes": 29200
     },
     "news.html": {
       "sha256": "0ea37f854247b290c998912397021cf4da0c77acc5e7f175d63e1a89c90e9c0b",
@@ -284377,5 +284377,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "536b48ebaabf76c996841de99f6d21f62a5f5af48c4c6b62b705f43df199d0c9"
+  "contentDigest": "458872385dc731697c20863414145ed0b0a75f1fb39ecee197f16d1e0a795922"
 }
