@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "e370c350-e716-4293-836c-667ef5c2edf8",
+  "releaseId": "bf9b4f92-19ec-43ca-be42-311686732949",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,8 +41,8 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "0d3beefcc3b3bbafc456e50a15abab1202429c9d5b31b613e4dab54600bca823",
-      "bytes": 9326
+      "sha256": "bfa5767681d8e546a9c8390a9344c135ec0d53c7ea2de219bc2c874d1059c092",
+      "bytes": 9328
     },
     "_redirects": {
       "sha256": "b0064a6e748cb4421e4ff024a6219ff6600077feec61978bcd07fb0bd7a87010",
@@ -280341,7 +280341,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "67a46784819cd74dfb0615052361d549b4e31b674fb46c130106f7a06157be6e",
+      "sha256": "5ae503e6b12e53cad68eb51c8410b5507b9db63a0eaa2aee99f69b32ec8b450f",
       "bytes": 2372
     },
     "hook-marketplace.html": {
@@ -281664,9 +281664,9 @@
       "sha256": "1618e7b5304ad76f59f440f8fe7e62676adb43b6bb24f830e0fc5b6ab910cdf3",
       "bytes": 76102
     },
-    "new/app.8346359756.js": {
-      "sha256": "266cbdf039d14bd3131be50e7ea5e7df2e0285f4675589108653eca156386f0e",
-      "bytes": 538597
+    "new/app.7f734a3998.js": {
+      "sha256": "720eefb872f0453e4681aceff9e05c7158f035fa281f305274398fcd61659c18",
+      "bytes": 539262
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
@@ -281721,7 +281721,7 @@
       "bytes": 1382
     },
     "new/index.html": {
-      "sha256": "2746e7a60358eda773b1d6064007208f7253f71bdea69e42dbcf5a1364484077",
+      "sha256": "514b1640c08e93f5c07564f2942e557cdac715689d1f91990533cdf9db9d2d6d",
       "bytes": 1150
     },
     "new/js/perps-book.js": {
@@ -291549,8 +291549,8 @@
       "bytes": 1044
     },
     "qx-tv-chart.mjs": {
-      "sha256": "d593fc91d5541923edb95acc52fad1982967b038bc99519c25ddad6170110256",
-      "bytes": 12318
+      "sha256": "8a272100f86fe654ad8e27fcbdb2404c9f7537901e13fc330032c6c84d80eea8",
+      "bytes": 12712
     },
     "qx-tv-datafeed.mjs": {
       "sha256": "e3dd52763a1dd720fca5858fd235c19449a98da442713882c381169358a8b541",
@@ -292317,5 +292317,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "ead3c70a58441b337dae51d28ea6e0eb41ce4366bab016bc1dcae419731fc69e"
+  "contentDigest": "2d526c9bddc3b0c0b6e9f1ddef55d4a1ec1ff316f04b88eb754f9aea7ce79f1e"
 }

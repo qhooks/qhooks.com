@@ -88,7 +88,7 @@ function ensureStyle(doc) {
 /// view = {sel, unit:'price'|'mcap', tf, bars, k, label, priceUnit, format(value, unit), overlay:{entry, entryText, markers}}
 export function createTvLayer({host, doc = globalThis.document, win = globalThis, timeoutMs = LOAD_TIMEOUT_MS, load = loadLibrary,
   phone = () => !!win.matchMedia?.('(max-width:760px)').matches, colors = () => readColors(doc.body, win), onFallback = () => {}, onReady = () => {}} = {}) {
-  let state = 'idle', widget = null, el = null, timer = null, current = null, pending = null, reason = null, shapes = [], overlayKey = '', visible = false;
+  let state = 'idle', widget = null, el = null, timer = null, current = null, pending = null, reason = null, shapes = [], overlayKey = '', visible = false, lastView = null;
   const feed = createDatafeed({fetcher: win.fetch?.bind(win), onError: (why) => fail('datafeed_' + why)});
   const mark = (on) => { host?.classList.toggle('qx-tv-on', on); if (el) el.dataset.state = state; };
   function fail(why) {
@@ -129,7 +129,10 @@ export function createTvLayer({host, doc = globalThis.document, win = globalThis
     if (!res) { show(false); return; }
     if (!current || current.symbol !== symbol || current.tf !== view.tf) {
       current = {symbol, tf: view.tf}; overlayKey = '';
-      try { widget.setSymbol(symbol, res, () => drawOverlay(view)); } catch (e) { fail('set_symbol'); return; }
+      // The switch callback draws the newest view: a wallet answer that lands during the switch must not be replaced by
+      // the view captured when the switch began (2026-11-21, average-entry line).
+      // The chart clears its drawings when the new symbol loads, so the redraw must not be skipped as 'unchanged'.
+      try { widget.setSymbol(symbol, res, () => { overlayKey = ''; drawOverlay(lastView || view); }); } catch (e) { fail('set_symbol'); return; }
     } else drawOverlay(view);
     show(view.bars.length > 0);
   }
@@ -165,6 +168,7 @@ export function createTvLayer({host, doc = globalThis.document, win = globalThis
   return {
     update(view) {
       if (state === 'failed' || !view?.sel) return false;
+      lastView = view;
       feed.push(symbolFor(view.sel), {tf: view.tf, bars: view.bars || [], k: view.k, label: view.label, unit: view.priceUnit, format: view.format});
       if (!view.bars?.length) { show(false); pending = view; return false; } // the native chart says "No trades yet"
       if (state === 'idle') { pending = view; start(view); return false; }
