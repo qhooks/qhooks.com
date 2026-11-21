@@ -28,6 +28,10 @@
 
 
 
+
+
+
+
 # BEGIN /new static (lead/newstatic/apply.mjs; do not edit by hand)
 /new/*
   strict-transport-security: max-age=31536000
@@ -49,7 +53,7 @@
   cache-control: public, max-age=31536000, immutable
   content-security-policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://coin-images.coingecko.com https://assets.coingecko.com https://assets.geckoterminal.com https://cdn.dexscreener.com data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
 
-/new/app.c44bf7bddc.js
+/new/app.99fc37d9bf.js
   cache-control: public, max-age=31536000, immutable
   content-security-policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://coin-images.coingecko.com https://assets.coingecko.com https://assets.geckoterminal.com https://cdn.dexscreener.com data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
 
