@@ -6,7 +6,7 @@
 // Every send is simulated (eth_call) and estimated first; nothing is sent from any wallet but the connected one.
 import {getWalletHub} from '/wallet-hub-fresh.mjs';
 import {chainById} from '/chains.mjs';
-import {ROUND_TEXT as T, roundChain, call, SEL, projectRound, vestedAt, toUnits, fromUnits, pct, keccakText} from '/qx-round-core.mjs';
+import {ROUND_TEXT as T, ROUND_FACTORY, roundChain, call, SEL, projectRound, vestedAt, toUnits, fromUnits, pct, keccakText} from '/qx-round-core.mjs';
 import {readRound, rpcBatch} from '/qx-round-read.mjs';
 
 const root = document.getElementById('qrp-root'), hub = getWalletHub(window), q = new URLSearchParams(location.search);
@@ -84,7 +84,8 @@ function overview() {
       ['Vesting', T.vestLine(+(R.vestCliff / 86400).toFixed(2), +(R.vestDuration / 86400).toFixed(2))], ['Chain', c.name]),
     R.settled ? dl(['Settled', when(R.settledAt)], tokenLink && ['Token', tokenLink],
       R.totalSupply && ['Round holds', pct(Number(R.tokensReceived * 1000000n / R.totalSupply) / 1e6, 2) + ' of supply']) : null,
-    el('details', {class: 'setup-facts'}, el('summary', {}, 'Contracts'), dl(['Creator', R.creator], ['Round contract', R.round], ['Launch contract', R.launchFactory])));
+    el('details', {class: 'setup-facts'}, el('summary', {}, 'Contracts'), dl(['Creator', R.creator], ['Round contract', R.round], ['Launch contract', R.launchFactory],
+      ['Source code', el('a', {href: 'https://repo.sourcify.dev/' + chainId + '/' + ROUND_FACTORY, target: '_blank', rel: 'noopener'}, 'Verified on Sourcify')])));
 }
 function projection(potAfter = null) {
   const p = projectRound({pot: R.pot, startCap: R.startCap, reserveBps: R.reserveBps});

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "85b88614-62bd-4d85-b0d8-354a56a11e30",
+  "releaseId": "e8536ff4-aa21-487f-9e98-da5cd1bc5014",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -330541,8 +330541,8 @@
       "bytes": 15753
     },
     "qx-round-page.mjs": {
-      "sha256": "fe47a001ae15434842e04e25a6f5207569507a114da859e2341ce3617fe437ad",
-      "bytes": 15090
+      "sha256": "eb5407cc5b4360c6ef3ddcd501b0e917f5326b425fd93e8bf3138d3a63a9fa06",
+      "bytes": 15266
     },
     "qx-round-read.mjs": {
       "sha256": "c5629a99dbec4e35bdf35038d37a9cb38b3a0873b166f163f4f20de1a0a4931b",
@@ -332081,5 +332081,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "177cf0f598f954017df37a57523e5cd928c631d9568228681a739a9e3b3ab24f"
+  "contentDigest": "3d5427ada23603d185ebb9a4e0415e4445d2cdb85648ddf3cac51681132af3b0"
 }
