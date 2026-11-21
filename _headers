@@ -14,6 +14,8 @@
 
 
 
+
+
 # BEGIN /new static (lead/newstatic/apply.mjs; do not edit by hand)
 /new/*
   strict-transport-security: max-age=31536000
@@ -31,11 +33,11 @@
   cache-control: no-cache, no-transform
   content-security-policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://coin-images.coingecko.com https://assets.coingecko.com https://assets.geckoterminal.com https://cdn.dexscreener.com data: blob: https://auth.privy.io https://explorer-api.walletconnect.com https://api.web3modal.org; font-src 'self'; connect-src 'self' wss://mm-sdk-relay.api.cx.metamask.io wss://relay.walletconnect.org wss://relay.walletconnect.com https://rpc.walletconnect.org https://rpc.walletconnect.com https://pulse.walletconnect.org https://verify.walletconnect.org https://verify.walletconnect.com https://api.web3modal.org https://auth.privy.io https://*.rpc.privy.systems https://explorer-api.walletconnect.com https://mainnet.base.org https://rpc.mainnet.chain.robinhood.com https://ethereum-rpc.publicnode.com https://arb1.arbitrum.io https://bsc-dataseed.bnbchain.org https://rpc.mainnet.arc.io https://base-rpc.publicnode.com https://bsc-rpc.publicnode.com https://testnet-rpc.elysium.kinetiq.xyz https://rpc.elysium.kinetiq.xyz https://api.dexscreener.com https://rpc.monad.xyz https://robinhood.rpc.pinax.network https://api.hyperliquid.xyz wss://api.hyperliquid.xyz; frame-src 'self' https://verify.walletconnect.org https://verify.walletconnect.com https://auth.privy.io https://challenges.cloudflare.com; worker-src 'self' blob:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; report-uri /api/csp-report
 
-/new/app.01ce6e4087.js
+/new/app.7b3b183866.css
   cache-control: public, max-age=31536000, immutable
   content-security-policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://coin-images.coingecko.com https://assets.coingecko.com https://assets.geckoterminal.com https://cdn.dexscreener.com data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
 
-/new/app.7b3b183866.css
+/new/app.d6f53f425f.js
   cache-control: public, max-age=31536000, immutable
   content-security-policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://coin-images.coingecko.com https://assets.coingecko.com https://assets.geckoterminal.com https://cdn.dexscreener.com data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
 
