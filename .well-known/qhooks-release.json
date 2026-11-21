@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "612d58f7-4dc8-416f-8981-0ec6240cea04",
+  "releaseId": "d041914e-6b8a-43d5-9127-0561f1dfcdb6",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,12 +41,12 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "be70653edeabf7265cffe626e9051226e432e8dd81b15b659c2b09556ca9edb7",
-      "bytes": 5975
+      "sha256": "26ab28d48a6429f63bf6584229d5525df71ad985b5a4af3ff99d1bcb67ac6d9e",
+      "bytes": 9556
     },
     "_redirects": {
-      "sha256": "76c39fdfdd1d7b4bcea32ff43d71225f87132610d46f7c5e685b874db100b94b",
-      "bytes": 41
+      "sha256": "b0064a6e748cb4421e4ff024a6219ff6600077feec61978bcd07fb0bd7a87010",
+      "bytes": 93
     },
     "adaptive-liquidity.html": {
       "sha256": "c03b2ded384543623e8b3f013ae95898966d30be539988be7e3156b32c65e9fc",
@@ -271012,6 +271012,10 @@
       "sha256": "7f33bfd48389d2acf17fe39176c1cba15b28b34fcbc73ca9388e5bcb4ae7109d",
       "bytes": 1531
     },
+    "classic/index.html": {
+      "sha256": "804ae0f792a44748f1cdde1771637786943cb7417c3c064d8ee5a4aa9df9b3cc",
+      "bytes": 29574
+    },
     "collection.js": {
       "sha256": "b57c5e72a7f36d8e547075ef3afd5d2f8ad2c465de9779ee6cfed354d6072ff3",
       "bytes": 2359
@@ -272396,6 +272400,10 @@
       "sha256": "d6924d4d8e1f9470087f9ca470c6bfb132727cf262e165ff001e4402959ff441",
       "bytes": 772
     },
+    "home.html": {
+      "sha256": "b58beababd585360919096d4e32faf0b711e1609f4a61158272e29879f5efb14",
+      "bytes": 2372
+    },
     "hook-marketplace.html": {
       "sha256": "9ecd79c615eaa287c32957186de71aa954307e75812ca5d81a87600e89f30e7d",
       "bytes": 8752
@@ -273712,9 +273720,9 @@
       "sha256": "0238ea9322d763191730c14a66a5ab70f11744487e93c0e8fe948fb4b92109c4",
       "bytes": 5712
     },
-    "new/app.50541ff312.js": {
-      "sha256": "50541ff31286fbf9b4981ef6d2581c9a7726bec5029b81faa0dbe2db5f25008f",
-      "bytes": 459268
+    "new/app.01ce6e4087.js": {
+      "sha256": "eacfdcc834efea73f8568d5a1d643d1913f9a194570ae84ba34eaab8a5234ece",
+      "bytes": 493662
     },
     "new/app.7b3b183866.css": {
       "sha256": "7b3b18386645df278f424cb9d347c30c07bed1bccf2eb9dee71a44e9f1064e73",
@@ -273768,13 +273776,13 @@
       "sha256": "e7beee93129ed3f92c18c4625364e213507132261d5c754b005c4a5a1955ee91",
       "bytes": 10550
     },
-    "new/early.779c3fd249.js": {
-      "sha256": "779c3fd24982ff94b1ed173383bbd2352afc85530926b4978f55c0ffd377ab91",
-      "bytes": 1100
+    "new/early.4743cbca6b.js": {
+      "sha256": "4743cbca6befde92d9f60605e1001874b44f299951f7939ad3da33fe86e9e9bb",
+      "bytes": 1382
     },
     "new/index.html": {
-      "sha256": "c900bbc7d2656761e9836d7e14af03babe67ca7111e292329efc3d1c91b27da4",
-      "bytes": 1074
+      "sha256": "204c3dfc43e02c9b575a1123c1e1232bc892558bbf27b883f56762d33e85068d",
+      "bytes": 1150
     },
     "new/js/perps-book.js": {
       "sha256": "5711cdbfcd0818ebbe6b040efd77efcecb92f7ffd9d538a950ed017e791550ec",
@@ -273824,9 +273832,9 @@
       "sha256": "c5edcf5d4627cf936cc58928d5277813a9da139429e3a3dd1c4cf3cf88840c02",
       "bytes": 2173
     },
-    "new/main.04f93eec0c.js": {
-      "sha256": "04f93eec0cec3d4365a2fb5ebaf484fff62358f1c47b9b1f74dfb30dcc9f551e",
-      "bytes": 28783
+    "new/main.eb81214ce8.js": {
+      "sha256": "c9d7004e33726fd175822a7d18a70b741a8530f6e0d220d65a8976e68d49fe12",
+      "bytes": 28777
     },
     "news.html": {
       "sha256": "0ea37f854247b290c998912397021cf4da0c77acc5e7f175d63e1a89c90e9c0b",
@@ -284333,5 +284341,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "5dbc875228874066edb75a14efef1dbe3177a114d463b1c0ddae4d8f9a6063a9"
+  "contentDigest": "a7329717f7cef563cb6fa465d1f024936cb750fa6f9208a0eb7cc8648732d1c3"
 }
