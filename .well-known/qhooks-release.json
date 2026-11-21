@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "3c975196-3c2d-4d62-98af-89394eabf481",
+  "releaseId": "c710bc3b-e783-4623-a9b2-3b70c664d704",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,7 +41,7 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "3f78a0528772bd43fc5b6aae11de06ebdc40e298230055113af5230b63b48383",
+      "sha256": "8e98e2b6d676260920484fae28102abb5949f03fb40e5c52876cfaf3343055bf",
       "bytes": 5961
     },
     "_redirects": {
@@ -273712,9 +273712,9 @@
       "sha256": "0238ea9322d763191730c14a66a5ab70f11744487e93c0e8fe948fb4b92109c4",
       "bytes": 5712
     },
-    "new/app.51b340bcc2.js": {
-      "sha256": "51b340bcc2509d79209b479c1f37bfe247d73a158563cf48df2ef170f782be41",
-      "bytes": 437612
+    "new/app.6f74399889.js": {
+      "sha256": "6f74399889a153454ab0256650ca7381e1a229ed083046e7d4fb2fadf0c77bd9",
+      "bytes": 437719
     },
     "new/app.a4483c03a2.css": {
       "sha256": "a4483c03a2a38a3aaa6130b95b6e6be8fa4ae340b6dc592acd0cc2214c549dcc",
@@ -273773,7 +273773,7 @@
       "bytes": 1100
     },
     "new/index.html": {
-      "sha256": "f450dfc23b7780a506ba369d6641bf8fb741fcbd70adaec89e1192ad0fd2991f",
+      "sha256": "fc1473fac226cab294f944407a7f3bc0afbba0852e2790bd8a527e07efbbbb91",
       "bytes": 1074
     },
     "new/js/perps-book.js": {
@@ -284333,5 +284333,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "a47357efa4048843b8e97b57547f7b129eb6c71b770156ef2f9d79a72e130f21"
+  "contentDigest": "8535bc1b067509113e17f9b3986f2db0b2882ba4a0eb263420a423c471444b3e"
 }
