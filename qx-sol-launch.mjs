@@ -6,7 +6,8 @@ import {launchIdentityDraft,draftTokenProfile} from './qx-create-draft.mjs';
 import {solLaunchError} from './qx-sol-launch-errors.mjs';
 import {recordSolLaunch} from './qx-sol-launch-record.mjs';
 import {SOL_LAUNCH_CONFIG as C,solLaunchConfigReady} from './qx-sol-launch-config.mjs';
-import {solReviewLines,normalizeSolMetadata,solAmount,solText} from './qx-sol-launch-values.mjs';
+import {solReviewLines,solFirstBuyNote,normalizeSolMetadata,solAmount,solText} from './qx-sol-launch-values.mjs';
+import {setSolActivePolicy} from './qx-sol-launch-config.mjs';
 import {mountTokenProfileEditor,editableTokenProfileDraft,onTokenProfileDraft,setTokenProfileDraft} from './qx-token-profile.mjs';
 import {solAddress,solWallets,connectSol,onSolChange} from './qx-solana.mjs';
 import {solApi,solRuntime,prepareSolTransaction,sendPreparedSol,buildSolLaunch} from './qx-sol-launch-client.mjs';
@@ -25,7 +26,7 @@ export function mountSolCreate({chainSelect,onExit=()=>{}}){
  for(const n of [name,symbol,buy])n.addEventListener('input',()=>{if(n===symbol)n.value=n.value.toUpperCase();save();});
  screens[0].append(el('div',{class:'qxc-fields'},el('label',{},'Name',name),el('label',{},'Ticker',symbol)),wallets,mountTokenProfileEditor({id:'qsc-profile',chain:()=> 'solana',name:()=>name.value,symbol:()=>symbol.value,imageRequired:true,bannerRequired:true}),el('div',{class:'qxc-actions'},button('Hooks & rules →',()=>go(2),true)));
  const rules=el('dl',{class:'qxc-sol-rules'},...solReviewLines().flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)]));
- screens[1].append(rules,el('label',{},'Your optional first buy · SOL',buy),el('p',{id:'qsc-buy-note',class:'qxc-fine'},'Included in the launch transaction. The opening 50% anti-snipe fee applies; 1% price tolerance. Leave 0 to launch without buying.'),el('div',{class:'qxc-actions'},button('← Your token',()=>go(1)),button('Review launch →',()=>go(3),true)));
+ screens[1].append(rules,el('label',{},'Your optional first buy · SOL',buy),el('p',{id:'qsc-buy-note',class:'qxc-fine'},solFirstBuyNote()),el('div',{class:'qxc-actions'},button('← Your token',()=>go(1)),button('Review launch →',()=>go(3),true)));
  const review=el('div'),launch=button('Confirm and launch',()=>void confirm(),true),prepareButton=button('Prepare launch review',()=>void reviewAction(),true),recover=button('Check launch confirmation',()=>void recoverPending(),true),done=el('div',{class:'qxc-done'});
  screens[2].append(review,el('div',{class:'qxc-actions'},button('← Hooks & rules',()=>go(2)),prepareButton,launch,recover),done);
  root.append(chainSlot,...screens,message,receiptLink);document.getElementById('qc-screen-1').before(root);
@@ -54,7 +55,7 @@ export function mountSolCreate({chainSelect,onExit=()=>{}}){
  document.addEventListener('qhooks:create-draft',()=>{if(active)syncIdentity();});
  function fields(){return normalizeSolMetadata({mint:mint?.publicKey.toBase58()||C.quoteMint,name:name.value,symbol:symbol.value,...editableTokenProfileDraft('solana')});}
  function go(next){if(busy)return;try{if(next>1)fields();if(next>2)solAmount(buy.value);step=next;render();document.getElementById('qsc-title-'+step).focus({preventScroll:true});root.scrollIntoView({block:'start'});}catch(e){notify(solLaunchError(e),true);}}
- async function loadConfig(){try{config=await solApi('config');config={...config,ready:solLaunchConfigReady(config)};notify(config.ready?'':'Solana launches open shortly.');}catch{config={ready:false};notify('Solana launches open shortly.');}render();}
+ async function loadConfig(){try{config=await solApi('config');config={...config,ready:solLaunchConfigReady(config)};setSolActivePolicy(config.policyVersion);rules.replaceChildren(...solReviewLines().flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)]));{const note=document.getElementById('qsc-buy-note');if(note)note.textContent=solFirstBuyNote();}notify(config.ready?'':'Solana launches open shortly.');}catch{config={ready:false};notify('Solana launches open shortly.');}render();}
  function render(){
   mountLaunchTickerInput(symbol,{id:'qsc-symbol-rule'}).paint();
   if(!active)return;modelPreview.update(solModel({ready:!!config?.ready,cost,prepared,pending:!!pending}));root.hidden=false;for(const n of originals())n.hidden=true;
@@ -85,7 +86,7 @@ export function mountSolCreate({chainSelect,onExit=()=>{}}){
    notify('Preparing metadata and simulating your launch…');runtime||=await solRuntime();mint||=runtime.Keypair.generate();details=fields();
    let uri=metadataUri;if(!uri){const meta=await solApi('meta',details);uri=metadataUri=meta.uri;}
    details.uri=uri;
-   const quoted=await solApi('cost',{mint:details.mint,creator:owner}),tx=await buildSolLaunch(runtime,{config:config.config,mint,owner,name:details.name,symbol:details.symbol,uri,buy:amount,lamports:quoted.lamports});
+   const quoted=await solApi('cost',{mint:details.mint,creator:owner}),tx=await buildSolLaunch(runtime,{config:config.config,policyVersion:config.policyVersion||1,mint,owner,name:details.name,symbol:details.symbol,uri,buy:amount,lamports:quoted.lamports});
    prepared=await prepareSolTransaction(runtime,tx,[mint],owner);
    const sizes=[82,165,runtime.client.program.account.virtualPool.size,679],response=await fetch('/api/sol-launch/rpc',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(sizes.map((size,i)=>({jsonrpc:'2.0',id:i,method:'getMinimumBalanceForRentExemption',params:[size,{commitment:'confirmed'}]})))}),rows=await response.json();
    if(!Array.isArray(rows)||rows.some(r=>r.error||!Number.isSafeInteger(r.result)))throw Error('Refreshing the rent estimate. Refresh review.');const rent=rows.reduce((n,r)=>n+BigInt(r.result)*(r.id===1?BigInt(amount>0n?4:2):1n),0n);

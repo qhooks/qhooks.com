@@ -44,16 +44,35 @@ export const SOL_LAUNCH_CONFIG = Object.freeze({
  cashbackPercentage: 30, // Share of QHooks partner fee credited to the trader.
  referralPercentage: 20, // Share of QHooks partner fee credited to an enrolled referrer.
 });
+// solcfg2 (2026-11-21, Randall: "Yep have it built"): fee policies by version. SOL_LAUNCH_CONFIG above stays policy 1,
+// the config AFBWu… that every existing coin trades on. Policy 2 changes only the anti-snipe schedule and the creator's
+// bundled first buy; supply, curve, graduation, fee split and claimer are identical, so both curves are the same.
+// Meteora limits (SDK 2.0.0 helpers/feeParams.ts + validation.ts, program fee_scheduler.rs): timestamp activation counts
+// whole seconds; periodFrequency = floor(totalDuration / numberOfPeriod) >= 1 s; numberOfPeriod 1..65535; every fee
+// numerator within [MIN_FEE_NUMERATOR 0.25%, MAX_FEE_NUMERATOR 99%]. So the finest fade is one step per second:
+// 15 one-second steps from 50% to 1.2%, the EVM 50%-over-15 s. The first-swap discount applies only to a swap bundled
+// at top level in the pool-initialize transaction, without CPI and without a referral account (program
+// validate_contain_initialize_pool_ix_and_no_cpi); it pays the minimum base fee (1.2%).
+export const SOL_LAUNCH_POLICIES = Object.freeze({
+ 1: SOL_LAUNCH_CONFIG,
+ 2: Object.freeze({...SOL_LAUNCH_CONFIG, policy: 2, schedulerPeriods: 15, schedulerSeconds: 15, enableFirstSwapWithMinFee: true}),
+});
+export const SOL_LAUNCH_POLICY_NEXT = 2; // The policy the setup page offers next; switching needs Randall's signature.
+export function solPolicy(version = 1) { const p = SOL_LAUNCH_POLICIES[Number(version) || 1]; if (!p) throw Error('unknown_sol_policy'); return p; }
+// Browser display state: launch pages set it from /api/sol-launch/config (policyVersion); defaults to the live policy 1.
+let activeVersion = 1;
+export function setSolActivePolicy(version) { activeVersion = SOL_LAUNCH_POLICIES[Number(version)] ? Number(version) : 1; return solPolicy(activeVersion); }
+export const solActivePolicy = () => solPolicy(activeVersion);
 export function solLaunchFeeLamports(price) {
  if (!(Number.isFinite(price) && price > 0)) throw Error('Refreshing the SOL price. Refresh before launching.');
  const amount=Math.ceil(SOL_LAUNCH_CONFIG.flatLaunchUsd / price * 1e9);if(!Number.isSafeInteger(amount)||amount<=0)throw Error('SOL price is outside the supported range.');return BigInt(amount);
 }
-export function solScheduledFeeNumerator(seconds) {
- const c=SOL_LAUNCH_CONFIG,period=Math.min(c.schedulerPeriods,Math.max(0,Math.floor(seconds)));
+export function solScheduledFeeNumerator(seconds, c = SOL_LAUNCH_CONFIG) {
+ const period=Math.min(c.schedulerPeriods,Math.max(0,Math.floor(seconds)));
  return BigInt(c.startingFeeBps)*100000n-BigInt(period)*(BigInt(c.startingFeeBps-c.steadyFeeBps)*100000n/BigInt(c.schedulerPeriods));
 }
-export function solLaunchReview() {
- const c=SOL_LAUNCH_CONFIG,fee=Number(solScheduledFeeNumerator(60))/1e7;
+export function solLaunchReview(c = SOL_LAUNCH_CONFIG) {
+ const fee=Number(solScheduledFeeNumerator(c.schedulerSeconds, c))/1e7;
  return {steadyFeePercent:fee,meteoraPercent:fee*c.protocolFeePercentage/100,creatorPercent:fee*(100-c.protocolFeePercentage)*c.creatorTradingFeePercentage/10000,partnerPercent:fee*(100-c.protocolFeePercentage)*(100-c.creatorTradingFeePercentage)/10000};
 }
 

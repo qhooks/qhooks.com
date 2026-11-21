@@ -1,7 +1,9 @@
 import {requireSolTreasury} from './qx-sol-treasury.mjs';
 import {waitSolFinalized} from './qx-sol-launch-confirm.mjs';
 // SDK and transaction primitives load only after a Solana action.
-import {SOL_LAUNCH_CONFIG as C} from './qx-sol-launch-config.mjs';
+import {SOL_LAUNCH_CONFIG as C,solPolicy} from './qx-sol-launch-config.mjs';
+// solcfg2: a coin trades on its own config; the site serves the active config and the retired ones (cfg.configs).
+export const solServesConfig=(cfg,config)=>!!cfg?.ready&&(Array.isArray(cfg.configs)?cfg.configs.some(k=>k.config===config):cfg.config===config);
 import {solAddress,sendSol} from './qx-solana.mjs';
 const b64=b=>{let s='';for(const v of b)s+=String.fromCharCode(v);return btoa(s);};
 const approvals=new WeakMap(); // In-memory co-signers only; never put keypairs in saved recovery state.
@@ -43,10 +45,10 @@ export async function sendPreparedSol(runtime,prepared){
  const signature=await sendSol(approval.serialized,{owner:approval.owner,coSign,send:bytes=>runtime.connection.sendRawTransaction(bytes,{skipPreflight:false,preflightCommitment:'confirmed',maxRetries:2})});
  return {signature,confirm:()=>waitSolFinalized(runtime.connection,signature,{lastValidBlockHeight:prepared.last.lastValidBlockHeight})};
 }
-export async function buildSolLaunch(runtime,{config,mint,owner,name,symbol,uri,buy,lamports}){
+export async function buildSolLaunch(runtime,{config,policyVersion=1,mint,owner,name,symbol,uri,buy,lamports}){
  requireSolTreasury();
  const {PublicKey,BN,client,SystemProgram,buildSolLaunchParameters}=runtime,creator=new PublicKey(owner),key=new PublicKey(config);
- let minimum=new BN(0);if(buy>0n){const quote=client.pool.getQuoteFromInputAmount({config:buildSolLaunchParameters(),amountIn:new BN(buy.toString()),swapBaseForQuote:false,slippageBps:100,hasReferral:false,eligibleForFirstSwapWithMinFee:false});minimum=quote.minimumAmountOut;}
+ let minimum=new BN(0);if(buy>0n){const policy=solPolicy(policyVersion),quote=client.pool.getQuoteFromInputAmount({config:buildSolLaunchParameters(policy),amountIn:new BN(buy.toString()),swapBaseForQuote:false,slippageBps:100,hasReferral:false,eligibleForFirstSwapWithMinFee:policy.enableFirstSwapWithMinFee===true});minimum=quote.minimumAmountOut;}
  const tx=await client.creator.createPoolWithFirstBuy({createPoolParam:{name,symbol,uri,payer:creator,poolCreator:creator,config:key,baseMint:mint.publicKey},...(buy>0n?{firstBuyParam:{buyer:creator,buyAmount:new BN(buy.toString()),minimumAmountOut:minimum,referralTokenAccount:null}}:{})});
  tx.add(SystemProgram.transfer({fromPubkey:creator,toPubkey:new PublicKey(C.treasury),lamports:BigInt(lamports)}));
  return tx;
@@ -54,8 +56,8 @@ export async function buildSolLaunch(runtime,{config,mint,owner,name,symbol,uri,
 export async function claimSolFees(mint,{partner=false,onStatus=()=>{}}={}){
  if(partner)requireSolTreasury();
  const owner=solAddress();if(!owner)throw Error('Connect a Solana wallet first.');if(partner&&owner!==C.treasury)throw Error('Connect the QHooks treasury wallet.');
- const [r,status,cfg]=await Promise.all([solRuntime(),solApi('token/'+mint),solApi('config')]);if(!cfg.ready||status.config!==cfg.config||!status.qhooksLaunch)throw Error('Not a verified QHooks launch.');
- const pool=new r.PublicKey(status.pool),actual=await r.client.state.getPool(pool);if(actual?.poolState?.config.toBase58()!==cfg.config)throw Error('Pool config mismatch.');
+ const [r,status,cfg]=await Promise.all([solRuntime(),solApi('token/'+mint),solApi('config')]);if(!solServesConfig(cfg,status.config)||!status.qhooksLaunch)throw Error('Not a verified QHooks launch.');
+ const pool=new r.PublicKey(status.pool),actual=await r.client.state.getPool(pool);if(actual?.poolState?.config.toBase58()!==status.config)throw Error('Pool config mismatch.');
  if(!partner&&actual.poolState.creator.toBase58()!==owner)throw Error('Connect this coin’s creator wallet.');
  onStatus('Preparing the fee claim…');const payer=new r.PublicKey(owner),params={payer,pool,maxBaseAmount:r.U64_MAX,maxQuoteAmount:r.U64_MAX};
  const tx=partner?await r.client.partner.claimPartnerTradingFee({...params,feeClaimer:payer,receiver:payer}):await r.client.creator.claimCreatorTradingFee({...params,creator:payer,receiver:payer});
@@ -66,7 +68,7 @@ export async function claimSolFees(mint,{partner=false,onStatus=()=>{}}={}){
 export async function migrateSolLaunch(mint,onStatus=()=>{}){
  const owner=solAddress();if(!owner)throw Error('Connect a Solana wallet.');
  const [r,cfg,status]=await Promise.all([solRuntime(),solApi('config'),solApi('token/'+mint)]);
- if(!cfg.ready||status.config!==cfg.config||status.graduated||BigInt(status.quoteReserve)<BigInt(C.migrationQuoteThresholdLamports))throw Error('This curve has not reached 85 SOL or has already graduated.');
+ if(!solServesConfig(cfg,status.config)||status.graduated||BigInt(status.quoteReserve)<BigInt(C.migrationQuoteThresholdLamports))throw Error('This curve has not reached 85 SOL or has already graduated.');
  const result=await r.client.migration.migrateToDammV2({payer:new r.PublicKey(owner),pool:new r.PublicKey(status.pool),dammConfig:r.DAMM_V2_MIGRATION_FEE_ADDRESS[C.migrationFeeOption]});
  const prepared=await prepareSolTransaction(r,result.transaction,[result.firstPositionNftKeypair,result.secondPositionNftKeypair],owner);onStatus('Simulation passed. Confirm migration and network/rent costs in your wallet.');const sent=await sendPreparedSol(r,prepared);await sent.confirm();return sent.signature;
 }
