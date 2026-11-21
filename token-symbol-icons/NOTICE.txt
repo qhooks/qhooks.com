@@ -1,0 +1,4 @@
+Token symbol icons for well-known quote tokens (portfolio rows without a logo, 2026-11-21).
+eth, bnb, sol, hype and mon are the chain marks from ../chain-symbol-icons (see its NOTICE: @web3icons/core 4.0.58, MIT,
+and original badges). usdc, usdt and usdg are original geometric badges in the same style, identifying the asset only;
+they are not official brand assets. Assigned by contract address (never by symbol), so look-alike tokens never get them.

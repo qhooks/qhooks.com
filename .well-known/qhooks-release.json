@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "c8544d8b-a38d-44cd-b556-fecf082a6495",
+  "releaseId": "8db436eb-4bb5-4d95-9424-dfb99f379c78",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -283952,6 +283952,42 @@
       "sha256": "e3ca9f97b20ae395f66710024f2a6f06beb09d41413bc60b1a7cc320ac6707dd",
       "bytes": 4701
     },
+    "token-symbol-icons/NOTICE.txt": {
+      "sha256": "47a8d409b73e2fde7f69562c428bd8b78a7ca689af84c9225db010be2b2a232e",
+      "bytes": 453
+    },
+    "token-symbol-icons/bnb.svg": {
+      "sha256": "bb4eaf7fb18772d69ea632322598b13d6df59313798398a13efec1646ad5e0f0",
+      "bytes": 737
+    },
+    "token-symbol-icons/eth.svg": {
+      "sha256": "c262a17068419a73c94b55c4468b0e63e0c0a14420fec77e41ecd94355cd3e1b",
+      "bytes": 882
+    },
+    "token-symbol-icons/hype.svg": {
+      "sha256": "f2f79dff20bcb348a411781f5d8ae8ea69247315d3b08e9c59e1ad80114e8d72",
+      "bytes": 271
+    },
+    "token-symbol-icons/mon.svg": {
+      "sha256": "e50c3f5b3952f13151a54539e611c6f84b531391e7a2a59b993c7cc485a541e2",
+      "bytes": 267
+    },
+    "token-symbol-icons/sol.svg": {
+      "sha256": "65edaf18e4c2b2b75c483403ee44a5606e5599bb1f6bd7b5fc901643e520b490",
+      "bytes": 471
+    },
+    "token-symbol-icons/usdc.svg": {
+      "sha256": "a14a5eee8c23878cecc8df0ed086acf195d040dd014fff84b1ab8c0ca07dc3a2",
+      "bytes": 443
+    },
+    "token-symbol-icons/usdg.svg": {
+      "sha256": "40c2d3df6bf18f4c49eab767121231ed40addc4f3ff5923cb37b8064269aa6f9",
+      "bytes": 280
+    },
+    "token-symbol-icons/usdt.svg": {
+      "sha256": "4ab38e0d6ad5d5968eb139a8036ffbde0aa6ca9a5545976911ecc58fb4ecce32",
+      "bytes": 321
+    },
     "tokenlist.json": {
       "sha256": "92b07105e5b2f99d899918c4ed3ba0f88149c2ddbe57322896169c78def151f0",
       "bytes": 478
@@ -284341,5 +284377,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "598755c61442f68f3ef94502d30493995c53e53d4c776b6e801d62825dbff292"
+  "contentDigest": "479bfa22d5458af01e9878312e1ea05a78fa3e1c1d6995da66c5d9fca5838819"
 }
