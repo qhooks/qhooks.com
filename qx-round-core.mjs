@@ -10,15 +10,17 @@ export const ROUND_FACTORY = '0x88d24518427333fe324561b3b985b01956e3a4b7';
 /// Chains with a round deploy step. `from`: no RoundCreated log can be older than this block (the head when the
 /// manifest was made, 2026-11-21; raise it to the deploy block after the tap). Log windows for the Worker's meta lookup:
 /// Robinhood's public RPC answers address+topic eth_getLogs over 5M blocks (checked 2026-11-21); Base/BNB stay at 10k.
+// from: 4663 120183234 and 56 134963350 are the blocks at 21:59:57Z (those RPCs keep no history, the deploys came
+// after); 8453 60552150 is the deploy block.
 export const ROUND_CHAINS = Object.freeze({
-  '4663': Object.freeze({from: 120155257, logSpan: 5_000_000, logWindows: 6}),
-  '56': Object.freeze({from: 134956151, logSpan: 10_000, logWindows: 24}),
-  '8453': Object.freeze({from: 60523912, logSpan: 10_000, logWindows: 24}),
+  '4663': Object.freeze({from: 120183234, logSpan: 5_000_000, logWindows: 6}),
+  '56': Object.freeze({from: 134963350, logSpan: 10_000, logWindows: 24}),
+  '8453': Object.freeze({from: 60552150, logSpan: 10_000, logWindows: 24}),
 });
 /// Chains where RoundFactory is deployed and switched on. Empty until Randall's /chain-setup?set=round taps; each chain is
 /// added (with its deploy block as `from`) in a small follow-up release. Until then every round surface (create section,
 /// /round, token line, Worker routes) is inert and makes no chain reads (Alchemy CU is paid; nothing to read before code).
-export const ROUND_LIVE = Object.freeze(new Set([]));
+export const ROUND_LIVE = Object.freeze(new Set(['4663', '56', '8453'])); // live 2026-11-21: RoundFactory code on all three (Randall's taps)
 /// The chain's round settings when RoundFactory is live there, else null (fail closed).
 export const roundChain = id => ROUND_LIVE.has(String(id)) ? ROUND_CHAINS[String(id)] || null : null;
 /// Settings regardless of the live switch (manifest, simulations and tests only).

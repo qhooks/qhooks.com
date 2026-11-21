@@ -151,6 +151,8 @@ export function mountRoundCreate({hub, context, prepare, onChange = () => {}, fe
       const log = (r.logs || []).map(l => parseRoundCreated(l)).find(Boolean);
       const round = log?.round || predicted, block = r.blockNumber != null ? Number(BigInt(r.blockNumber)) : null;
       result = {chainId, round, block};
+      // Keep its launch details on the site so /round can settle it however old (best effort; the log lookup is the fallback).
+      fetch('/api/v1/rounds/record', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({chain: String(chainId), tx: hash})}).catch(() => {});
       try { localStorage.removeItem(DRAFT); } catch {}
       busy = false; say(T.created);
       done.replaceChildren(el('a', {class: 'qxc-primary', href: roundPath(chainId, round, block)}, T.open), ' ', el('span', {class: 'qxc-fine'}, round));
