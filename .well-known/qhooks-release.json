@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "e8536ff4-aa21-487f-9e98-da5cd1bc5014",
+  "releaseId": "96e281d5-13ea-4ab7-84bb-dedac5e3ee59",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -330681,8 +330681,8 @@
       "bytes": 800
     },
     "qx-sol-launch-setup.mjs": {
-      "sha256": "16c37dc389b1554bf5c5d3c4a1238ae54a76aef5b375e4560f360f100b08de7f",
-      "bytes": 6166
+      "sha256": "b3d8b93ed10d37538368ffe99ba1cbcb958a9b057645ce87719d87ab968945c5",
+      "bytes": 10119
     },
     "qx-sol-launch-trade.mjs": {
       "sha256": "3ba5bbd8f58a70d6ca7537a16bc2fff5ccd69935008f5ad282c21b5b02fc1975",
@@ -331549,8 +331549,8 @@
       "bytes": 50367
     },
     "sol-launch-setup.html": {
-      "sha256": "9eeb20afe15352ae89efeb6b0fcedcd4b78066b05181558531ad56ea662d5cad",
-      "bytes": 3479
+      "sha256": "fef20e8143353a57f391a89a1f34337897b2ab7326a694ee0834da8f1effce6e",
+      "bytes": 3634
     },
     "sol-referral-payouts.html": {
       "sha256": "696952c0dd251abbf749088a3edd3d4d3496712d08d3c062f8e87859b110e197",
@@ -332081,5 +332081,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "3d5427ada23603d185ebb9a4e0415e4445d2cdb85648ddf3cac51681132af3b0"
+  "contentDigest": "7625a5c1b0d1c5714cca41b4a98d9d865a16495f9502bccc48cb98870dd7c2dc"
 }
