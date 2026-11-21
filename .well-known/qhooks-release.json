@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "bf9b4f92-19ec-43ca-be42-311686732949",
+  "releaseId": "858e308e-4d29-4242-9393-5c25a0d278fe",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -287369,12 +287369,12 @@
       "bytes": 15814
     },
     "qproof-view.css": {
-      "sha256": "5e0b1c7500e00b723af1788844ad1375c7dcb053c6fd505d3e029d140db519c0",
-      "bytes": 9742
+      "sha256": "de3a49bbb5a5f3516144e95b1f3b6cc7e79f97b04e4c5f5e36d8b02ca7fc0e42",
+      "bytes": 9867
     },
     "qproof-view.mjs": {
-      "sha256": "afd82e9b2b6e0f2dac1b31f86a5f445d82a87357f00e9d7970b312532a9ba4af",
-      "bytes": 18174
+      "sha256": "df9bc42e47137adf22d58d4d25c8f788cd2c26a355d86c9f12d6a62f4052800e",
+      "bytes": 18298
     },
     "qproof.html": {
       "sha256": "c2ab341537ab4fc79e92e26ca9f9b718881da906a4240f759f87848049fbe06e",
@@ -292317,5 +292317,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "2d526c9bddc3b0c0b6e9f1ddef55d4a1ec1ff316f04b88eb754f9aea7ce79f1e"
+  "contentDigest": "6070478b701713c1f075b2b1394b1250fd3c88e60f7272ce72a5801667db7e59"
 }

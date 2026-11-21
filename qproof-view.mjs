@@ -1,6 +1,7 @@
 import {qproofCheckDisplayCopy} from './qproof-check-display-copy.mjs';
 // Display only: the server owns risk, required checks and the verdict policy.
-const LEVELS=new Set(['danger','watch','clear','incomplete']);
+// FU47: 'info' = a known-issuer stablecoin (its label is the server's "Issuer stablecoin · <Issuer>")
+const LEVELS=new Set(['danger','watch','clear','incomplete','info']);
 const finite=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0?v:null;
 const pct=v=>finite(v)!==null&&v<=100?v:null;
 const text=(v,max=500)=>typeof v==='string'?v.slice(0,max):'';
@@ -57,7 +58,7 @@ export function qproofAgeLabel(freshness,now=Date.now()){
  return'Checked '+unit+block;
 }
 // Compatibility for existing execution guards; this maps the server enum only.
-export function qproofGuardLevel(value){const p=readQProofPresentation(value);return p.ready?({danger:'danger',watch:'caution',clear:'clear',incomplete:'unknown'})[p.verdict.level]:null;}
+export function qproofGuardLevel(value){const p=readQProofPresentation(value);return p.ready?({danger:'danger',watch:'caution',clear:'clear',incomplete:'unknown',info:'clear'})[p.verdict.level]:null;}
 export function qproofReadParams(search=globalThis.location?.search||''){const q=new URLSearchParams(search);if(!q.has('cached_only'))return{};return{cached_only:q.getAll('cached_only').length===1&&q.get('cached_only')==='1'?'1':'invalid'};}
 export function qproofReportLocation(path,search=globalThis.location?.search||''){const mode=qproofReadParams(search);return path+(mode.cached_only?'?'+new URLSearchParams(mode):'');}
 const percent=v=>v===null?'Not reported':new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(v)+'%';
