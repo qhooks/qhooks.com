@@ -31,7 +31,25 @@ let M,busy=false,status={chain:null,text:'',tone:''};
 const state={};
 async function rpc(chainId,method,params){
  const r=await fetch(net(chainId).rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});
- const j=await r.json();if(j.error)throw Error(j.error.message||'Network read failed');return j.result;
+ const j=await r.json();if(j.error)throw Error(revertText(j.error));return j.result;
+}
+// A JSON-RPC error as a sentence: the revert reason when the node returns Error(string) data, else its message.
+function revertText(err){
+ const d=typeof err?.data==='string'?err.data:typeof err?.data?.data==='string'?err.data.data:'';
+ if(/^0x08c379a0[0-9a-f]{128,}$/i.test(d)){try{const len=Number(BigInt('0x'+d.slice(74,138)));const t=new TextDecoder().decode(Uint8Array.from((d.slice(138,138+len*2).match(/../g)||[]).map(x=>parseInt(x,16))));if(t)return 'Reverted: '+t;}catch{}}
+ return err?.message||'Network read failed';
+}
+// setupfix (2026-11-21, BNB set=round): a public endpoint behind a load balancer can lag a just-deployed contract by a
+// few blocks. A lagging '0x' offered the send again and 4 resends failed on the CREATE2 collision (all gas burned).
+// Once a step's code is seen it stays seen for this page, and a '0x' is read again through the site's own
+// /api/rpc/<chain> (another node) before any send is offered.
+const seen=new Set();
+async function codeAt(chainId,addr){
+ const a=await rpc(chainId,'eth_getCode',[addr,'latest']);
+ if(a!=='0x')return a;
+ try{const r=await fetch('/api/rpc/'+chainId,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_getCode',params:[addr,'latest']})});
+  const j=await r.json();if(typeof j?.result==='string'&&/^0x[0-9a-f]+$/i.test(j.result)&&j.result!=='0x')return j.result;}catch{}
+ return '0x';
 }
 const hex=b=>Array.from(new Uint8Array(b),x=>x.toString(16).padStart(2,'0')).join('');
 const bytes=h=>Uint8Array.from((h.slice(2).match(/../g)||[]).map(x=>parseInt(x,16)));
@@ -48,7 +66,8 @@ async function target(chainId,s){
 // What is at a step's address: 'none', 'ok' (code matches the step), or 'wrong' (some other code: stop).
 async function check(chainId,s){
  const addr=await target(chainId,s);if(!addr)return 'none';
- const code=await rpc(chainId,'eth_getCode',[addr,'latest']);
+ const key=chainId+':'+s.id+':'+addr.toLowerCase();if(seen.has(key))return 'ok';
+ const code=await codeAt(chainId,addr);
  if(code==='0x')return 'none';
  if(s.runtimeSha256&&await sha256(code)!==s.runtimeSha256)return 'wrong';
  if(s.safe){
@@ -59,6 +78,7 @@ async function check(chainId,s){
   const want=safe.owners.map(o=>o.toLowerCase());
   if(!want.length||BigInt(th)!==BigInt(safe.threshold)||ow.length!==want.length||!want.every(o=>ow.includes(o)))return 'wrong';
  }
+ seen.add(key);
  return 'ok';
 }
 const say=(chain,text,tone='')=>{status={chain,text,tone};draw();};
@@ -110,7 +130,12 @@ async function send(chainId,s){
   if((await rpc(chainId,'eth_getCode',[M.deployer,'latest']))==='0x')throw Error('The standard deployer is not on this chain. Nothing was sent.');
   const from=conn.owner,provider=conn.entry.provider,tx={from,to:s.to,data:s.data,value:s.value||'0x0'};
   try{const est=BigInt(await rpc(chainId,'eth_estimateGas',[{from,to:tx.to,data:tx.data,value:tx.value}]));tx.gas='0x'+(est*13n/10n).toString(16);}
-  catch{throw Error('This step would fail right now (often: not enough gas in the wallet on this chain). Nothing was sent.');}
+  catch(e){throw Error('This step would fail right now (often: not enough gas in the wallet on this chain, or it is already set up). '+(/^Reverted: /.test(e?.message||'')?e.message+'. ':'')+'Nothing was sent.');}
+  // Same call through the site's own read (another node): a lagging endpoint must not let a send through.
+  try{const r2=await fetch('/api/rpc/'+chainId,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_call',params:[{from,to:tx.to,data:tx.data,value:tx.value},'latest']})});
+   // Only a JSON-RPC answer counts (a revert from the node); the proxy refusing the method is not a verdict.
+   const j2=await r2.json();if(j2?.jsonrpc==='2.0'&&j2.error&&typeof j2.error==='object')throw Error('This step would fail right now: '+revertText(j2.error)+'. Nothing was sent.');}catch(e){if(/Nothing was sent/.test(e?.message||''))throw e;}
+  if((await check(chainId,s))==='ok'){state[chainId].steps[s.id]='ok';say(chainId,'Already set up at '+s.address+'. Nothing to send.','ok');return;}
   try{const b=await rpc(chainId,'eth_getBlockByNumber',['latest',false]),tip=BigInt(await provider.request({method:'eth_maxPriorityFeePerGas'}).catch(()=>'0x0'));
    if(b?.baseFeePerGas){tx.maxPriorityFeePerGas='0x'+tip.toString(16);tx.maxFeePerGas='0x'+(BigInt(b.baseFeePerGas)*2n+tip).toString(16);}}catch{}
   if(hub.snapshot().current?.owner!==from)throw Error('Your wallet changed. Try again.');
@@ -119,7 +144,14 @@ async function send(chainId,s){
   say(chainId,'Sent. Waiting for the network…');
   let r=null;for(let i=0;i<180&&!r;i++){r=await rpc(chainId,'eth_getTransactionReceipt',[hash]).catch(()=>null);if(!r)await new Promise(res=>setTimeout(res,2000));}
   if(!r)throw Error('Still pending. Check your wallet activity, then reload this page.');
-  if(r.status!=='0x1')throw Error('The network refused it. Only gas was spent.');
+  if(r.status!=='0x1'){
+   // Already there (a send raced a deploy, or a read lagged)? Then this step is done.
+   let again='none';for(let i=0;i<6&&again==='none';i++){again=await check(chainId,s).catch(()=>'none');if(again==='none')await new Promise(res=>setTimeout(res,3000));}
+   if(again==='ok'){state[chainId].steps[s.id]='ok';say(chainId,'Set up at '+s.address+'. This send was refused because the contract was already there; only its gas was spent.','ok');return;}
+   let why='';try{await rpc(chainId,'eth_call',[{from,to:tx.to,data:tx.data,value:tx.value,gas:tx.gas},r.blockNumber]);}catch(e){why=e?.message||'';}
+   const used=BigInt(r.gasUsed||'0x0'),lim=BigInt(tx.gas||'0x0'),most=lim>0n&&used*100n>=lim*97n;
+   throw Error('The network refused it'+(why?' ('+why+')':'')+'. Gas used '+used.toLocaleString('en-US')+' of '+lim.toLocaleString('en-US')+(most?': nearly all of it, which means it ran out of gas or something is already at that address':'')+'. Only gas was spent.');
+  }
   let after=await check(chainId,s).catch(()=>'none');
   // Some networks' reads lag the receipt by a few blocks (Robinhood Chain: minutes). Re-read before saying anything.
   for(let i=0;i<24&&after==='none';i++){say(chainId,'Confirmed. Waiting for the network to show the contract…');await new Promise(res=>setTimeout(res,5000));after=await check(chainId,s).catch(()=>'none');}

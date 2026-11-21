@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "9e0f574c-c83a-4ba1-9276-68f5c8cf327b",
+  "releaseId": "7db29364-afd8-4d58-a214-3ceaad333c3a",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -320949,8 +320949,8 @@
       "bytes": 33987
     },
     "qx-chain-setup.mjs": {
-      "sha256": "5ca0d52690c31fe3595186212706055582057d2c13de558fd1de65e6ca78f1d1",
-      "bytes": 19460
+      "sha256": "bf58fe642419e9c17bac7039f3d379d956bed26d9799dbd499781f375e472634",
+      "bytes": 22771
     },
     "qx-chain.mjs": {
       "sha256": "3a577e4a87dfc7292fd2d8bd20751e1969b04175a69d62f3e27e52816e8d30d8",
@@ -324137,5 +324137,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "289beb39f12ffcba19f9f32bbdd31c89aa8d730ceb4a94c89433cccb4e918c93"
+  "contentDigest": "d348b1d6a691a514d6f738f25aa82b6c37bea8731b4100c4a0eaf80ff287f1d3"
 }
