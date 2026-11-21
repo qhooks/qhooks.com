@@ -35,6 +35,8 @@ import {pairsFactory,pairQuotes,primePairsFactory,pairsLive,pairStartAtCall,read
 import {mountAccountQuantum} from './qx-account-quantum-control.mjs';
 import {rangeKitReady,planRange,makeCall,pointCall,pointCallPq,checkPqMessage,payoutOf,sendBatch,RANGE_SHARES,DEFAULT_RANGE_BPS,RANGE_GAS} from './qx-range-kit.mjs';
 import {ideaCards,ideaCard,visibleGroups,quickFactory,encodeQuickLaunch,validateQuick,launchFeeWei,quickCost,ethText,launchedToken,randomSalt,PLANNING_GAS,QUICK_PRESET} from './qx-quick-launch-core.mjs';
+import {mountTeamBuy} from './qx-team-buy-ui.mjs';
+import {TEAM_TEXT,TEAM_NATIVE_CHAINS,TEAM_BUY_LIVE,teamSplit} from './qx-team-buy-core.mjs';
 
 let banner='',bannerData='',bannerRevision=0,imageRevision=0,bannerSource='',lastImageFile=null;
 let simpleDefault=false;
@@ -181,6 +183,35 @@ const curPair=()=>pairIdx&&pick&&pick.style!=='flywheel'&&!isRangeKit()&&(multiL
 const pairFactory=()=>multiLive(chainId)?multiFactory(chainId):pairsFactory(chainId);
 const launchFactory=()=>multiOn()?multiFactory(chainId):curPair()?pairFactory():quickFactory(chainId);
 const pqOnChain=()=>multiOn()||!!curPair()||pqFactory(chainId);
+// ---- Team buy (2026-11-21, Randall approved): optional first buy in the launch call (paid with its value on wrapped-native
+// chains, before the launch blocks exist), then one plain token transfer per team wallet, sent by the creator. ----
+const teamEvm=mountTeamBuy({chain:'evm',creator:()=>hub.snapshot().current?.owner||null,onChange:()=>{renderQuick();costSoon();}});
+const buyInput=el('input',{id:'qq-buy',inputmode:'decimal',autocomplete:'off',value:'0','aria-describedby':'qq-buy-note'}),buyHint=el('p',{class:'qxc-fine',id:'qq-buy-pct',role:'status'}),buyUnit=el('span',{});
+const firstBuyBox=el('div',{id:'qq-firstbuy',class:'qq-firstbuy',hidden:''},el('label',{},el('span',{},'Your optional first buy · '),buyUnit,buyInput),el('p',{class:'qxc-fine',id:'qq-buy-note'},'Included in the launch transaction, before the anti-snipe rules start. Leave 0 to launch without buying.'),buyHint,teamEvm.node);
+const firstBuyOk=()=>TEAM_BUY_LIVE&&!!pick&&TEAM_NATIVE_CHAINS.includes(String(chainId))&&!curPair()&&!multiOn()&&!isRangeKit();
+function firstBuyWei(){if(!firstBuyOk())return 0n;const v=String(buyInput.value||'0').trim();if(!/^(?:0|[1-9]\d{0,6})(?:\.\d{1,18})?$/.test(v))return -1n;const [w,f='']=v.split('.');return BigInt(w)*10n**18n+BigInt((f+'0'.repeat(18)).slice(0,18));}
+function teamDraft(){if(!firstBuyOk())return null;try{const t=teamEvm.value();if(t&&firstBuyWei()<=0n)return {__error:'Add a first buy to share with your team.'};return t;}catch(e){return {__error:e.message};}}
+let buyPctTimer=null,buyPctKey='';
+function paintBuyPct(){const wei=firstBuyWei(),f=launchFactory();if(wei<=0n||!f){clearTimeout(buyPctTimer);buyPctKey='';buyHint.textContent='';return;}const k=[chainId,f,startCapOn()?startSteps:0,wei].join('|');if(k===buyPctKey)return;clearTimeout(buyPctTimer);buyPctKey=k;buyHint.textContent='';
+ buyPctTimer=setTimeout(async()=>{try{const q=new URLSearchParams({chain:String(chainId),factory:f,buy:wei.toString(),steps:String(startCapOn()?startSteps:0),pq:pqOnChain()?'1':'0',startCap:startCapOn()?'1':'0'}),r=await fetch('/api/team-buy/evm-quote?'+q),j=await r.json();if(k===buyPctKey)buyHint.textContent=r.ok?TEAM_TEXT.supply(Number((j.supplyBps/100).toFixed(2))):'';}catch{}},400);}
+buyInput.addEventListener('input',()=>{renderQuick();costSoon();});
+let teamPendingEvm=null;try{teamPendingEvm=JSON.parse(localStorage.getItem('qhooks:team-buy:pending:evm')||'null');}catch{}
+const saveTeamPending=()=>{try{if(teamPendingEvm)localStorage.setItem('qhooks:team-buy:pending:evm',JSON.stringify(teamPendingEvm));else localStorage.removeItem('qhooks:team-buy:pending:evm');}catch{}};
+function paintTeamSendEvm(){$('team-send')?.remove();const p=teamPendingEvm;if(!p||String(p.chainId)!==String(chainId))return;const b=el('button',{id:'qq-team-send',type:'button',class:'qxc-primary'},TEAM_TEXT.send(p.team.wallets.length));b.disabled=busy;b.addEventListener('click',()=>void sendTeamEvm());
+ // Right after the launch it sits under "Open your market"; after a reload (an unsent distribution) above the cost box.
+ const done=$('done');if(done&&!done.hidden&&$('open-market'))$('open-market').after(b);else $('launch')?.before(b);}
+async function sendTeamEvm(){const p=teamPendingEvm;if(!p||busy)return;const conn=hub.snapshot().current;
+ if(!conn||conn.owner.toLowerCase()!==p.owner.toLowerCase()){note('Connect the wallet that launched the token to send team shares.',true);return;}
+ if(conn.chainId!==p.chainId){note('Switch your wallet to '+chainById(p.chainId).name+' to send team shares.',true);return;}
+ busy=true;renderQuick();try{
+  // The shares are fixed from the first-buy tokens once, before the first transfer, so a resumed send never re-splits.
+  if(!p.split){const bal=BigInt(await callAt({to:p.token,data:'0x70a08231'+p.owner.slice(2).toLowerCase().padStart(64,'0')}));p.split=teamSplit(bal,p.team.wallets).map(w=>({address:w.address,amount:w.amount.toString()}));p.sent=[];saveTeamPending();}
+  for(let i=p.sent.length;i<p.split.length;i++){const w=p.split[i];note('Approve team transfer '+(i+1)+' of '+p.split.length+' in your wallet.');
+   const r=await sendOne(conn.entry.provider,conn.owner,{to:p.token,data:'0xa9059cbb'+w.address.slice(2).padStart(64,'0')+BigInt(w.amount).toString(16).padStart(64,'0')});p.sent.push(r.transactionHash);saveTeamPending();}
+  if(p.team.disclosed){const r=await fetch('/api/team-buy/record',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chain:String(p.chainId),token:p.token,txs:p.sent})});if(!r.ok)throw Error('Team shares sent. The disclosure record is refreshing; tap again to retry it.');}
+  teamPendingEvm=null;saveTeamPending();teamEvm.clear();note(TEAM_TEXT.sent);
+ }catch(e){note(launchError(e),true);}finally{busy=false;renderQuick();paintTeamSendEvm();}}
+
 const RISK={stable:s=>s+' is a dollar stablecoin. Its issuer can freeze any address, this pool included, and can pause it. Either one stops trading in this pool.',
  stock:s=>s+' is a Robinhood stock token. Its issuer can block any address, this pool included, pause the token, burn from any holder, and apply splits. Blocking or pausing stops trading in this pool. Stock tokens are not offered to US persons.'};
 function renderPair(){
@@ -355,11 +386,14 @@ function openQuick(id,{scroll=false}={}){
 }
 
 const costKey=v=>JSON.stringify(v,(_k,value)=>typeof value==='bigint'?value.toString():value);
-function fields(){return {name:$('name').value,symbol:$('symbol').value,image,banner,description:$('description')?.value||'',x:$('x')?.value||'',telegram:$('telegram')?.value||'',website:$('website')?.value||''};}
+// Team buy: the first buy is part of the launch call's value and of the total shown.
+const withBuy=(c,buy)=>({...c,buyWei:buy.toString(),totalWei:(BigInt(c.totalWei)+buy).toString(),valueWei:(BigInt(c.valueWei)+buy).toString()});
+function fields(){return {name:$('name').value,symbol:$('symbol').value,image,banner,description:$('description')?.value||'',x:$('x')?.value||'',telegram:$('telegram')?.value||'',website:$('website')?.value||'',buyQuote:firstBuyWei(),teamBuy:teamDraft()};}
 function quickReadinessHost(){let host=$('readiness');if(!host){host=el('div',{id:'qq-readiness',class:'qq-readiness',role:'status','aria-live':'polite','aria-atomic':'true'});$('launch').before(host);$('launch').setAttribute('aria-describedby','qq-readiness');}return host;}
 function renderQuick(){
  mountLaunchTickerInput($('symbol')).paint();
  if(!pick)return;const c=chainById(chainId),conn=hub.snapshot().current;
+ if(!firstBuyBox.isConnected)$('launch')?.before(firstBuyBox);firstBuyBox.hidden=!firstBuyOk();buyUnit.textContent=c.native+' ';teamEvm.setAvailable(firstBuyOk());buyInput.disabled=busy;paintBuyPct();paintTeamSendEvm();
  let validationError='';try{validateQuick(fields());}catch(e){validationError=e.message;}
  const box=$('cost');
  const keyReady=!validationError&&!priceBlocked()&&!poolsBlocked()&&!pqBlocked();
@@ -374,7 +408,7 @@ function renderQuick(){
   const rangeWei=isRangeKit()&&cost.gasPriceWei?BigInt(RANGE_GAS.make+(pqOnChain()&&pqKeyHex()?RANGE_GAS.pointPq:RANGE_GAS.point))*BigInt(cost.gasPriceWei):0n,totalWei=BigInt(cost.totalWei)+rangeWei;
   const dollars=usd?' · about $'+(Number(totalWei)/1e18*usd).toFixed(2):'';
   box.replaceChildren(el('p',{class:'qq-total qxc-number'},ethText(totalWei)+' '+c.native+dollars),
-   line('Launch fee',ethText(cost.feeWei)+' '+c.native),line('Network gas · up to',ethText(cost.networkWei)+' '+c.native),...(rangeWei?[line('Range setup gas · about',ethText(rangeWei)+' '+c.native)]:[]),
+   line('Launch fee',ethText(cost.feeWei)+' '+c.native),...(BigInt(cost.buyWei||0)>0n?[line('First buy',ethText(cost.buyWei)+' '+c.native)]:[]),line('Network gas · up to',ethText(cost.networkWei)+' '+c.native),...(rangeWei?[line('Range setup gas · about',ethText(rangeWei)+' '+c.native)]:[]),
    ...(cost.live&&!cost.quote.funded?[el('p',{class:'qxc-fine qq-short','data-error':'true'},'Add '+ethText(BigInt(cost.quote.requiredBalance)-BigInt(cost.quote.balance))+' '+c.native+' on '+c.name+' to launch.')]:[]),el('p',{class:'qxc-fine'},isRangeKit()?(cost.live?'Priced for this launch from your wallet’s estimate. ':'Planning estimate. Connect a wallet for this launch’s own estimate. ')+'Launch, create its range, point its LP fees there: one approval where your wallet can batch, otherwise three.':cost.live?'Priced for this launch from your wallet’s estimate. One transaction, one confirmation.':'Planning estimate. Connect a wallet for this launch’s own estimate. One transaction, one confirmation.'));}
  appendArbRecaptureLine(box,c,pick.blocks||[],launchFactory());
  box.append(splitPreviewNode(quickSplitPreview(isRangeKit()?rangeBps:0),{quick:true}));
@@ -427,10 +461,10 @@ async function refreshCost(){
  try{
   const conn=hub.snapshot().current,fee=await readFee();let next=null;
   if(conn&&conn.chainId===chainId&&!pqBlocked()){let f=null;try{f=fields();validateQuick(f);}catch{f=null;}
-   if(f){const salt=randomSalt(),data=encodeQuickLaunch({...f,style,snipe,salt,steps,startCap:startCapOn(),pq:pqOnChain(),pqKey,quoteIndex,...multiFields()}),call={to:launchFactory(),data,value:'0x'+fee.toString(16)};
+   if(f){const salt=randomSalt(),data=encodeQuickLaunch({...f,style,snipe,salt,steps,startCap:startCapOn(),pq:pqOnChain(),pqKey,quoteIndex,...multiFields()}),call={to:launchFactory(),data,value:'0x'+(fee+BigInt(f.buyQuote||0)).toString(16)};
     const quote=await quoteCall({chainId,request:walletRequest(conn),owner:conn.owner,call});
-    next={...quickCost({feeWei:fee,gas:quote.gas,gasPriceWei:BigInt(quote.transaction.maxFeePerGas),dataFeeWei:quote.dataFeeWei||0}),live:true,quote,owner:conn.owner,key:costKey([f,style,snipe,steps,pqKey,call.to,quoteIndex,multiFields()])};}}
-  if(!next){const price=await rpc('eth_gasPrice',[]);next={...quickCost({feeWei:fee,gas:Math.ceil(PLANNING_GAS[style]*1.25),gasPriceWei:2n*BigInt(price)}),live:false};}
+    next={...withBuy(quickCost({feeWei:fee,gas:quote.gas,gasPriceWei:BigInt(quote.transaction.maxFeePerGas),dataFeeWei:quote.dataFeeWei||0}),BigInt(f.buyQuote||0)),live:true,quote,owner:conn.owner,key:costKey([f,style,snipe,steps,pqKey,call.to,quoteIndex,multiFields()])};}}
+  if(!next){const price=await rpc('eth_gasPrice',[]),buy=firstBuyWei();next={...withBuy(quickCost({feeWei:fee,gas:Math.ceil(PLANNING_GAS[style]*1.25),gasPriceWei:2n*BigInt(price)}),buy>0n?buy:0n),live:false};}
   if(run!==costRun)return cost;cost=next;
  }catch(e){if(run===costRun){cost=null;costError=/insufficient|exceeds balance/i.test(String(e?.message))?launchError(e):/review limit/i.test(String(e?.message))?launchError(e):'Reading network fees. Trying again in a few seconds.';clearTimeout(costTimer);costTimer=setTimeout(()=>void refreshCost(),10000);}}
  if(run===costRun){if(cost)costError='';renderQuick();}return cost;
@@ -537,7 +571,7 @@ async function launch(){
   if(startReviewKey!==JSON.stringify([startTier,startSteps,customUsd,startBase])||priceBlocked()||poolsBlocked()||key!==costKey([fields(),pick.style,pick.snipe,startCapOn()?startSteps:0,pqOnChain()?pqKeyHex():null,launchFactory(),curPair()?.index||0,multiFields()])||hub.snapshot().current!==conn)throw Error(START_PRICE_HOLD);
   if(await uploadTokenBanner(bannerData)!==f.banner||hub.snapshot().current!==conn)throw Error('Your banner changed. Review your launch again.');
   if(isRangeKit()){await launchWithRange(conn,sent,factory,f);return;}
-  note('Confirm '+ethText(cost.totalWei)+' '+chainById(chainId).native+' or less in your wallet: the launch fee plus network gas.');
+  note('Confirm '+ethText(cost.totalWei)+' '+chainById(chainId).native+' or less in your wallet: the launch fee'+(BigInt(cost.buyWei||0)>0n?', your first buy':'')+' plus network gas.');
   const hash=await conn.entry.provider.request({method:'eth_sendTransaction',params:[sent]});
   rememberLast({chainId,hash,name:f.name.trim(),symbol:f.symbol.trim().toUpperCase(),at:Date.now()});
   $('tx-wait').href=chainById(chainId).explorer+'/tx/'+hash;$('waiting').hidden=false;note('Sent. Waiting for the network to confirm…');
@@ -546,6 +580,7 @@ async function launch(){
   const token=launchedToken(r,factory);if(!token)throw Error('The launch confirmed, but its token could not be read. Open the transaction link to see it.');
   rememberLast({chainId,hash,token,name:f.name.trim(),symbol:f.symbol.trim().toUpperCase(),at:Date.now()});
   $('waiting').hidden=true;note('Your token launched.');showDone(token,hash);
+  if(f.teamBuy?.wallets?.length&&!f.teamBuy.__error){teamPendingEvm={chainId,token,owner:conn.owner,team:f.teamBuy};saveTeamPending();paintTeamSendEvm();}
  }catch(e){note(launchError(e),true);}
  finally{busy=false;renderQuick();}
 }

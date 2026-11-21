@@ -2,13 +2,16 @@ import {requireLaunchTicker} from './qx-launch-ticker.mjs';
 import {SOL_LAUNCH_CONFIG as C,solLaunchReview,solActivePolicy} from './qx-sol-launch-config.mjs';
 import {normalizeTokenProfile} from './qx-token-profile-core.mjs';
 import {solWallet} from './qx-solana-identity.mjs';
+import {normalizeTeamBuy,teamMeta} from './qx-team-buy-core.mjs';
 export function normalizeSolMetadata(value){
  if(!value||!solWallet(value.mint))throw Error('invalid_mint');
  const name=typeof value.name==='string'?value.name.trim():'',symbol=typeof value.symbol==='string'?value.symbol.toUpperCase():'';
  if(!name||/[\p{C}<>]/u.test(name)||new TextEncoder().encode(name).length>32)throw Error('Use a name of 1–32 UTF-8 bytes, without angle brackets.');
  requireLaunchTicker(symbol);
  const p=normalizeTokenProfile(value);if(!p.image)throw Error('Add a token image.');if(!p.banner)throw Error('Add a banner for your token.');
- return {mint:value.mint,name,symbol,description:p.description,image:p.image,banner:p.banner,links:p.links};
+ // Team buy: a disclosed team list is published in the token metadata (planned shares of the creator's first buy).
+ const team=teamMeta(normalizeTeamBuy(value.teamBuy,{chain:'solana'}));
+ return {mint:value.mint,name,symbol,description:p.description,image:p.image,banner:p.banner,links:p.links,...(team?{teamBuy:team}:{})};
 }
 export function solAmount(value){if(!/^(?:0|[1-9]\d{0,4})(?:\.\d{1,9})?$/.test(String(value)))throw Error('Enter SOL with up to 9 decimal places.');const[w,f='']=String(value).split('.');return BigInt(w)*1000000000n+BigInt(f.padEnd(9,'0'));}
 export const solText=value=>{const n=BigInt(value);return ((n/1000000000n)+'.'+(n%1000000000n).toString().padStart(9,'0').replace(/0+$/,'')).replace(/\.$/,'');};

@@ -7,7 +7,10 @@ import {solLaunchError} from './qx-sol-launch-errors.mjs';
 import {recordSolLaunch} from './qx-sol-launch-record.mjs';
 import {SOL_LAUNCH_CONFIG as C,solLaunchConfigReady} from './qx-sol-launch-config.mjs';
 import {solReviewLines,solFirstBuyNote,normalizeSolMetadata,solAmount,solText} from './qx-sol-launch-values.mjs';
-import {setSolActivePolicy} from './qx-sol-launch-config.mjs';
+import {setSolActivePolicy,solActivePolicy} from './qx-sol-launch-config.mjs';
+import {mountTeamBuy} from './qx-team-buy-ui.mjs';
+import {TEAM_TEXT,TEAM_BUY_LIVE,supplyPercent} from './qx-team-buy-core.mjs';
+import {sendSolTeamShares} from './qx-team-buy-sol.mjs';
 import {mountTokenProfileEditor,editableTokenProfileDraft,onTokenProfileDraft,setTokenProfileDraft} from './qx-token-profile.mjs';
 import {solAddress,solWallets,connectSol,onSolChange} from './qx-solana.mjs';
 import {solApi,solRuntime,prepareSolTransaction,sendPreparedSol,buildSolLaunch} from './qx-sol-launch-client.mjs';
@@ -20,13 +23,18 @@ export function mountSolCreate({chainSelect,onExit=()=>{}}){
  const screens=[1,2,3].map(i=>el('section',{class:'qxc-panel',id:'qsc-step-'+i,'aria-labelledby':'qsc-title-'+i},el('div',{class:'qxc-panel-head'},el('h2',{id:'qsc-title-'+i,tabindex:'-1'},['Your token','Hooks & rules','Review & launch'][i-1]),el('span',{},'0'+i+' / 03'))));
  const name=el('input',{maxlength:'32',autocomplete:'off',placeholder:'Token name'}),symbol=el('input',{maxlength:'10',autocomplete:'off',placeholder:'TICKER'}),buy=el('input',{inputmode:'decimal',value:'0',autocomplete:'off','aria-describedby':'qsc-buy-note'});
  let active=false,step=1,busy=false,config=null,runtime=null,mint=null,prepared=null,details=null,cost=null,pending=null,metadataUri=null;
+ // Team buy (2026-11-21): shown only on a config whose creator first buy pays the base fee (policy 2).
+ const team=mountTeamBuy({chain:'solana',creator:()=>solAddress(),onChange:()=>{prepared=null;cost=null;metadataUri=null;}}),buyPct=el('p',{class:'qxc-fine',id:'qsc-buy-pct',role:'status'});
+ let pctTimer=null;const paintPct=()=>{clearTimeout(pctTimer);if(!TEAM_BUY_LIVE){buyPct.textContent='';return;}pctTimer=setTimeout(async()=>{let lamports=0n;try{lamports=solAmount(buy.value);}catch{}if(lamports<=0n){buyPct.textContent='';return;}try{runtime||=await solRuntime();const p=solActivePolicy(),q=runtime.client.pool.getQuoteFromInputAmount({config:runtime.buildSolLaunchParameters(p),amountIn:new runtime.BN(lamports.toString()),swapBaseForQuote:false,slippageBps:0,hasReferral:false,eligibleForFirstSwapWithMinFee:p.enableFirstSwapWithMinFee===true});buyPct.textContent=TEAM_TEXT.supply(supplyPercent(q.outputAmount.toString(),BigInt(C.totalSupply)*10n**BigInt(C.tokenDecimals)));}catch{buyPct.textContent='';}},250);};
+ buy.addEventListener('input',paintPct);
+ let teamPending=null;try{teamPending=JSON.parse(localStorage.getItem('qhooks:team-buy:pending:solana')||'null');}catch{}
  try{const d=JSON.parse(localStorage.getItem('qhooks:sol-launch:draft')||'null');name.value=d?.name||'';symbol.value=d?.symbol||'';buy.value=d?.buy||'0';pending=JSON.parse(localStorage.getItem('qhooks:sol-launch:pending')||'null');}catch{}
  const q=new URLSearchParams(location.search);if(q.get('chain')==='solana'){if(q.has('name'))name.value=q.get('name').slice(0,32);if(q.has('ticker'))symbol.value=q.get('ticker').slice(0,10).toUpperCase();}
  const save=()=>{try{localStorage.setItem('qhooks:sol-launch:draft',JSON.stringify({name:name.value,symbol:symbol.value,buy:buy.value}));}catch{}prepared=null;cost=null;mint=null;metadataUri=null;};
  for(const n of [name,symbol,buy])n.addEventListener('input',()=>{if(n===symbol)n.value=n.value.toUpperCase();save();});
  screens[0].append(el('div',{class:'qxc-fields'},el('label',{},'Name',name),el('label',{},'Ticker',symbol)),wallets,mountTokenProfileEditor({id:'qsc-profile',chain:()=> 'solana',name:()=>name.value,symbol:()=>symbol.value,imageRequired:true,bannerRequired:true}),el('div',{class:'qxc-actions'},button('Hooks & rules →',()=>go(2),true)));
  const rules=el('dl',{class:'qxc-sol-rules'},...solReviewLines().flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)]));
- screens[1].append(rules,el('label',{},'Your optional first buy · SOL',buy),el('p',{id:'qsc-buy-note',class:'qxc-fine'},solFirstBuyNote()),el('div',{class:'qxc-actions'},button('← Your token',()=>go(1)),button('Review launch →',()=>go(3),true)));
+ screens[1].append(rules,el('label',{},'Your optional first buy · SOL',buy),el('p',{id:'qsc-buy-note',class:'qxc-fine'},solFirstBuyNote()),buyPct,team.node,el('div',{class:'qxc-actions'},button('← Your token',()=>go(1)),button('Review launch →',()=>go(3),true)));
  const review=el('div'),launch=button('Confirm and launch',()=>void confirm(),true),prepareButton=button('Prepare launch review',()=>void reviewAction(),true),recover=button('Check launch confirmation',()=>void recoverPending(),true),done=el('div',{class:'qxc-done'});
  screens[2].append(review,el('div',{class:'qxc-actions'},button('← Hooks & rules',()=>go(2)),prepareButton,launch,recover),done);
  root.append(chainSlot,...screens,message,receiptLink);document.getElementById('qc-screen-1').before(root);
@@ -41,7 +49,7 @@ export function mountSolCreate({chainSelect,onExit=()=>{}}){
  const modelAnchor=el('div');root.append(modelAnchor);const modelPreview=mountCreateModelPreview({before:modelAnchor,id:'qsc-model-preview'});modelAnchor.remove();
  if(inline){
   root.classList.add('qsc-inline');
-  const hiddenIdentity=el('div',{hidden:''},screens[0]),options=el('details',{class:'qsc-inline-options'},el('summary',{},'Hooks & rules'),rules,screens[1].querySelector('label'),document.getElementById('qsc-buy-note'));
+  const hiddenIdentity=el('div',{hidden:''},screens[0]),options=el('details',{class:'qsc-inline-options'},el('summary',{},'Hooks & rules'),rules,screens[1].querySelector('label'),document.getElementById('qsc-buy-note'),buyPct,team.node);
   const actions=screens[2].querySelector('.qxc-actions');actions.firstElementChild.hidden=true;
   root.replaceChildren(hiddenIdentity,wallets,inlineLimit,modelPreview.element,options,review,readinessHost,actions,done,message,receiptLink);
  }
@@ -53,9 +61,9 @@ export function mountSolCreate({chainSelect,onExit=()=>{}}){
   render();
  }
  document.addEventListener('qhooks:create-draft',()=>{if(active)syncIdentity();});
- function fields(){return normalizeSolMetadata({mint:mint?.publicKey.toBase58()||C.quoteMint,name:name.value,symbol:symbol.value,...editableTokenProfileDraft('solana')});}
+ function fields(){return normalizeSolMetadata({mint:mint?.publicKey.toBase58()||C.quoteMint,name:name.value,symbol:symbol.value,...editableTokenProfileDraft('solana'),teamBuy:team.value()});}
  function go(next){if(busy)return;try{if(next>1)fields();if(next>2)solAmount(buy.value);step=next;render();document.getElementById('qsc-title-'+step).focus({preventScroll:true});root.scrollIntoView({block:'start'});}catch(e){notify(solLaunchError(e),true);}}
- async function loadConfig(){try{config=await solApi('config');config={...config,ready:solLaunchConfigReady(config)};setSolActivePolicy(config.policyVersion);rules.replaceChildren(...solReviewLines().flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)]));{const note=document.getElementById('qsc-buy-note');if(note)note.textContent=solFirstBuyNote();}notify(config.ready?'':'Solana launches open shortly.');}catch{config={ready:false};notify('Solana launches open shortly.');}render();}
+ async function loadConfig(){try{config=await solApi('config');config={...config,ready:solLaunchConfigReady(config)};setSolActivePolicy(config.policyVersion);team.setAvailable(TEAM_BUY_LIVE&&config.ready&&solActivePolicy().enableFirstSwapWithMinFee===true);paintPct();rules.replaceChildren(...solReviewLines().flatMap(([k,v])=>[el('dt',{},k),el('dd',{},v)]));{const note=document.getElementById('qsc-buy-note');if(note)note.textContent=solFirstBuyNote();}notify(config.ready?'':'Solana launches open shortly.');}catch{config={ready:false};notify('Solana launches open shortly.');}render();}
  function render(){
   mountLaunchTickerInput(symbol,{id:'qsc-symbol-rule'}).paint();
   if(!active)return;modelPreview.update(solModel({ready:!!config?.ready,cost,prepared,pending:!!pending}));root.hidden=false;for(const n of originals())n.hidden=true;
@@ -96,15 +104,17 @@ export function mountSolCreate({chainSelect,onExit=()=>{}}){
  async function confirm(){if(!prepared||busy||pending)return;busy=true;render();try{
   // Refresh the unsigned message and simulation immediately before wallet approval.
   const owner=prepared.owner;prepared=await prepareSolTransaction(runtime,prepared.transaction,[mint],owner);notify('Confirm the token launch in your Solana wallet.');
-  const sent=await sendPreparedSol(runtime,prepared);pending={signature:sent.signature,mint:details.mint,creator:owner};try{localStorage.setItem('qhooks:sol-launch:pending',JSON.stringify(pending));}catch{}
+  const sent=await sendPreparedSol(runtime,prepared);pending={signature:sent.signature,mint:details.mint,creator:owner,team:team.value()};try{localStorage.setItem('qhooks:sol-launch:pending',JSON.stringify(pending));}catch{}
   notify('Waiting for final confirmation…');await sent.confirm();await record();
  }catch(e){notify(solLaunchError(e,'Could not confirm your launch. Please try again.')+(pending?' Check confirmation to continue.':''),true);}finally{busy=false;render();}}
- async function record(){const r=await recordSolLaunch(pending.signature),l=r.launch;pending=null;mint=null;prepared=null;try{localStorage.removeItem('qhooks:sol-launch:pending');}catch{}done.replaceChildren(el('p',{class:'qxc-kicker'},'Launch complete'),el('h3',{},'Launched.'),el('p',{},l.name+' · '+l.symbol),el('p',{class:'qxc-number'},l.mint),el('a',{class:'qxc-primary',href:'/terminal#t=solana:'+l.mint},'Open your market →'));notify('Your coin is live on QHooks.');}
+ async function record(){const r=await recordSolLaunch(pending.signature),l=r.launch,teamPlan=pending.team;if(teamPlan?.wallets?.length){teamPending={mint:l.mint,owner:pending.creator,team:teamPlan};try{localStorage.setItem('qhooks:team-buy:pending:solana',JSON.stringify(teamPending));}catch{}}pending=null;mint=null;prepared=null;try{localStorage.removeItem('qhooks:sol-launch:pending');}catch{}done.replaceChildren(el('p',{class:'qxc-kicker'},'Launch complete'),el('h3',{},'Launched.'),el('p',{},l.name+' · '+l.symbol),el('p',{class:'qxc-number'},l.mint),el('a',{class:'qxc-primary',href:'/terminal#t=solana:'+l.mint},'Open your market →'));paintTeamSend();notify('Your coin is live on QHooks.');}
+ function paintTeamSend(){done.querySelector('.qtb-send')?.remove();if(!teamPending)return;const n=teamPending.team.wallets.length,b=button(TEAM_TEXT.send(n),()=>void sendTeam(),true);b.classList.add('qtb-send');b.disabled=busy;done.append(b);}
+ async function sendTeam(){if(!teamPending||busy)return;if(solAddress()!==teamPending.owner){notify('Connect the creator wallet '+teamPending.owner.slice(0,4)+'…'+teamPending.owner.slice(-4)+' to send team shares.',true);return;}busy=true;render();try{runtime||=await solRuntime();const r=await sendSolTeamShares(runtime,{mint:teamPending.mint,owner:teamPending.owner,team:teamPending.team,onStatus:notify});teamPending=null;team.clear();try{localStorage.removeItem('qhooks:team-buy:pending:solana');}catch{}done.append(el('p',{class:'qxc-number'},el('a',{href:'https://solscan.io/tx/'+r.signature,target:'_blank',rel:'noopener'},TEAM_TEXT.sent+' · '+r.signature)));notify(TEAM_TEXT.sent);}catch(e){notify(solLaunchError(e,'Could not send team shares. Please try again.'),true);}finally{busy=false;render();paintTeamSend();}}
  async function recoverPending(){if(!pending||busy)return;busy=true;render();try{await record();}catch(e){notify(solLaunchError(e),true);}finally{busy=false;render();}}
  function select(value){if(busy)return;active=value;if(active){
   const picker=document.getElementById('qq-chain');if(inline&&picker&&picker.value!=='solana'){picker.value='solana';picker.dispatchEvent(new Event('change',{bubbles:true}));return;}
   if(inline){quick.insertBefore(root,quick.querySelector('.cr-go'));syncIdentity();}else chainSlot.append(chainLabel);
-  chainSelect.value='solana';const u=new URL(location.href);u.searchParams.set('chain','solana');history.replaceState(history.state,'',u);render();void loadConfig();if(pending){step=3;render();}
+  chainSelect.value='solana';const u=new URL(location.href);u.searchParams.set('chain','solana');history.replaceState(history.state,'',u);render();void loadConfig();if(pending){step=3;render();}else if(teamPending){step=3;render();paintTeamSend();}
  }else{
   root.hidden=true;if(inline){rootOrigin.insertBefore(root,rootAfter);for(const n of quick.querySelectorAll('#qq-name,#qq-symbol,#qq-image,#qq-banner,#qq-description,#qq-x,#qq-telegram,#qq-website'))n.disabled=false;}else origin.insertBefore(chainLabel,after);
   document.querySelector('.qxc-wallet').hidden=false;document.getElementById('qc-message').hidden=false;onExit();

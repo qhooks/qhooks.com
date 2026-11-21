@@ -1,4 +1,5 @@
 import {requireLaunchTicker} from './qx-launch-ticker.mjs';
+import {teamMeta} from './qx-team-buy-core.mjs';
 import {socialURL} from './qx-token-profile-core.mjs';
 import {requireBannerHash} from './qx-token-banner.mjs';
 // Quick launch (one transaction through QSimpleLaunch) and the launch-idea cards on /create.
@@ -252,21 +253,23 @@ function stringTail(s) {const b = enc.encode(s), h = hexOf(b);return word(b.leng
 /// A token image is required to launch (2026-11-10).
 export const NEED_IMAGE = 'Add an image for your token.';
 /// Checks name, ticker and the token's meta JSON. Throws a plain sentence.
-export function validateQuick({name, symbol, image = '', banner = '', description = '', x = '', telegram = '', website = ''}) {
+export function validateQuick({name, symbol, image = '', banner = '', description = '', x = '', telegram = '', website = '', teamBuy = null, buyQuote = 0n}) {
+ if (BigInt(buyQuote ?? 0) < 0n) throw new TypeError('Enter the first buy as a number, like 0.05.');
+ if (teamBuy?.__error) throw new TypeError(teamBuy.__error);
  const n = String(name ?? '').trim(), s = String(symbol ?? '').toUpperCase();
  if (!n || !n.isWellFormed() || enc.encode(n).length > 64) throw new TypeError('Enter a token name, up to 64 characters.');
  requireLaunchTicker(s);
  if (!image) throw new TypeError(NEED_IMAGE);
  if (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(image)) throw new TypeError('Choose a PNG, JPEG or WebP image.');
  requireBannerHash(banner);
- const meta = quickMeta({image,banner,description,x,telegram,website});
+ const meta = quickMeta({image,banner,description,x,telegram,website,teamBuy});
  if (enc.encode(meta).length > META_LIMIT) throw new TypeError('Choose a smaller image.');
  return {name: n, symbol: s, meta};
 }
-export function quickMeta({image='',banner='',description='',x='',telegram='',website=''}){
+export function quickMeta({image='',banner='',description='',x='',telegram='',website='',teamBuy=null}){
  const text=String(description).trim();if(text.length>160||!text.isWellFormed()||/[\r\n]/.test(text))throw new TypeError('Keep the description to one line, up to 160 characters.');
  const links={x:socialURL(x,'x'),telegram:socialURL(telegram,'telegram'),website:socialURL(website,'website')};
- return JSON.stringify({...(image?{image}:{}),...(banner?{banner}:{}),...(text?{description:text}:{}),...Object.fromEntries(Object.entries(links).filter(([,v])=>v)),launchedFrom:'create-quick'});
+ return JSON.stringify({...(image?{image}:{}),...(banner?{banner}:{}),...(text?{description:text}:{}),...Object.fromEntries(Object.entries(links).filter(([,v])=>v)),...(teamMeta(teamBuy)?{team_buy:teamMeta(teamBuy)}:{}),launchedFrom:'create-quick'});
 }
 
 /// A quote is a table index or an ERC-20 address encoded as uint160 in uint256[].
@@ -276,7 +279,7 @@ export function quoteCode(value) {
  return n;
 }
 /// Calldata for QSimpleLaunch.launch from the card preset and the three typed fields.
-export function encodeQuickLaunch({name, symbol, image = '', banner = '', description = '', x = '', telegram = '', website = '', style, snipe = 15, salt, steps = 0, startCap = false, pq = false, pqKey = null, lockRoles = false, quoteIndex = 0, quotes = null, ticks = null, weights = null}) {
+export function encodeQuickLaunch({name, symbol, image = '', banner = '', description = '', x = '', telegram = '', website = '', style, snipe = 15, salt, steps = 0, startCap = false, pq = false, pqKey = null, lockRoles = false, quoteIndex = 0, quotes = null, ticks = null, weights = null, buyQuote = 0n, teamBuy = null}) {
  const multi = quotes !== null, codes = multi && Array.isArray(quotes) ? quotes.map(quoteCode) : [];
  if (multi && (!pq || !startCap || !Array.isArray(quotes) || quotes.length < 1 || quotes.length > 8 || new Set(codes.map(String)).size !== quotes.length || !Array.isArray(ticks) || ticks.length !== quotes.length || ticks.some((t,i) => !Number.isInteger(t) || t % 200 || Math.abs(t) > 887200 || codes[i]>=256n&&t===0))) throw new TypeError('Choose valid pools and starting prices.');
  if (multi && (!Array.isArray(weights) || weights.length !== quotes.length || weights.some(w => !Number.isInteger(w) || w < 500 || w > 10000) || weights.reduce((sum, w) => sum + w, 0) !== 10000)) throw new TypeError('Pool weights must add up to 10000, with at least 500 per pool.');
@@ -285,7 +288,10 @@ export function encodeQuickLaunch({name, symbol, image = '', banner = '', descri
  if (!Number.isInteger(qi) || qi < 0 || qi > 255) throw new TypeError('Choose a pair.');
  if (qi && (!pq || !startCap)) throw new TypeError('Pairs need the pairs launch contract on this chain.');
  if (qi && style === 'flywheel') throw new TypeError('Stakers’ share launches pair with ETH only.');
- const v = validateQuick({name, symbol, image,banner,description,x,telegram,website});
+ const v = validateQuick({name, symbol, image,banner,description,x,telegram,website,teamBuy});
+ // Team buy (2026-11-21): optional first buy in the launch call (wrapped-native quote chains pay it with the call's value).
+ const buy = BigInt(buyQuote || 0); if (buy < 0n || buy >= (1n << 128n)) throw new TypeError('Check the first buy amount.');
+ if (buy > 0n && (multi || qi)) throw new TypeError('A first buy is available on single-pool launches.');
  if (!(style in SIMPLE_STYLE_IDS)) throw new TypeError('Choose a launch idea.');
  if (!SNIPE_OPTIONS.includes(Number(snipe))) throw new TypeError('Choose a supported anti-snipe length.');
  if (!/^0x[0-9a-f]{64}$/i.test(salt || '')) throw new TypeError('Missing launch salt.');
@@ -298,7 +304,7 @@ export function encodeQuickLaunch({name, symbol, image = '', banner = '', descri
  const tails = [stringTail(v.name), stringTail(v.symbol), stringTail(v.meta)], head = (pq ? 13 : 11) * 32;
  const offsets = [head, head + tails[0].length / 2, head + (tails[0].length + tails[1].length) / 2];
  const p = QUICK_PRESET;
- const tuple = offsets.map(word).join('') + word(SIMPLE_STYLE_IDS[style]) + word(p.fee) + salt.slice(2).toLowerCase() + word(p.buyQuote) + word(p.minTokensOut) +
+ const tuple = offsets.map(word).join('') + word(SIMPLE_STYLE_IDS[style]) + word(p.fee) + salt.slice(2).toLowerCase() + word(buy) + word(p.minTokensOut) +
   word(st * 65536 + Number(snipe)) + word(0) + word(p.reserveBps) + (pq ? (key ? key.slice(2) : word(0)) + word(lockRoles ? 1 : 0) : '') + tails.join('');
  if (multi) {
   const qs = word(codes.length) + codes.map(word).join(''), ts = word(ticks.length) + ticks.map(t => word(BigInt.asUintN(256, BigInt(t)))).join(''), ws = word(weights.length) + weights.map(word).join('');
