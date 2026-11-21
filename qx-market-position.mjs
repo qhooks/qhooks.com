@@ -17,6 +17,7 @@ const sameTx=(a,b)=>String(a||'').toLowerCase()===String(b||'').toLowerCase();
 // walletchains: what the chain position can say about its basis (qx-wallet-pnl.mjs costState)
 const NOTE={complete:sym=>'From this wallet’s on-chain buys and sells of '+sym+', any venue. Approximate.',
   pending:sym=>'Balance read now. Entry and PnL refreshing: reading this wallet’s '+sym+' history.',
+  recent:sym=>'Balance read now. Cost basis covers the last 30 days.',
   limited:sym=>'Balance read now. This chain’s free endpoint doesn’t serve history this old, so entry and PnL aren’t available here.',
   none:sym=>'Balance read now. No buy of '+sym+' found in this wallet’s history (received by transfer, or bought with another token).'};
 export function mountMarketPosition({h,after,getSelection,getOwner,ticket,onChange=()=>{},fetcher=(...a)=>fetch(...a),now=Date.now,headersFor=tradeRecordHeaders,chainPosition=null}) {

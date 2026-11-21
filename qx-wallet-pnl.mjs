@@ -34,13 +34,16 @@ export const PNL_CHAINS = Object.freeze({
   '4663': row({rpc: 'https://rpc.mainnet.chain.robinhood.com', span: 10_000_000, quoteSymbol: 'ETH', wrapped: '0x0bd7d308f8e1639fab988df18a8011f41eacad73',
     router: ROUTER, pons: '0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e', // PonsV2LaunchFactory (facts: MKTSEARCH-DELTA.md)
     stable: stable('0x5fc5360d0400a0fd4f2af552add042d716f1d168', 'USDG', 6)}),
-  '8453': row({rpc: 'https://base-rpc.publicnode.com', span: 50_000, quoteSymbol: 'ETH', wrapped: '0x4200000000000000000000000000000000000006', router: ROUTER,
+  // index (2026-11-21, never publicnode): Base, BNB and Ethereum read the wallet's buys and sells from our own index
+  // (/api/wallet/<chain>/<wallet>/token/<token>, 30 days of trades) instead of 50k-block log scans; their other reads go
+  // through the site's own /api/rpc/<chain> relay.
+  '8453': row({rpc: '/api/rpc/8453', index: true, span: 50_000, quoteSymbol: 'ETH', wrapped: '0x4200000000000000000000000000000000000006', router: ROUTER,
     stable: stable('0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', 'USDC', 6)}),
   '42161': row({rpc: 'https://arb1.arbitrum.io/rpc', span: 10_000_000, quoteSymbol: 'ETH', wrapped: '0x82af49447d8a07e3bd95bd0d56f35241523fbab1', router: ROUTER,
     stable: stable('0xaf88d065e77c8cc2239327c5edb3a432268e5831', 'USDC', 6)}),
-  '56': row({rpc: 'https://bsc-rpc.publicnode.com', span: 50_000, quoteSymbol: 'BNB', wrapped: '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c', router: ROUTER,
+  '56': row({rpc: '/api/rpc/56', index: true, span: 50_000, quoteSymbol: 'BNB', wrapped: '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c', router: ROUTER,
     stable: stable('0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', 'USDC', 18)}),
-  '1': row({rpc: 'https://ethereum-rpc.publicnode.com', span: 10_000, quoteSymbol: 'ETH', wrapped: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', router: ROUTER,
+  '1': row({rpc: '/api/rpc/1', index: true, span: 10_000, quoteSymbol: 'ETH', wrapped: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', router: ROUTER,
     stable: stable('0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', 'USDC', 6)}),
   // Monad's endpoint serves 100-block log reads: the scan goes back at most maxBack blocks (about 87 min, 10 views)
   '143': row({rpc: 'https://rpc.monad.xyz', span: 100, maxBack: 13_000, quoteSymbol: 'MON', wrapped: '0x3bd359c1119da7da1d913d1c4d2b7c461115433a',
@@ -178,6 +181,32 @@ export function costFromState(s, token, quoteUsd, quoteSymbol) {
   const pnlQuote = valueQuote === null ? null : receivedQuote + valueQuote - spentQuote;
   return {boughtUnits, soldUnits, spentQuote, receivedQuote, quoteSymbol, pnlQuote,
     pnlUsd: pnlQuote === null ? null : pnlQuote * quoteUsd, approximate: true, source: 'chain'}; // source: worked out here, not indexed
+}
+
+// index chains: the wallet's buys and sells of one token from our index (30 days). Kept as s.idx; the basis is complete
+// when those trades explain the whole balance, else 'recent' ("Cost basis covers the last 30 days").
+export const INDEX_DAYS = 30;
+export async function indexAdvance({chainId, wallet, tokens, state, fetchImpl, now = Date.now, rescanMs = LIMITS.RESCAN_MS}) {
+  let changed = false;
+  await Promise.all(tokens.map(async t => {
+    const prev = state[t.address]; if (prev?.idx && now() - (prev.at || 0) < rescanMs) return;
+    try {
+      const r = await fetchImpl('/api/wallet/' + chainId + '/' + wallet + '/token/' + t.address, {cache: 'no-store', signal: AbortSignal.timeout(LIMITS.CALL_MS)});
+      const b = r.ok ? await r.json() : null, x = b?.totals; if (!x || !Number.isFinite(Number(x.bought))) return;
+      state[t.address] = {idx: {bought: Number(x.bought) || 0, sold: Number(x.sold) || 0, investedUsd: Number(x.investedUsd) || 0, proceedsUsd: Number(x.proceedsUsd) || 0, trades: Array.isArray(b.trades) ? b.trades.length : 0}, at: now()};
+      changed = true;
+    } catch { /* refreshing: the next view asks again */ }
+  }));
+  return changed;
+}
+export function costFromIndex(idx, token, quoteUsd, quoteSymbol) {
+  if (!idx || !(idx.bought > 0) || !(idx.investedUsd > 0)) return null;
+  const held = known(token?.units) ? token.units : null, net = idx.bought - idx.sold;
+  if (held === null || !(net > 0) || Math.abs(held - net) > Math.max(net, held) * 0.001) return null; // the 30 days don't explain the balance
+  const valueUsd = known(token.valueUsd) ? token.valueUsd : null, pnlUsd = valueUsd === null ? null : idx.proceedsUsd + valueUsd - idx.investedUsd;
+  const q = known(quoteUsd) && quoteUsd > 0 ? quoteUsd : null;
+  return {boughtUnits: idx.bought, soldUnits: idx.sold, spentQuote: q ? idx.investedUsd / q : null, receivedQuote: q ? idx.proceedsUsd / q : null, quoteSymbol,
+    pnlQuote: pnlUsd === null || !q ? null : pnlUsd / q, pnlUsd, approximate: true, source: 'chain', basis: 'qhooks-index', historyDays: INDEX_DAYS};
 }
 
 // JSON-RPC over the chain's public endpoint. Batches of at most LIMITS.BATCH calls. The public RPC rate-limits bursts with
@@ -418,9 +447,9 @@ export function applyState(chain, cfg, state, now = Date.now) {
     }
     if (!t.qhooks && (t.cost == null || t.cost.source === 'chain')) {
       // re-derived on every apply: a new trade pending its price clears an earlier basis instead of leaving it wrong
-      const cost = costFromState(s, t, posUsd, s?.quote || cfg.quoteSymbol);
+      const cost = s?.idx ? costFromIndex(s.idx, t, ethUsd, cfg.quoteSymbol) : costFromState(s, t, posUsd, s?.quote || cfg.quoteSymbol);
       if (cost || t.cost) { t.cost = cost; touched = true; }
-      const state = isCandidate(t, cfg) ? (cost ? 'complete' : costState(s, t)) : null;
+      const state = isCandidate(t, cfg) ? (cost ? 'complete' : cfg.index ? (s?.idx ? 'recent' : 'pending') : costState(s, t)) : null;
       if ((t.costState ?? null) !== state) { if (state) t.costState = state; else delete t.costState; touched = true; }
     }
   }
@@ -477,6 +506,27 @@ export function positionFrom({s, decimals, heldRaw, supplyRaw, priceQuote = null
     markers, source: 'chain'};
 }
 
+/// index chains: the same position shape from our index's 30-day totals (USD-based; quote figures via quoteUsd now).
+export function positionFromIndex({idx, decimals, heldRaw, supplyRaw, priceQuote = null, quoteUsd = null, nativeSymbol = 'ETH'}) {
+  if (!Number.isInteger(decimals) || heldRaw == null) return null;
+  const heldBig = big(heldRaw), held = num(heldBig, decimals), supply = big(supplyRaw);
+  const supplyPct = supply > 0n ? Number(heldBig * 10_000_000_000n / supply) / 1e8 : null;
+  const bought = idx?.bought || 0, sold = idx?.sold || 0, net = bought - sold, q = known(quoteUsd) && quoteUsd > 0 ? quoteUsd : null;
+  const complete = !!idx && bought > 0 && (idx.investedUsd || 0) > 0 && net > 0 && Math.abs(held - net) <= Math.max(net, held) * 0.001;
+  const spent = q ? (idx?.investedUsd || 0) / q : 0, received = q ? (idx?.proceedsUsd || 0) / q : 0;
+  const avg = complete && q ? spent / bought : null;
+  const usd = v => v === null || !q ? null : v * q;
+  const unrealizedQuote = avg !== null && known(priceQuote) ? held * (priceQuote - avg) : null;
+  const realizedQuote = avg !== null ? received - sold * avg : null;
+  return {quantity: held, supplyPct, quoteSymbol: nativeSymbol, complete, state: complete ? 'complete' : idx ? 'recent' : 'pending', bought, sold, spentQuote: spent, receivedQuote: received,
+    priceQuote: known(priceQuote) ? priceQuote : null, priceUsd: usd(known(priceQuote) ? priceQuote : null),
+    valueQuote: known(priceQuote) ? held * priceQuote : null, valueUsd: known(priceQuote) ? usd(held * priceQuote) : null,
+    averageEntryQuote: avg, averageEntryUsd: usd(avg),
+    unrealizedQuote, unrealizedUsd: usd(unrealizedQuote), unrealizedPercent: avg !== null && known(priceQuote) ? (priceQuote / avg - 1) * 100 : null,
+    realizedQuote, realizedUsd: usd(realizedQuote), realizedPercent: avg !== null && sold > 0 ? (received / (sold * avg) - 1) * 100 : null,
+    markers: [], source: 'chain', basis: 'qhooks-index', historyDays: INDEX_DAYS};
+}
+
 // v2 (walletpos): per-trade rows and the position's quote. A v1 state has neither, so it is read again from the chain.
 const KEY = 'qhooks:wallet-pnl:v2:';
 const defaultStorage = () => { try { return globalThis.localStorage || null; } catch { return null; } };
@@ -522,7 +572,8 @@ export function createOutsideCosts({fetchImpl = plainFetch, priceFetch = plainFe
       if (!due.length && !thin.length && !held.length) return false;
       const rpc = rpcClient(cfg.rpc, fetchImpl, Date.now() + workMs, gapMs);
       let changed = false;
-      try { if (due.length) changed = await advance({cfg, wallet: w, tokens: due, state: state.tokens, rpc, now}) || changed; } catch {}
+      try { if (due.length) changed = await (cfg.index ? indexAdvance({chainId: chain.chainId, wallet: w, tokens: due, state: state.tokens, fetchImpl: priceFetch, now})
+        : advance({cfg, wallet: w, tokens: due, state: state.tokens, rpc, now})) || changed; } catch {}
       try { if (thin.length) changed = await ponsCurves({cfg, tokens: thin, state, rpc, now}) || changed; } catch {}
       try { changed = await poolPrices({tokens: held, state: state.tokens, rpc, now}) || changed; } catch {}
       if (changed) saveState(storage, k, state);
@@ -567,7 +618,8 @@ export function createOutsideCosts({fetchImpl = plainFetch, priceFetch = plainFe
       let changed = false;
       if (heldRaw > 0n || s0) {
         // a balance the kept history doesn't explain means a trade since the cursor: read past it now, not in a minute
-        for (let pass = 0; pass < 2; pass++) {
+        if (cfg.index) { try { changed = await indexAdvance({chainId, wallet: w, tokens: [row], state: state.tokens, fetchImpl: priceFetch, now, rescanMs: force ? 0 : LIMITS.RESCAN_MS}) || changed; } catch {} }
+        else for (let pass = 0; pass < 2; pass++) {
           const s1 = state.tokens[t], open = !s1 || (s1.pending || []).length || (s1.prior !== '0' && !s1.bad);
           if (pass && !open) break;
           try { changed = await advance({cfg, wallet: w, tokens: [row], state: state.tokens, rpc, now, rescanMs: force || !explained ? 0 : LIMITS.RESCAN_MS}) || changed; } catch { break; }
@@ -581,7 +633,8 @@ export function createOutsideCosts({fetchImpl = plainFetch, priceFetch = plainFe
       const priceQuote = s?.px && now() - s.px.at < LIMITS.PRICE_MS ? s.px.eth
         : p?.curve && !p.graduated && known(p.price) ? p.price
         : known(hintPriceUsd) && known(quoteUsd) && quoteUsd > 0 ? hintPriceUsd / quoteUsd : null;
-      const out = positionFrom({s, decimals, heldRaw: heldRaw.toString(), supplyRaw: big(sup).toString(), priceQuote, quoteUsd, nativeSymbol: cfg.quoteSymbol});
+      const out = cfg.index ? positionFromIndex({idx: s?.idx, decimals, heldRaw: heldRaw.toString(), supplyRaw: big(sup).toString(), priceQuote, quoteUsd: usdNative, nativeSymbol: cfg.quoteSymbol})
+        : positionFrom({s, decimals, heldRaw: heldRaw.toString(), supplyRaw: big(sup).toString(), priceQuote, quoteUsd, nativeSymbol: cfg.quoteSymbol});
       if (out) out.symbol = abiString(sym); // the token's own symbol(), for a page whose market didn't load
       return out;
     })().catch(() => null).finally(() => posFlights.delete(fk));

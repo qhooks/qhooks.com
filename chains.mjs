@@ -34,7 +34,7 @@ const rows = [
     // from 0: the indexer starts at the chain head on its first scan; set the deploy block once it is on chain.
     saleLaunch: { address: '0x707d79c32bea8f9773a81569fbacc64ab0502044', from: 0 },
     feeModel: 'op-stack', feeAccounting: 'separate-data-and-operator-fees', feeCapWei: null, gasFloorWei: null,
-    native: 'ETH', rpc: 'https://mainnet.base.org', logsRpc: 'https://base-rpc.publicnode.com', logStep: 4000, blockTime: 2,
+    native: 'ETH', rpc: 'https://mainnet.base.org', logsRpc: 'https://qhooks.com/api/logs-rpc/8453', logStep: 4000, blockTime: 2,
     explorer: 'https://basescan.org',
     contracts: { manager: '0x498581ff718922c3f8e6a244956af099b2652b2b', stateView: '0xa3c0c9b65bad0b08107aa264b0f3db444b867a71', quoter: '0x0d5e0f971ed27fbff6c2837bf31316121532048d', router: '0x6ff5693b99212da76ad316178a184ab56d299b43', permit2: '0x000000000022d473030f116ddee9f6b43ac78ba3', extended: false },
     quote: { address: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', symbol: 'USDC', decimals: 6, wrapNative: false },
@@ -111,7 +111,7 @@ const rows = [
     // from 0: the indexer starts at the chain head on its first scan; set the deploy block once it is on chain.
     saleLaunch: { address: '0x707d79c32bea8f9773a81569fbacc64ab0502044', from: 0 },
     feeModel: 'ethereum', feeAccounting: 'execution-only', feeCapWei: '1000000000000', gasFloorWei: null,
-    native: 'ETH', rpc: 'https://ethereum-rpc.publicnode.com', logsRpc: 'https://ethereum-rpc.publicnode.com', logStep: 2000, blockTime: 12,
+    native: 'ETH', rpc: 'https://mainnet.gateway.tenderly.co', logsRpc: 'https://mainnet.gateway.tenderly.co', logStep: 2000, blockTime: 12,
     explorer: 'https://etherscan.io',
     contracts: { manager: '0x000000000004444c5dc75cb358380d2e3de08a90', stateView: '0x7ffe42c4a5deea5b0fec41c94c136cf115597227', quoter: '0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203', router: '0x66a9893cc07d91d95644aedd05d03f95e1dba8af', permit2: '0x000000000022d473030f116ddee9f6b43ac78ba3', extended: false },
     quote: { address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', symbol: 'USDC', decimals: 6, wrapNative: false },
@@ -154,7 +154,7 @@ const rows = [
     // from 0: the indexer starts at the chain head on its first scan; set the deploy block once it is on chain.
     saleLaunch: { address: '0x707d79c32bea8f9773a81569fbacc64ab0502044', from: 0 },
     minPriorityFeeWei: '50000000', feeModel: 'bsc', feeAccounting: 'bsc-execution', feeCapWei: '10000000000', gasFloorWei: null,
-    native: 'BNB', rpc: 'https://bsc-dataseed.bnbchain.org', logsRpc: 'https://bsc-rpc.publicnode.com', logStep: 5000, blockTime: 0.45,
+    native: 'BNB', rpc: 'https://bsc-dataseed.bnbchain.org', logsRpc: 'https://qhooks.com/api/logs-rpc/56', logStep: 5000, blockTime: 0.45,
     explorer: 'https://bscscan.com',
     contracts: { manager: '0x28e2ea090877bf75740558f6bfb36a5ffee9e9df', stateView: '0xd13dd3d6e93f276fafc9db9e6bb47c1180aee0c4', quoter: '0x9f75dd27d6664c475b90e105573e550ff69437b0', router: '0x91bf3bfaef8d771a74e1a8fe460b3ee646b2e588', permit2: '0x000000000022d473030f116ddee9f6b43ac78ba3', extended: false },
     quote: { address: '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c', symbol: 'WBNB', decimals: 18, wrapNative: true },

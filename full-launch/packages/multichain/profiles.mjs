@@ -2,7 +2,7 @@
 const rows = [
  ['8453','0x2105','base','Base','op-stack','separate-data-and-operator-fees','https://mainnet.base.org','https://basescan.org','ETH'],
  ['4663','0x1237','robinhood','Robinhood Chain','nitro','data-fee-in-estimate-gas','https://rpc.mainnet.chain.robinhood.com','https://robinhoodchain.blockscout.com','ETH'],
- ['1','0x1','ethereum','Ethereum','ethereum','execution-only','https://ethereum-rpc.publicnode.com','https://etherscan.io','ETH'],
+ ['1','0x1','ethereum','Ethereum','ethereum','execution-only','https://mainnet.gateway.tenderly.co','https://etherscan.io','ETH'],
  ['42161','0xa4b1','arbitrum','Arbitrum One','nitro','data-fee-in-estimate-gas','https://arb1.arbitrum.io/rpc','https://arbiscan.io','ETH'],
  ['56','0x38','bnb','BNB Chain','bsc','bsc-execution','https://bsc-dataseed.bnbchain.org','https://bscscan.com','BNB'],
  ['5042','0x13b2','arc','Arc','arc-stablecoin','execution-only-native-usdc','https://rpc.mainnet.arc.io','https://explorer.arc.io','USDC'],

@@ -30,6 +30,7 @@ export const chainName = c => names[c.chainId] || c.name || c.chainId;
 export const tradeHref = row => '/terminal#' + (row.qhooks ? 'm=' + row.chainId + ':' + row.qhooks.controller : 't=' + row.chainId + ':' + row.address);
 // walletpos: the chain's coin and its wrapped form are cash, not a position: their PnL is "—", never "unknown".
 const COST_NOTE = {pending: 'Reading this wallet’s buys and sells of this token from the chain.',
+ recent: 'Cost basis covers the last 30 days.',
  limited: 'This chain’s free endpoint doesn’t serve history this old, so the cost basis isn’t available here.',
  none: 'No buy of this token found in this wallet’s history (received by transfer, or bought with another token).'};
 export const cashRow = r => !!r && (r.native === true || (!!r.address && String(r.address).toLowerCase() === String(wrapped[r.chainId] || '').toLowerCase()));
