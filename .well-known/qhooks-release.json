@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "afd06aaa-e950-451d-b2a9-f30e60784ee7",
+  "releaseId": "b9d880b8-f627-45b9-b245-5f56a7f45bae",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,8 +41,8 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "b1a3312d75328a1a33da240c95156eee0c3e4c0ebac19a72f1b801d585bc791e",
-      "bytes": 9330
+      "sha256": "65c7b66ee25ddfc13d3aa3fe5c18b8a7a7a79cbeee58f773b8cfe37f5e57fafa",
+      "bytes": 9332
     },
     "_redirects": {
       "sha256": "b0064a6e748cb4421e4ff024a6219ff6600077feec61978bcd07fb0bd7a87010",
@@ -280341,7 +280341,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "4be7118aa47332d9e4a3dfe82a421575cf471bd79f6873e59d9f6f347ad5da90",
+      "sha256": "705f0f93b0205e92288be51bc402b1c059fdb213913a7586aed4a2ae50c352a8",
       "bytes": 2372
     },
     "hook-marketplace.html": {
@@ -281664,9 +281664,9 @@
       "sha256": "1618e7b5304ad76f59f440f8fe7e62676adb43b6bb24f830e0fc5b6ab910cdf3",
       "bytes": 76102
     },
-    "new/app.8c9220e560.js": {
-      "sha256": "382d6edd0504dfa2d297dca6f04df5de5c7440b34e050a7d4c14c5115f1386f5",
-      "bytes": 540383
+    "new/app.791d682fa6.js": {
+      "sha256": "1955097319457b17d9b24920ae3cc67423a1fba823ab81e143bf88681f55826f",
+      "bytes": 542867
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
@@ -281721,7 +281721,7 @@
       "bytes": 1382
     },
     "new/index.html": {
-      "sha256": "e82b96129a51634b9acb635dc49d39ced2df96c02306057a9568b8874eab9a18",
+      "sha256": "1bd487a47dbe4f5260738152126c560f987b2b088eea0d22c67d84301cbf2df2",
       "bytes": 1150
     },
     "new/js/perps-book.js": {
@@ -291781,8 +291781,8 @@
       "bytes": 1519
     },
     "skill.md": {
-      "sha256": "1841bb46a53bc59e1a651714cf733c62ea12b1bd279d461cab0586a4d51a4c4c",
-      "bytes": 47397
+      "sha256": "4b97e3fb46a70f3fa36370eea44b9487ac795954c6e00bc6aed2579e7a5b154e",
+      "bytes": 50367
     },
     "sol-launch-setup.html": {
       "sha256": "9eeb20afe15352ae89efeb6b0fcedcd4b78066b05181558531ad56ea662d5cad",
@@ -292317,5 +292317,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "40553fa49d9dbb82cf3637642015b01135e3fdd83889fd48d1298fc6e2fe638d"
+  "contentDigest": "c063c838f27d22d76f9b21ef07ec778a3f00d725c791a7d677b1705c0f7ca6b8"
 }

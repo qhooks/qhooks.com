@@ -1,7 +1,7 @@
 ---
 name: qhooks
-version: 9.1.0
-updated: 2026-11-20
+version: 9.2.0
+updated: 2026-11-21
 description: Launch, trade & QProof token safety on Robinhood Chain + more; perps, OTC escrow and agreements.
 ---
 
@@ -262,6 +262,19 @@ builder_approval_required returns order:null. Verify main-wallet approval: maxFe
 
 order_prepared: review full action, coin/asset, size, price, side, TIF, reduce-only, builder 100 tenths-bp, nonce, null vault and expiresAfter. Recompute connectionId with the official SDK from that exact ordered action. Check Exchange/1 domain, chainId 1337 (signing domain), zero verifyingContract, mainnet source a. The signing main wallet (agent-owned or user-owned) signs/sends to the fixed exchange endpoint; MCP never handles signatures/submission. Re-prepare stale/changed plans. Never approve an opaque hash without its action.
 
+## Orders: prepare → sign → submit → cancel
+
+Limit, stop, take-profit and TP/SL orders on QHooks pools (Robinhood Chain, Base, Arbitrum, BNB Chain, Ethereum, Elysium). Orders are Permit2 witness orders: the trader's wallet signs typed data, tokens stay in the wallet until a fill, and the keeper can only fill at or above the floor that was signed. These tools answer 503 "waiting for the orders release" until they are switched on; tools/list always shows them.
+
+1. `prepare_order` `{chain, token, trader, kind, side?, amount, trigger | tpsl, days?, slippageBps?, referrer?}`. `kind` is `limit`, `stop`, `take_profit` or `tpsl`. `amount.unit` is `raw` (smallest units of the input), `token` (sells), `quote` (buys), `usd` or `pct_position` (share of the token balance). `trigger.unit` is `quote_price`, `usd_price`, `mcap_usd` or `pct_from_now`. Returns `group`, one `orders[i]` per leg with `typedData`, `order`, `hops` and a preview, an `approval` object (when `approval.needed`, send `approval.tx` first: an exact-amount ERC-20 approve to Permit2), `verify` and `notes`.
+2. Check before signing: `typedData.domain.chainId` is the chain, `typedData.domain.verifyingContract` is Permit2 `0x000000000022D473030F116dDEE9F6B43aC78BA3`, `message.spender` is the executor in `verify`, `witness.trader` is the trader and `permitted.token` is the token you spend (the quote currency for a buy). When `approval.needed`, send `approval.tx` first.
+3. Sign each `orders[i].typedData` with the trader wallet (`eth_signTypedData_v4`).
+4. `submit_order` `{chain, group, orders: [{kind, order, signature, hops}]}`. All legs of a group are placed together or none are kept.
+5. `list_orders` `{trader, chain?}` shows status (Waiting, Filling, Filled, Cancelled, Closed, Expired, Failed), group, label and linked legs.
+6. `cancel_order` `{chain, trader, hash}` returns one unsigned Permit2 `invalidateUnorderedNonces` transaction for the order's nonce (TP/SL legs share it, so it cancels them together). The trader wallet sends it (gas only). Call `cancel_order` again after it confirms: the order and its linked legs are recorded as cancelled.
+
+The older `prepare_limit_order`, `prepare_tpsl` and `orders_status` still work as aliases of these.
+
 ## OTC: agreed terms → quote → wallet settlement
 
 Robinhood Chain (4663), escrow 0xbea24499f82f1e018a4dff5607b7c54141cbfbf8. Tools verify runtime, fee recipient, payment assets and a recent block. Start with amounts and parties agreed by the user and counterparty. A planning quote validates those supplied terms; it does not establish counterparty consent. RFQ board posting/matching remain unavailable.
@@ -399,6 +412,18 @@ await fetch('https://qhooks.com/api/terminal/sol/execute', {method: 'POST', head
 Use tools/list for active schemas and flags. Data-quality notes follow.
 
 Public tools only. Server schemas define exact inputs; additional fields are refused. Semantic requirements still apply. Use nonzero token/trader addresses and supported chains. Result `?` means optional.
+
+### prepare_order
+`{chain, token, trader, kind, side?, amount, trigger?, tpsl?, days?, slippageBps?, referrer?}` → `{group, orders[{kind, typedData, order, hops, preview}], approval{needed, tx?}, verify, fees, notes}`. Unsigned; see Orders.
+
+### submit_order
+`{chain, group, orders[{kind, order, signature, hops}]}` → `{ok, group, placed[{hash, kind, status}]}`. All or nothing.
+
+### list_orders
+`{trader, chain?}` → `{trader, orders[{hash, chainId, kind, status, statusLabel, group, label, linked, expiresAt, order}]}`.
+
+### cancel_order
+`{chain, trader, hash}` → while the nonce is live `{done: false, legs, transactions[{chainId, to, data, value}]}`; after it is spent on chain `{done: true, status: "cancelled", legs}`.
 
 ### qwallet_status
 
