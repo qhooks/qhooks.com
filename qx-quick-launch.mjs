@@ -37,6 +37,8 @@ import {rangeKitReady,planRange,makeCall,pointCall,pointCallPq,checkPqMessage,pa
 import {ideaCards,ideaCard,visibleGroups,quickFactory,encodeQuickLaunch,validateQuick,launchFeeWei,quickCost,ethText,launchedToken,randomSalt,PLANNING_GAS,QUICK_PRESET} from './qx-quick-launch-core.mjs';
 import {mountTeamBuy} from './qx-team-buy-ui.mjs';
 import {TEAM_TEXT,TEAM_NATIVE_CHAINS,TEAM_BUY_LIVE,teamSplit} from './qx-team-buy-core.mjs';
+import {mountRoundCreate} from './qx-round-create.mjs';
+import {SIMPLE_STYLE_IDS} from './qx-quick-launch-core.mjs';
 
 let banner='',bannerData='',bannerRevision=0,imageRevision=0,bannerSource='',lastImageFile=null;
 let simpleDefault=false;
@@ -188,7 +190,17 @@ const pqOnChain=()=>multiOn()||!!curPair()||pqFactory(chainId);
 const teamEvm=mountTeamBuy({chain:'evm',creator:()=>hub.snapshot().current?.owner||null,onChange:()=>{renderQuick();costSoon();}});
 const buyInput=el('input',{id:'qq-buy',inputmode:'decimal',autocomplete:'off',value:'0','aria-describedby':'qq-buy-note'}),buyHint=el('p',{class:'qxc-fine',id:'qq-buy-pct',role:'status'}),buyUnit=el('span',{});
 const firstBuyBox=el('div',{id:'qq-firstbuy',class:'qq-firstbuy',hidden:''},el('label',{},el('span',{},'Your optional first buy · '),buyUnit,buyInput),el('p',{class:'qxc-fine',id:'qq-buy-note'},'Included in the launch transaction, before the anti-snipe rules start. Leave 0 to launch without buying.'),buyHint,teamEvm.node);
-const firstBuyOk=()=>TEAM_BUY_LIVE&&!!pick&&TEAM_NATIVE_CHAINS.includes(String(chainId))&&!curPair()&&!multiOn()&&!isRangeKit();
+const firstBuyOk=()=>TEAM_BUY_LIVE&&!!pick&&TEAM_NATIVE_CHAINS.includes(String(chainId))&&!curPair()&&!multiOn()&&!isRangeKit()&&!roundCreate.on;
+// ---- Contributor round (2026-11-21, qx-round-create.mjs): instead of launching now, the creator makes a round; the pot is
+// the launch's first buy at settle. Offered only for a single-pool launch to a known launch contract, and only where the
+// RoundFactory has code (the module reads it and stays hidden on any read error). The one-tap fields are its launch fields.
+const roundCreate=mountRoundCreate({hub,
+ context:()=>{if(!pick||chainId==='solana'||curPair()||multiOn()||isRangeKit()||!CREATE_EXECUTION_ENABLED)return null;const f=launchFactory();if(!f)return null;
+  return {chainId:String(chainId),factory:String(f).toLowerCase(),steps:startCapOn()?startSteps:0,style:SIMPLE_STYLE_IDS[pick.style],snipe:pick.snipe,pqKey:!!(pqOn&&pqOnChain())};},
+ prepare:async conn=>{const f=fields(),v=validateQuick(f);if(priceBlocked())throw Error('Refreshing price… The starting market cap needs a live price. Try again in a moment, or choose Standard.');
+  try{await assertTickerFree({symbol:f.symbol,chainId,creator:conn.owner});}catch(e){if(e instanceof TickerTaken){showTaken(e.result);throw Error('That ticker is taken. Choose another.');}throw e;}
+  if(await uploadTokenBanner(bannerData)!==f.banner)throw Error('Your banner changed. Review your launch again.');return v;},
+ onChange:()=>renderQuick()});
 function firstBuyWei(){if(!firstBuyOk())return 0n;const v=String(buyInput.value||'0').trim();if(!/^(?:0|[1-9]\d{0,6})(?:\.\d{1,18})?$/.test(v))return -1n;const [w,f='']=v.split('.');return BigInt(w)*10n**18n+BigInt((f+'0'.repeat(18)).slice(0,18));}
 function teamDraft(){if(!firstBuyOk())return null;try{const t=teamEvm.value();if(t&&firstBuyWei()<=0n)return {__error:'Add a first buy to share with your team.'};return t;}catch(e){return {__error:e.message};}}
 let buyPctTimer=null,buyPctKey='';
@@ -393,7 +405,7 @@ function quickReadinessHost(){let host=$('readiness');if(!host){host=el('div',{i
 function renderQuick(){
  mountLaunchTickerInput($('symbol')).paint();
  if(!pick)return;const c=chainById(chainId),conn=hub.snapshot().current;
- if(!firstBuyBox.isConnected)$('launch')?.before(firstBuyBox);firstBuyBox.hidden=!firstBuyOk();buyUnit.textContent=c.native+' ';teamEvm.setAvailable(firstBuyOk());buyInput.disabled=busy;paintBuyPct();paintTeamSendEvm();
+ if(!firstBuyBox.isConnected)$('launch')?.before(firstBuyBox);if(!roundCreate.node.isConnected)firstBuyBox.after(roundCreate.node);void roundCreate.refresh();firstBuyBox.hidden=!firstBuyOk();buyUnit.textContent=c.native+' ';teamEvm.setAvailable(firstBuyOk());buyInput.disabled=busy;paintBuyPct();paintTeamSendEvm();
  let validationError='';try{validateQuick(fields());}catch(e){validationError=e.message;}
  const box=$('cost');
  const keyReady=!validationError&&!priceBlocked()&&!poolsBlocked()&&!pqBlocked();
@@ -428,6 +440,8 @@ function renderQuick(){
   defaults.append(label,document.createTextNode(' · 100% in pool · LP locked'));
   setGlossaryContext(defaults,{kind:'draft',start:{standardUsd:startBase?.usd??null,actualUsd:startSteps?null:startBase?.usd??null,chainId:String(chainId),quoteSymbol:startBase?.unit??null,steps:startSteps}});
  }
+ // A contributor round replaces the launch button and its cost (the settler pays the launch fee later).
+ {const ro=roundCreate.on;$('launch').hidden=ro||!$('done').hidden;box.hidden=ro;const rd=$('readiness');if(rd)rd.hidden=ro;}
  renderAdv();const adv=$('adv');if(!pqBlocked())advAuto=false;else if(adv&&!adv.hidden&&conn&&conn.chainId===chainId&&!advAuto){advAuto=true;adv.open=true;const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;}
 }
 
