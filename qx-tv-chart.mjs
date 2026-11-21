@@ -107,21 +107,34 @@ export function createTvLayer({host, doc = globalThis.document, win = globalThis
     let line = false; try { line = win.localStorage?.getItem('qa-chart-mode') === 'line'; } catch {}
     try { widget?.activeChart().setChartType(line ? 3 : 1); } catch {}
   }
+  // Overlay draws are serialized: each draw waits for the previous draw's shapes to exist (createShape resolves
+  // asynchronously), removes exactly those, then creates its own. Before, a second draw could run while the first
+  // draw's ids were still pending, so those shapes were never removed (duplicates) or a later clear removed the
+  // newer line (the average-entry line went missing while the markers stayed).
+  let drawing = Promise.resolve();
   function drawOverlay(view) {
+    drawing = drawing.then(() => drawNow(view)).catch(() => {});
+  }
+  async function drawNow(view) {
     if (state !== 'ready' || !widget) return;
     const o = view?.overlay || {}, key = JSON.stringify([current?.symbol, current?.tf, o.entry, o.entryText, (o.markers || []).map((m) => [m.time, m.side])]);
-    if (key === overlayKey) return; overlayKey = key;
+    if (key === overlayKey) return;
     let chart; try { chart = widget.activeChart(); } catch { return; }
+    overlayKey = key;
     for (const id of shapes) { try { chart.removeEntity(id); } catch {} }
     shapes = [];
     const opts = {lock: true, disableSelection: true, disableSave: true, disableUndo: true, showInObjectsTree: false};
-    const add = (p) => p?.then?.((id) => { if (id != null) shapes.push(id); }).catch(() => {});
-    const c = colors();
+    const c = colors(), made = [];
+    const add = (r) => { made.push(Promise.resolve(r).then((id) => id, () => null)); };
     if (o.entry > 0) add(chart.createShape({price: o.entry}, {...opts, shape: 'horizontal_line', text: o.entryText || '', overrides: {linecolor: c.up, linestyle: 2, linewidth: 1, showLabel: !!o.entryText, textcolor: c.up, horzLabelsAlign: 'left'}}));
     for (const m of (o.markers || []).slice(-60)) {
       const buy = m.side === 'buy';
       add(chart.createShape({time: m.time, price: m.price}, {...opts, shape: buy ? 'arrow_up' : 'arrow_down', text: m.text || (buy ? 'You buy' : 'You sell'), overrides: {color: buy ? c.up : c.down, arrowColor: buy ? c.up : c.down, fontsize: 11}}));
     }
+    const ids = (await Promise.all(made)).filter((id) => id != null);
+    shapes = ids;
+    // If the line was asked for but did not come back (TradingView refused it mid-load), let the next update retry.
+    if (o.entry > 0 && made.length && (await made[0]) == null) overlayKey = '';
   }
   function apply(view) {
     if (state !== 'ready' || !widget) return;
