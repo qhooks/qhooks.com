@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "dfa990a6-23bb-4ddb-92d6-00a51359de64",
+  "releaseId": "c8544d8b-a38d-44cd-b556-fecf082a6495",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,8 +41,8 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "e3a9a1eb598c37ed738382c4a3cd316817e41314dfea2aa5c595f606d30f23fa",
-      "bytes": 9558
+      "sha256": "d1253c6d70711861452187b637f9b2b8989d67bb3923240429fb5cf6daaf6b15",
+      "bytes": 9560
     },
     "_redirects": {
       "sha256": "b0064a6e748cb4421e4ff024a6219ff6600077feec61978bcd07fb0bd7a87010",
@@ -272401,7 +272401,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "e03d6d38ad96c036ce3fec19bfc6231d79310e8ee6279423a23716056e9b1bbb",
+      "sha256": "aaa2869d55bc7563b19b84b95e8c242c12fe316df0a5f8a5a0cb12d818ce41e5",
       "bytes": 2372
     },
     "hook-marketplace.html": {
@@ -273720,13 +273720,13 @@
       "sha256": "0238ea9322d763191730c14a66a5ab70f11744487e93c0e8fe948fb4b92109c4",
       "bytes": 5712
     },
+    "new/app.6679e1ffe6.js": {
+      "sha256": "d66a5b89ec40eb5d26d301c22301628753cf9225681d770739f0005160a41e01",
+      "bytes": 502610
+    },
     "new/app.7b3b183866.css": {
       "sha256": "7b3b18386645df278f424cb9d347c30c07bed1bccf2eb9dee71a44e9f1064e73",
       "bytes": 75819
-    },
-    "new/app.d6f53f425f.js": {
-      "sha256": "c3cd22207222c985f9ad963714459fb9fdfb48600ccca7c9f8b7c61d318ba4d4",
-      "bytes": 493662
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
@@ -273781,7 +273781,7 @@
       "bytes": 1382
     },
     "new/index.html": {
-      "sha256": "e9c61e623052184e0f34339eeff2253c4d3309d99652736e529fca570d3d1be7",
+      "sha256": "6a54fc9d964daa15a2978a659722b3b9474d4305d536ffbc02e968599e5083a0",
       "bytes": 1150
     },
     "new/js/perps-book.js": {
@@ -284341,5 +284341,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "a62264fd575ecfb0f7ebd0520ba2eec239e1c081245674e93e7f0253aa14a537"
+  "contentDigest": "598755c61442f68f3ef94502d30493995c53e53d4c776b6e801d62825dbff292"
 }
