@@ -1,6 +1,29 @@
 // Runs before tg-early.js so Telegram launch credentials stay in memory even when the URL is normalized.
 // This file is also valid as a classic script: /terminal loads it synchronously before other scripts.
+// tgnew (2026-11-22, Randall: "Point telegram at new site"): a Telegram open of the classic terminal or perps page moves to
+// the new site (qhooks.com/, which runs its own Telegram bridge): the trade page, a token (#m= / #t= / start parameter
+// m_<chain>_<0x…>) or perps. Wallet linking (link=1), home settings (home=1), call-it (callit=1) and ?classic=1 stay here.
 (function () {
+  try {
+    const q = new URLSearchParams(location.search), raw = location.hash.slice(1);
+    const hp = /(?:^|&)tgWebApp/.test(raw) ? new URLSearchParams(raw) : null;
+    if (!(q.get('tg') === '1' || hp || window.TelegramWebviewProxy)) return;
+    if (['link', 'home', 'callit', 'classic'].some(k => q.has(k))) return;
+    const own = hp || new URLSearchParams(raw), extra = [...own.keys()].filter(k => !/^tgWebApp/.test(k) && k !== 'm' && k !== 't');
+    if (extra.length) return; // a prefilled ticket (side, amt, pool…) keeps the classic page
+    const data = new URLSearchParams((hp && hp.get('tgWebAppData')) || q.get('tgWebAppData') || '');
+    const start = (hp && hp.get('tgWebAppStartParam')) || q.get('tgWebAppStartParam') || data.get('start_param') || '';
+    const sm = /^m_(\d+)_(0x[0-9a-fA-F]{40})$/.exec(start), mk = /^(\d+|solana):([0-9A-Za-z]{32,44})$/.exec(own.get('m') || own.get('t') || '');
+    const perps = /^\/perps(\.html)?$/.test(location.pathname);
+    const route = perps ? '/perps' : mk ? '/token/' + mk[1] + '/' + (mk[1] === 'solana' ? mk[2] : mk[2].toLowerCase()) : sm ? '/token/' + sm[1] + '/' + sm[2].toLowerCase() : '/pulse';
+    const out = new URLSearchParams({tg: '1'}), ref = q.get('ref') || (/^ref_(0x[0-9a-fA-F]{40})$/.exec(start) || [])[1];
+    if (/^0x[0-9a-fA-F]{40}$/.test(ref || '')) out.set('ref', ref.toLowerCase());
+    window.__qhTgMoved = true;
+    location.replace('/?' + out + '#' + route);
+  } catch {}
+})();
+(function () {
+  if (window.__qhTgMoved) return;
   const q = new URLSearchParams(location.search), rawHash = location.hash.slice(1);
   const hp = /(?:^|&)tgWebApp/.test(rawHash) ? new URLSearchParams(rawHash) : null;
   let initData = hp?.get('tgWebAppData') || q.get('tgWebAppData') || '';

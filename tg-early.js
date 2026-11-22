@@ -3,6 +3,7 @@
 // as running in Telegram, keep the launch info for qx-telegram.mjs, take a referral or launch from the start parameter
 // (ref_0x… / m_<chain>_0x…), and put back only the #m= part.
 (function () {
+  if (window.__qhTgMoved) return; // qx-telegram.mjs already moved this Telegram open to the new site
   try {
     var q = new URLSearchParams(location.search), raw = location.hash.slice(1);
     var hp = /tgWebApp/.test(raw) ? new URLSearchParams(raw) : null;

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "96e281d5-13ea-4ab7-84bb-dedac5e3ee59",
+  "releaseId": "f0e2e5f7-bb99-44fa-a126-ae4d60a8889f",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,8 +41,8 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "65c7b66ee25ddfc13d3aa3fe5c18b8a7a7a79cbeee58f773b8cfe37f5e57fafa",
-      "bytes": 9332
+      "sha256": "ea9b8b577665a30308c73acc45803885849b03fe6c603f77174b9231975b8719",
+      "bytes": 9336
     },
     "_redirects": {
       "sha256": "b0064a6e748cb4421e4ff024a6219ff6600077feec61978bcd07fb0bd7a87010",
@@ -319064,6 +319064,10 @@
       "sha256": "70d87367a33960f0b7465f200fa4de6d5b605af726b78cbc5560488cfd97b5a0",
       "bytes": 645446
     },
+    "full-launch/chain-setup-orders2-v1.json": {
+      "sha256": "dd8ce0560a947e5539979d449613d95bcba616b04b02e655c7e80ddd27858ca9",
+      "bytes": 69177
+    },
     "full-launch/chain-setup-pairs-v1.json": {
       "sha256": "c2d0a1c6a0b8ed15e1b65aa6c8a2dd8597de461815a8190341b302df9bb9b17c",
       "bytes": 46852
@@ -320057,7 +320061,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "705f0f93b0205e92288be51bc402b1c059fdb213913a7586aed4a2ae50c352a8",
+      "sha256": "2f36cb26b77f1188acb78c152749f6f651199264b7d8991fbff8bb9bbd0f047a",
       "bytes": 2372
     },
     "hook-marketplace.html": {
@@ -321380,9 +321384,9 @@
       "sha256": "1618e7b5304ad76f59f440f8fe7e62676adb43b6bb24f830e0fc5b6ab910cdf3",
       "bytes": 76102
     },
-    "new/app.791d682fa6.js": {
-      "sha256": "1955097319457b17d9b24920ae3cc67423a1fba823ab81e143bf88681f55826f",
-      "bytes": 542867
+    "new/app.922867245d.js": {
+      "sha256": "6e02114a0f781bd506386e1c5c81d18cf5b2cc646f45bbf4d4ec26f354e2443c",
+      "bytes": 548466
     },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
@@ -321437,7 +321441,7 @@
       "bytes": 1382
     },
     "new/index.html": {
-      "sha256": "1bd487a47dbe4f5260738152126c560f987b2b088eea0d22c67d84301cbf2df2",
+      "sha256": "919309d1e0b68a952fa1447881cfc6d9eea5b33e11e8d4ab446f7890e955103f",
       "bytes": 1150
     },
     "new/js/perps-book.js": {
@@ -330901,8 +330905,8 @@
       "bytes": 15275
     },
     "qx-telegram.mjs": {
-      "sha256": "48fe293e411974730728f4b364892743984e19ded43eadd7629f60f84b275c81",
-      "bytes": 3454
+      "sha256": "ef43619a4f30a9291cf8c14b601b57518e6c72f1aeff97fcc73e606226b4fdff",
+      "bytes": 5339
     },
     "qx-terminal-data.mjs": {
       "sha256": "1f04a14beeab72dbb1a789335e8721441ac5c08993c39b9d13778b9abb085b7f",
@@ -331625,8 +331629,8 @@
       "bytes": 7182
     },
     "tg-early.js": {
-      "sha256": "15c1b45c413a5b10dcdafdbe495c4d9b59d76118aa4a124115672cb3e9d214de",
-      "bytes": 1614
+      "sha256": "153427365d91323da05327634081a881f19a58c8a3fca231f573fd4587427723",
+      "bytes": 1716
     },
     "theme.css": {
       "sha256": "46b779d3584ef77a1890c4d404c881dee5a162024e05cc1c00e4603821d413fc",
@@ -332081,5 +332085,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "7625a5c1b0d1c5714cca41b4a98d9d865a16495f9502bccc48cb98870dd7c2dc"
+  "contentDigest": "b55a042b78a30f2bea78e219ed11ded7c803a0624781a616e8630650b84ba860"
 }
