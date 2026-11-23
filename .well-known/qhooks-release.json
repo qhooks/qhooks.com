@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "414ff190-9e62-41f6-9a29-d5e609069fe6",
+  "releaseId": "4ee70699-289c-436b-b463-62b80ef1ed03",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -320073,8 +320073,8 @@
       "bytes": 4092
     },
     "hook-referral-config.mjs": {
-      "sha256": "25bbb685c37e61c5969dcdd790ab75f0d7d8ea85c29fae67e2cbe5ddbc6d25d4",
-      "bytes": 6861
+      "sha256": "a822f3653e46e17c4c63bddd27b06b94b1249322a43af521089af99c7a6bed96",
+      "bytes": 6928
     },
     "hook-referral-policy.mjs": {
       "sha256": "8739c9ec7c0cf353e2d06b0ba8c1b71909b93f31540a06a5f446972601ad94cc",
@@ -332085,5 +332085,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "38927ced03bf7541178958661dae0a5bd6503d71b57debc4b2e815628110c630"
+  "contentDigest": "cb641af80789e8e75464be2a024cc9562000805bafccb95b592d2c1fa495d4bb"
 }

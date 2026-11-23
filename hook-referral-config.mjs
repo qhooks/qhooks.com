@@ -1,6 +1,6 @@
 // Source-pinned forwarding contracts; native code/config proof is required at preparation.
 // Wallets are resolved from the audited partner registry, never from this file.
-export const hookReferralEnabledPartnerSlugs=Object.freeze(['autonomo']);
+export const hookReferralEnabledPartnerSlugs=Object.freeze(['autonomo','rushr']); // rushr: Randall OK 2026-11-23 (registry row rushr rev 1)
 export const hookReferralFactories=Object.freeze(
 [
  {
