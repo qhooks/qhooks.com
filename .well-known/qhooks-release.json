@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "fbff55df-33b6-4589-9e27-611bbafbcfde",
+  "releaseId": "a77fdcc5-e700-47c0-83c7-3f6552f62f6c",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -137,8 +137,8 @@
       "bytes": 4460
     },
     "agents-hub.html": {
-      "sha256": "fe9c68c5fd646ecc85954aa93aecca3b3a36d70afc5dd879b2ff1e3d7166b193",
-      "bytes": 9844
+      "sha256": "926b3953c3dd3654238136abda376f8e7fbe95cca02c03bb00703b6c53118e92",
+      "bytes": 10526
     },
     "agents-leaderboard.css": {
       "sha256": "107b3ce91108a7866f98e3957df473cd9c8789c03e86d7ae063360709b8022a6",
@@ -318765,8 +318765,8 @@
       "bytes": 2653
     },
     "create.html": {
-      "sha256": "d9d2a5039cb4e8e1c394996a63f5e6ffce49cad287ed786fe3b95dcfe5559987",
-      "bytes": 28942
+      "sha256": "efd84d8f5867664f3b6c2dd282845351ae2321ae5a6984cd7209d5de53755316",
+      "bytes": 29603
     },
     "creator-draft.mjs": {
       "sha256": "8eb777c8f8c6096eecc35e6ddbe129f64a4b3d5dafe00adba9db05981194562b",
@@ -332085,5 +332085,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "40e9b65049105882c10c29efcf36b634887ad379fa2a056db56aa9f8fabf09ff"
+  "contentDigest": "076eb16588f4f2ba0c71070022eecd9db86088689ef18e06bc6ba95fe5e488b1"
 }
