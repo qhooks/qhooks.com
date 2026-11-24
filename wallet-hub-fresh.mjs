@@ -52,16 +52,22 @@ export function createWalletHub(target,{discover=discoverWallets,settle=()=>new 
     granted=accounts[0].toLowerCase();
    }
    if(dead||revision!==epoch||!entries.includes(entry))throw Error('Wallet changed during connection');
-   next=createWalletSession(sessionProvider(entry.provider),()=>{if(current&&session===next)reset({forgetSelection:true});});session=next;
+   next=createWalletSession(sessionProvider(entry.provider),()=>{if(current&&session===next)rejoin();});session=next;
    const c=await next.connect();
    if(dead||revision!==epoch||session!==next||!entries.includes(entry))throw Error('Wallet changed during connection');
    if(granted&&c.owner!==granted)throw Error('Authorized account changed. Reconnect your wallet.');
-   if(expected&&(c.owner!==expected.owner||c.chainId!==expected.chainId||entries.filter(e=>e.rdns===expected.rdns).length!==1))throw Error('Saved wallet no longer matches');
+   if(expected&&(c.owner!==expected.owner||entries.filter(e=>e.rdns===expected.rdns).length!==1))throw Error('Saved wallet no longer matches');
    await next.refresh(c);
    if(dead||revision!==epoch||session!==next)throw Error('Wallet changed during connection');
    current=Object.freeze({entry,owner:c.owner,chainId:c.chainId});automatic=!!expected;save(entry,c);busy=false;publish();return current;
   }catch(error){if(revision===epoch){reset();if(expected)forget();}next?.dispose();throw error;}
  }
+ // Network changes, a wallet's own events and phone browsers resuming a tab used to forget the remembered wallet, so the
+ // next page (each bottom tab is its own page) showed the trader disconnected (trader report 2026-11-24, Phantom on a
+ // phone). Now the live session still ends at once (fail-closed), the remembered choice stays, and a read-only restore
+ // (eth_accounts, never a popup) rejoins when the wallet still shares the same account. If it does not, the restore fails
+ // and forgets the choice as before. An explicit Disconnect still forgets at once.
+ function rejoin(){reset();attempted=null;target.clearTimeout(timer);timer=target.setTimeout(()=>{void restore();},300);}
  async function restore(){
   if(dead||busy||current||!allowRestore)return;const preference=stored();if(!preference)return;
   const matches=entries.filter(e=>e.rdns===preference.rdns);if(matches.length!==1)return;
@@ -76,7 +82,7 @@ export function createWalletHub(target,{discover=discoverWallets,settle=()=>new 
  });
  function storageChanged(event){if(event.key!==WALLET_PREFERENCE_KEY&&event.key!==null)return;const p=stored();if(busy||current&&(!p||p.owner!==current.owner||p.chainId!==current.chainId||p.rdns!==current.entry.rdns))reset();}
  target.addEventListener('storage',storageChanged);
- function resumeView(){if(busy||!current||!session)return;const selected=session,revision=epoch;void selected.refresh(selected.current).then(()=>{if(revision===epoch)publish();}).catch(()=>{if(session===selected)reset({forgetSelection:true});});}
+ function resumeView(){if(busy||!current||!session)return;const selected=session,revision=epoch;void selected.refresh(selected.current).then(()=>{if(revision===epoch)publish();}).catch(()=>{if(session===selected)rejoin();});}
  target.addEventListener('focus',resumeView);target.addEventListener('pageshow',resumeView);
  async function switchChain(chainId){
   const chain=chainById(chainId),before=current;
@@ -98,7 +104,7 @@ export function createWalletHub(target,{discover=discoverWallets,settle=()=>new 
    // that handoff finish before any workspace opens its own guarded session.
    await settle();
    if(dead||epoch!==revision||current!==before)throw Error('Wallet changed. Connect it again.');
-   next=createWalletSession(sessionProvider(p),()=>{if(current&&session===next)reset({forgetSelection:true});});
+   next=createWalletSession(sessionProvider(p),()=>{if(current&&session===next)rejoin();});
    const c=await next.connect();await next.refresh(c);
    if(dead||epoch!==revision||current!==before||c.owner!==before.owner||c.chainId!==chain.id)throw Error('Your wallet is still on the wrong network. Try switching again.');
    const old=session;session=next;old?.dispose();
