@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "b6adffaf-5e01-4a50-832e-cd454d031965",
+  "releaseId": "68943e90-eec5-4955-919b-e76b3b34b413",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,8 +41,8 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "ad0bb4b2baf96303dc872141a4a323a5c6959cb0279631033888573d9f20ddcd",
-      "bytes": 9352
+      "sha256": "dc99e2f22ab2f14a878a5945ed615ba877f0a8f346c566fc86235df86f9b9ece",
+      "bytes": 9760
     },
     "_redirects": {
       "sha256": "b0064a6e748cb4421e4ff024a6219ff6600077feec61978bcd07fb0bd7a87010",
@@ -326609,8 +326609,8 @@
       "bytes": 1531
     },
     "classic/index.html": {
-      "sha256": "9bbbdfa66affa2813373dd1e7e70e3100db3debb88706a36a95318c1b349e333",
-      "bytes": 29224
+      "sha256": "683f8e0c71725202f27743e7c2f0f50c41cd5d843d078f4c377f6d694cb3381b",
+      "bytes": 29324
     },
     "collection.js": {
       "sha256": "b57c5e72a7f36d8e547075ef3afd5d2f8ad2c465de9779ee6cfed354d6072ff3",
@@ -328005,7 +328005,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "bc622a5a051fdb27003b45ee3a3c4f3da9b39beb0f90d671d9b47eb727b4871d",
+      "sha256": "71d8850d93e9fe5e783c4661b3dc75651251db94c07e7730864895079cea8236",
       "bytes": 2372
     },
     "hook-marketplace.html": {
@@ -329328,6 +329328,10 @@
       "sha256": "1618e7b5304ad76f59f440f8fe7e62676adb43b6bb24f830e0fc5b6ab910cdf3",
       "bytes": 76102
     },
+    "new/app.5908252783.js": {
+      "sha256": "a5a2e09923682c940063d901e6f24eccad0ae9b796f8e63a6ddb60bccac3e5ab",
+      "bytes": 566683
+    },
     "new/app.a7bdae92d2.js": {
       "sha256": "9c36c7347449e2304de8596734d859769d4a53875a1afad92fcf9ea1c47e7ba6",
       "bytes": 566589
@@ -329385,7 +329389,7 @@
       "bytes": 1382
     },
     "new/index.html": {
-      "sha256": "41565d7f31a3c81118f71d21c7916f27e7c99b274c6ea38861a10aeeffe0ec86",
+      "sha256": "9514a87d6fcea50f736816eca66b68ca2eea725e62f235500859fe270bed42b2",
       "bytes": 1150
     },
     "new/js/perps-book.js": {
@@ -340029,5 +340033,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "a1f5a383a2747c74bea2a366d41f14a12c2422b10f104602f15766b428545943"
+  "contentDigest": "f29281cdd1d9de5457b7c21b7f4ddd9d754a7595222dbdc247788a20ac6b44d6"
 }
