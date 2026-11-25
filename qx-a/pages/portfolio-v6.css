@@ -284,3 +284,6 @@ main.pf6 .pf6-row:has(.pf-row-sale:not([hidden])){height:auto;grid-template-rows
 main.pf6 .pf-holding.is-watch{opacity:.92}main.pf6 .pf-holding.is-watch .pf-holding__name{flex-wrap:wrap}
 main.pf6 .pf6-tag.pf-watch-tag{color:var(--qa-tx-2);background:var(--qa-wash);border-radius:2px;max-width:150px}
 @media (max-width:600px){.pf-watch .pf-watch__input{font-size:16px}} /* no iOS focus zoom */
+/* STALEPORT 2026-11-25: a failed holdings refresh reads as a warning, not a live dot; the PnL figure stays on one line at phone width (Randall's 390 screenshot clipped "≈ +$1,058.88"). */
+main.pf6 .qp-read-failed .qa-live__dot{background:var(--qa-warn);animation:none}main.pf6 .qp-read-failed #qp-at{color:var(--qa-warn)}
+@media(max-width:520px){main.pf6 .pf6-pnl__v{font-size:clamp(14px,4.4vw,20px);white-space:nowrap;line-height:1.25}main.pf6 .pf6-pnl__main{max-width:100%;overflow:visible}}

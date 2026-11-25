@@ -57,7 +57,7 @@ export function allocatePortfolioValuation(report,{now=Date.now()}={}){
 }
 export function pricingCoverage(report,{now=Date.now(),pending=false}={}){
  const chains=report?.chains||[],rows=Array.isArray(report?.rows)?report.rows:chains.flatMap(c=>[...(c.native?[{...c.native,chainId:c.chainId,native:true}]:[]),...(c.tokens||[]).map(t=>({...t,chainId:c.chainId}))]);
- let unpriced=0,cachedPrices=0,liquidUnpriced=0,unknownOtherUnpriced=0;const clocks=[],seen=new Set();
+ let unpriced=0,cachedPrices=0,oldPrices=0,liquidUnpriced=0,unknownOtherUnpriced=0;const clocks=[],seen=new Set();
  // Display classification only: exact registry/static identities, never symbols
  // or a guessed $1 value. These are existing official quote identities.
  const liquidIdentity=row=>{
@@ -81,7 +81,7 @@ export function pricingCoverage(report,{now=Date.now(),pending=false}={}){
    else if(liquidity===null)unknownOtherUnpriced++;
    continue;
   }
-  clocks.push(price.priceAt);if(price.priceStatus==='last-known'||now-price.priceAt>PRICE_REFRESH_MS)cachedPrices++;
+  clocks.push(price.priceAt);if(price.priceStatus==='last-known'||now-price.priceAt>PRICE_REFRESH_MS)cachedPrices++;if(now-price.priceAt>3600000)oldPrices++;
  }
  const balancesPending=chains.some(c=>c.balancesRefreshing||c.positionsRefreshing||c.error==='balances_unavailable'),progress=report?.progress;
  const settled=!pending&&(!progress||progress.phase==='settled'||progress.transportTimedOut===true);
@@ -95,5 +95,5 @@ export function pricingCoverage(report,{now=Date.now(),pending=false}={}){
  // A settled priced share is independent of blanket partial/price-refresh
  // flags. Actual balance gaps and transport failure stay explicit separately.
  const label=!settled?'Updating holdings…':transportTimedOut||balanceError?'Partial · holdings coverage':priceLabel;
- return {settled,balancesPending,unpriced,cachedPrices,observedAt,label,liquidUnpriced,otherUnpriced,unknownOtherUnpriced,pricedCount,priceLive,priceLabel,balanceError,transportTimedOut};
+ return {settled,balancesPending,unpriced,cachedPrices,oldPrices,observedAt,label,liquidUnpriced,otherUnpriced,unknownOtherUnpriced,pricedCount,priceLive,priceLabel,balanceError,transportTimedOut};
 }

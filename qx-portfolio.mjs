@@ -300,7 +300,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
  const [chain, sol] = await Promise.all([loadChain(), loadSol()]);
  if (!view) void walletTools().catch(() => {}); // Connect wiring must not delay cached/read-only holdings.
  const {h, connectedAddress, onWalletChange, savedPortfolioAddress=portfolioContext.savedPortfolioAddress} = chain;
- let sequence = 0, earningsSequence = 0, current = null, aborter = null, walletKey = '',savedPreview=null;
+ let sequence = 0, earningsSequence = 0, current = null, aborter = null, walletKey = '',savedPreview=null, lastReadFailure=[];
  const viewingLabel=$('qp-viewing')?.textContent;
  const prefs = {...readPreferences(storage), search: '', chain: 'all', hideTest: readHideTest(storage), period: readPeriod(storage)};
  let tab = TABS.some(([k]) => k === initialTab) ? initialTab : 'holding';
@@ -411,7 +411,7 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   }
   const coverage=pricingCoverage(m),unpriced=unpricedHoldingDetails(m.rows);
   if(coverage.unpriced)notes.push(coverage.unpriced+' unpriced token'+(coverage.unpriced===1?'':'s')+' excluded from the total.');
-  if(coverage.cachedPrices)notes.push('Cached prices for '+coverage.cachedPrices+' token'+(coverage.cachedPrices===1?'':'s')+' · '+portfolioReadLabel(coverage.observedAt)+'.');
+  if(coverage.oldPrices)notes.push(coverage.oldPrices+' price'+(coverage.oldPrices===1?'':'s')+' older than 1h');
   // one line per message: "Base, Robinhood: Refreshing prices" instead of a line per chain
   const grouped = new Map();
   for (const t of notes) { const i = t.indexOf(': '), k = i > 0 ? t.slice(i + 2) : '\u0000' + t; if (!grouped.has(k)) grouped.set(k, []); if (i > 0) grouped.get(k).push(t.slice(0, i)); }
@@ -602,7 +602,8 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   } else if (logos) paintList();
   paintAge();
  }
- function paintReadAge() { const at=$('qp-at');at.textContent=portfolioValuationLabel(current);at.title='Oldest price in the shown total. Individual holdings keep their own observation times.'; }
+ function ageText(at,now=Date.now()) { if(!known(at)||at<=0||at>now)return 'an unknown time'; const seconds=Math.max(0,Math.floor((now-at)/1000)); return seconds<60?seconds+'s':seconds<3600?Math.floor(seconds/60)+'m':seconds<86400?Math.floor(seconds/3600)+'h':Math.floor(seconds/86400)+'d'; }
+ function paintReadAge() { const at=$('qp-at');if(lastReadFailure.length&&current){at.textContent="Couldn't refresh · showing holdings from "+ageText(current.at)+" ago";at.title='The latest holdings read failed. Retry to read the wallet again.';$('qp-refresh').textContent='Retry';at.parentElement?.classList.add('qp-read-failed');return;}at.parentElement?.classList.remove('qp-read-failed');at.textContent=portfolioReadLabel(current?.at);at.title='When the shown holdings were read. Individual prices keep their own observation times.';$('qp-refresh').textContent='Refresh'; }
 
  function paintAge() {
   if(current?.rows.some(r=>priceState(r.priceAt).refreshing&&!r.pricesRefreshing||known(r.priceUsd)&&(!known(r.priceAt)||r.priceAt>Date.now()||Date.now()-r.priceAt>PORTFOLIO_PRICE_MAX_MS))){
@@ -687,14 +688,21 @@ export async function startPortfolio({document = globalThis.document, fetchImpl 
   });
   try {
    const results=await Promise.allSettled(jobs.map(async([family,address])=>{
-    const report=await read(family,address,controller.signal);if(mine!==sequence||disposed)return report;
+    let report;
+    for(let attempt=0;attempt<2;attempt++){
+     if(controller.signal.aborted||mine!==sequence||disposed)return;
+     try{report=await read(family,address,controller.signal);break;}
+     catch(error){if(attempt||controller.signal.aborted||mine!==sequence||disposed)throw error;}
+    }
+    if(mine!==sequence||disposed)return report;
     liveReports.set(address,report);current=mergePortfolios([...liveReports.values()]);
     const waiting=jobs.filter(([,w])=>!liveReports.has(w)).map(([, ,label])=>label+': Refreshing balances');
     if(waiting.length)current.partial=true;if(feed)applyLive(current,feed);paintAll(waiting);startLive();return report;
    }));
    if (mine !== sequence || disposed) return;
    const reports=[...liveReports.values()], failed = results.flatMap((r, i) => r.status === 'rejected' ? [jobs[i][2] + ': balance coverage unavailable'] : []);
-   if (!reports.length && shownKept) { $('qp-status').textContent = pricingCoverage(current).label; return; } // keep the kept reading
+   lastReadFailure=failed;
+   if (!reports.length && shownKept) { paintReadAge();$('qp-status').textContent = pricingCoverage(current).label; return; } // keep the kept reading
    current = mergePortfolios(reports);
    if (failed.length) { current.partial = true; current.change24 = null; current.change24Usd = null; }
    if (feed) applyLive(current, feed);
