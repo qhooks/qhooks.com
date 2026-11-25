@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "715751c9-5873-46be-b158-2e695e1fc888",
+  "releaseId": "29b0a385-768d-4a13-b5de-c705da4b3c6f",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -334928,6 +334928,10 @@
       "sha256": "e8993d791691f6f3b6e3ac3a450e8514d0e74646a5894e0e73b4899aebbfaa43",
       "bytes": 16619
     },
+    "full-launch/chain-setup-agreements-v1.json": {
+      "sha256": "084350b58b943cbade48c0a659a2cb8fd89c9eb647b46c22e384f54d7e86ac2a",
+      "bytes": 137096
+    },
     "full-launch/chain-setup-clean-v1.json": {
       "sha256": "d7c0fbcef24f203628508448a8d158de986d5fbdc8cd030b8a01164fe50a3a21",
       "bytes": 709746
@@ -348033,9 +348037,9 @@
       "bytes": 6499
     },
     "x402-test.html": {
-      "sha256": "d57f100ff0b933ccb82866e12ba38ce770f47c1bf17b94c16a4e7e7ac22fc124",
-      "bytes": 5284
+      "sha256": "6f2782b6785bda65ccb7a239e95422fb4d17811151b8b0e13cba51d55e8dae35",
+      "bytes": 5230
     }
   },
-  "contentDigest": "1f6edd7aae59feb2682fa07c562d1cb3ec14588e37ca1f5d94ae75fb2a49b677"
+  "contentDigest": "dc39b7df800efcfe2d5bd255afe6ab414f46227ae8776e64fceb43aab89aae25"
 }
