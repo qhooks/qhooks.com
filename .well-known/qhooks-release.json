@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "19163a91-7497-4e13-a3bd-dc93fa723130",
+  "releaseId": "7db22783-597c-4744-9519-ca25ed348051",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -344005,8 +344005,8 @@
       "bytes": 7270
     },
     "qx-a/pages/portfolio-v6.css": {
-      "sha256": "07bbc80f6ee0040cc9690218af94b3589a1b0c65c6c7cbc8cc1fed40b693dca5",
-      "bytes": 33875
+      "sha256": "54b272e7f27a6de5712b9ab5dcb88cde4ab549365ed7cabdc7a99465541fb8db",
+      "bytes": 33924
     },
     "qx-a/pages/profile-v4.css": {
       "sha256": "33a86954860cf486555e1b02e3e4b25a39a2063a71a985d212ec8d0ff9f6598c",
@@ -347997,5 +347997,5 @@
       "bytes": 6499
     }
   },
-  "contentDigest": "1b2a83cc21548c1a9a53cee1e423996697e370cd0a6616c97ebb703478dd190c"
+  "contentDigest": "06189e4d285ab9f0e05c4300138b549b387e0c354da37d21a262b2ca1ea65c9e"
 }
