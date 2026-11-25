@@ -79,6 +79,8 @@ export function tagAgentUrl(value, source, { replaceCampaign = false } = {}) {
     return value;
   if (/\.(?:mjs|js|css|svg|png|webp|woff2|tgz)$/.test(u.pathname)) return value;
   const refs = u.searchParams.getAll("ref");
+  // A template link such as ?ref=<partner> arrives with an empty ref: leave it as written.
+  if (refs.length && refs.every((r) => !r)) return value;
   if (!refs.length) u.searchParams.set("ref", source);
   else if (refs.length === 1 && agentSource(refs[0])) {
     if (replaceCampaign) u.searchParams.set("ref", source);

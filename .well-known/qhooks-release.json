@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "89e18830-94f3-4a0d-a5a8-e0677031db58",
+  "releaseId": "715751c9-5873-46be-b158-2e695e1fc888",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,8 +41,8 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "6269058ce524436545cdc88d54333bbcca56a15038c5fdc96156e1f0b9e0e82c",
-      "bytes": 11803
+      "sha256": "b4871777a56a11b214218d95dfebc050cf27c1736bb5b0730a6f18ce977d5e87",
+      "bytes": 12211
     },
     "_redirects": {
       "sha256": "b0064a6e748cb4421e4ff024a6219ff6600077feec61978bcd07fb0bd7a87010",
@@ -97,8 +97,8 @@
       "bytes": 512
     },
     "agent-source.mjs": {
-      "sha256": "a855b49623ac2d49df933e7c6d095323074ec99e0d32dc9c3ea4eb6a71d8d295",
-      "bytes": 4294
+      "sha256": "e85d33f00371758a9f12954cbba359e4d5be4cd548c986710f1b3d96e453f4a8",
+      "bytes": 4444
     },
     "agent-stack.css": {
       "sha256": "cd4abb0291d48d571be05c40491de46c6a4951b5ec0412ce16f6a289a1266ac4",
@@ -335953,7 +335953,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "f139373132c672c01bdc314eeff99e823208948011b92d819ec1639ef81004b4",
+      "sha256": "aa786808a4cb8499ad9b1be4f634b0ef2948694ab6971c38ffde70b3386510f5",
       "bytes": 2372
     },
     "hook-marketplace.html": {
@@ -337284,6 +337284,10 @@
       "sha256": "a5a2e09923682c940063d901e6f24eccad0ae9b796f8e63a6ddb60bccac3e5ab",
       "bytes": 566683
     },
+    "new/app.59bd2bd72c.js": {
+      "sha256": "384b45094d14ab683a41a33a700d901ddb3311fe3fb2e071872c0321373cb16d",
+      "bytes": 575461
+    },
     "new/app.5ca09a2602.js": {
       "sha256": "f46895829aec5ba769e8c0ff8f29da7959d651d3b6328d084e25c1b7d304532a",
       "bytes": 569545
@@ -337352,8 +337356,24 @@
       "sha256": "4743cbca6befde92d9f60605e1001874b44f299951f7939ad3da33fe86e9e9bb",
       "bytes": 1382
     },
+    "new/img/partners/Autonomo.png": {
+      "sha256": "683e7dd4b6f85d016cbc3f6acc7db6928f607ba6e6fe26a08c50d9b2f94399e2",
+      "bytes": 2960
+    },
+    "new/img/partners/Nomad.png": {
+      "sha256": "72af0f5e9ab85d51632fb1612cb313972f50a21c2e33ac5e9e0a44b8190466d9",
+      "bytes": 8074
+    },
+    "new/img/partners/Rushr.png": {
+      "sha256": "d14445bfa6bdb205edd7376dd20484dec613dca5ffdf558ed092f3261812beb2",
+      "bytes": 6765
+    },
+    "new/img/partners/Zolva.png": {
+      "sha256": "10d7b9bf48a59aa9110bcd5f82bdfb52c7cd9d7f9d505e14ad1eb9be6415ed70",
+      "bytes": 7857
+    },
     "new/index.html": {
-      "sha256": "1bd46422a0382ce45b0cbc15c18a352ae021f521257d8b1ae8534747c94379be",
+      "sha256": "381ce19961d2cc7d3b883694af5b461fbdac31cb59b456c6faf7100058e1fbf4",
       "bytes": 1150
     },
     "new/js/perps-book.js": {
@@ -344644,6 +344664,18 @@
       "sha256": "4702377e4abafc2f45c3f9be5839cff8b038e1f8435cc3ecf58505edda3dd6da",
       "bytes": 4557
     },
+    "qx-bazaar-test-core.mjs": {
+      "sha256": "be9cae3f1946b9514953d8459230c75ba642e3bab5ca7204bf330f72e9bd949b",
+      "bytes": 6372
+    },
+    "qx-bazaar-test.css": {
+      "sha256": "c96ec4ba9ecdfc74144865f38c5009d71a59e0d8b15f627a555764cdb7ab3da7",
+      "bytes": 2732
+    },
+    "qx-bazaar-test.mjs": {
+      "sha256": "d3da66d8066acc562605b46c36d8fe246ace1421637c063d9e932870fab40843",
+      "bytes": 1438
+    },
     "qx-best-pool.mjs": {
       "sha256": "84e038f6e66293b5aab2b5a64e786a9871b259b6406f09c7b9785f5f3a51f7ef",
       "bytes": 5482
@@ -347996,10 +348028,14 @@
       "sha256": "a1c545d7ecf31d4cfd38130c48394e3eb5fecacd201d7a7f4e527ed0290837db",
       "bytes": 8197
     },
-    "x402-test.html": {
+    "x402-legacy-test.html": {
       "sha256": "c12280b145864dc27f5a108ac0cec73e73f291c9d52dba5b1b062565cb0c44fd",
       "bytes": 6499
+    },
+    "x402-test.html": {
+      "sha256": "d57f100ff0b933ccb82866e12ba38ce770f47c1bf17b94c16a4e7e7ac22fc124",
+      "bytes": 5284
     }
   },
-  "contentDigest": "376e08d3f901d69f9f50b8b0347066c3a68e5998006148015dd83b978891bf1d"
+  "contentDigest": "1f6edd7aae59feb2682fa07c562d1cb3ec14588e37ca1f5d94ae75fb2a49b677"
 }
