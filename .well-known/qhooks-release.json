@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "ff8c1c71-b84c-4670-9556-1a9ce9460312",
+  "releaseId": "3b2da851-b690-4f02-a359-957fc7fe6322",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -341752,6 +341752,10 @@
       "sha256": "b6a77344f772eeabbed30112d100d87b2ee44886b7c371be59f2399c27b37e16",
       "bytes": 166015
     },
+    "full-launch/chain-setup-feerouter2-v1.json": {
+      "sha256": "c1a1b6426623bcca643ee1dc327bb9280bde153b0d48738984ce9c2b4c35bfc4",
+      "bytes": 35879
+    },
     "full-launch/chain-setup-flywheel2-v1.json": {
       "sha256": "9c9ce88fda0b86d2513a450bb10ab55e3e943328153ad88bd6abb334164b61d8",
       "bytes": 34237
@@ -354869,5 +354873,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "ca6af0ec9a80d4ca7b4e8180f4cf85ddc2a118bf3dff4224bc465d336a7efba1"
+  "contentDigest": "a1a638cced759854ad06cc0f34344f365105dcf91bc394b601f4dee851cf16bd"
 }
