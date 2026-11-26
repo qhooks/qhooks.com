@@ -1,7 +1,7 @@
 ---
 name: qhooks
-version: 9.2.0
-updated: 2026-11-21
+version: 9.3.0
+updated: 2026-11-25
 description: Launch, trade & QProof token safety on Robinhood Chain + more; perps, OTC escrow and agreements.
 ---
 
@@ -9,7 +9,7 @@ description: Launch, trade & QProof token safety on Robinhood Chain + more; perp
 
 ## One plug-in for everything
 
-One MCP for launches, trades, perps reads, stored QProof, paid QProof scans and portfolios. Prepare OTC deals and agreements on Robinhood Chain. Spot plans need a listed EVM pool, or use `chain:'solana'` for an unsigned Jupiter swap your own Solana wallet signs; aggregation uses site flows. Hosted at https://qhooks.com/mcp, or run locally with `npx -y @qhooks/mcp`.
+One MCP for launches, trades, perps reads, stored QProof, paid QProof scans and portfolios. Prepare OTC deals on Robinhood Chain and agreements on Robinhood Chain plus every chain where QAgreements is live. Spot plans need a listed EVM pool, or use `chain:'solana'` for an unsigned Jupiter swap your own Solana wallet signs; aggregation uses site flows. Hosted at https://qhooks.com/mcp, or run locally with `npx -y @qhooks/mcp`.
 
 30% back on EVM trades · 40% on Robinhood Chain if you hold 100K QHOOKS
 
@@ -65,7 +65,7 @@ console.log(await rpc('prepare_trade', {...{chain:setting('QHOOKS_CHAIN'),token:
 
 ## Unsigned-transaction checklist
 
-- Match requested/returned chain to the chain table and wallet network. Match the requested chain to every returned transaction. Set and verify chainId explicitly if absent; OTC/agreement preparations use chainId 4663.
+- Match requested/returned chain to the chain table and wallet network. Match the requested chain to every returned transaction. Set and verify chainId explicitly if absent; OTC preparations use chainId 4663; agreement preparations use the selected live deployment chain.
 - Swap `to` must equal the listed QHooks fee router, with deployed code checked. Never substitute a Universal Router, PoolManager or metadata recipient.
 - Approval `to` is the input token, `value` is zero, spender is that chain's fee router and decoded amount is requested `amountIn`. Approval need not target the router itself.
 - Match token, both pool currencies and direction against `meta.pools`, request and calldata; reject unrelated pools or changed tokens.
@@ -135,6 +135,7 @@ Transport/OTC/agreement messages follow; other tools may return their own valida
 - `price_unavailable`
 - `simulation_unavailable`
 - `agreements_unavailable`
+- `agreements_not_deployed` (includes the requested chain and deployment message)
 - `Refreshing router ABI.`
 - `Agent read limits are refreshing.`
 - `Refreshing.`
@@ -329,7 +330,7 @@ REST under /api/v1/agent/: POST otc-quote, otc-create and otc-accept; GET deal-s
 
 ## Agreements: conditions → wallet funds → attest → release
 
-Robinhood Chain (4663), escrow 0x9b6e579dd876c364bf232d2958d7cc45937809bf. agreement_create and agreement_fund prepare the same atomic create-and-fund operation from a full specification. Existing agreements cannot be topped up. Only the named payer signs creation. Exact decimal amounts use ETH/WETH/USDG or an ERC-20 address; the server reads decimals, balance, allowance, runtime/config and chain time. Fee-on-transfer funding is refused.
+Agreements run on Robinhood Chain (4663) plus every chain where the deployment is live: Ethereum (1), BNB Chain (56), Base (8453), Arbitrum One (42161) and Elysium (99901). Runtime code must match the deployment pin before a chain is available. Robinhood Chain escrow: 0x9b6e579dd876c364bf232d2958d7cc45937809bf. agreement_create and agreement_fund prepare the same atomic create-and-fund operation from a full specification. Existing agreements cannot be topped up. Only the named payer signs creation. Exact decimal amounts use the chain’s native or wrapped native asset, USDG on 4663, USDC outside Robinhood Chain, or an ERC-20 address; the server reads decimals, balance, allowance, runtime/config and chain time. Fee-on-transfer funding is refused.
 
 Review payee, asset, total, each condition/party, expiry, termsHash, fees and transactions before signing. Retain reviewed terms privately: only their hash is on-chain; terms accept at most 4096 bytes. dryRun is read/simulation only, reserves no ID and moves no funds. Read the actual receipt after the wallet confirms. Approval targets the exact escrow amount. approval_required returns only simulated approval; confirm then re-prepare. Dependent creation/funding is returned only after successful sequence simulation.
 
@@ -459,31 +460,31 @@ See tools/list.
 
 ### agreement_create
 
-`{chain:"4663", payer, payee, asset, tranches, expiry? | expiresInDays?, terms?, dryRun?}`. Same atomic create-and-fund preparation as `agreement_fund`. See Agreements.
+`{chain:"4663" | "1" | "56" | "8453" | "42161" | "99901", payer, payee, asset, tranches, expiry? | expiresInDays?, terms?, dryRun?}`. Same atomic create-and-fund preparation as `agreement_fund`. See Agreements.
 
 ### agreement_fund
 
-See tools/list.
+Uses the agreement chains listed above, subject to a live deployment. See tools/list.
 
 ### agreement_from_template
 
-`{chain:"4663", payer, payee, asset, template, params, expiry? | expiresInDays?, terms?, dryRun?}`. Templates: milestones, arbiter_escrow, time_release, optimistic, panel (params under Agreements). Builds the same create-and-fund preparation; no price triggers. Never signs or sends.
+`{chain:"4663" | "1" | "56" | "8453" | "42161" | "99901", payer, payee, asset, template, params, expiry? | expiresInDays?, terms?, dryRun?}`. Templates: milestones, arbiter_escrow, time_release, optimistic, panel (params under Agreements). Builds the same create-and-fund preparation; no price triggers. Never signs or sends.
 
 ### agreement_status
 
-See tools/list.
+Uses the agreement chains listed above, subject to a live deployment. See tools/list.
 
 ### agreement_attest
 
-`{chain:"4663", id, actor, tranche?, dryRun?}`. Simulated unsigned attest for a named ATTEST/QUORUM wallet with an uncounted vote.
+`{chain:"4663" | "1" | "56" | "8453" | "42161" | "99901", id, actor, tranche?, dryRun?}`. Simulated unsigned attest for a named ATTEST/QUORUM wallet with an uncounted vote.
 
 ### agreement_release
 
-`{chain:"4663", id, actor, tranche?, dryRun?}`. Checks real tranche readiness; prepares a permissionless release.
+`{chain:"4663" | "1" | "56" | "8453" | "42161" | "99901", id, actor, tranche?, dryRun?}`. Checks real tranche readiness; prepares a permissionless release.
 
 ### agreement_refund
 
-See tools/list.
+Uses the agreement chains listed above, subject to a live deployment. See tools/list.
 
 ### qproof_check
 

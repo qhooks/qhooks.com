@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "29b0a385-768d-4a13-b5de-c705da4b3c6f",
+  "releaseId": "e1f310f1-3352-4368-9e6c-6bec8840030c",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -334960,6 +334960,10 @@
       "sha256": "dd8ce0560a947e5539979d449613d95bcba616b04b02e655c7e80ddd27858ca9",
       "bytes": 69177
     },
+    "full-launch/chain-setup-otc-v1.json": {
+      "sha256": "930498d83f2a4439b270c0ff2d344b9887dde766f7a5f751f5844158541dff75",
+      "bytes": 84190
+    },
     "full-launch/chain-setup-pairs-v1.json": {
       "sha256": "c2d0a1c6a0b8ed15e1b65aa6c8a2dd8597de461815a8190341b302df9bb9b17c",
       "bytes": 46852
@@ -347501,8 +347505,8 @@
       "bytes": 1519
     },
     "skill.md": {
-      "sha256": "4b97e3fb46a70f3fa36370eea44b9487ac795954c6e00bc6aed2579e7a5b154e",
-      "bytes": 50367
+      "sha256": "4320414d0de3fc9f3f0e61f2705ea6b1fca5ea9119bfeec3ef93f0a4da2cda30",
+      "bytes": 51256
     },
     "sol-launch-setup.html": {
       "sha256": "fef20e8143353a57f391a89a1f34337897b2ab7326a694ee0834da8f1effce6e",
@@ -348041,5 +348045,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "dc39b7df800efcfe2d5bd255afe6ab414f46227ae8776e64fceb43aab89aae25"
+  "contentDigest": "10060a28d58f36af78fcc5db1224ab640a0ad8897e14bed434875af773529d21"
 }
