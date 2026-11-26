@@ -823,7 +823,7 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
     const oc = await import('/qx-oneclick.mjs').catch(() => null);
     if (!oc || !(await oc.oneClickOn().catch(() => false))) return false;
     assertTradeOwner(c); s('Placing your trade…');
-    const done = await oc.oneClickTrade({ chainId: st.chainId, token: st.token, side: c.side, amountWei: c.a, ...(st.multi&&c.side==='sell'?{quoteToken:c.route.pool.quote}:{}), slippageBps: c.toleranceBps || 300, referrer: savedReferrer() });
+    const done = await oc.oneClickTrade({ chainId: st.chainId, token: st.token, side: c.side, amountWei: c.a, ...(st.multi&&c.side==='sell'?{quoteToken:c.route.pool.quote}:{}), slippageBps: c.toleranceBps || 300, referrer: savedReferrer(), usd: tradeUsd(c), onFallback: s });
     if (!done) return false;
     const last = done.hashes[done.hashes.length - 1];
     const receipt=await waitTransactionReceipt(st.chainId,last,{rpc,onStatus:s,assert:()=>assertTradeOwner(c)});
