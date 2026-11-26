@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "e1f310f1-3352-4368-9e6c-6bec8840030c",
+  "releaseId": "f15d7f27-4a10-4682-912c-ff8991afb699",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -334928,6 +334928,10 @@
       "sha256": "e8993d791691f6f3b6e3ac3a450e8514d0e74646a5894e0e73b4899aebbfaa43",
       "bytes": 16619
     },
+    "full-launch/chain-setup-agents-v1.json": {
+      "sha256": "afac56e116cfb3d46081ab30b0a957e021c468bc622b269030093734727fffbc",
+      "bytes": 218041
+    },
     "full-launch/chain-setup-agreements-v1.json": {
       "sha256": "084350b58b943cbade48c0a659a2cb8fd89c9eb647b46c22e384f54d7e86ac2a",
       "bytes": 137096
@@ -344853,8 +344857,8 @@
       "bytes": 33987
     },
     "qx-chain-setup.mjs": {
-      "sha256": "bf58fe642419e9c17bac7039f3d379d956bed26d9799dbd499781f375e472634",
-      "bytes": 22771
+      "sha256": "18999ea55e995849eabf2f277fa9a0b5e8e749d170050bd3ca0becb3d5b6d522",
+      "bytes": 24626
     },
     "qx-chain.mjs": {
       "sha256": "3a577e4a87dfc7292fd2d8bd20751e1969b04175a69d62f3e27e52816e8d30d8",
@@ -348045,5 +348049,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "10060a28d58f36af78fcc5db1224ab640a0ad8897e14bed434875af773529d21"
+  "contentDigest": "fba2c210aa2b65ff3a957038c17e77b99eabc8e4e5fe71a7722527f56bf30689"
 }

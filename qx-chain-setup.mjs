@@ -249,12 +249,41 @@ function section(chainId,many){
  rows.push(el('p',{class:'qas-status',role:'status','aria-live':'polite','data-tone':status.chain===chainId&&status.tone||false},status.chain===chainId?status.text:''));
  return el('section',{class:'qcs-chainset','data-chain':chainId},...rows);
 }
+// Set up everything (2026-11-25, Randall: "put all the taps under one button"): walks every chain on the page in order and
+// sends each step that is not set up yet through the same send() as the per-step buttons (same checks, switches the
+// wallet per chain). One wallet confirmation per step; it stops at the first step that does not end Set up.
+let runningAll=false;
+async function runAll(){
+ if(busy||runningAll)return;
+ if(!hub.snapshot().current){hub.open();return;}
+ runningAll=true;draw();
+ try{
+  for(const id of chainIds()){
+   if(!go.has(id))continue;
+   for(const s of M.chains[id].steps){
+    if(state[id]?.steps?.[s.id]==='ok')continue;
+    if(needsFactoryGo(s)&&!factoryGo.has(id))continue;
+    await send(id,s);
+    if(state[id]?.steps?.[s.id]!=='ok'){if(status.tone!=='bad')say(id,'Paused at '+net(id).name+'. Press Set up everything again to carry on.','bad');return;}
+   }
+  }
+  const left=chainIds().reduce((n,id)=>n+M.chains[id].steps.filter(s=>state[id]?.steps?.[s.id]!=='ok').length,0);
+  say(chainIds()[0],left?'Done where this page has a go. '+left+' step(s) still need a go.':'Everything on this page is set up.','ok');
+ }finally{runningAll=false;draw();}
+}
+function allBar(){
+ const ids=chainIds();let left=0,chains=0;
+ for(const id of ids){const n=M.chains[id].steps.filter(s=>state[id]?.steps?.[s.id]!=='ok').length;left+=n;if(n)chains++;}
+ const b=el('button',{type:'button',class:'qtx-mini qas-go',disabled:busy||runningAll||!left},runningAll?'Setting up…':left?'Set up everything ('+left+' steps on '+chains+' chains)':'Everything is set up');
+ b.addEventListener('click',runAll);
+ return el('div',{class:'qcs-allbar'},b,el('p',{},'One button, every chain in order. Your wallet asks you to switch network once per chain and to confirm each step; each chain pays its own gas.'));
+}
 function draw(){
  if(!M)return;
  const ids=chainIds();
  if(!ids.length){root.replaceChildren(chainList());return;}
  const many=!!q.get('chains');
- root.replaceChildren(...ids.map(id=>section(id,many)));
+ root.replaceChildren(...(many&&ids.length>1?[allBar()]:[]),...ids.map(id=>section(id,many)));
 }
 async function start(){
  M=await fetch(SET?'/full-launch/chain-setup-'+SET+'-v1.json':'/full-launch/chain-setup-v1.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
