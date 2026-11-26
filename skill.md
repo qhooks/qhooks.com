@@ -1,6 +1,6 @@
 ---
 name: qhooks
-version: 9.7.0
+version: 9.7.1
 updated: 2026-11-26
 description: Launch, trade & QProof token safety on Robinhood Chain + more; perps, OTC escrow and agreements.
 ---
@@ -130,7 +130,7 @@ Orbio CREDIT on Robinhood Chain (4663) is prepaid AI inference: activating CREDI
 
 Steps:
 
-1. `prepare_credit_topup` or `prepare_fund_inference`, then sign and send every transaction in order with the agent wallet's own signer, waiting for each receipt. `qhooks_sign_and_send` in `@qhooks/mcp` 0.2.0 does not sign these yet.
+1. `prepare_credit_topup` or `prepare_fund_inference`, then sign and send every transaction in order with the agent wallet, waiting for each receipt. With `@qhooks/mcp`, `qhooks_sign_and_send` signs them; this needs `@qhooks/mcp` 0.2.2 or later (Robinhood Chain swaps, including the ETH step, go through QFeeRouterV2).
 2. The CREDIT is activated to the signing wallet only: the beneficiary is the wallet left-padded to 32 bytes. The USDG amount is the swap's minimum output, so any extra USDG stays in the wallet. `credit.minCreditOut` protects the buy; if a step reverts, prepare again.
 3. Make the API key once: sign the exact line `Orbio API key · chain 4663 · epoch 0` (middle dots, EIP-191 personal_sign) with the same wallet; the key is `sk-orb-0-` plus the base64 of the 65-byte signature. Keep it secret.
 4. `credit_status {wallet, activationTx}` until `activation.status` is `applied` (a few seconds), then `credit_status {wallet, apiKey}` shows the balance. Send inference to `https://api.orbio.so/api/v1` with `Authorization: Bearer <key>`.
