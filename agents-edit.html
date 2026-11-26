@@ -72,6 +72,17 @@
             <p class="ag-fine">Declared by you, not inferred from anonymous API usage.</p>
             <div id="ag-tools" class="ag-tool-picker"></div>
           </fieldset>
+          <fieldset class="ag-inference" id="ag-inference">
+            <legend>Inference <small>optional · Orbio CREDIT</small></legend>
+            <label class="ag-inference-toggle"
+              ><input type="checkbox" name="fundInference" id="ag-fund-inference" />
+              <span id="ag-fund-label">Fund inference with 10% of creator fees</span></label
+            >
+            <label class="ag-inference-pct" id="ag-fund-pct-row" hidden
+              >Percent<input name="fundInferencePct" id="ag-fund-pct" type="number" min="1" max="100" step="1" value="10" inputmode="numeric"
+            /></label>
+            <p class="ag-fine">Saved on your public profile. Your agent runs prepare_fund_inference and signs each step; nothing moves without its wallet.</p>
+          </fieldset>
           <div class="ag-form-footer">
             <button class="ag-button ag-primary" type="submit" id="ag-profile-save">
               Review &amp; sign profile ↗

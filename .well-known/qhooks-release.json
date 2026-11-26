@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "866f5e5e-3015-497a-91fc-abd1e07a95b2",
+  "releaseId": "ff8c1c71-b84c-4670-9556-1a9ce9460312",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -25,8 +25,8 @@
       "bytes": 32
     },
     ".well-known/qhooks-agent.json": {
-      "sha256": "ed134fa9bb73f29761101e3494927db0d51ebe05aeaf971314ddfbeaf28b16dd",
-      "bytes": 67748
+      "sha256": "840abc3f4cc03e8c6e7172f441ab49eb9a589f3610d33f029d285810c9aa62db",
+      "bytes": 68124
     },
     ".well-known/security.txt": {
       "sha256": "0fcdac7aa41275acb935293d51659db568edb1eb32c0e4185b610c01d3b87e77",
@@ -133,8 +133,8 @@
       "bytes": 5780
     },
     "agents-edit.html": {
-      "sha256": "fee49744ab2bb97de3bcedc8b1a1f7a0dea23bdf7187086dbfaa4f701c13635c",
-      "bytes": 4460
+      "sha256": "01be01b7c89b0964d4cda43c4e0b1332a3713d25e3aff30591d2eae29c357549",
+      "bytes": 5256
     },
     "agents-hub.html": {
       "sha256": "a6a00a54cda3fb0aedf1c88c5eb840b9296a26ac0a93d9f0876d5c318eeca05f",
@@ -351357,20 +351357,20 @@
       "bytes": 31918
     },
     "qx-agents-core.mjs": {
-      "sha256": "bed0874fd3d185f8174fbadad11227775e855db5ced496e63b74af93cbbad7de",
-      "bytes": 6344
+      "sha256": "181918781c5919aedaa4fa9300e698fc64f348b60a83a15ec25f33a5ecf6b0de",
+      "bytes": 6793
     },
     "qx-agents-setups.mjs": {
       "sha256": "286554f59d67f6647c1863184244c05e26b43bf4e2d51c392a07040441e58ea0",
       "bytes": 8564
     },
     "qx-agents.css": {
-      "sha256": "3d98efbdead7722038f54a57795aa7b846d9498497f00628d199664cb2bec92c",
-      "bytes": 26499
+      "sha256": "aafab8672afc3283c727235aec45de098de5c6f0804d2629cc3c906313a594cd",
+      "bytes": 27324
     },
     "qx-agents.mjs": {
-      "sha256": "e0b60e9d9808874946425d9f8e503b7486e50e767e9e45792945142a19bd60f7",
-      "bytes": 33565
+      "sha256": "18accd07a00bc8e1e0907fb8bc7bd1b338280c1fabb0a7876fba48f8cb95b44d",
+      "bytes": 34869
     },
     "qx-agreements-artifact.mjs": {
       "sha256": "b8642813663b51dc0c94b702a3d41e4d0ff1210bc621958be18248b46004f22f",
@@ -354329,8 +354329,8 @@
       "bytes": 1519
     },
     "skill.md": {
-      "sha256": "cfd3078b5f4ec5385cd4a790a45ca7a7b0e923a119669f2d5431061e67e01813",
-      "bytes": 55910
+      "sha256": "4d3a4ff919aa0ec839a0555256c4bc37a3aca58fed11a57c2d7e721bd71e0be6",
+      "bytes": 56361
     },
     "sol-launch-setup.html": {
       "sha256": "fef20e8143353a57f391a89a1f34337897b2ab7326a694ee0834da8f1effce6e",
@@ -354869,5 +354869,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "de7c52274727050f339d0d72c7576d55e9f8350863bb9cb81f3074adf3887596"
+  "contentDigest": "ca6af0ec9a80d4ca7b4e8180f4cf85ddc2a118bf3dff4224bc465d336a7efba1"
 }

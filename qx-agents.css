@@ -1496,3 +1496,43 @@ pre {
 
 /* Shared wallet controls register the existing icon sprite on first use. */
 .qa-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+/* Inference opt-in (2026-11-26): Orbio CREDIT from creator earnings */
+.ag-inference .ag-inference-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 10px 12px;
+  background: var(--panel);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.ag-inference .ag-inference-toggle input {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  accent-color: var(--accent);
+  flex: none;
+}
+.ag-inference .ag-inference-pct {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.ag-inference .ag-inference-pct[hidden] {
+  display: none;
+}
+.ag-inference .ag-inference-pct input {
+  width: 88px;
+}
+.ag-profile-inference {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+}

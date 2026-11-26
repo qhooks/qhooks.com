@@ -256,6 +256,12 @@
           "revision": {
             "type": "integer",
             "minimum": 0
+          },
+          "fundInferencePct": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Optional. Percent of this wallet's QHooks creator earnings its operator wants turned into Orbio inference (prepare_fund_inference reads it). 0 or absent = off."
           }
         },
         "required": [
@@ -1615,7 +1621,7 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 100,
-            "description": "Percent of the wallet's claimable quote-currency share to turn into CREDIT."
+            "description": "Percent of the wallet's claimable quote-currency share to turn into CREDIT. Default: the fundInferencePct saved on the wallet's QHooks agent profile."
           },
           "sources": {
             "type": "array",
@@ -1640,8 +1646,7 @@
           }
         },
         "required": [
-          "wallet",
-          "pct"
+          "wallet"
         ],
         "additionalProperties": false
       },

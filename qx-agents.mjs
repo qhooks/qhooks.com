@@ -615,6 +615,9 @@ if (page === "profile") {
           {},
           node("small", {}, "TOOLS USED · OPERATOR-DECLARED"),
           tools,
+          ...(Number.isInteger(p.fundInferencePct) && p.fundInferencePct > 0
+            ? [node("p", { class: "ag-profile-inference" }, fundInferenceLabel(p.fundInferencePct))]
+            : []),
           node("p", {}, "Not inferred from anonymous usage metrics."),
         ),
       );
@@ -697,6 +700,23 @@ if (page === "profile") {
 }
 
 const profileDrafts = new Map();
+// Inference opt-in (2026-11-26): one short label, shown in the editor and on the public profile.
+const fundInferenceLabel = (pct) => "Fund inference with " + pct + "% of creator fees";
+function fundInferencePct() {
+  const box = $("ag-fund-inference"), n = Number($("ag-fund-pct").value);
+  return box?.checked ? (Number.isInteger(n) && n >= 1 && n <= 100 ? n : NaN) : 0;
+}
+function paintFundInference(pct) {
+  const box = $("ag-fund-inference");
+  if (!box) return;
+  if (pct !== undefined) {
+    box.checked = pct > 0;
+    if (pct > 0) $("ag-fund-pct").value = String(pct);
+  }
+  const n = Number($("ag-fund-pct").value);
+  $("ag-fund-pct-row").hidden = !box.checked;
+  $("ag-fund-label").textContent = fundInferenceLabel(Number.isInteger(n) && n >= 1 && n <= 100 ? n : "1–100");
+}
 let profileLoading = false;
 async function loadOwnProfile() {
   if (page !== "edit" || profileLoading) return;
@@ -712,9 +732,10 @@ async function loadOwnProfile() {
       tools: [...form.querySelectorAll("input[name=tools]:checked")].map(
         (i) => i.value,
       ),
+      fundInferencePct: fundInferencePct() || 0,
     };
     if (loadedWallet) profileDrafts.set(loadedWallet, draft);
-    else if (draft.name || draft.operator || draft.site || draft.tools.length)
+    else if (draft.name || draft.operator || draft.site || draft.tools.length || draft.fundInferencePct)
       profileDrafts.set(wallet, draft);
     const value = await api("/api/agents/profile?wallet=" + wallet);
     if (walletNow() !== wallet) return;
@@ -725,6 +746,7 @@ async function loadOwnProfile() {
       form.elements[key].value = p?.[key] || "";
     for (const input of $("ag-tools").querySelectorAll("input"))
       input.checked = !!p?.tools?.includes(input.value);
+    paintFundInference(p?.fundInferencePct || 0);
     $("ag-edit-status").textContent = p
       ? "Editing " + short(wallet) + " · revision " + currentRevision
       : "Ready to create a profile for " + short(wallet) + ".";
@@ -754,6 +776,9 @@ if (page === "edit") {
         tool,
       ),
     );
+  for (const id of ["ag-fund-inference", "ag-fund-pct"])
+    $(id)?.addEventListener("input", () => paintFundInference());
+  paintFundInference();
   void bootWallet()
     .then(loadOwnProfile)
     .catch(() => {});
@@ -778,6 +803,7 @@ if (page === "edit") {
           site: form.elements.site.value,
           tools: [...new FormData(form).getAll("tools")],
           revision: currentRevision,
+          fundInferencePct: fundInferencePct(),
         });
       form
         .querySelectorAll("input,select,textarea")

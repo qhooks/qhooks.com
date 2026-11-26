@@ -61,7 +61,7 @@ export function agentText(value, label, max) {
   return text;
 }
 export function agentProfileInput(value) {
-  exactAgentObject(value, ["wallet", "name", "operator", "site", "tools", "revision"]);
+  exactAgentObject(value, ["wallet", "name", "operator", "site", "tools", "revision", "fundInferencePct"]);
   const wallet = agentWallet(value.wallet),
     name = agentText(value.name, "the agent name", 40),
     operator = agentText(value.operator, "the operator name", 48);
@@ -86,6 +86,11 @@ export function agentProfileInput(value) {
     value.tools.some(t => !AGENT_TOOL_NAMES.includes(t))
   )
     throw TypeError("Choose up to 16 QHooks tools.");
+  // Optional opt-in (2026-11-26): share of creator earnings an agent turns into Orbio inference.
+  // Absent or 0 = off, and then the payload is exactly as before, so older signed profiles still verify.
+  const pct = value.fundInferencePct ?? 0;
+  if (!Number.isInteger(pct) || pct < 0 || pct > 100)
+    throw TypeError("Use a whole percent from 1 to 100 for inference funding.");
   return {
     wallet,
     name,
@@ -93,6 +98,7 @@ export function agentProfileInput(value) {
     site,
     tools: [...new Set(value.tools)].sort(),
     revision: value.revision,
+    ...(pct ? { fundInferencePct: pct } : {}),
   };
 }
 export function agentPostInput(value) {
