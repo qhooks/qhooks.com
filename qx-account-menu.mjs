@@ -253,5 +253,20 @@ if (dialog) {
     if (switching && Date.now() < switching.until) { rejoin(); return; }
     switching = null; cur = null; render();
   });
+  // Tapping the header wallet pill copies the full address (Telegram ask, 2026-11-26); the Account dialog still opens,
+  // and its address line says "Address copied". The address line itself also copies on tap.
+  const shortEl = card.querySelector('.qwm-short');
+  shortEl.setAttribute('role', 'button'); shortEl.tabIndex = 0; shortEl.title = 'Copy address'; shortEl.style.cursor = 'pointer';
+  let copyTimer = 0;
+  const copyAddress = async () => {
+    if (!cur?.owner) return;
+    let ok = false;
+    try { await navigator.clipboard.writeText(cur.owner); ok = true; } catch {}
+    shortEl.textContent = ok ? 'Address copied' : cur.owner;
+    clearTimeout(copyTimer); copyTimer = setTimeout(() => { if (cur) shortEl.textContent = short(cur.owner); }, 1600);
+  };
+  shortEl.addEventListener('click', copyAddress);
+  shortEl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); copyAddress(); } });
+  document.addEventListener('click', e => { if (cur && e.target?.closest?.('#qhc-trigger,#qxt-connect')) copyAddress(); }, true);
   render();
 }
