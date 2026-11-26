@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "0672af37-3ce8-4739-9f6a-ce2328b86d4c",
+  "releaseId": "129d6353-a81c-406a-9f42-e2f7cf5303a3",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,8 +41,8 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "f0bcb75b990ac98b26524f4f1aac10985418659c05ae8dc3f3727a8ada5c22b0",
-      "bytes": 13845
+      "sha256": "8afaaf7c772d83dfd49b2578cda3871cf3d27fae7978f1e2669f316b04a75ba0",
+      "bytes": 14253
     },
     "_redirects": {
       "sha256": "b0064a6e748cb4421e4ff024a6219ff6600077feec61978bcd07fb0bd7a87010",
@@ -347529,8 +347529,8 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "04a5ee8a099448e5b6176dad2e9604900b12affb456e829b25b6e37b8e2639eb",
-      "bytes": 2372
+      "sha256": "30b4050e7e78f53febead182e01c13036df918b66c0324708d3bcc33d407c6a7",
+      "bytes": 2423
     },
     "hook-marketplace.html": {
       "sha256": "9ecd79c615eaa287c32957186de71aa954307e75812ca5d81a87600e89f30e7d",
@@ -348860,6 +348860,10 @@
       "sha256": "43a5acb5dd52d204a313dffc3ede4ae02bd95fe388add96850623c605821045f",
       "bytes": 575485
     },
+    "new/app.55a445b9d9.js": {
+      "sha256": "55a445b9d9c6959c2686592c742d22d09b356ebb6b6da483e4fbf161e9f6d6b8",
+      "bytes": 579035
+    },
     "new/app.5908252783.js": {
       "sha256": "a5a2e09923682c940063d901e6f24eccad0ae9b796f8e63a6ddb60bccac3e5ab",
       "bytes": 566683
@@ -348965,8 +348969,12 @@
       "bytes": 7977
     },
     "new/index.html": {
-      "sha256": "d42c63a2dc2999bd1fe342521720994f65850df6fc043e59ab57456ec55eee18",
-      "bytes": 1150
+      "sha256": "b98b6dca35f6e86983f67cf02537cee8d13d9575c52d34e39871c27911e21205",
+      "bytes": 1201
+    },
+    "new/js/orbio-chip.js": {
+      "sha256": "d43102ebd73c9d5fa09c2eb59de912c0f6abd258df39794432bf5094eed5c5de",
+      "bytes": 1780
     },
     "new/js/perps-book.js": {
       "sha256": "5711cdbfcd0818ebbe6b040efd77efcecb92f7ffd9d538a950ed017e791550ec",
@@ -359645,5 +359653,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "34104bd56a14f01ddb4063ab6de4414c22ea8f0712744bf10a719d2a4517b86b"
+  "contentDigest": "3afcc4f8e16fd97648b21cfd7e33d5e4cf7b4fb2e21515483949b7f25ab116b3"
 }
