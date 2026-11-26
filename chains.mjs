@@ -235,7 +235,7 @@ const rows = [
       maxSideFee: 30000, gasReserveWei: '5000000000000000', bridges: [] },
     // Own-pool index (charts, tape, holders): GeckoTerminal/DexScreener don't list Elysium, so like Robinhood it is the only source.
     ownIndex: { confirmations: 128, statelessHistory: true, ownHistory: true, ownTransfers: true, nativeSample: true, onlySource: true },
-    data: { gecko: null, dex: null, alchemy: 'elysium-mainnet', zeroEx: false }
+    data: { gecko: 'elysium', dex: 'elysium', alchemy: 'elysium-mainnet', zeroEx: false }
   },
   {
     // The Monad v4 build is offered by one-tap only after its code probe succeeds.
