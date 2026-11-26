@@ -1,6 +1,6 @@
 ---
 name: qhooks
-version: 9.4.0
+version: 9.5.0
 updated: 2026-11-26
 description: Launch, trade & QProof token safety on Robinhood Chain + more; perps, OTC escrow and agreements.
 ---
@@ -115,6 +115,31 @@ Guarantees and limits:
 - Token approvals are exact, never unlimited. Tokens without standard ERC-20 events are refused.
 - No QHooks fee; you pay network gas.
 - Tested end to end on a private chain with ETH and a 6-decimal ERC-20 (deploy, enroll, deposit, lost-response recovery, withdraw, tampering refusals). An independent review of the QWallet contracts is pending; start with small amounts.
+
+## Orbio CREDIT: inference for agents
+
+Orbio CREDIT on Robinhood Chain (4663) is prepaid AI inference: activating CREDIT burns it into an inference balance for one wallet, and that wallet's signature is its API key. These tools let an agent fund its own inference from its trading wallet. All are unsigned; none signs or sends.
+
+| Tool | Does |
+| --- | --- |
+| `prepare_credit_topup` | `{wallet, amountIn, from: "ETH"\|"USDG", slippageBps?}`. With ETH: an ETH to USDG swap through the QHooks fee router (same terms as `prepare_trade`), an exact USDG approval, then `buyAndActivate` on the Orbio exchange for this wallet. With USDG: the approval (when short) and `buyAndActivate`. |
+| `prepare_fund_inference` | `{wallet, pct, sources?, minUsd?, slippageBps?}`. For agents that launched on QHooks: `release()` on each Robinhood Chain launch income contract that pays this wallet, unwrap `pct` of the wallet's own WETH share, then the ETH flow above. Returns `below_dust` with no transactions under `minUsd` (default 0.5). |
+| `credit_status` | `{wallet, apiKey?, activationTx?}`. ETH, USDG and CREDIT balances, the USDG allowance to the exchange and current CREDIT per USDG. With the wallet's own key it also returns Orbio's `available` and `used` balance; with `activationTx` it returns Orbio's indexing status. |
+
+Steps:
+
+1. `prepare_credit_topup` or `prepare_fund_inference`, then sign and send every transaction in order with the agent wallet's own signer, waiting for each receipt. `qhooks_sign_and_send` in `@qhooks/mcp` 0.2.0 does not sign these yet.
+2. The CREDIT is activated to the signing wallet only: the beneficiary is the wallet left-padded to 32 bytes. The USDG amount is the swap's minimum output, so any extra USDG stays in the wallet. `credit.minCreditOut` protects the buy; if a step reverts, prepare again.
+3. Make the API key once: sign the exact line `Orbio API key · chain 4663 · epoch 0` (middle dots, EIP-191 personal_sign) with the same wallet; the key is `sk-orb-0-` plus the base64 of the 65-byte signature. Keep it secret.
+4. `credit_status {wallet, activationTx}` until `activation.status` is `applied` (a few seconds), then `credit_status {wallet, apiKey}` shows the balance. Send inference to `https://api.orbio.so/api/v1` with `Authorization: Bearer <key>`.
+
+Fund-inference loop, for agents that launched on QHooks:
+
+- Every 6 hours, call `prepare_fund_inference {wallet, pct}` with the share your operator set.
+- If `status` is `prepared`, sign and send the transactions in order. If it is `below_dust` or `no_creator_earnings`, do nothing until the next run.
+- Prepare again if more than a few minutes pass between the release receipt and the swap.
+
+`apiKey` is forwarded once to Orbio's key endpoint to read the balance and is never stored or logged by QHooks. Orbio's own terms and fees apply to CREDIT; `credit.creditedToApi` is what reaches the inference balance at the quoted price. Only EOA and EIP-7702 wallets can sign an Orbio wallet key.
 
 ## Results and errors
 
@@ -426,6 +451,18 @@ Public tools only. Server schemas define exact inputs; additional fields are ref
 
 ### cancel_order
 `{chain, trader, hash}` → while the nonce is live `{done: false, legs, transactions[{chainId, to, data, value}]}`; after it is spent on chain `{done: true, status: "cancelled", legs}`.
+
+### prepare_credit_topup
+
+`{chain?: "4663", wallet, amountIn, from: "ETH"|"USDG", slippageBps?}`. Raw units (wei, or 6-decimal USDG). Returns `credit` (`usdgIn`, `creditOut`, `minCreditOut`, `creditedToApi`, `fills`), `swap` for ETH, ordered `transactions`, and `api` (the key line and key format). See Orbio CREDIT.
+
+### prepare_fund_inference
+
+`{chain?, wallet, pct: 1-100, sources?, minUsd?, slippageBps?}`. Returns `status` `prepared`, `below_dust` or `no_creator_earnings`, per-source `pending` and `yourShare`, `claimable`, and the ordered `transactions` (release, unwrap, swap, approval, buyAndActivate).
+
+### credit_status
+
+`{chain?, wallet, apiKey?, activationTx?}`. Returns `balances`, `market.per1Usdg`, `api` (`status` `active` with `available`/`used`, or Orbio's refusal code such as `wallet_not_activated` with `recoveredAddress` and `matchesWallet`) and `activation`.
 
 ### qwallet_status
 

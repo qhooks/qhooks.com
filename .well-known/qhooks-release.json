@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "d7fd20a6-7460-4edb-8767-ef48733aff5e",
+  "releaseId": "866f5e5e-3015-497a-91fc-abd1e07a95b2",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -25,8 +25,8 @@
       "bytes": 32
     },
     ".well-known/qhooks-agent.json": {
-      "sha256": "34894385c29deb114c8e5233e3007bec05aecae6fbb987c51e185e042f92c902",
-      "bytes": 61338
+      "sha256": "ed134fa9bb73f29761101e3494927db0d51ebe05aeaf971314ddfbeaf28b16dd",
+      "bytes": 67748
     },
     ".well-known/security.txt": {
       "sha256": "0fcdac7aa41275acb935293d51659db568edb1eb32c0e4185b610c01d3b87e77",
@@ -137,8 +137,8 @@
       "bytes": 4460
     },
     "agents-hub.html": {
-      "sha256": "926b3953c3dd3654238136abda376f8e7fbe95cca02c03bb00703b6c53118e92",
-      "bytes": 10526
+      "sha256": "a6a00a54cda3fb0aedf1c88c5eb840b9296a26ac0a93d9f0876d5c318eeca05f",
+      "bytes": 11480
     },
     "agents-leaderboard.css": {
       "sha256": "107b3ce91108a7866f98e3957df473cd9c8789c03e86d7ae063360709b8022a6",
@@ -354329,8 +354329,8 @@
       "bytes": 1519
     },
     "skill.md": {
-      "sha256": "07424e4841ebf9efea04882e6d441a9182772c6200184c4f55c5a7d8b0d3f04a",
-      "bytes": 52041
+      "sha256": "cfd3078b5f4ec5385cd4a790a45ca7a7b0e923a119669f2d5431061e67e01813",
+      "bytes": 55910
     },
     "sol-launch-setup.html": {
       "sha256": "fef20e8143353a57f391a89a1f34337897b2ab7326a694ee0834da8f1effce6e",
@@ -354869,5 +354869,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "edcb4d411d4ee371b6bfdd0fb7cc3c2906fdb3e92eb73960bb7c20f22a985ec2"
+  "contentDigest": "de7c52274727050f339d0d72c7576d55e9f8350863bb9cb81f3074adf3887596"
 }

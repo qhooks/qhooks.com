@@ -1471,6 +1471,195 @@
       }
     },
     {
+      "name": "credit_status",
+      "description": "Read an agent wallet's Orbio CREDIT on Robinhood Chain: ETH, USDG and CREDIT balances, the USDG allowance to the Orbio exchange and the current CREDIT per USDG. Pass the wallet's own Orbio key (sk-orb-...) to also read its activated inference balance from Orbio; the key is forwarded once and never stored. Pass activationTx to check Orbio has indexed an activation. Read-only.",
+      "annotations": {
+        "title": "Read Orbio CREDIT status",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chain": {
+            "type": "string",
+            "enum": [
+              "4663"
+            ],
+            "description": "Robinhood Chain (4663), where Orbio CREDIT trades."
+          },
+          "wallet": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "apiKey": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Optional Orbio wallet key, sk-orb-<epoch>-<base64 signature>. Sign \"Orbio API key · chain 4663 · epoch 0\" with the wallet (EIP-191) to make it."
+          },
+          "activationTx": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{64}$"
+          }
+        },
+        "required": [
+          "wallet"
+        ],
+        "additionalProperties": false
+      },
+      "title": "Read Orbio CREDIT status",
+      "securitySchemes": [
+        {
+          "type": "noauth"
+        }
+      ],
+      "_meta": {
+        "securitySchemes": [
+          {
+            "type": "noauth"
+          }
+        ]
+      }
+    },
+    {
+      "name": "prepare_credit_topup",
+      "description": "Prepare unsigned transactions that buy Orbio CREDIT and activate it as inference balance for the agent's own wallet in one sequence: with from ETH, an ETH->USDG swap through the QHooks fee router (same fee, cashback and referral terms as prepare_trade), then an exact USDG approval, then Orbio exchange.buyAndActivate with a CREDIT minimum from the live activation quote. With from USDG, only the approval and buyAndActivate. Never signs or sends.",
+      "annotations": {
+        "title": "Prepare an Orbio CREDIT top-up",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chain": {
+            "type": "string",
+            "enum": [
+              "4663"
+            ],
+            "description": "Robinhood Chain (4663), where Orbio CREDIT trades."
+          },
+          "wallet": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "amountIn": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,37}$",
+            "description": "Raw units of the input: wei for ETH, 6-decimal units for USDG."
+          },
+          "from": {
+            "type": "string",
+            "enum": [
+              "ETH",
+              "USDG"
+            ]
+          },
+          "slippageBps": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 3000,
+            "description": "Slippage for the ETH->USDG swap and the CREDIT minimum, in basis points. Default 100."
+          }
+        },
+        "required": [
+          "wallet",
+          "amountIn",
+          "from"
+        ],
+        "additionalProperties": false
+      },
+      "title": "Prepare an Orbio CREDIT top-up",
+      "securitySchemes": [
+        {
+          "type": "noauth"
+        }
+      ],
+      "_meta": {
+        "securitySchemes": [
+          {
+            "type": "noauth"
+          }
+        ]
+      }
+    },
+    {
+      "name": "prepare_fund_inference",
+      "description": "Prepare unsigned transactions that turn part of a QHooks launch creator's fee earnings into Orbio inference: release() on each of the wallet's Robinhood Chain launch income contracts with a pending share, then the prepare_credit_topup flow for pct of the wallet's own share of the pending quote currency (WETH is unwrapped to ETH first). Returns status below_dust and no transactions when the share is under minUsd. Run it on a schedule; never signs or sends.",
+      "annotations": {
+        "title": "Prepare inference funding from creator fees",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chain": {
+            "type": "string",
+            "enum": [
+              "4663"
+            ],
+            "description": "Robinhood Chain (4663), where Orbio CREDIT trades."
+          },
+          "wallet": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "pct": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Percent of the wallet's claimable quote-currency share to turn into CREDIT."
+          },
+          "sources": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{40}$"
+            },
+            "description": "Optional launch income contract addresses. Default: found from the wallet's QHooks launches."
+          },
+          "minUsd": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 1000,
+            "description": "Dust floor for the amount to fund, in USD. Default 0.5."
+          },
+          "slippageBps": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 3000,
+            "description": "Slippage for the ETH->USDG swap and the CREDIT minimum, in basis points. Default 100."
+          }
+        },
+        "required": [
+          "wallet",
+          "pct"
+        ],
+        "additionalProperties": false
+      },
+      "title": "Prepare inference funding from creator fees",
+      "securitySchemes": [
+        {
+          "type": "noauth"
+        }
+      ],
+      "_meta": {
+        "securitySchemes": [
+          {
+            "type": "noauth"
+          }
+        ]
+      }
+    },
+    {
       "name": "qwallet_status",
       "description": "Read an owner's QWallet on Robinhood Chain: verified verifier/pool runtime, post-quantum key enrollment, nonce and per-asset balances, wallet balances and allowances, and the next setup step. Read-only.",
       "annotations": {
