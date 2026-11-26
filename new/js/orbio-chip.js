@@ -10,7 +10,7 @@
     var chain = document.querySelector('.token-meta .lt-chain');
     if (!chain || chain.parentElement.querySelector('.lt-orbio')) return;
     var s = document.createElement('span');
-    s.className = 'lt-chain lt-orbio'; s.textContent = lp.label + ' · Agent #' + lp.agentId; s.title = 'Launched on Orbio (agent #' + lp.agentId + ')';
+    s.className = 'lt-chain lt-orbio'; s.textContent = (window.innerWidth < 520 ? 'Orbio #' + lp.agentId : lp.label + ' · Agent #' + lp.agentId); s.style.whiteSpace = 'nowrap'; s.style.flexShrink = '0'; s.title = 'Launched on Orbio (agent #' + lp.agentId + ')';
     chain.insertAdjacentElement('afterend', s);
   }
   function check() {

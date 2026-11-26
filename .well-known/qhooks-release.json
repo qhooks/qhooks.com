@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "129d6353-a81c-406a-9f42-e2f7cf5303a3",
+  "releaseId": "1b2338bf-52ce-4606-a0b4-c3098dca5163",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -348973,8 +348973,8 @@
       "bytes": 1201
     },
     "new/js/orbio-chip.js": {
-      "sha256": "d43102ebd73c9d5fa09c2eb59de912c0f6abd258df39794432bf5094eed5c5de",
-      "bytes": 1780
+      "sha256": "79b02c58d680823b9ea0a9dcbdfdbeb8cae94198b308c448758a4229378a44c8",
+      "bytes": 1890
     },
     "new/js/perps-book.js": {
       "sha256": "5711cdbfcd0818ebbe6b040efd77efcecb92f7ffd9d538a950ed017e791550ec",
@@ -359653,5 +359653,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "3afcc4f8e16fd97648b21cfd7e33d5e4cf7b4fb2e21515483949b7f25ab116b3"
+  "contentDigest": "77db2edb4d5f853e581162534246925c95bd1d99824ee00daad4757f6f713371"
 }
