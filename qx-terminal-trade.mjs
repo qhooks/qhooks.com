@@ -16,6 +16,7 @@ import {solOrderFeeCopy} from './qx-sol-referral-payout-core.mjs';
 import {sellPortion} from './qx-position-core.mjs';
 import {poolQuoteInfo} from './qx-best-pool.mjs';
 import {chainById} from './chains.mjs';
+import {feeRoutersOf} from './qx-fee-routers.mjs';
 import {createGasGate} from './qx-gas-preflight.mjs';
 import {externalTradingNote} from './qx-external-trading.mjs';
 import {quoteUsd as readQuoteUsd} from '/qx-native-usd.mjs';
@@ -37,7 +38,7 @@ import {resolveTradingTolerance} from './qx-trading-preferences.mjs';
 // Every quote runs through the real pool and hook, so charges are in the number shown. Trades go through the
 // platform fee router: 1% per trade, 30% of it back to the trader as cashback they claim here (40% for QHOOKS holders on Robinhood Chain).
 import { rpc, livePoolKey, parseUnits, formatUnits, erc20, send, ensureAllowance, connectedAddress, onWalletChange, NATIVE, CHAIN_NAME, h } from '/qx-chain.mjs';
-import { quotePoolRoutes, quoteSingle, nativeRoute, quoteNative, quotePayAsset, nativeHops, hookData, hookReferralFor,assertHookReferralsCurrent,selectedHookReferralPartner,FEE_BPS, feeSwapCall, viaSwapCall, cashbackOf, referralLink, claimCall, savedReferrer } from '/qx-swap.mjs';
+import { quotePoolRoutes, quoteSingle, nativeRoute, quoteNative, quotePayAsset, nativeHops, hookData, hookReferralFor,assertHookReferralsCurrent,selectedHookReferralPartner,FEE_BPS, feeSwapCall, viaSwapCall, feeSwapPermit2Call, viaSwapPermit2Call, sellThroughRouter, cashbackOf, referralLink, claimCall, savedReferrer } from '/qx-swap.mjs';
 import { extraAddress, isLive, setUp } from '/qx-extras.mjs';
 import { hasDirectRoute, resolveDirectPool, refusalText } from '/qx-elysium-direct.mjs';
 import { holderMinTokens, shortText } from '/qx-holder-min.mjs';
@@ -51,13 +52,16 @@ import { createFundingRow, fundingAsset, destinationCosts, runCrossChainBuy, ret
   cashAsset, cashHome, cashSettings, moveProceeds, offerMoveBack, chainName, readAssetBalance, loadFundingStyle, xchainEnabled } from './qx-xchain-gate.mjs';
 
 // Holder cashback (live since the Safe set the flywheel on 2026-11-08): on Robinhood Chain the fee router pays 40%
-// instead of 30% to wallets the flywheel counts as QHOOKS holders (1,000,000+). Read on chain, cached per wallet.
+// instead of 30% to QHOOKS holders. Read on chain, cached per wallet: isHolder on the CURRENT Robinhood Chain fee router
+// (QFeeRouterV2 since fr2switch, 2026-11-26: counts wallet + staked + locked), the flywheel's isHolder if that read fails.
 const FLYWHEEL_RH = "0xb85E67cf7728572033A9d36aEe3218DadF85bAA2", holderReads = new Map();
+const readIsHolder = (to, k) => rpc("4663", "eth_call", [{ to, data: "0xd4d7b19a" + k.slice(2).padStart(64, "0") }, "latest"])
+  .then(r => { if (!/^0x[0-9a-f]{64}$/i.test(r || "")) throw Error("isHolder unread"); return BigInt(r) === 1n; });
 function holderRate(who) {
   if (!who) return Promise.resolve(false);
   const k = who.toLowerCase();
-  if (!holderReads.has(k)) holderReads.set(k, rpc("4663", "eth_call", [{ to: FLYWHEEL_RH, data: "0xd4d7b19a" + k.slice(2).padStart(64, "0") }, "latest"])
-    .then(r => BigInt(r || "0x0") === 1n).catch(() => { holderReads.delete(k); return false; }));
+  if (!holderReads.has(k)) holderReads.set(k, extraAddress("feeRouter", "4663").then(router => readIsHolder(router, k))
+    .catch(() => readIsHolder(FLYWHEEL_RH, k)).catch(() => { holderReads.delete(k); return false; }));
   return holderReads.get(k);
 }
 function feeLine(chainId, extra = "", onRate = () => {}) {
@@ -586,10 +590,19 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
       const tin = sell === XNATIVE ? ZERO : sell, tout = buy === XNATIVE ? ZERO : buy;
       assertTradeOwner(c);
       if (!((tin === ZERO || tout === ZERO) && await tryOneClick(c, s))) {
+      if (c.side === 'sell' && tin !== ZERO) {
+        // Sells: one confirm or a Permit2 signature instead of a separate approve where the wallet allows (sellThroughRouter).
+        const deadline = async () => { const now = BigInt((await rpc(chainId, 'eth_getBlockByNumber', ['latest', false])).timestamp); assertTradeOwner(c); return now + 600n; };
+        const { receipt } = await sellThroughRouter({ chainId, token: tin, router, owner: me, amountIn: c.a, deadline, onStatus: s, assertContext,
+          swapTx: async when => ({ to: router, data: viaSwapCall(q.tx.to, q.tx.data, tin, tout, c.a, minOut, false, when) }),
+          permitSwapTx: async (when, p) => ({ to: router, data: viaSwapPermit2Call(q.tx.to, q.tx.data, tin, tout, c.a, minOut, false, when, p.nonce, p.signature) }) });
+        queueRecord(c, receipt);
+      } else {
       if (tin !== ZERO) await ensureAllowance(chainId, tin, router, c.a, s, assertContext);
       const now = BigInt((await rpc(chainId, 'eth_getBlockByNumber', ['latest', false])).timestamp);
       assertTradeOwner(c);
       await sendRecorded(c, { to: router, data: viaSwapCall(q.tx.to, q.tx.data, tin, tout, c.a, minOut, c.side === 'buy', now + 600n), value: tin === ZERO ? c.a : 0n }, s, assertContext);
+      }
       }
       const after = await erc20(chainId, token, me).catch(() => null), moved = after ? (after.balance > b.token ? after.balance - b.token : b.token - after.balance) : null;
       s(moved === null ? 'Trade confirmed. Refresh balances.' : (c.side === 'buy' ? 'Bought ' : 'Sold ') + formatUnits(moved, st.decimals, 4) + ' ' + st.symbol + '.');if (c.side === 'buy' && moved !== null) afterBuy();
@@ -693,12 +706,17 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
     // Sharing does not depend on a balance RPC being available.
     cash.replaceChildren(h('p', {}, link));
     try {
-    if (!(await isLive(activeState.chainId, 'feeRouter'))) { if(!alive())return;cash.replaceChildren(h('p', {}, link)); return; }
-    const router = await extraAddress('feeRouter', activeState.chainId), Z = '0x0000000000000000000000000000000000000000';
-    const [q, n] = await Promise.all([cashbackOf(activeState.chainId, router, me, activeState.quote), cashbackOf(activeState.chainId, router, me, Z)]);
+    // FR2SWITCH: every router generation of the chain with code (Robinhood: QFeeRouterV2, then the shared router, which
+    // still holds what was earned before the switch). Each balance claims on its own router.
+    const Z = '0x0000000000000000000000000000000000000000', current = await extraAddress('feeRouter', activeState.chainId);
+    const routers = [...new Set([current, ...feeRoutersOf(activeState.chainId).slice(1)])];
+    const live = await Promise.all(routers.map(r => rpc(activeState.chainId, 'eth_getCode', [r, 'latest']).then(c => !!c && c !== '0x')));
+    const routed = routers.filter((r, i) => live[i]);
+    if (!routed.length) { if(!alive())return;cash.replaceChildren(h('p', {}, link)); return; }
+    const reads = await Promise.all(routed.map(router => Promise.all([cashbackOf(activeState.chainId, router, me, activeState.quote), cashbackOf(activeState.chainId, router, me, Z)]).then(([q, n]) => [router, q, n])));
     if(!alive())return;
-    const items = [[activeState.quote, q, activeState.quoteDecimals, activeState.quoteSymbol], [Z, n, 18, NATIVE[activeState.chainId]]].filter(x => x[1] > 0n);
-    cash.replaceChildren(...items.map(([cur, v, d, sym]) => {
+    const items = reads.flatMap(([router, q, n]) => [[activeState.quote, q, activeState.quoteDecimals, activeState.quoteSymbol, router], [Z, n, 18, NATIVE[activeState.chainId], router]]).filter(x => x[1] > 0n);
+    cash.replaceChildren(...items.map(([cur, v, d, sym, router]) => {
       const b = h('button', { type: 'button', class: 'qxt-mini' }, 'Claim');
       b.addEventListener('click', async () => { if (busy||!alive()||connectedAddress()!==me) return; b.disabled = true; try { await send(activeState.chainId, { to: router, data: claimCall(cur) }, t => { status.textContent = t; }); status.textContent = 'Rewards claimed.'; await showCashback(); document.dispatchEvent(new CustomEvent('qhooks:rewards-claimed')); } catch (e) { status.textContent = tradeError(e); b.disabled = false; } });
       return h('p', {}, h('span', {}, 'Rewards'), h('span', {}, small(v, d) + ' ' + sym), b);
@@ -811,6 +829,15 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
     const receipt=await waitTransactionReceipt(st.chainId,last,{rpc,onStatus:s,assert:()=>assertTradeOwner(c)});
     queueRecord(c,receipt);return true;
   }
+  // Pool sells through the fee router: the hook referral context is rechecked before an allowance can open and again
+  // before the swap is built, as executeTicketSwap does.
+  async function poolSell(c, chainId, token, router, hops, wrap, deadline, s, assertContext) {
+    const fresh = async () => { await assertHookReferralsCurrent(chainId, hops); assertTradeOwner(c); };
+    const { receipt } = await sellThroughRouter({ chainId, token, router, owner: connectedAddress(), amountIn: c.a, deadline: async () => deadline, onStatus: s, assertContext,
+      swapTx: async when => { await fresh(); return { to: router, data: feeSwapCall(chainId, hops, c.a, c.minOut, wrap, false, when) }; },
+      ...(wrap && BigInt(wrap) !== 0n ? {} : { permitSwapTx: async (when, p) => { await fresh(); return { to: router, data: feeSwapPermit2Call(chainId, hops, c.a, c.minOut, when, p.nonce, p.signature) }; } }) });
+    return receipt;
+  }
   async function poolSubmit(c) {
         const { chainId, key, token, quote: qt } = st, router = await extraAddress('feeRouter', chainId);
         const me = connectedAddress(), b = await balances();
@@ -827,7 +854,12 @@ export function mountTicket(card, { onTraded = () => {}, now = Date.now, rowMode
         const oneClickDone = !c.payAsset && (!st.multi&&(c.side === 'sell' || c.pay === 'native' || st.nativePool)||st.multi&&(c.side==='sell'&&c.route.quoteUsd>0||c.side==='buy'&&c.pay==='native')) && await tryOneClick(c, s);
         if (!oneClickDone) {
           let receipt;
-          if (st.multi) {
+          if (c.side === 'sell') {
+            // Sells (one pool or the chosen pool's hops): no separate approve where the wallet allows (sellThroughRouter).
+            const hops = st.multi ? c.route.hops : [{ key, zeroForOne: key.currency0 === token }], wrap = st.multi ? c.route.wrap : null;
+            if (st.multi) { await assertHookReferralsCurrent(chainId,hops);assertContext(); }
+            receipt = await poolSell(c, chainId, token, router, hops, wrap, deadline, s, assertContext);
+          } else if (st.multi) {
             // Several pools: the chosen pool's own hops through the fee router (qx-best-pool picked the route).
             await assertHookReferralsCurrent(chainId,c.route.hops);assertContext();
             if(c.side==='sell'||c.pay!=='native')await ensureAllowance(chainId,c.side==='sell'?token:c.payAsset?.address || c.route.pool.quote,router,c.a,s,assertContext);

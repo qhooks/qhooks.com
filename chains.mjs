@@ -59,6 +59,10 @@ const rows = [
     // 0.0002 ETH, same start): chain() identical. New one-tap launches go here; launches on 0x0236… stay listed and tradable.
     simpleLaunchNext: { address: '0xfb5a559886fccba6400cc52905ba3aa4658ba0cc', from: 110156527, abi: 'pq' },
     id: '4663', hex: '0x1237', key: 'robinhood', name: 'Robinhood Chain', short: 'Robinhood', icon: 'robinhood', status: 'live', family: 'nitro',
+    // QFeeRouterV2 (2026-11-26, FR2SWITCH): the Robinhood fee router. Same fees, cashback and referrals as the shared
+    // QFeeRouter 0x79d2…8bff; the holder bonus counts wallet + staked + locked QHOOKS, referrers carry over, sells can use
+    // Permit2. Trades go to feeRouter; feeRoutersPrev are read too (cashback still claimable there, referral history).
+    extras: { feeRouter: '0x352a4a1d927ed21bddf5e22b1eed728714438bcd', feeRoutersPrev: ['0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff'] },
     // Clean-token launch contract (full ERC-20 per launch, no clone; GoPlus all-clear on Base 2026-11-09). New launches use it
     // only once it has code on this chain (qx-quick-launch-core primeCleanFactory); `from` is the deploy block or a block before it.
     simpleLaunchClean: { address: '0x34ac8c4e6ca3d5b70a5321b648d0db9451c060cc', from: 110390517, abi: 'pq' },

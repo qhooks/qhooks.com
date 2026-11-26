@@ -1,6 +1,6 @@
 ---
 name: qhooks
-version: 9.6.0
+version: 9.7.0
 updated: 2026-11-26
 description: Launch, trade & QProof token safety on Robinhood Chain + more; perps, OTC escrow and agreements.
 ---
@@ -75,11 +75,13 @@ console.log(await rpc('prepare_trade', {...{chain:setting('QHOOKS_CHAIN'),token:
 | Chain | chainId | QHooks fee router (swap destination / approval spender) |
 | --- | --- | --- |
 | Base | `8453` | `0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff` |
-| Robinhood Chain | `4663` | `0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff` |
+| Robinhood Chain | `4663` | `0x352a4a1d927ed21bddf5e22b1eed728714438bcd` (QFeeRouterV2) |
 | Ethereum | `1` | `0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff` |
 | Arbitrum One | `42161` | `0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff` |
 | BNB Chain | `56` | `0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff` |
 | Elysium | `99901` | `0xff208831ed6f0c4e3e3224effa45fae7906dc6c2` |
+
+Robinhood Chain moved to QFeeRouterV2 on 2026-11-26: same fees, cashback and referrals; swaps to the previous router `0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff` there still work, but prepared transactions now target V2, and an approval naming the previous router does not cover V2. Cashback earned on the previous router stays claimable there (`claim(currency)` on that router). V2 also accepts ERC-20 input through Permit2 instead of an approval: `swapPermit2` / `swapViaPermit2` take the same arguments as `swap` (without `wrapNative`) / `swapVia`, plus `permit = abi.encode(nonce, signature)`, where the signature is a Permit2 `PermitTransferFrom` for exactly the input token and `amountIn`, spender = V2, deadline = the swap deadline, signed by the wallet that sends the transaction.
 
 ## Local MCP: @qhooks/mcp
 

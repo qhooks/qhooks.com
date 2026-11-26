@@ -11,6 +11,7 @@ import { extraAddress } from '/qx-extras.mjs';
 import {connectedAddress} from '/qx-chain.mjs';
 import { isTestLaunch, orderLaunches, testTag } from '/qx-test-tag.mjs';
 import {readEvmRewardSnapshot,sameRewardOwner} from '/qx-reward-state.mjs';
+import {feeRoutersOf} from '/qx-fee-routers.mjs';
 
 const ZERO = '0x' + '0'.repeat(40);
 const BLK = { config: '0x79502c55', release: '0x86d1a69f', creatorQuote: '0xe55e1ce9', creatorToken: '0x483a5f14' };
@@ -29,6 +30,35 @@ function amount(n, d, min = 4) {
 }
 const both = (q, qa, t, ta) => [qa && amount(qa, q.decimals) + ' ' + q.symbol, ta && amount(ta, t.decimals, 2) + ' ' + t.symbol].filter(Boolean).join(' + ');
 const chainTag = c => h('span', { class: 'qa-chain' }, CHAIN_NAME[c] || c);
+// FR2SWITCH (2026-11-26): a chain can have more than one fee router (Robinhood: QFeeRouterV2 now, the shared router
+// before). Every router is read; balances add per currency, and a claim goes to each router that holds a balance.
+// (Same helpers as qx-rewards.mjs; kept in both so neither page loads the other.)
+export async function rewardRouters(ids, current = id => extraAddress('feeRouter', id)) {
+  return Object.fromEntries(await Promise.all(ids.map(async id => [id, [...new Set([String(await current(id) || '').toLowerCase(), ...feeRoutersOf(id).slice(1)])]])));
+}
+export async function readRewardSnapshots(me, {quotes, native, routers, codeAt, cashbackOf, read = readEvmRewardSnapshot}) {
+  const depth = Math.max(1, ...Object.values(routers).map(list => list.length));
+  return mergeRewardSnapshots(await Promise.all(Array.from({length: depth}, (_, i) => read(me, {quotes: Object.fromEntries(Object.entries(quotes).filter(([id]) => routers[id]?.[i])), native, router: id => routers[id][i], codeAt, cashbackOf}))));
+}
+const RANK = {not_deployed: 0, checked: 1, unavailable: 2};
+export function mergeRewardSnapshots(snapshots) {
+  const chains = new Map(), parts = new Map();
+  for (const s of snapshots) {
+    for (const c of s.chains) if (!chains.has(c.chainId) || RANK[c.status] > RANK[chains.get(c.chainId)]) chains.set(c.chainId, c.status);
+    for (const b of s.balances) { const k = b.chainId + ':' + b.address.toLowerCase(); if (!parts.has(k)) parts.set(k, []); parts.get(k).push(b); }
+  }
+  const balances = [...parts.values()].map(list => {
+    const {chainId, address, symbol, decimals} = list[0];
+    if (list.some(x => x.status !== 'checked')) return {chainId, address, symbol, decimals, status: 'unavailable', amount: null};
+    const routers = list.filter(x => BigInt(x.amount) > 0n).map(x => ({router: x.router, amount: x.amount}));
+    return {chainId, address, symbol, decimals, status: 'checked', amount: list.reduce((a, x) => a + BigInt(x.amount), 0n).toString(), router: (routers[0] || list[0]).router, routers};
+  }).sort((a, b) => a.chainId.localeCompare(b.chainId) || a.address.localeCompare(b.address));
+  return {owner: snapshots[0]?.owner, observedAt: Math.min(...snapshots.map(s => s.observedAt)), balances,
+    chains: [...chains].map(([chainId, status]) => ({chainId, status})).sort((a, b) => a.chainId.localeCompare(b.chainId)),
+    partial: balances.some(r => r.status === 'unavailable'), claimable: balances.filter(r => r.status === 'checked' && BigInt(r.amount) > 0n)};
+}
+/// One claim(currency) per router that holds this balance, each sent to that router.
+export const claimTxs = (x, fallback) => (x.routers?.length ? x.routers.map(r => r.router) : [x.router || fallback]).map(to => ({to, data: claimCall(x.address)}));
 
 // One button: confirms in the wallet, shows progress in its row, then reloads the page's data.
 export function action(label, run, { primary = false, disabled = false, refresh = () => {} } = {}) {
@@ -174,15 +204,18 @@ export async function vestSection(me, opened, refresh = () => {}) {
 export async function rewardsSection(me, refresh = () => {}) {
   const action = (label, run, options = {}) => sharedAction(label, run, {...options, refresh});
   const router = await extraAddress('feeRouter');
-  const routers = Object.fromEntries(await Promise.all(Object.keys(QUOTES).map(async id => [id, await extraAddress('feeRouter', id)])));
-  const snapshot=await readEvmRewardSnapshot(me,{quotes:QUOTES,native:NATIVE,router:id=>routers[id],codeAt,cashbackOf});
-  const rows=snapshot.claimable.map(x=>h('div',{class:'qa-row'},h('div',{},h('b',{},'Available to claim'),h('span',{class:'qa-sub'},CHAIN_NAME[x.chainId]||x.chainId)),
+  const routers = await rewardRouters(Object.keys(QUOTES));
+  const snapshot=await readRewardSnapshots(me,{quotes:QUOTES,native:NATIVE,routers,codeAt,cashbackOf});
+  const rows=snapshot.claimable.map(x=>{const txs=claimTxs(x,router);let next=0;return h('div',{class:'qa-row'},h('div',{},h('b',{},'Available to claim'),h('span',{class:'qa-sub'},CHAIN_NAME[x.chainId]||x.chainId)),
     h('div',{},h('span',{},amount(x.amount,x.decimals)+' '+x.symbol),h('span',{class:'qa-sub'},'Cashback and referral credits in this asset')),
     h('div',{class:'qa-actions'},action('Claim',async say=>{
-      if(!sameRewardOwner(connectedAddress(),me))throw Error('Reconnect the wallet that owns these rewards.');
-      say('Confirm the claim in your wallet. Network gas is paid on '+(CHAIN_NAME[x.chainId]||x.chainId)+'.');
-      await send(x.chainId,{to:x.router||router,data:claimCall(x.address)},say);
-    },{primary:true})),h('p',{class:'qa-status',role:'status'})));
+      // One press claims from every router holding this balance, in turn; a retry continues with the ones left.
+      for(;next<txs.length;next++){
+        if(!sameRewardOwner(connectedAddress(),me))throw Error('Reconnect the wallet that owns these rewards.');
+        say('Confirm the claim in your wallet'+(txs.length>1?' ('+(next+1)+' of '+txs.length+')':'')+'. Network gas is paid on '+(CHAIN_NAME[x.chainId]||x.chainId)+'.');
+        await send(x.chainId,txs[next],say);
+      }
+    },{primary:true})),h('p',{class:'qa-status',role:'status'}));});
   const unavailable=snapshot.balances.filter(row=>row.status==='unavailable');
   const coverage=h('div',{class:'qa-reward-coverage'},h('p',{class:'qa-muted'},unavailable.length
     ?'Some balances could not be read: '+unavailable.slice(0,4).map(row=>(CHAIN_NAME[row.chainId]||row.chainId)+' '+row.symbol).join(', ')+(unavailable.length>4?' and '+(unavailable.length-4)+' more.':'.')

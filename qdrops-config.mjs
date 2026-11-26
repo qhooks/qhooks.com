@@ -9,7 +9,10 @@
 // referrals: phase 3 tier top-ups. Off.
 export const QHOOKS = '0x20429af7ca3b0ce4d99edbaa0693f26c5df05195';
 export const SAFE = '0x2b1cf7c4071a98a59709166dfa73c7acb7e83e71';
+import {feeRoutersOf} from './qx-fee-routers.mjs';
 export const ROUTER = '0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff';
+/// Every fee router of Robinhood Chain (QFeeRouterV2 and the shared ROUTER, FR2SWITCH 2026-11-26): none count as holders.
+export const ROUTERS = Object.freeze([...new Set([...feeRoutersOf('4663'), ROUTER])]);
 const ZERO = '0x0000000000000000000000000000000000000000';
 
 export const DROPS = {
@@ -57,7 +60,7 @@ export const DROPS = {
       '0xb85e67cf7728572033a9d36aee3218dadf85baa2', // QFlywheel
       '0x6248098bfa019b9035a21722a86bdee3f6e9b934', // QHOOKS stakers vault (stakers are scored separately)
       '0x807390f11e52e8508636bac3c54b47b17a66dae3', // QStakeLock timed locks (lock owners are scored separately)
-      ROUTER,
+      ...ROUTERS,
       ZERO, '0x000000000000000000000000000000000000dead',
       // Team wallets (Randall 2026-11-11): launch wallet, fomo wallet, Safe owners, keepers.
       '0xaf48a5ab32ef96ee7a72ed6ed4534be1bc928c73', // launch wallet

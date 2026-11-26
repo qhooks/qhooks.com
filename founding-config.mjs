@@ -20,7 +20,10 @@
 export const QHOOKS = '0x20429af7ca3b0ce4d99edbaa0693f26c5df05195';
 export const WETH_RH = '0x0bd7d308f8e1639fab988df18a8011f41eacad73';
 export const SAFE = '0x2b1cf7c4071a98a59709166dfa73c7acb7e83e71';
+import {feeRoutersOf} from './qx-fee-routers.mjs';
 export const ROUTER = '0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff';
+/// Every fee router of Robinhood Chain (QFeeRouterV2 and the shared ROUTER, FR2SWITCH 2026-11-26).
+export const ROUTERS = Object.freeze([...new Set([...feeRoutersOf('4663'), ROUTER])]);
 const DAY = 86400;
 
 export const FOUNDING = {
@@ -66,8 +69,9 @@ export const FOUNDING = {
   pay: {chain: '4663', token: WETH_RH, drops: '0x89eb481a2ea221e62647c113c88de67e7b9a5a70'},
   router: ROUTER,
   // Chains whose QHooks trades go through a fee router (same Swapped/Referral events). Elysium has its own router.
+  // A value is the eth_getLogs address filter: Robinhood lists both its routers, so trades through either count.
   routerChains: ['4663', '8453', '42161', '56', '1', '99901'],
-  routers: {'99901': '0xff208831ed6f0c4e3e3224effa45fae7906dc6c2'},
+  routers: {'99901': '0xff208831ed6f0c4e3e3224effa45fae7906dc6c2', '4663': ROUTERS},
   // Qualifying chains (Randall 2026-11-10). A chain with `gate` opens by itself once one of those launch contracts has
   // code there (Ethereum: the clean launch contract, deploying before 5 PM CT); until then the page says "opening soon".
   solana: {table: 'qhooks_sol_launches_v1', configTable: 'qhooks_sol_launch_config_v1', cols: {mint: 'mint', chainId: 'chain_id', creator: 'creator', privyUser: 'privy_user', evmWallet: 'evm_wallet', launchedAt: 'ts', slot: 'slot', tx: 'tx', pool: 'pool', config: 'config', quoteMint: 'quote_mint', name: 'name', symbol: 'symbol', graduatedAt: 'graduated_at'}, excludeCreators: [], excludeWallets: []},

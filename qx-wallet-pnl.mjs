@@ -20,6 +20,7 @@ import {isQhooksPriceAsset,priceState} from './qx-price-state.mjs';
 // its cursor (at most once a minute per token) plus one batched price read.
 import {keccak_256} from './full-launch/prototypes/qpools/client/vendor/hashes/sha3.js';
 import {inventoryBasis} from './qx-position-basis.mjs';
+import {feeRoutersOf} from './qx-fee-routers.mjs';
 
 // walletchains (2026-11-13): every EVM chain QHooks supports. Each row is that chain's free public endpoint (the page CSP
 // lists them, chains.mjs) and what it serves, probed 2026-11-13 with an address+topic eth_getLogs filter:
@@ -27,12 +28,15 @@ import {inventoryBasis} from './qx-position-basis.mjs';
 //  - history: false where the endpoint refuses old ranges ("archive requests require a personal token"); the scan backs
 //    off at that wall and the basis waits ("—" with the reason) instead of guessing.
 // QHooks' fee router (trade event) has code on Robinhood, Base, Arbitrum, BNB and Ethereum; Pons only on Robinhood.
+// Robinhood has two (FR2SWITCH 2026-11-26): QFeeRouterV2 now, the shared router before. `routers` lists every router a
+// chain's trades went through; `router` stays the shared one.
 const ROUTER = '0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff';
 const stable = (address, symbol, decimals) => Object.freeze({address, symbol, decimals});
+const routersFor = id => Object.freeze([...new Set([ROUTER, ...feeRoutersOf(id)])]);
 const row = r => Object.freeze({...r, skip: Object.freeze(r.stable ? [r.stable.address] : [])}); // the chain's dollar is cash, not a position
 export const PNL_CHAINS = Object.freeze({
   '4663': row({rpc: 'https://rpc.mainnet.chain.robinhood.com', span: 10_000_000, quoteSymbol: 'ETH', wrapped: '0x0bd7d308f8e1639fab988df18a8011f41eacad73',
-    router: ROUTER, pons: '0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e', // PonsV2LaunchFactory (facts: MKTSEARCH-DELTA.md)
+    router: ROUTER, routers: routersFor('4663'), pons: '0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e', // PonsV2LaunchFactory (facts: MKTSEARCH-DELTA.md)
     stable: stable('0x5fc5360d0400a0fd4f2af552add042d716f1d168', 'USDG', 6)}),
   // index (2026-11-21, never publicnode): Base, BNB and Ethereum read the wallet's buys and sells from our own index
   // (/api/wallet/<chain>/<wallet>/token/<token>, 30 days of trades) instead of 50k-block log scans; their other reads go
@@ -78,7 +82,8 @@ export function classifyTx({tx, receipt, wallet, token, cfg, unitsIn = 0n, units
   const native = cfg.quoteSymbol || 'ETH', quoteOf = a => a === ZERO || a === cfg.wrapped ? native : stable && a === stable ? cfg.stable.symbol : null;
   let paid = 0n, got = 0n, how = null, quote = null;
   for (const l of logs) {
-    if (String(l.address).toLowerCase() !== cfg.router || l.topics?.[0] !== TOPIC.routed || addrOf(l.topics[1]) !== W) continue;
+    const at = String(l.address).toLowerCase();
+    if (!(cfg.routers ? cfg.routers.includes(at) : at === cfg.router) || l.topics?.[0] !== TOPIC.routed || addrOf(l.topics[1]) !== W) continue;
     const tokenIn = addrOf(l.topics[2]), tokenOut = addrOf(l.topics[3]), [amountIn = 0n, amountOut = 0n] = words(l.data);
     const q = tokenOut === token ? quoteOf(tokenIn) : tokenIn === token ? quoteOf(tokenOut) : null;
     if (!q || (quote && quote !== q)) continue;

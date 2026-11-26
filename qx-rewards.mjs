@@ -6,6 +6,7 @@ import { formatUnits, send, connectedAddress, onWalletChange, CHAIN_NAME, NATIVE
 import { cashbackOf, referralLink, claimCall } from '/qx-swap.mjs';
 import { extraAddress } from '/qx-extras.mjs';
 import { readEvmRewardSnapshot, sameRewardOwner } from '/qx-reward-state.mjs';
+import { feeRoutersOf } from '/qx-fee-routers.mjs';
 import {installOverlayDismissal} from './qx-overlays.mjs';
 
 const Z = '0x0000000000000000000000000000000000000000';
@@ -18,6 +19,35 @@ const ICON = chainMap(c => c.icon);
 const LABEL = chainMap(c => c.short);
 const small = (v, d) => { let max = 4; while (max < d && v > 0n && formatUnits(v, d, max) === '0') max++; return formatUnits(v, d, Math.min(d, max + 2)); };
 const short = a => a.slice(0, 6) + '…' + a.slice(-4);
+// FR2SWITCH (2026-11-26): a chain can have more than one fee router (Robinhood: QFeeRouterV2 now, the shared router
+// before). Every router is read; balances add per currency, and a claim goes to each router that holds a balance.
+// (Same helpers as qx-earnings.mjs; kept in both so neither page loads the other.)
+export async function rewardRouters(ids, current = id => extraAddress('feeRouter', id)) {
+  return Object.fromEntries(await Promise.all(ids.map(async id => [id, [...new Set([String(await current(id) || '').toLowerCase(), ...feeRoutersOf(id).slice(1)])]])));
+}
+export async function readRewardSnapshots(me, {quotes, native, routers, codeAt, cashbackOf, read = readEvmRewardSnapshot}) {
+  const depth = Math.max(1, ...Object.values(routers).map(list => list.length));
+  return mergeRewardSnapshots(await Promise.all(Array.from({length: depth}, (_, i) => read(me, {quotes: Object.fromEntries(Object.entries(quotes).filter(([id]) => routers[id]?.[i])), native, router: id => routers[id][i], codeAt, cashbackOf}))));
+}
+const RANK = {not_deployed: 0, checked: 1, unavailable: 2};
+export function mergeRewardSnapshots(snapshots) {
+  const chains = new Map(), parts = new Map();
+  for (const s of snapshots) {
+    for (const c of s.chains) if (!chains.has(c.chainId) || RANK[c.status] > RANK[chains.get(c.chainId)]) chains.set(c.chainId, c.status);
+    for (const b of s.balances) { const k = b.chainId + ':' + b.address.toLowerCase(); if (!parts.has(k)) parts.set(k, []); parts.get(k).push(b); }
+  }
+  const balances = [...parts.values()].map(list => {
+    const {chainId, address, symbol, decimals} = list[0];
+    if (list.some(x => x.status !== 'checked')) return {chainId, address, symbol, decimals, status: 'unavailable', amount: null};
+    const routers = list.filter(x => BigInt(x.amount) > 0n).map(x => ({router: x.router, amount: x.amount}));
+    return {chainId, address, symbol, decimals, status: 'checked', amount: list.reduce((a, x) => a + BigInt(x.amount), 0n).toString(), router: (routers[0] || list[0]).router, routers};
+  }).sort((a, b) => a.chainId.localeCompare(b.chainId) || a.address.localeCompare(b.address));
+  return {owner: snapshots[0]?.owner, observedAt: Math.min(...snapshots.map(s => s.observedAt)), balances,
+    chains: [...chains].map(([chainId, status]) => ({chainId, status})).sort((a, b) => a.chainId.localeCompare(b.chainId)),
+    partial: balances.some(r => r.status === 'unavailable'), claimable: balances.filter(r => r.status === 'checked' && BigInt(r.amount) > 0n)};
+}
+/// One claim(currency) per router that holds this balance, each sent to that router.
+export const claimTxs = (x, fallback) => (x.routers?.length ? x.routers.map(r => r.router) : [x.router || fallback]).map(to => ({to, data: claimCall(x.address)}));
 
 const wallet = document.querySelector('.qxt-wallet');
 const btn = h('button', { type: 'button', id: 'qxt-rewards', class: 'qxt-rewards-btn', 'aria-haspopup': 'true', 'aria-expanded': 'false', hidden: true },
@@ -47,12 +77,12 @@ function scan(me, generation) {
   if (pending?.owner === me && pending.epoch === generation) return pending.promise;
   const job = { owner: me, epoch: generation };
   job.promise = (async () => {
-    // One router per chain (a chain may name its own build in chains.mjs extras).
-    const routers = router || Object.fromEntries(await Promise.all(Object.keys(QUOTES).map(async id => [id, await extraAddress('feeRouter', id)])));
-    if (Object.values(routers).some(a => !/^0x[0-9a-f]{40}$/i.test(a || '') || BigInt(a) === 0n)) throw Error('Rewards router unavailable');
+    // Every router per chain, current first (a chain may name its own build in chains.mjs extras, and earlier routers).
+    const routers = router || await rewardRouters(Object.keys(QUOTES));
+    if (Object.values(routers).some(list => !list.length || list.some(a => !/^0x[0-9a-f]{40}$/i.test(a || '') || BigInt(a) === 0n))) throw Error('Rewards router unavailable');
     router = routers;
     const target = await extraAddress('feeRouter');
-    const snapshot = await readEvmRewardSnapshot(me, { quotes: QUOTES, native: NATIVE, router: id => routers[id], codeAt, cashbackOf });
+    const snapshot = await readRewardSnapshots(me, { quotes: QUOTES, native: NATIVE, routers, codeAt, cashbackOf });
     if (owns(me, generation)) {
       for (const chain of snapshot.chains) if (chain.status === 'not_deployed') {
         for (const [id, row] of known) if (row.chainId === chain.chainId) known.delete(id);
@@ -121,24 +151,31 @@ async function load(notice = '') {
       for (const control of list.querySelectorAll('button')) control.disabled = true;
       refresh.disabled = true; b.textContent = 'Claiming…';
       status.className = 'qxt-rewards-status';
-      status.textContent = 'Confirm the ' + x.symbol + ' claim in your wallet. Network gas is paid on ' + CHAIN_NAME[x.chainId] + '.';
-      let confirmed = false, failure;
+      // One press claims from every router holding this balance (Robinhood: QFeeRouterV2 and the earlier router), in turn.
+      const txs = claimTxs(x, target), ask = n => 'Confirm the ' + x.symbol + ' claim in your wallet' + (txs.length > 1 ? ' (' + (n + 1) + ' of ' + txs.length + ')' : '') + '. Network gas is paid on ' + CHAIN_NAME[x.chainId] + '.';
+      status.textContent = ask(0);
+      let confirmed = false, failure, sent = 0;
       try {
-        // The displayed balance is never authority to send from a different wallet.
-        if (!owns(me, generation)) { sync(); return; }
-        await send(x.chainId, { to: x.router || target, data: claimCall(x.address) }, text => {
-          if (current(me, generation, mine)) status.textContent = text;
-        });
-        if (owns(me, generation)) { confirmed = true; document.dispatchEvent(new CustomEvent('qhooks:rewards-claimed')); }
+        for (const [n, tx] of txs.entries()) {
+          // The displayed balance is never authority to send from a different wallet.
+          if (!owns(me, generation)) { sync(); return; }
+          if (n && current(me, generation, mine)) status.textContent = ask(n);
+          await send(x.chainId, tx, text => {
+            if (current(me, generation, mine)) status.textContent = text;
+          });
+          sent++;
+        }
       } catch (error) { failure = error; }
       finally {
+        // A claim that landed reloads the balances even if a later one in the same press did not go through.
+        if (sent && owns(me, generation)) { confirmed = true; document.dispatchEvent(new CustomEvent('qhooks:rewards-claimed')); }
         if (claiming === job) claiming = null;
         if (!owns(me, generation)) {
           if (currentOwner() !== owner) sync();
           else if (owner && !panel.hidden) load();
         }
         else if (panel.hidden) refreshDot();
-        else if (mine !== seq || confirmed) load(confirmed ? 'Claim confirmed for ' + x.symbol + ' on ' + CHAIN_NAME[x.chainId] + '.' : '');
+        else if (mine !== seq || confirmed) load(confirmed && !failure ? 'Claim confirmed for ' + x.symbol + ' on ' + CHAIN_NAME[x.chainId] + '.' : '');
         else {
           status.className = 'qxt-rewards-status err'; status.textContent = failure?.message || 'The claim did not go through.';
           for (const control of list.querySelectorAll('button')) control.disabled = control.getAttribute('data-ready') !== 'true';

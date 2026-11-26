@@ -8,7 +8,7 @@
 // Reads use the public API (https://qhooks.com/api.html) and, for quotes, the chain's own RPC when given.
 // The SDK never holds keys or sends transactions: it returns { to, data, value } for your wallet to send.
 
-export const VERSION = '1.2.1';
+export const VERSION = '1.2.2';
 export const API = 'https://qhooks.com/api/v1';
 const Z = '0x0000000000000000000000000000000000000000';
 export const PERMIT2 = '0x000000000022d473030f116ddee9f6b43ac78ba3';
@@ -29,7 +29,8 @@ export const CHAINS = Object.freeze({
     "quoter": "0x8dc178efb8111bb0973dd9d722ebeff267c98f94",
     "router": "0x06afba43fd06227fa663b0daecf536f6eaa6bf99",
     "extended": true,
-    "feeRouter": "0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff"
+    "feeRouter": "0x352a4a1d927ed21bddf5e22b1eed728714438bcd",
+    "feeRoutersPrev": ["0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff"]
   },
   "1": {
     "name": "Ethereum",

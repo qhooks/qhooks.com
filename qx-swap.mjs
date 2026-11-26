@@ -1,7 +1,8 @@
 // Swaps through a launch pool and its hook with the chain's Universal Router: exact-in single-pool
 // trades paid from an ERC-20 (via Permit2), and buys paid in the native coin (wrapped first, or routed
 // native → USDC → token). Quotes run through the same pool and hook, so block charges are included.
-import { abi, calldata, ethCall, words, keyTuple, KEY_T, send, ensureAllowance, connectedAddress, rpc, NATIVE, MANAGER } from '/qx-chain.mjs';
+import { abi, calldata, ethCall, words, keyTuple, KEY_T, send, sendCallsAtomic, signTypedData, ensureAllowance, connectedAddress, rpc, NATIVE, MANAGER } from '/qx-chain.mjs';
+import { silentActive } from '/qx-instant-bridge.mjs';
 import { stockPair } from '/full-launch/packages/multichain-launch/stock-pairs.mjs';
 import {bestPool,bestSellPool,sellPoolCandidates,directPoolPlan,poolQuoteInfo,sellQuoteUsd,nativePoolPlans,poolQuoteArgs} from './qx-best-pool.mjs';
 import {chainById} from './chains.mjs';
@@ -152,12 +153,15 @@ import {FEE_BPS} from './qx-trade-fee-policy.mjs';
 export {FEE_BPS};
 const HOP_T = `(${KEY_T},bool,bytes)`;
 /// Router calldata for an exact-in swap through `hops` ([{ key, zeroForOne }]); `wrap` wraps native value first.
-export function feeSwapCall(chainId, hops, amountIn, minOut, wrap, feeOnInput, deadline, referrer = savedReferrer()) {
+function checkHopReferrals(chainId, hops, referrer) {
   for(const hop of hops){
     chainHookData(chainId,hop.key,true);
     const m=hookReferralFor(hop.key,chainId);
     if(m.state==='applied'&&String(referrer||Z).toLowerCase()!==m.appliedHookReferrer)throw Error('Referral choice changed. Refresh the quote.');
   }
+}
+export function feeSwapCall(chainId, hops, amountIn, minOut, wrap, feeOnInput, deadline, referrer = savedReferrer()) {
+  checkHopReferrals(chainId, hops, referrer);
   return calldata('0xf5ec7c4b', ['address', HOP_T + '[]', 'uint128', 'uint128', 'address', 'bool', 'uint16', 'uint256', 'address'],
     [MANAGER[chainId], hops.map(x => [keyTuple(x.key), x.zeroForOne, chainHookData(chainId,x.key,true)]), amountIn, minOut, wrap || Z, feeOnInput, FEE_BPS, deadline, referrer || Z]);
 }
@@ -188,7 +192,95 @@ export function viaSwapCall(target, data, tokenIn, tokenOut, amountIn, minOut, f
   return calldata('0xa1dfd5d8', ['address', 'bytes', 'address', 'address', 'uint256', 'uint256', 'bool', 'uint16', 'uint256', 'address'],
     [target, data, tokenIn, tokenOut, amountIn, minOut, feeOnInput, FEE_BPS, deadline, referrer || Z]);
 }
-export const cashbackOf = (chainId, router, who, currency) => ethCall(chainId, router, calldata('0x4f123156', ['address', 'address'], [who, currency])).then(BigInt);
+
+// ---- Sells without a separate approve (fr2switch, 2026-11-26) ----
+// Robinhood Chain trades go to QFeeRouterV2, a new spender, so a first sell of a token there would need a fresh approve.
+// sellThroughRouter hides it where the wallet allows: (a) EIP-5792 atomic [approve, swap] in one confirm (sendCallsAtomic's
+// own capability check), (b) on a router with Permit2 sells, a Permit2 SignatureTransfer signature when the token already
+// allows Permit2 (swapPermit2 / swapViaPermit2, no approve tx), else (c) approve then swap as before.
+export const FEE_ROUTER_V2 = '0x352a4a1d927ed21bddf5e22b1eed728714438bcd';
+const PERMIT2_SELL_ROUTERS = Object.freeze({ '4663': FEE_ROUTER_V2 });
+export const SIGN_TO_SELL = 'Sign to sell (no approval needed)';
+/// Whether `router` on `chainId` has swapPermit2 / swapViaPermit2 (QFeeRouterV2 only).
+export const supportsPermit2Sell = (chainId, router) => !!router && PERMIT2_SELL_ROUTERS[String(chainId)] === String(router).toLowerCase();
+/// Permit2 PermitTransferFrom the wallet signs: exactly `amount` of `token` to `spender` (the router), once, by `deadline`
+/// (the same deadline the swap call carries).
+export function permit2SellTyped({ chainId, token, amount, spender, nonce, deadline }) {
+  return {
+    domain: { name: 'Permit2', chainId: Number(chainId), verifyingContract: PERMIT2 },
+    primaryType: 'PermitTransferFrom',
+    types: {
+      EIP712Domain: [{ name: 'name', type: 'string' }, { name: 'chainId', type: 'uint256' }, { name: 'verifyingContract', type: 'address' }],
+      PermitTransferFrom: [{ name: 'permitted', type: 'TokenPermissions' }, { name: 'spender', type: 'address' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' }],
+      TokenPermissions: [{ name: 'token', type: 'address' }, { name: 'amount', type: 'uint256' }]
+    },
+    message: { permitted: { token: String(token).toLowerCase(), amount: String(amount) }, spender: String(spender).toLowerCase(), nonce: String(nonce), deadline: String(deadline) }
+  };
+}
+/// The router's `permit` argument: abi.encode(uint256 nonce, bytes signature).
+export function encodeSellPermit(nonce, signature) {
+  if (!/^0x(?:[0-9a-f]{2})+$/i.test(signature || '')) throw Error('The wallet did not return a signature');
+  return abi(['uint256', 'bytes'], [BigInt(nonce), signature]);
+}
+/// A fresh Permit2 unordered nonce (random 248 bits; Permit2's bitmap takes any unused value).
+export function permit2Nonce() { const b = crypto.getRandomValues(new Uint8Array(31)); return BigInt('0x' + Array.from(b, x => x.toString(16).padStart(2, '0')).join('')); }
+const SWAP_PERMIT2_T = ['address', HOP_T + '[]', 'uint128', 'uint128', 'bool', 'uint16', 'uint256', 'address', 'bytes'];
+/// Pure QFeeRouterV2.swapPermit2 calldata. route = { chainId, hops: [{ key, zeroForOne, hookData? }], manager? }
+/// (hookData defaults to 0x; manager to the chain's pool manager). Sells: feeOnInput false.
+export function swapPermit2Calldata(route, amountIn, minOut, deadline, referrer, nonce, signature, { feeOnInput = false, feeBps = FEE_BPS } = {}) {
+  if (route.wrap && BigInt(route.wrap) !== 0n) throw Error('swapPermit2 cannot wrap the native coin');
+  const manager = route.manager || MANAGER[route.chainId]; if (!manager) throw Error('No pool manager for this chain');
+  return calldata('0xd0d3c5db', SWAP_PERMIT2_T, [manager, route.hops.map(x => [keyTuple(x.key), x.zeroForOne, x.hookData ?? '0x']),
+    amountIn, minOut, feeOnInput, feeBps, deadline, referrer || Z, encodeSellPermit(nonce, signature)]);
+}
+/// feeSwapCall's Permit2 twin for a sell (same hook data and referral checks; no wrap, not payable).
+export function feeSwapPermit2Call(chainId, hops, amountIn, minOut, deadline, nonce, signature, referrer = savedReferrer()) {
+  checkHopReferrals(chainId, hops, referrer);
+  return swapPermit2Calldata({ chainId, hops: hops.map(x => ({ ...x, hookData: chainHookData(chainId, x.key, true) })) }, amountIn, minOut, deadline, referrer, nonce, signature);
+}
+/// viaSwapCall's Permit2 twin (QFeeRouterV2.swapViaPermit2): same arguments plus the permit; tokenIn must be an ERC-20.
+export function viaSwapPermit2Call(target, data, tokenIn, tokenOut, amountIn, minOut, feeOnInput, deadline, nonce, signature, referrer = savedReferrer()) {
+  return calldata('0x653b77c3', ['address', 'bytes', 'address', 'address', 'uint256', 'uint256', 'bool', 'uint16', 'uint256', 'address', 'bytes'],
+    [target, data, tokenIn, tokenOut, amountIn, minOut, feeOnInput, FEE_BPS, deadline, referrer || Z, encodeSellPermit(nonce, signature)]);
+}
+/// The decision: 'allowed' (router allowance covers it) · 'batch' (atomic approve+swap) · 'permit' (Permit2 signature) · 'approve'.
+export function chooseSellApproval({ amountIn, routerAllowance, atomic = false, permit2Sell = false, permit2Allowance = 0n }) {
+  if (routerAllowance >= amountIn) return 'allowed';
+  if (permit2Sell && permit2Allowance >= amountIn) return 'permit';
+  if (atomic) return 'batch';
+  return 'approve';
+}
+// A wallet that cannot sign typed data at all falls back to the approve; a decline stops the sell.
+const signUnsupported = e => [4200, -32601, -32602].includes(Number(e?.code));
+/// Sends a sell of `amountIn` of `token` through `router` with the fewest wallet steps. swapTx(deadline) builds the plain
+/// swap; permitSwapTx(deadline, {nonce, signature}) the Permit2 one (omit it where the route cannot use Permit2);
+/// deadline() is read when each swap is built. Returns { mode, receipt }.
+export async function sellThroughRouter({ chainId, token, router, owner, amountIn, deadline, swapTx, permitSwapTx, onStatus = () => {}, assertContext = () => {} }, deps = {}) {
+  const d = { ethCall, sendCallsAtomic, signTypedData, send, ensureAllowance, nonce: permit2Nonce, silent: silentActive, ...deps };
+  const allowance = spender => d.ethCall(chainId, token, calldata('0xdd62ed3e', ['address', 'address'], [owner, spender])).then(BigInt);
+  assertContext();
+  const routerAllowance = await allowance(router); assertContext();
+  if (chooseSellApproval({ amountIn, routerAllowance }) === 'allowed') return { mode: 'allowed', receipt: await d.send(chainId, await swapTx(await deadline()), onStatus, assertContext) };
+  // Order (lead, 2026-11-26): Permit2 signature first, then one EIP-5792 batch (approve + swap), then approve, swap.
+  const permit2Sell = supportsPermit2Sell(chainId, router) && typeof permitSwapTx === 'function';
+  const permit2Allowance = permit2Sell ? await allowance(PERMIT2).catch(() => 0n) : 0n; assertContext();
+  if (chooseSellApproval({ amountIn, routerAllowance, permit2Sell, permit2Allowance }) === 'permit') {
+    const when = await deadline(), nonce = d.nonce();
+    onStatus(d.silent() ? 'Sending…' : SIGN_TO_SELL);
+    let signature = null;
+    try { signature = await d.signTypedData(chainId, permit2SellTyped({ chainId, token, amount: amountIn, spender: router, nonce, deadline: when })); }
+    catch (e) { if (!signUnsupported(e)) throw e; }
+    assertContext();
+    if (signature) return { mode: 'permit', receipt: await d.send(chainId, await permitSwapTx(when, { nonce, signature }), onStatus, assertContext) };
+  }
+  const approve = { to: token, data: calldata('0x095ea7b3', ['address', 'uint256'], [router, amountIn]) };
+  const batch = await d.sendCallsAtomic(chainId, [approve, await swapTx(await deadline())], onStatus, assertContext);
+  if (batch) return { mode: 'batch', receipt: batch.at(-1) || null };
+  assertContext();
+  await d.ensureAllowance(chainId, token, router, amountIn, onStatus, assertContext); assertContext();
+  return { mode: 'approve', receipt: await d.send(chainId, await swapTx(await deadline()), onStatus, assertContext) };
+}
+export const cashbackOf =(chainId, router, who, currency) => ethCall(chainId, router, calldata('0x4f123156', ['address', 'address'], [who, currency])).then(BigInt);
 export const claimCall = currency => calldata('0x1e83409a', ['address'], [currency]);
 
 /// Multi-pool quotes carry their exact hops through review, funding and fee-router submission.

@@ -1,7 +1,8 @@
 import {chainById} from './chains.mjs';
+import {feeRouterOf} from './qx-fee-routers.mjs';
 import {abi} from './qx-launch-route-codec.mjs';
 import {createEcosystemRoutePlanner} from './qx-ecosystem-routes-core.mjs';
-const ZERO='0x'+'0'.repeat(40),ROUTER='0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff';
+const ZERO='0x'+'0'.repeat(40);
 const KEY='(address,address,uint24,int24,address)',PATH='(address,uint24,int24,address,bytes)';
 const ensure=(v,m)=>{if(!v)throw Error(m);};
 const keyTuple=k=>[k.currency0,k.currency1,k.fee,k.tickSpacing,k.hooks];
@@ -20,7 +21,7 @@ export async function compareQHooksNativeRoutes({chainId,poolKey,owner,amountIn,
  }
  ensure(BigInt(await read('eth_chainId',[])).toString()===String(chainId),'The read endpoint returned another chain.');const block=await read('eth_getBlockByNumber',['latest',false]);ensure(block&&/^0x[0-9a-f]+$/i.test(block.number)&&/^0x[0-9a-f]{64}$/i.test(block.hash)&&/^0x[0-9a-f]+$/i.test(block.timestamp),'A complete source block is required.');
  const state={chainId:String(chainId),number:BigInt(block.number).toString(),hash:block.hash.toLowerCase(),timestamp:BigInt(block.timestamp).toString()};
- const route=(id,path,wrap,single)=>({id,chainId:String(chainId),manager:chain.contracts.manager.toLowerCase(),router:ROUTER,wrap,path,sourceRef:'qhooks-current-registry:'+chainId+':'+id,async quote({amountIn:net},{signal:quoteSignal}){
+ const route=(id,path,wrap,single)=>({id,chainId:String(chainId),manager:chain.contracts.manager.toLowerCase(),router:feeRouterOf(chainId),wrap,path,sourceRef:'qhooks-current-registry:'+chainId+':'+id,async quote({amountIn:net},{signal:quoteSignal}){
   if(quoteSignal?.aborted)throw Error('Quote cancelled');let call;
   if(single)call='0xaa9d21cb'+abi([`(${KEY},bool,uint128,bytes)`],[[keyTuple(key),key.currency0===quote,net,'0x']]).slice(2);
   else{const first=path[0].key,stages=[[quote,first.fee,first.tickSpacing,ZERO,'0x'],[token,key.fee,key.tickSpacing,key.hooks,'0x']];call='0xca253dc9'+abi([`(address,${PATH}[],uint128)`],[[ZERO,stages,net]]).slice(2);}

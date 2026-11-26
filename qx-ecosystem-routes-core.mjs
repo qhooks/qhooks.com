@@ -1,7 +1,8 @@
 import {abi} from './qx-launch-route-codec.mjs';
 import {keccak} from './lab-deploy-core.mjs';
 import {chainById} from './chains.mjs';
-const ZERO='0x'+'0'.repeat(40),ROUTER='0x79d211f5137d22b0fe3bfda81fbb8b7f53248bff',MAX=(1n<<128n)-1n;
+import {feeRouterOf} from './qx-fee-routers.mjs';
+const ZERO='0x'+'0'.repeat(40),MAX=(1n<<128n)-1n;
 const fail=m=>{throw new TypeError(m);},ok=(v,m)=>{if(!v)fail(m);};
 const frozen=x=>{if(x&&typeof x==='object'){Object.values(x).forEach(frozen);Object.freeze(x);}return x;};
 const copy=x=>structuredClone(x);
@@ -28,10 +29,10 @@ function routeOf(d){
 const tuple=k=>[k.currency0,k.currency1,k.fee,k.tickSpacing,k.hooks];
 function unsigned(request,route,minimum){
  const chain=chainById(request.chainId);ok(chain?.status==='live'&&chain.router,'This chain has no admitted current QHooks fee-router generation');
- ok(route.manager===chain.contracts.manager.toLowerCase()&&route.router===ROUTER,'Route generation needs separate execution qualification');
+ ok(route.manager===chain.contracts.manager.toLowerCase()&&route.router===feeRouterOf(request.chainId),'Route generation needs separate execution qualification');
  ok(route.wrap===ZERO||request.currencyIn===ZERO&&route.wrap===chain.wrappedNative?.toLowerCase(),'Native wrapping must match this chain’s exact wrapped asset');
  const data='0xf5ec7c4b'+abi(['address','((address,address,uint24,int24,address),bool,bytes)[]','uint128','uint128','address','bool','uint16','uint256','address'],[route.manager,route.path.map(h=>[tuple(h.key),h.zeroForOne,h.hookData]),request.amountIn,minimum,route.wrap,request.feeOnInput,'100',request.deadline,request.referrer]).slice(2);
- return frozen({chainId:request.chainId,from:request.owner,to:ROUTER,data,value:request.currencyIn===ZERO?request.amountIn:'0'});
+ return frozen({chainId:request.chainId,from:request.owner,to:feeRouterOf(request.chainId),data,value:request.currencyIn===ZERO?request.amountIn:'0'});
 }
 // Adapters are trusted source injections, never request fields or URL flags.
 // This prepares reviewable wires; it cannot authorize a wallet or submit them.

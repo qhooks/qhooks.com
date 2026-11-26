@@ -7,6 +7,7 @@ import {createReadClient} from '/qx-taps.mjs';
 import {readTimedLocks} from '/qx-stake-lock-data.mjs';
 import {parseAmountInput} from '/qx-amount-input.mjs';
 import {calldata, ethCall, codeAt, words, parseUnits, formatUnits, send, sendCallsAtomic, ensureAllowance, connectedAddress, onWalletChange, rpc, h} from '/qx-chain.mjs';
+import {routerLive, sendCallsWithNote, reportLockReceipts} from '/qx-stakelock-note.mjs';
 
 const card = document.getElementById('qtzl');
 const TERMS = [[1, '1 week', '1 bonus share'], [2, '2 weeks', '2 bonus shares'], [3, '30 days', '4 bonus shares']];
@@ -27,6 +28,24 @@ const MK = me => 'qtzl-move:' + me;
 const getMove = me => { try { const v = JSON.parse(localStorage.getItem(MK(me)) || 'null'); if (v) return {amount: BigInt(v.amount), term: String(v.term)}; } catch {} return moved.get(me) || null; };
 const setMove = (me, v) => { if (v) moved.set(me, v); else moved.delete(me); try { v ? localStorage.setItem(MK(me), JSON.stringify({amount: v.amount.toString(), term: v.term})) : localStorage.removeItem(MK(me)); } catch {} };
 const when = t => new Date(Number(t) * 1000).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+// FR2SWITCH (2026-11-26): QFeeRouterV2 counts timed locks toward the holder bonus once each lock id is listed there
+// (qx-stakelock-note.mjs). Once v2 has code: a wallet with atomic batches gets noteLocks([nextId]) in the same batch as its
+// lock; any other wallet sends exactly what it sent before, and the new id from the receipt goes to the keeper. No new copy.
+const batchWithNote = (c, calls, s) => sendCallsWithNote({chainId: c, calls, onStatus: s, sendCallsAtomic, ethCall, codeAt, owner: connectedAddress()});
+const noteReceipt = receipt => { reportLockReceipts(receipt, {owner: connectedAddress(), codeAt}).catch(() => {}); };
+/// Lock `a` QHOOKS from the wallet for `tv`. With v2 live and an atomic-batch wallet: [approve if needed, lock, noteLocks] in
+/// one batch; otherwise the unchanged approve-then-lock prompts.
+async function lockFromWallet(c, a, tv, s) {
+  const lockCall = {to: cfg.lock, data: calldata(cfg.sel.lock, ['uint256', 'uint8'], [a, tv])}, me = connectedAddress();
+  if (me && await routerLive(codeAt)) {
+    const allowance = BigInt(await ethCall(c, cfg.token, calldata(cfg.sel.allowance, ['address', 'address'], [me, cfg.lock])));
+    const calls = allowance < a ? [{to: cfg.token, data: calldata(cfg.sel.approve, ['address', 'uint256'], [cfg.lock, a])}, lockCall] : [lockCall];
+    if (await batchWithNote(c, calls, s)) return;
+  }
+  await ensureAllowance(c, cfg.token, cfg.lock, a, s);
+  s('Confirm the lock in your wallet…');
+  noteReceipt(await send(c, lockCall, s));
+}
 
 async function act(btn, status, fn) {
   if(actingOwner)return;
@@ -101,9 +120,7 @@ async function render() {
   const lockBtn = h('button', {type: 'button', class: 'qtx-mini'}, 'Lock');
   lockBtn.addEventListener('click', () => act(lockBtn, status, async s => {
     const a = parseAmountInput(amount.value, 18); if (!a) throw Error('Enter an amount.');
-    await ensureAllowance(c, cfg.token, cfg.lock, a, s);
-    s('Confirm the lock in your wallet…');
-    await send(c, {to: cfg.lock, data: calldata(cfg.sel.lock, ['uint256', 'uint8'], [a, BigInt(term.value)])}, s);
+    await lockFromWallet(c, a, BigInt(term.value), s);
     if (me) setMove(me, null);
     s('Locked.');
   }));
@@ -114,9 +131,7 @@ async function render() {
     const n = resume.amount < wallet ? resume.amount : wallet, t = termPicker(resume.term), st = h('p', {class: 'qtx-status', role: 'status'});
     const btn = h('button', {type: 'button', class: 'qtx-mini'}, 'Lock ' + fmt(n, 0) + ' QHOOKS from your wallet');
     btn.addEventListener('click', () => act(btn, st, async s => {
-      await ensureAllowance(c, cfg.token, cfg.lock, n, s);
-      s('Confirm the lock in your wallet…');
-      await send(c, {to: cfg.lock, data: calldata(cfg.sel.lock, ['uint256', 'uint8'], [n, BigInt(t.value)])}, s);
+      await lockFromWallet(c, n, BigInt(t.value), s);
       setMove(me, null); s('Locked.');
     }));
     moveBox = h('div', {class: 'qtx-move', style: 'display:grid;gap:8px;margin:14px 0'},
@@ -134,11 +149,11 @@ async function render() {
       const calls = [{to: cfg.vault, data: calldata(cfg.sel.unstake, ['uint256'], [a]), label: 'Unstake'}];
       if (allowance < a) calls.push({to: cfg.token, data: calldata(cfg.sel.approve, ['address', 'uint256'], [cfg.lock, a]), label: 'Approve'});
       calls.push({to: cfg.lock, data: calldata(cfg.sel.lock, ['uint256', 'uint8'], [a, tv]), label: 'Lock'});
-      const batch = await sendCallsAtomic(c, calls, s);
+      const batch = await batchWithNote(c, calls, s);
       if (batch) { s('Moved into a lock.'); return; }
       for (let i = 0; i < calls.length; i++) {
         const step = 'Step ' + (i + 1) + ' of ' + calls.length + ' · ' + calls[i].label + ': ';
-        try { await send(c, calls[i], x => s(step + x)); }
+        try { const r = await send(c, calls[i], x => s(step + x)); if (i === calls.length - 1) noteReceipt(r); }
         catch (e) { if (i === 0) throw e; throw Error('Stopped before the lock.'); }
         if (i === 0) setMove(me, {amount: a, term: t.value});   // unstaked: remember the next step
       }
