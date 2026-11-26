@@ -1,1 +1,0 @@
-import{a,b,c,d,e,f,g,h,i,j,k}from"./c.V5QHTIM6.mjs";import"./c.XFJQXMSA.mjs";export{a as OFFICIAL,k as impostorBanner,e as impostorOf,i as notOfficialBadge,h as officialBadge,d as officialFor,c as officialLogo,g as pinOfficial,f as queryWantsOfficial,j as rowMark,b as skeleton};

@@ -1,1 +1,0 @@
-function r(e){try{for(let n=0;n<(e?.length||0);n++){let i=e.key(n);if(!/^privy:(?:[^:]+:)?token$/.test(i||""))continue;let c=e.getItem(i);if(!c)continue;let t=c;try{t=JSON.parse(c)}catch{}if(typeof t=="string"&&t.split(".").length===3)return t}}catch{}return null}export{r as a};

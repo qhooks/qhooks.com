@@ -1,1 +1,0 @@
-import{e as o}from"./c.PHWTVCVC.mjs";var t=Object.freeze(o.map(e=>Object.freeze({id:e.id,slug:e.key,name:e.name,gas:e.native,feeModel:e.feeModel||e.family,coreHref:e.id==="8453"?"/deploy":null,status:e.id==="8453"?"QPool core setup available":"Launch options on "+e.name})));export{t as a};

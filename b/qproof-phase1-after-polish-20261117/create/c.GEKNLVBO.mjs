@@ -1,1 +1,0 @@
-import{c as e}from"./c.DSL5DNQR.mjs";var r="Coqq8o1uYxrAFggNtLCcUcGZWDUF3aUPkaFEMezCMwHh",t=Object.freeze(["CEACkaNKdHVupnaiEMLGppw8RthjCdoMj8kdxJeg3MfV"]),n=Object.freeze(["CAhs68qUBmRVg4i8kh6L6VzDqAWsMtNrE8acoTo3K3Vd"]),s="Waiting for the new QHooks treasury wallet.",a=o=>!!e(o)&&!t.includes(o),c=()=>a(r);function L(){if(!c())throw Error(s)}export{r as a,c as b,L as c};

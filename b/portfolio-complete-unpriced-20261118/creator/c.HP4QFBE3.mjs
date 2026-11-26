@@ -1,1 +1,0 @@
-function e(t){if(t==null||typeof t=="boolean"||typeof t=="number"&&!Number.isFinite(t))return null;let n=String(t).trim();return n&&!/^(?:null|undefined|nan)$/i.test(n)?n:null}var o=(...t)=>t.flat(1/0).filter(n=>n!=null&&n!==!1&&(typeof n=="object"?!!n.nodeType:e(n)!==null));export{o as a};

@@ -1,1 +1,0 @@
-import"./c.XFJQXMSA.mjs";var r=Object.freeze({bring:Object.freeze({id:"bring-r5",approved:!0,poster:"/onboarding/bring-r5-poster.webp",mp4:"/onboarding/bring-r5.mp4",webm:"/onboarding/bring-r5.webm"})});export{r as FIRST_RUN_MEDIA};
