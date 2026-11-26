@@ -1,7 +1,7 @@
 ---
 name: qhooks
-version: 9.3.0
-updated: 2026-11-25
+version: 9.4.0
+updated: 2026-11-26
 description: Launch, trade & QProof token safety on Robinhood Chain + more; perps, OTC escrow and agreements.
 ---
 
@@ -9,7 +9,7 @@ description: Launch, trade & QProof token safety on Robinhood Chain + more; perp
 
 ## One plug-in for everything
 
-One MCP for launches, trades, perps reads, stored QProof, paid QProof scans and portfolios. Prepare OTC deals on Robinhood Chain and agreements on Robinhood Chain plus every chain where QAgreements is live. Spot plans need a listed EVM pool, or use `chain:'solana'` for an unsigned Jupiter swap your own Solana wallet signs; aggregation uses site flows. Hosted at https://qhooks.com/mcp, or run locally with `npx -y @qhooks/mcp`.
+One MCP for launches, trades, perps reads, stored QProof, paid QProof scans and portfolios. Prepare OTC deals and agreements on Robinhood Chain plus every chain where the respective escrow deployment is live. Spot plans need a listed EVM pool, or use `chain:'solana'` for an unsigned Jupiter swap your own Solana wallet signs; aggregation uses site flows. Hosted at https://qhooks.com/mcp, or run locally with `npx -y @qhooks/mcp`.
 
 30% back on EVM trades · 40% on Robinhood Chain if you hold 100K QHOOKS
 
@@ -65,7 +65,7 @@ console.log(await rpc('prepare_trade', {...{chain:setting('QHOOKS_CHAIN'),token:
 
 ## Unsigned-transaction checklist
 
-- Match requested/returned chain to the chain table and wallet network. Match the requested chain to every returned transaction. Set and verify chainId explicitly if absent; OTC preparations use chainId 4663; agreement preparations use the selected live deployment chain.
+- Match requested/returned chain to the chain table and wallet network. Match the requested chain to every returned transaction. Set and verify chainId explicitly if absent; OTC and agreement preparations use the selected live deployment chain.
 - Swap `to` must equal the listed QHooks fee router, with deployed code checked. Never substitute a Universal Router, PoolManager or metadata recipient.
 - Approval `to` is the input token, `value` is zero, spender is that chain's fee router and decoded amount is requested `amountIn`. Approval need not target the router itself.
 - Match token, both pool currencies and direction against `meta.pools`, request and calldata; reject unrelated pools or changed tokens.
@@ -135,6 +135,7 @@ Transport/OTC/agreement messages follow; other tools may return their own valida
 - `price_unavailable`
 - `simulation_unavailable`
 - `agreements_unavailable`
+- `otc_not_deployed` (includes the requested chain and deployment message)
 - `agreements_not_deployed` (includes the requested chain and deployment message)
 - `Refreshing router ABI.`
 - `Agent read limits are refreshing.`
@@ -278,9 +279,9 @@ The older `prepare_limit_order`, `prepare_tpsl` and `orders_status` still work a
 
 ## OTC: agreed terms → quote → wallet settlement
 
-Robinhood Chain (4663), escrow 0xbea24499f82f1e018a4dff5607b7c54141cbfbf8. Tools verify runtime, fee recipient, payment assets and a recent block. Start with amounts and parties agreed by the user and counterparty. A planning quote validates those supplied terms; it does not establish counterparty consent. RFQ board posting/matching remain unavailable.
+OTC runs on Robinhood Chain (4663), Ethereum (1), BNB Chain (56), Base (8453), Arbitrum One (42161) and Elysium (99901), subject to a live deployment with runtime matching the pinned hash. A missing or mismatched deployment returns `otc_not_deployed` with the chain and deployment message. Robinhood Chain escrow: 0xbea24499f82f1e018a4dff5607b7c54141cbfbf8. Tools verify runtime, fee recipient, payment assets and a recent block. Start with amounts and parties agreed by the user and counterparty. A planning quote validates those supplied terms; it does not establish counterparty consent. RFQ board posting/matching remain unavailable.
 
-otc_quote takes exact decimal token units. Pay assets are ETH, WETH and USDG. The returned quote contains raw integer amounts and actual decimals; pass it unchanged to otc_create within validUntil (at most 60s). The example computes a one-hour expiry and passes the fresh quote unchanged.
+otc_quote takes exact decimal token units. On 4663, pay assets are ETH, WETH and USDG. Outside Robinhood Chain use USDC + wrapped native (WETH on Ethereum/Base/Arbitrum, WBNB on BNB Chain, WHYPE on Elysium), or the chain’s native ETH/BNB/HYPE. USDC has 6 decimals except Binance-Peg USDC on BNB Chain, which has 18. The returned quote contains raw integer amounts and actual decimals; pass it unchanged to otc_create within validUntil (at most 60s). The example computes a one-hour expiry and passes the fresh quote unchanged.
 
 The seller must hold the full token amount. Actual holder→escrow→holder transfer deltas are probed without balance overrides; taxed or unknown tokens are refused. Funding rechecks transfers. Fee: 1% below $10K, 0.5% from $10K, rounded up and deducted from the seller's payment. USDG is valued at $1 for the tier; ETH/WETH use the existing fresh cached spot price. Changed tier or stale price requires a new quote. Spot cashback/referral does not apply.
 
@@ -444,19 +445,19 @@ Public tools only. Server schemas define exact inputs; additional fields are ref
 
 ### otc_quote
 
-`{chain:"4663", buyer, seller, token, amount, payAsset, payAmount, expiry}`. Validates agreed parties, decimal amounts, seller balance and transfer behavior; returns the fee tier and a quote valid at most 60s for `otc_create`. Planning only; not counterparty consent. See OTC.
+`{chain:"4663" | "1" | "56" | "8453" | "42161" | "99901", buyer, seller, token, amount, payAsset, payAmount, expiry}`. Validates agreed parties, decimal amounts, seller balance and transfer behavior; returns the fee tier and a quote valid at most 60s for `otc_create`. Planning only; not counterparty consent. See OTC.
 
 ### otc_create
 
-See tools/list.
+Uses the OTC chains listed above, subject to a live deployment. See tools/list.
 
 ### otc_accept
 
-`{chain:"4663", dealId, actor, expectedTermsHash, payout?, dryRun?}`. Prepares the named buyer or seller deposit for a real deal; `expectedTermsHash` comes from a recent `deal_status`.
+`{chain:"4663" | "1" | "56" | "8453" | "42161" | "99901", dealId, actor, expectedTermsHash, payout?, dryRun?}`. Prepares the named buyer or seller deposit for a real deal; `expectedTermsHash` comes from a recent `deal_status`.
 
 ### deal_status
 
-See tools/list.
+Uses the OTC chains listed above, subject to a live deployment. See tools/list.
 
 ### agreement_create
 
