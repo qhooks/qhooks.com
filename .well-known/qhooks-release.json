@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "3b2da851-b690-4f02-a359-957fc7fe6322",
+  "releaseId": "9262ab7e-924e-4cfa-a5e9-c125fc479496",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -41,8 +41,8 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "d138ef4639e4e921dcfad61ab79f2e8da1bf861eee5e3c3094ce666c955d99f8",
-      "bytes": 13027
+      "sha256": "c87921213af8b70bd8dd837fb408ba75c95a9204da4d86c59c6f93e47b702e01",
+      "bytes": 13435
     },
     "_redirects": {
       "sha256": "b0064a6e748cb4421e4ff024a6219ff6600077feec61978bcd07fb0bd7a87010",
@@ -342773,7 +342773,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "af64d0bfdcfe26fe9b793181765996f875d6a90e7ff8dbee466a3f2f1e34d0ef",
+      "sha256": "b53de804145241292c6c0b97eedc9fd769319504b79413c49988e100995f9048",
       "bytes": 2372
     },
     "hook-marketplace.html": {
@@ -344124,6 +344124,10 @@
       "sha256": "9c36c7347449e2304de8596734d859769d4a53875a1afad92fcf9ea1c47e7ba6",
       "bytes": 566589
     },
+    "new/app.c1e6c6784b.js": {
+      "sha256": "b9f5a97540e0868a4544d256eb5feac592a45df93509f0662f4e763a9f88dd01",
+      "bytes": 578521
+    },
     "new/app.c47efd6c87.js": {
       "sha256": "d7d6e0521c8b018c92c7fee91dbca7315f2d0113caadd050c4a4279180baf1ee",
       "bytes": 571690
@@ -344201,7 +344205,7 @@
       "bytes": 7857
     },
     "new/index.html": {
-      "sha256": "b955b39e4c140d9d8ac86250f3994c1288dfa628b6bc1a02d172651ce13290db",
+      "sha256": "0cb677cc5010055b78c5a632fda1002ff319ae5e21bbfcfa0cda3614a4286b1b",
       "bytes": 1150
     },
     "new/js/perps-book.js": {
@@ -354873,5 +354877,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "a1a638cced759854ad06cc0f34344f365105dcf91bc394b601f4dee851cf16bd"
+  "contentDigest": "c5c7a7dffc89a9b14a564a1b74694b5770b1b76e7ec435e8026f2af770537f68"
 }
