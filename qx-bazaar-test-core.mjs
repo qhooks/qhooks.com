@@ -60,6 +60,9 @@ export function createPurchase({hub,fetcher=(...args)=>fetch(...args),storage=gl
         const delay=Number(r.headers.get('retry-after'));
         await wait(Math.max(1000,Math.min(5000,Number.isFinite(delay)&&delay>0?delay*1000:3000)));
       }
+      // CDPFIX2: a 402 after signing is a refused payment, not an uncertain one: clear the saved header and say why.
+      const REASONS={self_send_not_allowed:'This wallet is the payee. Pay from a different wallet.',insufficient_funds:'This wallet needs at least the price in USDC on Base.',invalid_signature:'The wallet signature was not accepted. Try again.'};
+      if(r.status===402){storage.removeItem(key);throw Error((REASONS[body?.error]||'The payment was not accepted ('+(body?.error||'402')+').')+' Nothing was charged.');}
       if(r.status!==200)throw Error('Payment status '+r.status+'. Tap the same route to check the saved authorization; no new signature will be requested.');
       const receipt=decode(r.headers.get('payment-response'));
       if(receipt.success!==true||receipt.network!==BASE.network||receipt.payer?.toLowerCase()!==saved.payer||!/^0x[0-9a-f]{64}$/i.test(receipt.transaction||'')||body.subject?.address?.toLowerCase()!==address.toLowerCase())throw Error('Receipt could not be confirmed. Keep this tab and check the same payment.');
