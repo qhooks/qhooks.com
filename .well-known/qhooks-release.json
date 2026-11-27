@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "d46d3921-36ba-4047-9936-58e0f6ba907a",
+  "releaseId": "0e2f8201-987c-4cee-86c1-aa44da94f5ad",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -53,8 +53,8 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "3c5d90269a45308cfac6406d92d4da9e7379145880830859e61162d042bfba1d",
-      "bytes": 15882
+      "sha256": "7981b733f66a8b0c84c163362f5604dc4934cc626fb08e2acda01c2b6ec5ed53",
+      "bytes": 16288
     },
     "_redirects": {
       "sha256": "b0064a6e748cb4421e4ff024a6219ff6600077feec61978bcd07fb0bd7a87010",
@@ -3188,6 +3188,10 @@
       "sha256": "89e345b6dc469cc5b1d4acc78d89e4acd229eadc1598b0fdeaebb91b4b02b257",
       "bytes": 4616
     },
+    "b/create/c.ELMWEKOB.mjs": {
+      "sha256": "b2a608fa5a833ed82a8d8b6a1d5328388a9d473c5545d0c0a2f0ee74cd574adb",
+      "bytes": 1928
+    },
     "b/create/c.EMFRPYWC.mjs": {
       "sha256": "6892028c3042d80685e598d5d65253ddea52d8893655f9cca46d3dd6a3151e21",
       "bytes": 797
@@ -4220,6 +4224,10 @@
       "sha256": "6db29509092eafc7503640cbb37a381982b6c200dc2fe629c9d6f021960f1134",
       "bytes": 161997
     },
+    "b/create/qx-create.AZ6QPNOQ.mjs": {
+      "sha256": "ca965d1a898a4175639d036facb8966302b4229803279ba82a914aa81aa4ad68",
+      "bytes": 162477
+    },
     "b/create/qx-create.FDLRL3JJ.mjs": {
       "sha256": "b77f4317f74f121637d98063fc17bba3bb42eb1590aba8139b3d556d11eb2d08",
       "bytes": 161997
@@ -4231,6 +4239,10 @@
     "b/create/qx-qcaster-entry.F7CFI26G.mjs": {
       "sha256": "10a2c3c2ec645f488858899a69b2f167144f494fba304f5dcf4d8ddeedf10eca",
       "bytes": 613
+    },
+    "b/create/qx-quick-launch.2R2SLYFX.mjs": {
+      "sha256": "f84cfb043b8aa4ec69b962e8cedbeac7f59b3ec9ca8b3a471bd74268e1b57c68",
+      "bytes": 88926
     },
     "b/create/qx-quick-launch.L73EVNM6.mjs": {
       "sha256": "27c56b450ca6ff882b6222e8565bd35fe32a0b9de32fc990b44d51612d56b59e",
@@ -4290,6 +4302,10 @@
     },
     "b/create/qx-tg-launch-draft.SU5YZN2U.mjs": {
       "sha256": "fb8b2802853492f54b80e677089e74d22bd17dbda17060c9dd057888a2c04aba",
+      "bytes": 1886
+    },
+    "b/create/qx-tg-launch-draft.ZWH6DMCL.mjs": {
+      "sha256": "dc31c8cf50cbf4c06d6bb5a01462ac8519f7b48a7b8017551b1f5527aaf9c757",
       "bytes": 1886
     },
     "b/create/wallet-login.4BYVJ72U.mjs": {
@@ -83541,7 +83557,7 @@
       "bytes": 2653
     },
     "create.html": {
-      "sha256": "fe8bb956e2df5a15425d48676733217e11cc03c56be5ae3e602a287ca96aa036",
+      "sha256": "22e70345cca923a4b0cc0ba86a000b41a059409706910225d328a336c29da0e9",
       "bytes": 28100
     },
     "creator-draft.mjs": {
@@ -84861,7 +84877,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "247b72e5f1a47ef27cc6719e993b9269a79b8a380bd2e83384726d4171d1afed",
+      "sha256": "3e1d320016574cd8276f01b8b41cae2abf881af09911205f31aa5327a045ff8d",
       "bytes": 2543
     },
     "hook-marketplace.html": {
@@ -86296,6 +86312,10 @@
       "sha256": "6c20cf32b86d6167c9380cc0812c95d9fe1d8a86ea8d66d688926337e63a1369",
       "bytes": 582615
     },
+    "new/app.63bf6a7b5f.js": {
+      "sha256": "47d4dd222520862093b550caf7833bf056eab6e47c587a4bc2711bb83f82d31e",
+      "bytes": 610347
+    },
     "new/app.6ac58826c9.js": {
       "sha256": "44078b939f2e0fb679d0c9ebcc28dba4e19a83df1113e3fe6ab74f47dc35336e",
       "bytes": 576582
@@ -86433,7 +86453,7 @@
       "bytes": 7977
     },
     "new/index.html": {
-      "sha256": "3b15c05d37923543648d9594441816e224712fec66db8cd1158c56c70fea6707",
+      "sha256": "cbf387608f5c3660b915ecf8ac45c3ac99d49a2d244131470ee74d2adf7015b3",
       "bytes": 1238
     },
     "new/js/orbio-chip.js": {
@@ -94161,8 +94181,8 @@
       "bytes": 17266
     },
     "qx-create.mjs": {
-      "sha256": "b1e624b04ac0e72fc1e8072e6d8d2a0d15643af2ae6b655eeb91b946374ef003",
-      "bytes": 44967
+      "sha256": "810e883ff30ca00342bbc3e6dbbfe2884be26c87ac60ea6cf73251e72dbe7b36",
+      "bytes": 45820
     },
     "qx-creator-dashboard.css": {
       "sha256": "2e4d76321e5995f059be7dab1da96c65e1079b6e166ff8bd45169e11d8b59a65",
@@ -97201,5 +97221,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "bb1fac27d564c4718babf26fdd02e4ccbab26bd540c2ba49aa157cee4bc6f4f7"
+  "contentDigest": "69ae23bcf99e2d7f6ba7236b92f18b775b4b99bae2c7c5053332ee25f3f69c06"
 }

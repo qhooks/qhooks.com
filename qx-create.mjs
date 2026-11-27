@@ -21,6 +21,7 @@ import {hasTokenProfile} from './qx-token-profile-core.mjs';
 import {profileFromConfig} from './qx-create-plan.mjs';
 import {newLaunchRecord,createLaunchContext,saveLaunchRecord,RECORD_PREFIX} from './qx-create-runner.mjs';
 import {launchShare,mountLaunchShare} from './qx-launch-share.mjs';
+import {sanitizePrefill} from './qx-launch-prefill.mjs';
 import {mountAssistedLaunchPanel} from './qx-assisted-launch-panel.mjs';
 import {applyAssistedLaunch} from './qx-assisted-launch-core.mjs';
 import {mountLaunchReadiness} from './qx-launch-readiness.mjs';
@@ -57,6 +58,9 @@ function restoreDraft(){let hadDraft=false;try{const text=localStorage.getItem(D
  if(handoff.profileCarry){const c=handoff.profileCarry;setTokenProfileDraft(c.chainId,c.profile,c.scope);}config=handoff.config;profileScope=handoff.profileScope;liquidityState=liquidityDraftState(config,handoff.liquidityState||liquidityState);
  if(hadDraft&&handoff.changedChain){saveDraft();note('Selected '+requested.name+'. Check starting liquidity in '+requested.quote.symbol+'; your other draft settings were kept.');}
  if(!chains.some(c=>c.id===config.chainId)&&!record)config.chainId=chains[0].id;
+ // Launch-rules hand-off (Claude, 2026-11-27): the main app's Launch screen links here with ?rules=<style>&name=&ticker=
+ // so a chosen hook style (taxes, buybacks, burns) opens in the guided flow instead of the quick Fair kit.
+ {const rules=query.get('rules');if(!record&&rules&&CREATE_STYLES.some(p=>p.id===rules)){config.style=rules;Object.assign(config,presetRules(rules));const pf=sanitizePrefill({name:query.has('name')?query.get('name'):undefined,ticker:query.has('ticker')?query.get('ticker'):undefined});if(pf.name)config.name=pf.name;if(pf.ticker)config.symbol=pf.ticker;const o=document.getElementById('cr5-customize');if(o){o.open=true;setTimeout(()=>{const t=document.getElementById('qc-name');(t?.closest('section,form,fieldset')||t||o).scrollIntoView({block:'start'});},300);}}}
 }
 function saveDraft(){try{localStorage.setItem(DRAFT,JSON.stringify({version:1,screen,config,profileScope,liquidityState}));}catch{note('Browser storage is full or blocked. Free space before launching.',true);}}
 async function saveRecord(){saveLaunchRecord(localStorage,record);localStorage.setItem(ACTIVE,record.id);if(localStorage.getItem(ACTIVE)!==record.id)throw Error('Could not remember the active launch.');}
