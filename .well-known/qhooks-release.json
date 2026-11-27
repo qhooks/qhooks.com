@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "0c3073e0-9d80-4e27-9823-591f85b780e7",
+  "releaseId": "d9d07a3f-3751-4b18-97aa-21c2060653b1",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -53,7 +53,7 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "9b2426c64d11f99a1b28075df7b04c2c43739af36b8caa65c6f5e1752118651a",
+      "sha256": "38917c2736197d80313c4d45b3b536c33d98cdf74d369a8810b4bf63cbd11a3d",
       "bytes": 14664
     },
     "_redirects": {
@@ -84237,7 +84237,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "a8d3dc88306890a02dd12782c372ba5563becf1b40927346f7f76370f0df50d0",
+      "sha256": "c5a2c1827762f709f7f606512e18bb8b6d565b89ef8b14966f6464a3873f1c71",
       "bytes": 2543
     },
     "hook-marketplace.html": {
@@ -85765,7 +85765,7 @@
       "bytes": 7977
     },
     "new/index.html": {
-      "sha256": "53c14310d01f3e0871fd378fe63bbbbbfdd4901615d167912c19fa202904ee85",
+      "sha256": "f4ed8740faa0db9c854fe2560f97e12b83ada945fbaac2cb7266e8a7e09ccd98",
       "bytes": 1238
     },
     "new/js/orbio-chip.js": {
@@ -85835,6 +85835,10 @@
     "new/main.9c3f76ddb4.js": {
       "sha256": "c74c6bf2b311eac501d87311ac5bb2267081c7b0de46e0f636ef3d9e536f71bd",
       "bytes": 49881
+    },
+    "new/main.a3935f3647.js": {
+      "sha256": "8ec1725a7d0491f60a60c14a5d29843ec4ee007c5d7c428ef58d78962477984f",
+      "bytes": 49837
     },
     "new/main.fedd0a84f7.js": {
       "sha256": "af1bc90d6285548f12b276e95611f397162bae9e0bad9e052e0b2e3c7d94e5d2",
@@ -95497,8 +95501,8 @@
       "bytes": 4002
     },
     "qx-token-agent-view.mjs": {
-      "sha256": "1217278160814c8ebc3fb1bf6d15a962d6baccdbb98f03eb20b155173a411259",
-      "bytes": 7451
+      "sha256": "f942ac3a24ee2eec3db36a1d2d7701d0458736adbcdfef78cde494c96d8df26a",
+      "bytes": 7452
     },
     "qx-token-agents.css": {
       "sha256": "0bfbcc34b10e25977aa7aae96d45ab5be1257729debed87446c3a7d4ecdefc77",
@@ -96509,5 +96513,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "b8d6d006f54b145cd4fbd603ed5b1bc5356e22606cfa2c90a55f88bdcdca279a"
+  "contentDigest": "f99f5321c8cee8b497e9ac740bd87d477dc9fdbd6e98e0ea5f03540c6df16194"
 }
