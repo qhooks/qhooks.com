@@ -59,3 +59,6 @@
 .proof-hooks .qp-hook{padding:4px 0 14px}.proof-hooks .qp-hook__answer dt{color:var(--qa-muted,#aaa9a1)}.proof-hooks .qp-hook__answer dd>small{color:var(--qa-muted,#aaa9a1)}
 /* Server-supplied holder rows (top 5, any chain) when the native holder ranking is absent. */
 .qp-holders--reported .qp-holder-list{margin:8px 0 0}.qp-holders--reported .qp-holder{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--qa-rule,#373a32);font-size:12px;line-height:1.5;font-variant-numeric:tabular-nums}.qp-holders--reported .qp-holder:last-child{border-bottom:0}.qp-holders--reported .qp-holder>div{min-width:0}.qp-holder__address{color:var(--qa-gold,#e6c987);overflow-wrap:anywhere}.qp-holder__label{display:block;color:var(--qa-tx-2,#b2b5b1);overflow-wrap:anywhere}.qp-holders--reported .qp-holder>b{flex:none}.qp-holder-signals{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;line-height:1.5;color:var(--qa-tx-2,#b2b5b1)}
+.qp-autonomo__flags{margin:4px 0;padding-left:18px;font-size:12px;line-height:1.5;color:var(--qa-tx-2,#b2b5b1)}
+.qp-autonomo__credit{font-size:11px;margin:6px 0 0;color:var(--qa-tx-3,#8a8d89)}
+.qp-autonomo__credit a{color:inherit}

@@ -1,5 +1,5 @@
 import {installOverlayDismissal} from './qx-overlays.mjs';
-import {renderQProofSummary,readQProofPresentation,normalizeQProofChecks,ensureQProofStyles,qproofReadParams,safeQProofUrl,renderQProofHolders,renderQProofHooks} from './qproof-view.mjs';
+import {renderQProofSummary,readQProofPresentation,normalizeQProofChecks,ensureQProofStyles,qproofReadParams,safeQProofUrl,renderQProofHolders,renderQProofHooks,renderQProofAutonomo} from './qproof-view.mjs';
 
 // Display only. The server supplies every verdict and its reason.
 export function mountProofPopover({document:doc=globalThis.document,window:win=doc.defaultView,chip,desktop,h,readChecks,renderRow,report,refresh,reduceMotion=false}){
@@ -56,7 +56,7 @@ export function mountProofPopover({document:doc=globalThis.document,window:win=d
   if(!href)full.addEventListener('click',()=>{close();report?.scrollIntoView({block:'start',behavior:reduceMotion?'auto':'smooth'});});
   pop.replaceChildren(...[h('header',{class:'ta-proofpop__head'},h('h2',{id:'ta-proofpop-h'},'QProof'),x),summary.bar,summary.strip,summary.fee,
    section('danger','Red flags',rows.filter(c=>c.level==='danger')),section('watch','Watch',rows.filter(c=>c.level==='watch')),
-   renderQProofHooks(h,p),holderSection(p),
+   renderQProofHooks(h,p),holderSection(p),renderQProofAutonomo(h,p),
    section('passed','Passed',rows.filter(c=>c.level==='clear'),true),section('not-checked','Not checked',rows.filter(c=>c.level==='incomplete'),true),section('notes','Notes',rows.filter(c=>c.level==='info'),true),
    legend?h('details',{class:'ta-proof-method','data-proof-section':'method'},h('summary',null,'How QProof works'),h('p',null,legend)):null,
    h('footer',{class:'ta-proofpop__foot'},h('a',{class:'ta-proofpop__how',href:'/qproof'},'How QProof works'),full)].filter(Boolean));

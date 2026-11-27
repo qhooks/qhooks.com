@@ -671,6 +671,18 @@ MCP: `qproof_scan {chain, token}` returns `state:"payment_required"`, the decode
 
 When the 402 `accepts` list includes `network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"` (asset USDC, `extra.feePayer`), pay with any standard x402 SVM client (`exact` scheme): SetComputeUnitLimit, SetComputeUnitPrice (at most 5 lamports/CU) and a USDC TransferChecked to the payee's USDC account, fee payer `extra.feePayer`, signed by the transfer authority, sent in `PAYMENT-SIGNATURE`. No address lookup tables; only Memo or Lighthouse may be added. We verify and simulate, run the work (stored: the report must exist; fresh: every required check must complete), then co-sign as fee payer and send. Incomplete work answers `503` with `charged:false` and nothing is sent. Reuse the same payment while pending; a new one is needed after its blockhash expires (about 60 s).
 
+## Partner data: Autonomo
+
+[Autonomo](https://autonomo.fun) runs pay-per-call x402 APIs for Robinhood Chain and Base. Fresh QProof reports on Robinhood Chain and Base tokens add a creator and launch section read from three of them:
+
+| API | Call | Price |
+| --- | --- | --- |
+| Dev Wallet Tracker | `GET https://autonomo.fun/x/dev-wallet/dev/<token>?chain=<robinhood or base>` | $0.01 |
+| Tx Explainer | `GET https://autonomo.fun/x/tx-explainer/tx/<hash>` | $0.01 |
+| Page Reader | `GET https://autonomo.fun/x/page-reader/page?url=<url-encoded https link>` | $0.01 |
+
+Call them directly over x402 v2 (scheme `exact`), paying USDG on Robinhood Chain or USDC on Base; a failed answer is not charged. Every Autonomo API: https://autonomo.fun/llms.txt. In QProof reports the section is `autonomo`, credited "Project read and transaction lookup by Autonomo". It is partner data, treated as untrusted text, and never changes the QProof verdict.
+
 ## Discovery and public records
 
 ```js

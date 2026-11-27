@@ -4,7 +4,7 @@
 // except the holder step of "Run it".
 import '/qx-a/pages/hooks-lane.mjs';
 import { connectedAddress, onWalletChange, signMessage } from '/qx-chain.mjs';
-import {readQProofPresentation,renderQProofSummary,renderQProofHolders,renderQProofHooks,safeQProofUrl,ensureQProofStyles,qproofReadParams,qproofReportLocation} from '/qproof-view.mjs';
+import {readQProofPresentation,renderQProofSummary,renderQProofHolders,renderQProofHooks,renderQProofAutonomo,safeQProofUrl,ensureQProofStyles,qproofReadParams,qproofReportLocation} from '/qproof-view.mjs';
 ensureQProofStyles();
 
 const $ = (id) => document.getElementById(id);
@@ -152,7 +152,7 @@ function render(r,opts={}){
  const hooks=renderQProofHooks(h,p),ranking=renderQProofHolders(h,p);
  const sections=[sellSection(o,chain,r),supplySection(o,s),ranking?null:holdersSection(o,chain),creatorSection(r,o,s,chain),marketSection(o,r),repoSection(s),readsSection(r)].filter(Boolean);
  const details=sections.map(section=>{const title=section.querySelector('h3')?.textContent||'Evidence',first=section.querySelector('p')?.textContent||'',node=h('details',{class:'qp-report-section'},h('summary',null,h('b',null,title),first?h('span',null,first.length>120?first.slice(0,117)+'…':first):null),section);if(title==='Audit trail')node.id='qp-audit-trail';return node;});
- const main=h('div',{class:'qp-report-sections'},checksSection(r,chain),hooks,ranking,...details);
+ const main=h('div',{class:'qp-report-sections'},checksSection(r,chain),hooks,ranking,...details,renderQProofAutonomo(h,p));
  out.hidden=false;out.replaceChildren(h('div',{class:'qp-report-layout'},aside,main));reveal([aside,main]);
 }
 function sec(title, ...body) { return h('section', { class: 'qp-sec' }, h('h3', { class: 'qp-sec__h' }, title), ...body); }

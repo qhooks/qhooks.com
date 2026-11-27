@@ -49,7 +49,7 @@ export function readQProofPresentation(value){
  const numbers=readKeyNumbers(source.keyNumbers??report?.keyNumbers);
  const checks=normalizeQProofChecks(Array.isArray(source.checks)?source.checks:report?.checks);
  const keyEvidence=source.keyEvidence??report?.keyEvidence;
- return{ready:true,presentationVersion:2,report,verdict:{...v,label:text(v.label,80),reason:text(displayVerdict.detail),flags:Array.isArray(v.flags)?v.flags.map(qproofCheckDisplayCopy):[],counts:v.counts??{},evidence:Array.isArray(v.evidence)?v.evidence:[]},freshness:source.freshness??report?.freshness??{},keyNumbers:numbers,keyEvidence:keyEvidence&&typeof keyEvidence==='object'&&!Array.isArray(keyEvidence)?keyEvidence:{},checks,notChecked:(Array.isArray(source.notChecked)?source.notChecked:Array.isArray(report?.notChecked)?report.notChecked:[]).map(qproofCheckDisplayCopy),holders:readHolders(Array.isArray(source.holders)?source.holders:report?.holders),links:source.links??report?.links??{},holderView:qproofHolderView(source===report?report:{report,holderRanking:source.holderRanking}),hookView:qproofHookView(source===report?report:{report,poolHooks:source.poolHooks})};
+ return{ready:true,presentationVersion:2,...(value?.autonomo&&typeof value.autonomo==='object'?{autonomo:value.autonomo}:{}),report,verdict:{...v,label:text(v.label,80),reason:text(displayVerdict.detail),flags:Array.isArray(v.flags)?v.flags.map(qproofCheckDisplayCopy):[],counts:v.counts??{},evidence:Array.isArray(v.evidence)?v.evidence:[]},freshness:source.freshness??report?.freshness??{},keyNumbers:numbers,keyEvidence:keyEvidence&&typeof keyEvidence==='object'&&!Array.isArray(keyEvidence)?keyEvidence:{},checks,notChecked:(Array.isArray(source.notChecked)?source.notChecked:Array.isArray(report?.notChecked)?report.notChecked:[]).map(qproofCheckDisplayCopy),holders:readHolders(Array.isArray(source.holders)?source.holders:report?.holders),links:source.links??report?.links??{},holderView:qproofHolderView(source===report?report:{report,holderRanking:source.holderRanking}),hookView:qproofHookView(source===report?report:{report,poolHooks:source.poolHooks})};
 }
 export function qproofAgeLabel(freshness,now=Date.now()){
  const at=typeof freshness?.checkedAt==='string'?Date.parse(freshness.checkedAt):NaN;if(!Number.isFinite(now)||!Number.isFinite(at)||at>now+10000)return'Check time not reported';
@@ -154,4 +154,41 @@ export function renderQProofHooks(h,value){
    h('div',{class:'qp-hook__id'},h('span',{class:'ta-proof-status is-'+(p.level==='watch'?'caution':p.level)},p.levelLabel),p.hookUrl?h('a',{href:p.hookUrl,target:'_blank',rel:'noopener noreferrer',title:p.hook},'Hook '+p.short):p.short?h('span',null,'Hook '+p.short):null,p.identity?h('small',null,p.identity):null),
    h('dl',{class:'qp-hook__answers'},p.answers.map(a=>h('div',{class:'qp-hook__answer'+(a.known?'':' is-unknown')},h('dt',null,a.label),h('dd',null,h('span',null,a.headline),a.evidence.length||a.detail?h('div',{class:'qp-hook__meta'},renderQProofEvidence(h,a.evidence,{max:1}),a.detail?h('details',{class:'ta-proof-more'},h('summary',null,'More'),h('p',null,a.detail)):null):null)))))),
   v.note?h('p',{class:'qp-holders__note'},v.note):null);
+}
+
+// AUTONOMO partner section (2026-11-27). Everything here is partner data, shown as plain text only
+// (h() appends strings as text nodes), with links limited to https. It never changes the verdict.
+const AUTONOMO_SITE='https://autonomo.fun';
+const autoShort=a=>typeof a==='string'&&/^0x[0-9a-f]{40}$/i.test(a)?a.slice(0,6)+'…'+a.slice(-4):null;
+const autoText=(v,max=300)=>typeof v==='string'?v.replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁦-⁩]/g,' ').trim().slice(0,max):'';
+const autoPct=v=>typeof v==='number'&&Number.isFinite(v)?(Math.round(v*100)/100)+'%':null;
+export function qproofAutonomoView(value){
+ const a=value&&typeof value==='object'?(value.autonomo??value.report?.autonomo):null;
+ if(!a||typeof a!=='object'||a.version!==1)return null;
+ const d=a.devWallet&&typeof a.devWallet==='object'?a.devWallet:null,t=a.launchTx&&typeof a.launchTx==='object'?a.launchTx:null,p=a.page&&typeof a.page==='object'?a.page:null;
+ const s=d?.supply||{},supply=[['holds',s.holdsPercent],['sold',s.soldPercent],['locked',s.lockedPercent],['burned',s.burnedPercent],['pooled',s.pooledPercent]].map(([k,v])=>autoPct(v)?k+' '+autoPct(v):null).filter(Boolean);
+ return {state:a.state,
+  creator:d?.creator?.address?{short:autoShort(d.creator.address),url:safeQProofUrl(d.explorer)}:null,
+  supply:supply.length?'Creator '+supply.join(' · '):null,
+  funding:d?.funding?.funder?'Funded by '+autoShort(d.funding.funder)+(d.funding.funderIsService?' (a service wallet)':d.funding.funderIsContract?' (a contract)':''):null,
+  others:Number.isSafeInteger(d?.otherLaunches?.count)?(d.otherLaunches.count===0?'No other launches by this creator':'Other launches by this creator: '+d.otherLaunches.count):null,
+  flags:Array.isArray(d?.flags)?d.flags.slice(0,8).map(f=>({severity:autoText(f?.severity,16)||'info',text:autoText(f?.text,200)})).filter(f=>f.text):[],
+  launch:t?.summary?{text:autoText(t.summary,280),url:safeQProofUrl(t.explorer)}:null,
+  page:p&&(p.title||p.description)?{title:autoText(p.title,120),description:autoText(p.description,300),url:safeQProofUrl(p.url)}:null};
+}
+export function renderQProofAutonomo(h,value){
+ const v=qproofAutonomoView(value);if(!v)return null;
+ const empty=!v.creator&&!v.launch&&!v.page;
+ const note=v.state==='pending'?'Autonomo data is being read and shows on the next view.':empty?'Autonomo data is unavailable right now.':null;
+ return h('section',{class:'ta-proof-section qp-autonomo','aria-label':'Autonomo','data-proof-section':'autonomo'},
+  h('h3',null,'Creator and launch'),
+  note?h('p',{class:'qp-holders__note'},note):null,
+  v.creator?h('p',{class:'qp-holders__line'},'Creator ',v.creator.url?h('a',{href:v.creator.url,target:'_blank',rel:'noopener noreferrer'},v.creator.short):v.creator.short):null,
+  v.supply?h('p',{class:'qp-holders__note'},v.supply):null,
+  v.funding?h('p',{class:'qp-holders__note'},v.funding):null,
+  v.others?h('p',{class:'qp-holders__note'},v.others):null,
+  v.flags.length?h('ul',{class:'qp-autonomo__flags'},v.flags.map(f=>h('li',{class:'is-'+f.severity.toLowerCase().replace(/[^a-z]/g,'')},f.text))):null,
+  v.launch?h('p',{class:'qp-holders__note'},'Launch: ',v.launch.text,v.launch.url?[' ',h('a',{href:v.launch.url,target:'_blank',rel:'noopener noreferrer'},'Transaction')]:null):null,
+  v.page?h('p',{class:'qp-holders__note'},'Website: ',v.page.title||'',v.page.description?' · '+v.page.description:''):null,
+  h('p',{class:'qp-autonomo__credit'},h('a',{href:AUTONOMO_SITE,target:'_blank',rel:'noopener noreferrer'},'Project read and transaction lookup by Autonomo')));
 }
