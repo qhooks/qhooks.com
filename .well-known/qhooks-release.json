@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "9a9c7fbc-1bd9-43a6-86c5-67e925f6c603",
+  "releaseId": "d46d3921-36ba-4047-9936-58e0f6ba907a",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -96661,8 +96661,8 @@
       "bytes": 1519
     },
     "skill.md": {
-      "sha256": "4338e1b2c6570218835a7eb6daf3d8c8db1c39bf7e8d30bf3bd0cc455c0136f8",
-      "bytes": 61474
+      "sha256": "ab07ad572d9f2ebb8b24820acc5b4df04cc06069914865a32380e18a8b58f4fd",
+      "bytes": 61667
     },
     "sol-launch-setup.html": {
       "sha256": "fef20e8143353a57f391a89a1f34337897b2ab7326a694ee0834da8f1effce6e",
@@ -97201,5 +97201,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "f08053e9da56e076beb7a2190951c5253e9983b7aafa90824053b2f0753a9bd4"
+  "contentDigest": "bb1fac27d564c4718babf26fdd02e4ccbab26bd540c2ba49aa157cee4bc6f4f7"
 }
