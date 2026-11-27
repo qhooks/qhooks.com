@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "d9d07a3f-3751-4b18-97aa-21c2060653b1",
+  "releaseId": "9a059871-87dc-4324-955f-720301d73b89",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -53,7 +53,7 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "38917c2736197d80313c4d45b3b536c33d98cdf74d369a8810b4bf63cbd11a3d",
+      "sha256": "fab423dee6f50b43aa77d0201cf408d0105bfcf7adf7247a7ded665e659fcfc8",
       "bytes": 14664
     },
     "_redirects": {
@@ -84237,7 +84237,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "c5a2c1827762f709f7f606512e18bb8b6d565b89ef8b14966f6464a3873f1c71",
+      "sha256": "580714278079c0349f28f1604b0041c1bf7cc0860b71010127c8f2ef9e4a4a58",
       "bytes": 2543
     },
     "hook-marketplace.html": {
@@ -85620,6 +85620,10 @@
       "sha256": "75d62ffef8c8f81b274084ac71b5ca227b3269bfdbeb61baea25e13023a19442",
       "bytes": 599760
     },
+    "new/app.28e7d99540.css": {
+      "sha256": "28e7d995409e2157968f7226e473d398741d733543b8940b1d46aa9dc32df25e",
+      "bytes": 88043
+    },
     "new/app.3072748a76.css": {
       "sha256": "3072748a76f1e161e87490f54c4e0905c57d8e60d4c584f3915f38840334a42b",
       "bytes": 76921
@@ -85627,6 +85631,10 @@
     "new/app.43a5acb5dd.js": {
       "sha256": "43a5acb5dd52d204a313dffc3ede4ae02bd95fe388add96850623c605821045f",
       "bytes": 575485
+    },
+    "new/app.4b4a96c2ed.js": {
+      "sha256": "1b8aa17c482e66ed0bf06e9af19af8fe81968353fa75a5f077535f093aee71e6",
+      "bytes": 607060
     },
     "new/app.55a445b9d9.js": {
       "sha256": "55a445b9d9c6959c2686592c742d22d09b356ebb6b6da483e4fbf161e9f6d6b8",
@@ -85765,7 +85773,7 @@
       "bytes": 7977
     },
     "new/index.html": {
-      "sha256": "f4ed8740faa0db9c854fe2560f97e12b83ada945fbaac2cb7266e8a7e09ccd98",
+      "sha256": "8393e3ee6c6d3648d5101f7b09dbbe92b7100b37c6d0508690c180ae7531712b",
       "bytes": 1238
     },
     "new/js/orbio-chip.js": {
@@ -85831,6 +85839,10 @@
     "new/main.22f4af3909.js": {
       "sha256": "7cadbe75e1dfc190cdf879141ad662f1d9705e0fbb6fbfcad085300d136da88e",
       "bytes": 29200
+    },
+    "new/main.84d18f1395.js": {
+      "sha256": "ab37c02f6251fe689c666ce26a8c06ba2854009a1285a445c316f5b62f129912",
+      "bytes": 50513
     },
     "new/main.9c3f76ddb4.js": {
       "sha256": "c74c6bf2b311eac501d87311ac5bb2267081c7b0de46e0f636ef3d9e536f71bd",
@@ -96513,5 +96525,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "f99f5321c8cee8b497e9ac740bd87d477dc9fdbd6e98e0ea5f03540c6df16194"
+  "contentDigest": "079d79e6fa3f975dc585040f10b232fea2b5aebbb2076d9af20b2e98b7ef1ee7"
 }
