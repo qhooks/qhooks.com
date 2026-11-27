@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "23985532-e2d8-49cb-8544-663465ff873b",
+  "releaseId": "bb940f4e-5025-4f48-920d-9ad19a3f3373",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -92597,7 +92597,7 @@
       "bytes": 277
     },
     "qx-a/pages/setup-earn-setup.mjs": {
-      "sha256": "2ca6f1e4742b6240dd68c7fc969dab2936a966de891444afe82c74cac3e4718d",
+      "sha256": "a0e8ef46eca6f99922ed983b342379ff6f0fcd43716bcfbb255126494752ed4e",
       "bytes": 88278
     },
     "qx-a/pages/setup-flywheel2-setup.css": {
@@ -96577,5 +96577,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "f0020b4f90b483bafad08e7628d360c195d849ea7af2a502ad4a92d7fe44b6ee"
+  "contentDigest": "7e34dd07ae91d074cfb89b764ebac1c43c48ed57bd0b748685163e2743479a3e"
 }
