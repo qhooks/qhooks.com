@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "9a059871-87dc-4324-955f-720301d73b89",
+  "releaseId": "f62fcfac-f455-4813-a4ac-e0419639de45",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -53,7 +53,7 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "fab423dee6f50b43aa77d0201cf408d0105bfcf7adf7247a7ded665e659fcfc8",
+      "sha256": "d20cb75faa09cfde2dacde104b04613f142f1b8a2be26912ccc6c86085e2518d",
       "bytes": 14664
     },
     "_redirects": {
@@ -83016,6 +83016,10 @@
       "sha256": "d89d625d0594437416b2123cc87b210762e9afc68e32aae2d212740c80c08ad9",
       "bytes": 1807
     },
+    "earn-setup.html": {
+      "sha256": "b3e4c44068d802192a34c2c9dc7e6bb71645cc026bb9dd76a80ad86c5f4010c4",
+      "bytes": 15756
+    },
     "elysium.html": {
       "sha256": "3a12dedf956d1ad954a3178fc48b91b6aa6ba8546bdac36e6f979b7ea612f9e4",
       "bytes": 8675
@@ -84237,7 +84241,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "580714278079c0349f28f1604b0041c1bf7cc0860b71010127c8f2ef9e4a4a58",
+      "sha256": "27cbf7163782be0b211f71afb01b6b03e77f82536fe3f338baccb142638f9fbf",
       "bytes": 2543
     },
     "hook-marketplace.html": {
@@ -85672,6 +85676,10 @@
       "sha256": "9c36c7347449e2304de8596734d859769d4a53875a1afad92fcf9ea1c47e7ba6",
       "bytes": 566589
     },
+    "new/app.b5fac302d9.js": {
+      "sha256": "35f08c60e698796d907ff94b5e3ce69f8d3ab15b38428a8f0d4c1ff76d9d166c",
+      "bytes": 607236
+    },
     "new/app.b9eaaa324f.js": {
       "sha256": "4edfe047ef20eccc8d7cbac8705d84d32068715313cb37d2df5a3aa39c526d1a",
       "bytes": 600207
@@ -85773,7 +85781,7 @@
       "bytes": 7977
     },
     "new/index.html": {
-      "sha256": "8393e3ee6c6d3648d5101f7b09dbbe92b7100b37c6d0508690c180ae7531712b",
+      "sha256": "f7ec3a36e02e455514b1026f24b888c2edd901bbd546ce68ce4ada7c4f351ce7",
       "bytes": 1238
     },
     "new/js/orbio-chip.js": {
@@ -85839,6 +85847,10 @@
     "new/main.22f4af3909.js": {
       "sha256": "7cadbe75e1dfc190cdf879141ad662f1d9705e0fbb6fbfcad085300d136da88e",
       "bytes": 29200
+    },
+    "new/main.43948d3bf7.js": {
+      "sha256": "456d9ded1f0bda86d22339a5d9f61f2dda766b55468a92135dee5889b9a49910",
+      "bytes": 50448
     },
     "new/main.84d18f1395.js": {
       "sha256": "ab37c02f6251fe689c666ce26a8c06ba2854009a1285a445c316f5b62f129912",
@@ -92548,6 +92560,14 @@
       "sha256": "5101ecb54ff1487e7d9ef2095fbde553e857087e22cf4e6620c2127111d6ed3f",
       "bytes": 139
     },
+    "qx-a/pages/setup-earn-setup.css": {
+      "sha256": "7121b989637865e483863a14f3a7e4226c19c0c09e40e008b8e30796e842e33c",
+      "bytes": 277
+    },
+    "qx-a/pages/setup-earn-setup.mjs": {
+      "sha256": "2ca6f1e4742b6240dd68c7fc969dab2936a966de891444afe82c74cac3e4718d",
+      "bytes": 88278
+    },
     "qx-a/pages/setup-flywheel2-setup.css": {
       "sha256": "f0403c35177fcec6bf59428ac04a38aa783a5ed04a5eadba79ddb2dfa223b314",
       "bytes": 33
@@ -96525,5 +96545,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "079d79e6fa3f975dc585040f10b232fea2b5aebbb2076d9af20b2e98b7ef1ee7"
+  "contentDigest": "c777c2e91c285e195ddffb986a89d74b64bdf93666292d4c8b76cc927e226c87"
 }

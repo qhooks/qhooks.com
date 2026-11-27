@@ -1,0 +1,5 @@
+@import url("./setup-base.css");
+.earn-item + .earn-item { margin-top: 32px; padding-top: 28px; box-shadow: 0 -1px 0 var(--qa-rule); }
+.earn-address code { overflow-wrap: anywhere; user-select: all; }
+.earn-recipient p { user-select: all; }
+.earn-item .qas-go { width: 100%; }
