@@ -65,7 +65,19 @@ export function mountProofPopover({document:doc=globalThis.document,window:win=d
  }
  function resize(){if(!shown)return;pop.classList.toggle('qa-sheet',!desktop.matches);pop.classList.toggle('is-pop',desktop.matches);scrim.hidden=false;pop.style.removeProperty('left');pop.style.removeProperty('top');}
  function open(){if(disposed||shown)return;render();shown=true;pop.hidden=false;resize();chip.setAttribute('aria-expanded','true');owner.sync();
+  autonomoOnce(readChecks().snapshot);
   if(refresh&&!qproofReadParams(doc.location?.search??win.location?.search??'').cached_only&&readQProofPresentation(readChecks().snapshot).freshness.stale===true)void requestRefresh();
+ }
+ // AUTONOMO: the first sheet open of a stored report with no partner section asks the server once;
+ // the section shows on the next view. Fire-and-forget; never blocks or changes the sheet.
+ const askedAutonomo=new Set();
+ function autonomoOnce(snap){
+  try{
+   const sub=snap?.subject??snap?.report?.subject,chain=sub?.chain,address=String(sub?.address||'').toLowerCase();
+   if(snap?.autonomoOpen!==true||snap?.autonomo||!['robinhood','base'].includes(chain)||!/^0x[0-9a-f]{40}$/.test(address))return;
+   const key=chain+':'+address;if(askedAutonomo.has(key))return;askedAutonomo.add(key);
+   void win.fetch?.('/api/qproof/autonomo/open',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chain,address}),credentials:'same-origin'}).catch(()=>{});
+  }catch{}
  }
  function close(){if(!shown)return;shown=false;generation++;pop.hidden=true;scrim.hidden=true;chip.setAttribute('aria-expanded','false');owner.sync();}
  const toggle=event=>{event.stopPropagation();shown?close():open();};chip.addEventListener('click',toggle);win.addEventListener('resize',resize);win.addEventListener('hashchange',close);

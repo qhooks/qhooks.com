@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "04ea5fbd-8d4f-47da-90f1-613a3ea4b988",
+  "releaseId": "a5deaf48-6aac-4e3e-ae1c-f626de83875e",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -63500,6 +63500,10 @@
       "sha256": "73c5368d49d217e16f5a960d9ea9b959769291bdb2d37bf958b53a7ed8f97c92",
       "bytes": 1298
     },
+    "b/soldlmm1/terminal/qx-a/pages/token-terminal.I2C2V7CD.mjs": {
+      "sha256": "b5a60f4b4bbdce3159524507ac4e9e3f96a93afd255ed49bc0684bd925d5209b",
+      "bytes": 53539
+    },
     "b/soldlmm1/terminal/qx-a/pages/token-terminal.OJWE6U2Z.mjs": {
       "sha256": "bdd7a31cbcf81496536eb235e90639006743f6e47e9885881103848bb949d813",
       "bytes": 53054
@@ -95397,8 +95401,8 @@
       "bytes": 37459
     },
     "qx-proof-popover.mjs": {
-      "sha256": "0aa09354a7cb756be9f96eea845c34fc15e08f5ec1ddf96d770557fc3226159d",
-      "bytes": 7571
+      "sha256": "2b694b5ae06431f3a15cd01e85f5055e8385ea9672c437965ad12c7fb4ab0b41",
+      "bytes": 8405
     },
     "qx-provider-chart.mjs": {
       "sha256": "c5f3598561c70a6d94e85015825804d5bdb914ab5c5d44451a167e0af2afc606",
@@ -96653,8 +96657,8 @@
       "bytes": 1519
     },
     "skill.md": {
-      "sha256": "31e73130064c527865e7fc04be5f4f77e2c72444048b8a5c313cfbefad56d730",
-      "bytes": 61457
+      "sha256": "4338e1b2c6570218835a7eb6daf3d8c8db1c39bf7e8d30bf3bd0cc455c0136f8",
+      "bytes": 61474
     },
     "sol-launch-setup.html": {
       "sha256": "fef20e8143353a57f391a89a1f34337897b2ab7326a694ee0834da8f1effce6e",
@@ -96725,7 +96729,7 @@
       "bytes": 6801
     },
     "terminal.html": {
-      "sha256": "1abd287e9400bd67f68e46ce9ac2163adfd421b07405d1b84902f24db9a944c0",
+      "sha256": "81045b78767f0c58b881c2d95698aa08da853a1660b5f3bc3eefa0b4abee1df0",
       "bytes": 27234
     },
     "terms.html": {
@@ -97193,5 +97197,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "29f4ea55d29efd33b87688dac245109c8c824fbe51250cb702a299dd9fbdad59"
+  "contentDigest": "9176405922a2027789a0ca9004cdf02c8cdafa789debc2d368600c0653596844"
 }
