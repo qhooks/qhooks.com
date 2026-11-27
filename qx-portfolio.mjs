@@ -761,3 +761,6 @@ async function defaultStakeLocks(owner, fetchImpl) {
 if (typeof document !== 'undefined' && document.getElementById('qp-content')) startPortfolio().catch(() => {
  const line = document.getElementById('qp-status'); if (line) line.textContent = 'Could not load wallet tools. Reload to try again.';
 });
+
+import {mountDlmmPortfolio} from './qx-sol-dlmm-panel.mjs';
+if(typeof document!=='undefined')void mountDlmmPortfolio();

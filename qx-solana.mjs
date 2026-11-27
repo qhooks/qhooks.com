@@ -106,3 +106,16 @@ export async function signSolMessage(message) {
   if(!result?.signature||result.signature.length!==64||!result.signedMessage||result.signedMessage.length!==bytes.length||result.signedMessage.some((b,i)=>b!==bytes[i]))throw new Error('The wallet did not sign the exact rewards message.');
   const chars='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';let n=0n;for(const b of result.signature)n=n*256n+BigInt(b);let encoded='';while(n){encoded=chars[Number(n%58n)]+encoded;n/=58n;}let zero=0;while(zero<result.signature.length&&result.signature[zero]===0)zero++;return '1'.repeat(zero)+encoded;
 }
+
+// Wallet Standard's variadic signing operation is its signAllTransactions path.
+// This adds no broadcast or change to the existing single-transaction trade flow.
+export async function signAllSolTransactions(base64s,{owner=solAddress()}={}){
+ const session=current;
+ if(!session||session.account.address!==owner)throw Error('The wallet changed. Review again.');
+ if(!Array.isArray(base64s)||!base64s.length||!supports(session,'solana:signTransaction'))throw Error('This wallet cannot sign a transaction batch. Choose a wallet with batch signing.');
+ let outputs;
+ try{outputs=await session.wallet.features['solana:signTransaction'].signTransaction(...base64s.map(base64=>({account:session.account,transaction:fromB64(base64),chain:'solana:mainnet'})));}catch(error){throw walletError(error);}
+ if(current!==session||solAddress()!==owner)throw Error('The wallet changed. Review again.');
+ if(!Array.isArray(outputs)||outputs.length!==base64s.length||outputs.some(o=>!(o?.signedTransaction instanceof Uint8Array)||!o.signedTransaction.length))throw Error('The wallet did not sign the complete batch.');
+ return outputs.map(o=>o.signedTransaction);
+}

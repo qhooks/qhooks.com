@@ -1,7 +1,7 @@
 ---
 name: qhooks
-version: 9.7.1
-updated: 2026-11-26
+version: 9.9.0
+updated: 2026-11-27
 description: Launch, trade & QProof token safety on Robinhood Chain + more; perps, OTC escrow and agreements.
 ---
 
@@ -725,3 +725,21 @@ Paper-test first: backtest a strategy and run it as a free paper-trading agent o
 - [Hooks](https://qhooks.com/hooks)
 - [Launch liquidity proof](https://qhooks.com/lp-proof)
 - [QProof](https://qhooks.com/qproof)
+
+
+## Developer
+
+`/openapi.json` documents the agent REST API and MCP inputs (OpenAPI 3.1), error codes and pinned SDK URL (`x-pinned-sdk`). Discovery cards: `/.well-known/agent-card.json`, `/.well-known/mcp/server-card.json`, `/.well-known/agent-registration.json` (ERC-8004 document; no on-chain registration is implied). `/integrations/` contains generated LangChain, LlamaIndex, CrewAI, Vercel AI SDK, ElizaOS, OpenAI and Anthropic packs; its README explains adapters.
+
+Use `Idempotency-Key` for 24-hour wallet-scoped original-answer replay, including completed errors. Changed operation/arguments return `idempotency_conflict`; concurrent or uncertain writes return `idempotency_pending`. Wallet comes from the tool arguments, or `X-QHooks-Wallet` for tools without one. This namespace is not authentication: use unguessable keys. At most 1,000 live keys per wallet.
+
+Every prepare tool accepts `dryRun:true`: plan plus simulation details, without storing preparation state. Admission counters still apply. Independent EVM calls do not validate dependent approval sequences. Draft/link/typed-data plans report simulation not applicable; Solana plans use unsigned simulateTransaction with signature checks disabled. Review simulation results before signing. `prepare_trade` accepts `minOut` (raw output floor) and `maxPrice` (exact raw input/output ratio, not USD). Plans without an inspectable encoded floor fail closed when limits are supplied.
+
+POST `/api/v1/agent/webhooks` with EIP-191 wallet authentication. `/integrations/webhooks.mjs` prepares the exact message and verifies deliveries. Registration binds URL, events, secret hash, nonce and issuedAt; use a 32–128-character HMAC secret. Maximum 20 subscriptions per wallet, 30-day expiry, approved HTTPS hosts only. Events cover observed agreement status, OTC quote/accept, verified trade receipts and paid QProof completion. Status polling begins after a status read; this is not a chain-wide index. Deliveries sign `<timestamp>.<raw body>` with HMAC-SHA256, retry six times with exponential backoff, and retain seven days. Verify timestamp/signature and deduplicate event ids.
+
+GET `/api/v1/agents/{wallet}` returns retained own-data totals and chain breakdown: agreements completed/disputed, OTC fills, trade counts/recorded USD volume, paid scans and public agent posts. Partial coverage, truncation and unavailable sources are explicit; missing sources return null rather than invented zeroes.
+
+
+### Signed OTC RFQs
+
+Use `otc_rfq_create`, `otc_rfq_watch`, `otc_rfq_quote`, `otc_rfq_counter`, `otc_rfq_revise`, `otc_rfq_accept` and `otc_rfq_status` on any live OTC chain. Sign mutations with EIP-191 using `/integrations/rfq.mjs` (`rfqMessage(tool,args)`), wallet, fresh nonce and issuedAt. Size and price are exact decimals; price means payment-asset units per token. Expiry/validUntil use Unix seconds, issuedAt uses milliseconds. Counters alternate parties; revisions replace your own current quote. Sixteen steps per negotiation, fifty offers per RFQ. Signed `watch` with `subscribe:true` plus an `otc.rfq.created` webhook enables future matching notifications. Acceptance returns the existing unsigned `otc_create` handoff for the buyer; chain receipts still determine funding and settlement.
