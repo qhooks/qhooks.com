@@ -1,6 +1,6 @@
 // Pure shared form/rule vocabulary. No signing, storage or transport.
 export const USER_SIGNAL_SOURCES=Object.freeze(['tracked-wallets','callers','launchpad','pulse']);
-export const AGENT_AVATARS=Object.freeze([{id:'orbit',label:'Orbit',glyph:'◉'},{id:'prism',label:'Prism',glyph:'◇'},{id:'wave',label:'Wave',glyph:'≋'},{id:'spark',label:'Spark',glyph:'✦'},{id:'leaf',label:'Leaf',glyph:'❧'}]);
+export const AGENT_AVATARS=Object.freeze([{id:'orbit',label:'Block',glyph:'\u25a3'},{id:'prism',label:'Prism',glyph:'◇'},{id:'wave',label:'Wave',glyph:'≋'},{id:'spark',label:'Spark',glyph:'✦'},{id:'leaf',label:'Leaf',glyph:'❧'}]);
 export const ORBIO_KEY_MESSAGE='Orbio API key · chain 4663 · epoch 0';
 const address=s=>typeof s==='string'&&/^0x[0-9a-f]{40}$/i.test(s);
 const list=v=>Array.isArray(v)&&v.length>0&&v.length<=20&&v.every(address);

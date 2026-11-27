@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "b3b384a3-a983-415a-8f4b-490a6d4fc510",
+  "releaseId": "0c3073e0-9d80-4e27-9823-591f85b780e7",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -53,7 +53,7 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "fd5874f5a688f349f2aebee5c21537c3e443a960916c7bd184fbcdcd0e7aa6cc",
+      "sha256": "9b2426c64d11f99a1b28075df7b04c2c43739af36b8caa65c6f5e1752118651a",
       "bytes": 14664
     },
     "_redirects": {
@@ -84237,7 +84237,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "ba8735998e0e03ec417b18096caef06c827d7c34a64f059b84f45838b40d8363",
+      "sha256": "a8d3dc88306890a02dd12782c372ba5563becf1b40927346f7f76370f0df50d0",
       "bytes": 2543
     },
     "hook-marketplace.html": {
@@ -85692,6 +85692,10 @@
       "sha256": "dbd5937063cf38723292993f9560f1190460270c475055ad3d18a092dd81b6cc",
       "bytes": 570000
     },
+    "new/app.f3bb844fae.css": {
+      "sha256": "f3bb844faeb52e9aac928331c307860ce298267254b0f86dd99652f0b71f4192",
+      "bytes": 87525
+    },
     "new/brand/archivo.woff2": {
       "sha256": "4c98b9d490d1698ec95f2ff17a6c7d0e72691864c0c5d7bc2a2c161b45afe5ad",
       "bytes": 90096
@@ -85761,7 +85765,7 @@
       "bytes": 7977
     },
     "new/index.html": {
-      "sha256": "9d6f0c3efa489a9e8c2363f419be1df5298b1e5c1251546c9b4259b4efc71406",
+      "sha256": "53c14310d01f3e0871fd378fe63bbbbbfdd4901615d167912c19fa202904ee85",
       "bytes": 1238
     },
     "new/js/orbio-chip.js": {
@@ -85815,6 +85819,10 @@
     "new/js/token-tabs.js": {
       "sha256": "c5edcf5d4627cf936cc58928d5277813a9da139429e3a3dd1c4cf3cf88840c02",
       "bytes": 2173
+    },
+    "new/main.160dea31cf.js": {
+      "sha256": "aa22f5ed72f8c46914c6bd026a3237bcc3ff022f032b8a002958553f11452b5b",
+      "bytes": 49837
     },
     "new/main.1e5d54f68f.js": {
       "sha256": "a033b540312166ab99875f96b811f6822d6b0236319512337449494414363d43",
@@ -95485,8 +95493,8 @@
       "bytes": 2674
     },
     "qx-token-agent-model.mjs": {
-      "sha256": "08e9aa963449d0c73e224d14e448f9fdcde5f29deb63654f858a9bb2e7fa6235",
-      "bytes": 3999
+      "sha256": "ea6034115c9acbca1b456f19f4490e7e3a0abadcdd9ce68f8f5d3ff114450030",
+      "bytes": 4002
     },
     "qx-token-agent-view.mjs": {
       "sha256": "1217278160814c8ebc3fb1bf6d15a962d6baccdbb98f03eb20b155173a411259",
@@ -96501,5 +96509,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "3d24702da5c7a607eddfbebc15e81f34a18c13c4fc00683f2212420856ec18e8"
+  "contentDigest": "b8d6d006f54b145cd4fbd603ed5b1bc5356e22606cfa2c90a55f88bdcdca279a"
 }
