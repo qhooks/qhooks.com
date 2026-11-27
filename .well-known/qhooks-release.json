@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "d57783ae-6d13-4b17-811b-6805bd01df30",
+  "releaseId": "f62fcfac-f455-4813-a4ac-e0419639de45",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -53,7 +53,7 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "c9bfe7700c940ed94adb0266ab4204e8ca0a1ab51ce3dbd7b621d5a5534a5eba",
+      "sha256": "d20cb75faa09cfde2dacde104b04613f142f1b8a2be26912ccc6c86085e2518d",
       "bytes": 14664
     },
     "_redirects": {
@@ -84241,7 +84241,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "5abd90747f6f4826dc89bb31ac82cdb816fae6070408d17b2178e72e5778facc",
+      "sha256": "27cbf7163782be0b211f71afb01b6b03e77f82536fe3f338baccb142638f9fbf",
       "bytes": 2543
     },
     "hook-marketplace.html": {
@@ -85624,10 +85624,6 @@
       "sha256": "75d62ffef8c8f81b274084ac71b5ca227b3269bfdbeb61baea25e13023a19442",
       "bytes": 599760
     },
-    "new/app.261f2c80c7.css": {
-      "sha256": "261f2c80c7c77d9af5dbabf88a9a4481736016e46787bde7d1b9b35a99adcd90",
-      "bytes": 88381
-    },
     "new/app.28e7d99540.css": {
       "sha256": "28e7d995409e2157968f7226e473d398741d733543b8940b1d46aa9dc32df25e",
       "bytes": 88043
@@ -85671,10 +85667,6 @@
     "new/app.7ee36d129d.css": {
       "sha256": "7ee36d129d96d29f899de815eb43894ee3527483004fddbb026d7cdd7165afc7",
       "bytes": 79752
-    },
-    "new/app.8186ea1f90.js": {
-      "sha256": "e971001ad334c8faa9693f86166d401d259e6549b2fc62e9d563603edbae8a8f",
-      "bytes": 608023
     },
     "new/app.9a843a773e.js": {
       "sha256": "deaaaff42d4ddd6d5406622c57625cbf58b5a3e75b4b82ef0b84cf7f14cc8842",
@@ -85789,7 +85781,7 @@
       "bytes": 7977
     },
     "new/index.html": {
-      "sha256": "a81f74cf571cd4e1c87756cf122887a946ba91144a312cc9c08e96e575c9337e",
+      "sha256": "f7ec3a36e02e455514b1026f24b888c2edd901bbd546ce68ce4ada7c4f351ce7",
       "bytes": 1238
     },
     "new/js/orbio-chip.js": {
@@ -96553,5 +96545,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "f2ea2f0029dbdd2e4a7f02ac9e7a849f1f4acb4aec1719d82932db86406f52fc"
+  "contentDigest": "c777c2e91c285e195ddffb986a89d74b64bdf93666292d4c8b76cc927e226c87"
 }
