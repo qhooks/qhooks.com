@@ -537,7 +537,7 @@ Paid fresh QProof scan ($0.25) through x402: `{chain, token, payment?, paymentVe
 
 ### wallet_portfolio
 
-Reuse a portfolio snapshot. A cold cache fills from bounded public/index reads, without paid providers. Recent receipt hints are partial; cost and PnL stay qualified.
+The same report the QHooks Portfolio page shows for one address: holdings, values, `totals` and `partial`, from the same cache. A cold or stale wallet refreshes exactly as a Portfolio page visit would. `coverage` counts priced and unpriced holdings the way the page does; cost and PnL stay qualified.
 
 ### hooks_catalog
 
@@ -635,7 +635,7 @@ console.log(await rpc('qproof_check', {chain:'4663',token:'0x20429af7ca3b0ce4d99
 console.log(await rpc('wallet_portfolio', {address:wallet()}));
 ```
 
-`wallet_portfolio` reads one supplied address, never an inferred EVM/Solana or linked-wallet union. It fills a cold cache from public/index reads (up to 8 recent token hints per EVM chain). Warm reports are reused. Preserve `partial`, chain errors, cache time and cost qualifications. Missing cost is unknown, never zero cost or proven profit.
+`wallet_portfolio` reads one supplied address, never an inferred EVM/Solana or linked-wallet union. It returns the Portfolio page's own report, so its total matches the site. Warm reports are reused. Preserve `partial`, `coverage.unpriced`, chain errors, cache time and cost qualifications; an unpriced holding has `valueUsd: null` and is not in `totals`. Missing cost is unknown, never zero cost or proven profit.
 
 `prepare_launch` defaults to Robinhood Chain and style `fair`. Use the site's current one-tap cards for supported styles. Solana uses its own launch flow. Example:
 

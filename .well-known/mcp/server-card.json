@@ -1498,7 +1498,7 @@
     },
     {
       "name": "wallet_portfolio",
-      "description": "Read the same cached portfolio report used by QHooks. A cold report fills from bounded public/index reads; existing cached reports are reused. Never refreshes paid providers. Cost and PnL remain qualified data from the report.",
+      "description": "Read the same portfolio report the QHooks Portfolio page shows for one address: same holdings, values, totals and partial flags, from the same cache. A warm report is reused; a cold or stale one refreshes exactly as a Portfolio page visit would. coverage counts priced and unpriced holdings. Cost and PnL remain qualified data from the report.",
       "inputSchema": {
         "type": "object",
         "properties": {

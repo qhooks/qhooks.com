@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "9fd8c039-0b13-41b8-8c5a-68795dc20fe3",
+  "releaseId": "c61d0ea2-4c96-4394-be48-6038897d0bb7",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -17,8 +17,8 @@
   ],
   "files": {
     ".well-known/agent-card.json": {
-      "sha256": "fe06bc4882fee47316684891abdfc005337b6f58548ce245e27d937362a8a1dc",
-      "bytes": 84206
+      "sha256": "3ed583c414cd2464df068e76804818b9cbf7cc9f9b4d28938a304b03fbc40a03",
+      "bytes": 84323
     },
     ".well-known/agent-registration.json": {
       "sha256": "c7773277a7c5c875da175f6593d0562e5dc62f30303780a013bbd9846bac451f",
@@ -33,12 +33,12 @@
       "bytes": 32
     },
     ".well-known/mcp/server-card.json": {
-      "sha256": "fe649ed66df82efc2c28220eff79b9cbeb0b60a906c3a163c6d5660489ab2821",
-      "bytes": 84074
+      "sha256": "a742eb7ce0d2ee266c2eb16fd9ef4fe7dbbc7d3bac76e3f5d7beaec31797a329",
+      "bytes": 84191
     },
     ".well-known/qhooks-agent.json": {
-      "sha256": "840abc3f4cc03e8c6e7172f441ab49eb9a589f3610d33f029d285810c9aa62db",
-      "bytes": 68124
+      "sha256": "22e961bac09a419ab09b180e2d026160c9f367bf4943be2e48183d5cbe923cc0",
+      "bytes": 68241
     },
     ".well-known/security.txt": {
       "sha256": "0fcdac7aa41275acb935293d51659db568edb1eb32c0e4185b610c01d3b87e77",
@@ -88057,8 +88057,8 @@
       "bytes": 1586
     },
     "integrations/anthropic-tools.json": {
-      "sha256": "f562b7a270969d49d8141776e7f3ba9bb645293b0c8abfe34cd4d0069bfb250b",
-      "bytes": 77580
+      "sha256": "2b88f1ed16dea3497dc5594a95c328cd1a2c8698a59f50fdb1e06200219f06b9",
+      "bytes": 77697
     },
     "integrations/crewai.py": {
       "sha256": "99f2254763423683638828079ed9a71307a64a212bb1e6c76ace67496640d72c",
@@ -88077,24 +88077,24 @@
       "bytes": 431
     },
     "integrations/openai-tools.json": {
-      "sha256": "5ac31fb70ffa75d81c19b0e9e6e163e2e17829a5f8f7cb0b07f291f483e49fb2",
-      "bytes": 85484
+      "sha256": "b093ce1fbd0471e9e59e6d524a7571b565bb4a58de2595ed00fe9ad7e5b4f038",
+      "bytes": 85601
     },
     "integrations/qhooks_runtime.py": {
-      "sha256": "c53cc60bcad1aab2e811ef203ca9b4d70872b6802b37299cc46548a0779e6b21",
-      "bytes": 55510
+      "sha256": "a85bbc37fc9df8e6ee32ce608558272e7514516b02771b577fff507790a68c92",
+      "bytes": 55627
     },
     "integrations/rfq.mjs": {
       "sha256": "169c7a4a4994dfd97378ed5f8f209fa61dd9adafdb21d0ae9015dcd9882cb097",
       "bytes": 911
     },
     "integrations/runtime.mjs": {
-      "sha256": "264fc454da1f63efb413f9955f0a59821c11534af64103389049d8541de3169d",
-      "bytes": 49976
+      "sha256": "579e7c074503b8b42d40b9977fa6f9e1d7aa06b1bf7e4714a422b2f9710a40dd",
+      "bytes": 50093
     },
     "integrations/tools.json": {
-      "sha256": "4324506bfe39d43b56758f5df6bdc87bd76502bb35d28944c7dfb8b67c9286a5",
-      "bytes": 78361
+      "sha256": "55a37e95df824be52d11dd23096dfc767093c3ea26905995ee4c25f349833630",
+      "bytes": 78478
     },
     "integrations/vercel-ai.mjs": {
       "sha256": "90f53bbb133a7c81b58c7390adfd507a6f0b66006ea1f62bd4d98e3fed726bba",
@@ -89697,8 +89697,8 @@
       "bytes": 898001
     },
     "openapi.json": {
-      "sha256": "8e2a1511d245fe57d25fa194cecd0ce40ec5d519492752dadf66a6c06c0cf1b8",
-      "bytes": 334628
+      "sha256": "0102fa198a4265630f428503ced3ad4e7899d13148a1c2d71679229299a3f5d9",
+      "bytes": 334862
     },
     "orders.html": {
       "sha256": "b8fb0c2037fd28618c4414ca0b360c29cc5c66f19dc98d0f4e5c86e0bda93e07",
@@ -99805,8 +99805,8 @@
       "bytes": 1519
     },
     "skill.md": {
-      "sha256": "ab07ad572d9f2ebb8b24820acc5b4df04cc06069914865a32380e18a8b58f4fd",
-      "bytes": 61667
+      "sha256": "b641c10ca6affdd1bd1758205ed17001670ca6de650e783df42d5191357eca58",
+      "bytes": 61872
     },
     "sol-launch-setup.html": {
       "sha256": "fef20e8143353a57f391a89a1f34337897b2ab7326a694ee0834da8f1effce6e",
@@ -100345,5 +100345,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "b0f854418f1d8715c77bf17c1ea85283cba3c29ce5e1aeaa121a6f48faf08926"
+  "contentDigest": "3bde0c7807555ae9d9a62db3c7a60ded48ec8aca3be7c3d91857d884494b63a0"
 }
