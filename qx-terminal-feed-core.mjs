@@ -13,6 +13,7 @@ import { chainById } from './chains.mjs';
 import { DIRECT_CHAINS } from './qx-elysium-direct.mjs';
 import {safetyChecked,plainMarketError} from './qx-terminal-data.mjs';
 import {officialLogo} from './qx-official.mjs';
+import {isTestLaunch} from './qx-test-tag.mjs';
 import {discoveryCandidate,rankDiscovery,orderByTrendingScore} from './qx-discovery-rank.mjs';
 import {activeBoost,dexPaid} from './qx-discovery-rows.mjs';
 import {rowsSignature} from './qx-feed-live.mjs';
@@ -97,8 +98,28 @@ export function safetyLabel(safety) {
 export const externalQuick=(chainId,address,quick={})=>quickBuyPlan({chainId,token:address,kind:'external'},quick);
 export const launchQuick=(market,quick={})=>quickBuyPlan({chainId:market.chainId,token:market.token,kind:'launch'},quick);
 
+// A test launch (2026-11-28, LAUNCHLIST): the reviewed list Portfolio's "Hide tests" uses (qx-test-tag isTestLaunch,
+// by token or controller), or a launch named or tickered TEST / Test 2 / test-token. Display filter only.
+const TEST_NAME = /^\$?test(?:[\s_-]*(?:token|coin|launch))?(?:[\s_-]*\d+)?$/i;
+export function isTestLaunchRow(row) {
+  const L = row?.launch || {}, chainId = String(row?.chainId ?? L.chainId ?? '');
+  if (isTestLaunch({chainId, token: L.token || row?.token?.address, controller: L.controller || row?.pool})) return true;
+  return [row?.token?.symbol, row?.token?.name, L.symbol, L.name].some(v => typeof v === 'string' && TEST_NAME.test(v.trim()));
+}
+const positiveNumber = v => { const n = typeof v === 'string' && v.trim() ? Number(v) : v; return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : null; };
+// Market cap for a launch row (LAUNCHLIST): the summary's own cap, else the token page's FDV-based cap, price × supply.
+// Both come from the summary price, so without a separate cap clock the cap carries that price's clock and expires with it.
+function launchCap(market, s, priceAt) {
+  const supply = positiveNumber(s.supply ?? market.supply), price = positiveNumber(s.priceUsd);
+  const derived = price && supply && supply < 1e15 ? price * supply : null;
+  const cap = positiveNumber(s.mcapUsd) ?? derived;
+  const explicitAt = Object.hasOwn(s, 'capAt') || Object.hasOwn(market, 'capAt');
+  return {cap, fdv: positiveNumber(s.fdvUsd) ?? derived, capAt: !explicitAt && cap && priceAt ? priceAt : undefined};
+}
+
 export function launchRow(market) {
   const s = market.summary || {};
+  const priceAt = s.priceAt ?? market.priceAt ?? market.observedAt ?? (s.lastTradeAt ? s.lastTradeAt * 1000 : null), cap = launchCap(market, s, priceAt);
   return {
     chainId: String(market.chainId), pool: market.controller, dex: 'QHooks', launch: market,
     token: { address: market.token, symbol: market.symbol, name: market.name, profileImage:market.profileImage,launchImage:market.launchImage,logo: tokenAvatar(market).src || officialLogo(market.chainId, market.token) },
@@ -107,12 +128,12 @@ export function launchRow(market) {
     // Explicit unknown beats a fallback; index checks and price clocks are not
     // capitalization observations.
     ...(Object.hasOwn(s,'observedAt')?{observedAt:s.observedAt}:Object.hasOwn(market,'observedAt')?{observedAt:market.observedAt}:{}),
-    ...(Object.hasOwn(s,'capAt')?{capAt:s.capAt}:Object.hasOwn(market,'capAt')?{capAt:market.capAt}:{}),
+    ...(Object.hasOwn(s,'capAt')?{capAt:s.capAt}:Object.hasOwn(market,'capAt')?{capAt:market.capAt}:cap.capAt?{capAt:cap.capAt}:{}),
     ...(Object.hasOwn(s,'stale')?{stale:s.stale}:Object.hasOwn(market,'stale')?{stale:market.stale}:{}),
     ...(Object.hasOwn(s,'refreshFailed')?{refreshFailed:s.refreshFailed}:Object.hasOwn(market,'refreshFailed')?{refreshFailed:market.refreshFailed}:{}),
     ...(Object.hasOwn(s,'capsRefreshing')?{capsRefreshing:s.capsRefreshing}:Object.hasOwn(market,'capsRefreshing')?{capsRefreshing:market.capsRefreshing}:{}),
-    priceUsd: s.priceUsd ?? null,priceAt:s.priceAt??market.priceAt??market.observedAt??(s.lastTradeAt?s.lastTradeAt*1000:null),priceSource:s.priceSource,pricePoolId:s.pricePoolId,priceSourceVersion:s.priceSourceVersion,pricesRefreshing:Object.hasOwn(s,'pricesRefreshing')?s.pricesRefreshing:market.pricesRefreshing, volumeUsd: { h24: s.volume24Usd ?? null }, liquidityUsd: s.liquidityUsd ?? null,
-    marketCapUsd: s.mcapUsd ?? null, fdvUsd: s.fdvUsd ?? null,
+    priceUsd: s.priceUsd ?? null,priceAt,priceSource:s.priceSource,pricePoolId:s.pricePoolId,priceSourceVersion:s.priceSourceVersion,pricesRefreshing:Object.hasOwn(s,'pricesRefreshing')?s.pricesRefreshing:market.pricesRefreshing, volumeUsd: { h24: s.volume24Usd ?? null }, liquidityUsd: s.liquidityUsd ?? null,
+    marketCapUsd: cap.cap, fdvUsd: cap.fdv,
     quoteAmounts: { price: s.price, volume: s.volume24, liquidity: s.liquidity, mcap: s.mcap, unit: market.quoteSymbol },
     change: { m5: null, h1: null, h6: null, h24: s.change24 ?? null },
     txns: { h24: { buys: s.buys24 ?? null, sells: s.sells24 ?? null } }, makers: { h24: null }, safety: null,
@@ -167,7 +188,7 @@ export function rowViewModel(row, { now = Date.now(), quick = {}, window = 'h24'
     letter: symbol.replace(/^\$/, '').slice(0, 1).toUpperCase() || '?', age: age(row.createdAt, now),
     price: displayMoney('price', true), m5: percent(numeric.m5), h1: percent(numeric.h1), h6: percent(numeric.h6), h24: percent(numeric.h24),
     holders:compact(numeric.holders),volume: displayMoney('volume'), liquidity: displayMoney('liquidity'), mcap: capValue,
-    capKind,capCaption:capValue===DASH?'syncing':capKind,
+    capKind,capCaption:capValue===DASH?'':capKind, // no endless 'syncing' (LAUNCHLIST): the dash says unknown
     buys: compact(buys), sells: compact(sells), makers: compact(numeric.makers), numeric,
     // Boosted only while a boost is active (pair boosts.active, or matched to the current boost lists under 24 h ago);
     // a paid profile is labelled "DEX paid" instead. Neither adds rank (qx-discovery-rows.mjs).

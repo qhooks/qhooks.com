@@ -14,7 +14,7 @@ export function feedRowPriceView(vm,{now=Date.now(),refreshing=false}={}){
  const available=!!(usd||native),clock=usd?usdState:native?quoteState:usdState,value=usd?row.priceUsd:native?quote.price:null,unit=usd?'USD':native?quote.unit:null;
  const liveness=discoveryLiveness(source,{now,failed:!available||!!refreshing||!!row.pricesRefreshing||clock.refreshing||clock.at>now});
  const delayed=!liveness.live;
- const status=available?liveness.label:'Price syncing';
+ const status=available?liveness.label:''; // LAUNCHLIST: no endless 'Price syncing'; the price cell's dash says unknown
  // An original cap observation has its own expiry. An expired price does not
  // erase it, and a foreign QHOOKS price source cannot supply it.
  const capRow=priceState(observed.capAt,now).usable&&(!isQhooksPriceAsset(chainId,token)||canonical)?observed:row,capQuote=capRow.quoteAmounts;

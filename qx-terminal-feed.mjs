@@ -36,7 +36,7 @@ import {applyColumnVisibility,newPairsOnly,paintFirstTradePending,paintPromotion
 globalThis.__qxTokenQuery = globalThis.__qxTokenQuery || applyTokenQuery();
 import {
   CHAINS, TABS, SORT_KEYS, DASH, rowViewModel, sortRows, launchRow, searchRow,
-  preferences, savePreference, hasTokenHash, createFeedLoader, age,
+  preferences, savePreference, hasTokenHash, createFeedLoader, age, isTestLaunchRow,
 } from './qx-terminal-feed-core.mjs';
 
 const el = (tag, attrs = {}, ...children) => {
@@ -152,6 +152,10 @@ const widen=button('Widen filters',{class:'qxfd-widen'});widen.addEventListener(
 // Hidden-by-filters line: Show all pauses this view's filters in memory only; saved filters stay.
 let filterBypass=null,hiddenCount=0;const hiddenText=el('span'),showAll=button('Show all',{class:'qxfd-show-all'}),hiddenLine=el('p',{class:'qxfd-hidden-line',hidden:''},hiddenText,showAll);
 showAll.addEventListener('click',()=>{filterBypass=filterBypass===bypassKey(state)?null:bypassKey(state);renderRows();refresh();});
+// LAUNCHLIST (2026-11-28): test launches are hidden on the QHooks launches tab by default, as Portfolio's "Hide tests" does;
+// "Show tests" brings them back for this visit. Display only: the index rows are untouched.
+let showTests=false,testCount=0;const testsText=el('span'),testsToggle=button('Show tests',{class:'qxfd-show-all','aria-pressed':'false'}),testsLine=el('p',{class:'qxfd-hidden-line qxfd-tests-line',hidden:''},testsText,testsToggle);
+testsToggle.addEventListener('click',()=>{showTests=!showTests;renderRows();});
 resetFilters.addEventListener('click',()=>{state.filters=validateDiscoveryFilters();persistFilters();paintFilterFields();filterMessage.textContent='Filters cleared.';renderRows();refresh();});
 saveView.addEventListener('click',()=>{try{state.filters=captureFilters();persistFilters();savedViews.save({name:viewName.value,chain:state.chain,tab:state.tab,window:state.window,filters:state.filters,layout:state.layout,stage:pulse.stage()});renderViews();viewSelect.value=viewName.value.trim();filterMessage.textContent='View saved on this device.';renderRows();refresh();}catch(error){filterMessage.textContent=error.message;}});
 removeView.addEventListener('click',()=>{try{if(!viewSelect.value)return;savedViews.remove(viewSelect.value);renderViews();filterMessage.textContent='View deleted.';}catch(error){filterMessage.textContent=error.message;}});
@@ -307,6 +311,7 @@ function visibleRows() {
   const quickByChain=new Map(),quickFor=id=>{if(!quickByChain.has(id))quickByChain.set(id,api?.quickForChain?.(id)||api?.state.quick||{});return quickByChain.get(id);};
   const seenLaunch = new Set(), launches = launchMarkets().filter(m => m.live && !seenLaunch.has(m.chainId + ':' + m.controller) && seenLaunch.add(m.chainId + ':' + m.controller)).map(launchRow).map(r => { const p = livePatches.get(launchKey(r)); return p && Date.now() - p.observedAt < 120000 && r.priceUsd == null ? applyRowPatch(r, p) : r; });
   let rows = state.tab === 'launches' ? launches : state.data?.rows || [];
+  if(state.tab==='launches'){const real=rows.filter(r=>!isTestLaunchRow(r));testCount=rows.length-real.length;if(!showTests)rows=real;}else testCount=0;
   const q = state.query.toLowerCase();
   // The tab's own filter (Gainers needs a positive move in the chosen window, etc.) applies to the list, never to search
   // hits: a hit carries only a 24 h change, so on Gainers 6h every pasted contract read "No tokens match" (2026-11-10).
@@ -437,13 +442,13 @@ function updateRow(node, vm, {refreshing=!!(state.loading||state.data?.stale||st
     node.cells[key].classList.toggle('down', vm.numeric[key] < 0);
   }
   setA(node.cells.move,'data-label',(WINDOWS.find(([k])=>k===state.window)?.[1]||'24h')+' change');setA(node.cells.move,'data-window',WINDOWS.find(([k])=>k===state.window)?.[1]||'24h');
-  const capUnit=priceView.capUnit&&priceView.capUnit!=='USD'?priceView.capUnit:null;const capNumber=capUnit&&priceView.cap.endsWith(' '+capUnit)?priceView.cap.slice(0,-capUnit.length-1):priceView.cap;text(node.capNumber,capNumber);text(node.capUnit,capUnit?' '+capUnit:'');text(node.capKind,priceView.cap===DASH?'syncing':priceView.capKind==='FDV'?'FDV':'');
+  const capUnit=priceView.capUnit&&priceView.capUnit!=='USD'?priceView.capUnit:null;const capNumber=capUnit&&priceView.cap.endsWith(' '+capUnit)?priceView.cap.slice(0,-capUnit.length-1):priceView.cap;text(node.capNumber,capNumber);text(node.capUnit,capUnit?' '+capUnit:'');text(node.capKind,priceView.cap===DASH?'':priceView.capKind==='FDV'?'FDV':'');
   setA(node.cells.mcap,'data-label',priceView.capKind);setD(node.cells.mcap,'unit',priceView.capUnit||'');remA(node.cells.mcap,'data-refreshing');setD(node.cells.mcap,'capState',priceView.cap===DASH?'syncing':'known');
   // Bind only after insertion. The source getter never substitutes an arrival,
   // cache or canonical-price clock for the original row/cap observation.
   node.discoveryRefreshing=refreshing;node.discoveryPriceAvailable=priceView.available;node.discoveryPriceAt=priceView.at;node.discoveryCapAvailable=priceView.cap!==DASH;
   const hidden=()=>root.hidden||!!node.tr.closest('[hidden]');
-  const stopPrice=livenessView.bind(node.priceStatus,{get:()=>({row:node.vm.row,failed:hidden()||node.discoveryRefreshing||!node.discoveryPriceAvailable||priceState(node.discoveryPriceAt).refreshing||node.discoveryPriceAt>Date.now()}),paint:(label,live)=>{text(label,node.discoveryPriceAvailable?live.label:'Price syncing');setD(node.cells.price,'refreshing',String(live.refreshing));}});
+  const stopPrice=livenessView.bind(node.priceStatus,{get:()=>({row:node.vm.row,failed:hidden()||node.discoveryRefreshing||!node.discoveryPriceAvailable||priceState(node.discoveryPriceAt).refreshing||node.discoveryPriceAt>Date.now()}),paint:(label,live)=>{text(label,node.discoveryPriceAvailable?live.label:'');setD(node.cells.price,'refreshing',String(live.refreshing));}});
   const stopCap=livenessView.bind(node.cells.mcap,{get:()=>{const row=node.vm.row;return {row:{observedAt:Object.hasOwn(row,'capAt')?row.capAt:row.observedAt,stale:row.stale},failed:hidden()||node.discoveryRefreshing||!node.discoveryCapAvailable||!!row.capsRefreshing};},paint:(cell,live)=>{setA(cell,'title',live.label);},fallback:(cell,live)=>{setA(cell,'title',live.label);}});
   node.unbindLiveness=()=>{stopPrice();stopCap();};
   text(node.buys, vm.buys); text(node.sells, vm.sells);
@@ -571,6 +576,7 @@ function renderRows() {
   livenessView.bind(status,{get:()=>{const input=feedFeedbackSource(state);return {...input,row:state.wallet||pulseMode()||state.tab==='launches'||state.query||!state.data?.rows?.length?null:input.row};},paint:(label,live)=>{if(state.wallet||pulseMode())return;const view=feedFeedbackStatus(state,live);label.setAttribute('aria-live',live.live?'off':'polite');text(label,view.label);label.dataset.delayed=String(view.delayed);}});
   // Never a dead-empty filter result: offer to widen (clears the filters and reloads the whole list).
   const paused=!!activeFilters&&filterBypass===bypassKey(state);hiddenLine.hidden=!!state.query||!paused&&!(activeFilters&&hiddenCount>0);text(hiddenText,paused?'Filters paused · ':hiddenCount+' hidden by your filters · ');text(showAll,paused?'Use my filters':'Show all');if(hiddenLine.parentNode!==panel||hiddenLine.nextSibling!==scroll)panel.insertBefore(hiddenLine,scroll);
+  testsLine.hidden=!!state.query||state.tab!=='launches'||!testCount;text(testsText,showTests?testCount+' test launch'+(testCount===1?'':'es')+' shown · ':testCount+' test launch'+(testCount===1?'':'es')+' hidden · ');text(testsToggle,showTests?'Hide tests':'Show tests');testsToggle.setAttribute('aria-pressed',String(showTests));if(testsLine.parentNode!==panel||testsLine.nextSibling!==hiddenLine)panel.insertBefore(testsLine,hiddenLine);
   if (!rows.length && activeFilters && hiddenLine.hidden && !state.query && !initialLoading && !state.loading) { empty.hidden = false; empty.append(widen); }else widen.remove();
   nextSteps.update({count:rows.length,loading:initialLoading||state.searching,failed:!!(state.error||state.searchError),filtered:!!activeFilters||!!state.query,kind:state.tab==='launches'?'launches':'feed',compact:!rows.length});
   if(!nextSteps.element.hidden){if(rows.length){if(scroll.lastChild!==nextSteps.element)scroll.append(nextSteps.element);}else{empty.append(nextSteps.element);empty.hidden=false;scroll.hidden=true;}}
