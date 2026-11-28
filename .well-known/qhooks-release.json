@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "2350ec2f-2c27-41c9-9dcc-cde8f6c3b288",
+  "releaseId": "554b6247-6bcf-4da1-b1ac-1b77722d5360",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -53,8 +53,8 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "b513e8df8c543aeb84cb6053004f02a00a44e6328052c0316f0b96ac46b2916d",
-      "bytes": 20758
+      "sha256": "3a6d92d7b9d325e950c597f40a47f1c3fb52e46759c0d553dff17f0d0273d703",
+      "bytes": 21164
     },
     "_redirects": {
       "sha256": "b0064a6e748cb4421e4ff024a6219ff6600077feec61978bcd07fb0bd7a87010",
@@ -88865,7 +88865,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "786ef1d0557aab3fa9d840bc95cd2754aa877c538ec89cd2da39fb969d294a91",
+      "sha256": "15f3a1ea175616db644b27ba70aaf12fbff42faeaed3bef66e29b1dd3147da9c",
       "bytes": 2607
     },
     "hook-marketplace.html": {
@@ -90272,6 +90272,10 @@
       "sha256": "43a5acb5dd52d204a313dffc3ede4ae02bd95fe388add96850623c605821045f",
       "bytes": 575485
     },
+    "new/app.4781b41990.js": {
+      "sha256": "cc29cf24a0975da2ecbe4a44e0d429a2947554662e99c05b003cd402303bf990",
+      "bytes": 668869
+    },
     "new/app.4b4a96c2ed.js": {
       "sha256": "1b8aa17c482e66ed0bf06e9af19af8fe81968353fa75a5f077535f093aee71e6",
       "bytes": 607060
@@ -90477,7 +90481,7 @@
       "bytes": 7977
     },
     "new/index.html": {
-      "sha256": "34484f02db197cb2573c195c20990343dfcbd15fde1419f9ba7a84e9fb3767ab",
+      "sha256": "0c654bb97561b07d1a2518296176a06db3785d793d060e3f2cd2d630292a9096",
       "bytes": 1302
     },
     "new/js/orbio-chip.js": {
@@ -101265,5 +101269,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "bd065ef91c903ee79c667a0820b5bef3d61307e4c05d95881ed34fb71f73b74f"
+  "contentDigest": "32735bca7980a6f773aca7e0c8999cbc5d9f52f5a884f0b7bdcfbdac7d8e68f7"
 }
