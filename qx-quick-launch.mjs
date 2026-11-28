@@ -433,7 +433,8 @@ function renderQuick(){
  const total=document.getElementById('cr5-total');if(total)total.textContent=displayCost?(cost.live?'Wallet estimate · ':'Planning estimate · ')+ethText(BigInt(cost.totalWei)+(isRangeKit()&&cost.gasPriceWei?BigInt(RANGE_GAS.make+(pqOnChain()&&pqKeyHex()?RANGE_GAS.pointPq:RANGE_GAS.point))*BigInt(cost.gasPriceWei):0n))+' '+c.native:feeView.phase==='reading'?'Reading fees…':'Fees unavailable · retry below';
  const defaults=document.getElementById('cr5-defaults');if(defaults){
   defaults.replaceChildren(document.createTextNode(pick.name+' · '));
-  const label=el('span',{},startSteps?'Custom start':'Standard start');
+  // launchfix 2026-11-27: name the picked tier ($20K / $50K start); only the slider/custom tier says Custom start.
+  const label=el('span',{},startSteps?(startTier!=='custom'&&START_TIERS.find(x=>x[0]===startTier)?.[1])||'Custom start':'Standard start');
   // Only the authored Standard start label is a definition target. The custom
   // tier’s displayed estimate is not an exact factory read for that tier.
   if(!startSteps){label.dataset.glossaryTerm='standard-start';label.dataset.glossaryOwned='';}
@@ -617,7 +618,11 @@ async function generateBanner(file,imageRev){
 }
 function mount(){
  if(!$('ideas'))return;
- const savedIdentity=identityDraft.get(),prefill=readLaunchPrefill(location),entry=quickLaunchEntry({chain:urlChain()||savedIdentity?.chain,style:prefill?.style,start:URL_TIER,hash:location.hash});
+ // launchfix 2026-11-27: a ?rules=<style> link is for the guided form. The Quick card keeps its own plain defaults
+ // (Plain token, one pool, no post-quantum key) instead of switching to Fair with a split pool and a key.
+ const rulesLink=/^[a-z-]{1,40}$/.test(new URLSearchParams(location.search).get('rules')||'')&&!/^#quick-/.test(location.hash||'');
+ const savedIdentity=identityDraft.get(),prefill=readLaunchPrefill(location);if(rulesLink&&prefill)prefill.style=QUICK_LAUNCH_DEFAULTS.cardId;
+ const entry=quickLaunchEntry({chain:urlChain()||savedIdentity?.chain,style:rulesLink?undefined:prefill?.style,start:URL_TIER,hash:location.hash});
  simpleDefault=entry.simple;pqOptOut=simpleDefault;quickChain=entry.chain;
  const draftNotice=el('p',{id:'qq-draft-notice',class:'qxc-message',role:'status',hidden:true});$('image-status').after(draftNotice);
  if(savedIdentity)restoreDraft(savedIdentity);else if(entry.chain==='solana'){try{const old=JSON.parse(localStorage.getItem('qhooks:sol-launch:draft')||'null'),profile=editableTokenProfileDraft('solana');restoreDraft({name:old?.name||'',symbol:old?.symbol||'',...profile,banner:'',bannerData:profile.banner,bannerSource:profile.banner?'custom':'',x:profile.links?.x,telegram:profile.links?.telegram,website:profile.links?.website});}catch{}}
@@ -644,7 +649,7 @@ function mount(){
   if(prefill.chain&&ideaCards(prefill.chain).length){quickChain=prefill.chain;renderIdeas();}
   if(prefill.name!==undefined)$('name').value=prefill.name;
   if(prefill.ticker!==undefined)$('symbol').value=prefill.ticker;
-  openQuick(prefill.style,{scroll:true});checkTickerSoon();costSoon();
+  openQuick(prefill.style,{scroll:!rulesLink});checkTickerSoon();costSoon();
  }else{openQuick(entry.card);if(!simpleDefault&&chainId!=='solana'){const custom=document.getElementById('cr5-customize');if(custom)custom.open=true;}}
  ideaLink();
  if(!pick&&chainId!=='solana')chainPresentation('unavailable');

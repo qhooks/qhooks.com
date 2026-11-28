@@ -334,3 +334,28 @@ html:has(.cr-go) { scroll-padding-bottom: calc(var(--cx-dock-bottom, 0px) + 96px
 
 /* kitpick: the whole idea card picks it */
 .cr .qq-card { cursor: pointer; }
+
+/* launchfix 2026-11-27: the review banner fits its card (3:1, cropped) and never runs under the cost panel or off-screen. */
+.cr .qxc-review-grid > * { min-width: 0; }
+.cr #qc-screen-3 img { max-width: 100%; }
+.cr .qxc-review-banner { display: block; width: 100%; max-width: 100%; height: auto; aspect-ratio: 3 / 1; object-fit: cover; border-radius: 12px; margin-bottom: 14px; }
+
+/* launchfix 2026-11-27: ?rules= links fold the Quick card (no tax) and its kit picker behind one row. */
+.cr .cr-rules-quick { display: none; }
+.cr.cr-rules-link .cr-rules-quick { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; box-shadow: 0 1px 0 var(--qa-rule-row), 0 -1px 0 var(--qa-rule-row); }
+.cr .cr-rules-quick > span { display: grid; gap: 2px; min-width: 0; }
+.cr .cr-rules-quick strong { font-size: 15px; color: var(--qa-tx); }
+.cr .cr-rules-quick small { font-size: 13px; color: var(--qa-tx-3); }
+.cr .cr-rules-quick button { flex: none; }
+.cr.cr-rules-link #qq-quick, .cr.cr-rules-link #cr5-idea,
+.cr.cr-rules-link .cr5-customize-body > .cr5-sol-chain, .cr.cr-rules-link .cr5-customize-body > .qq-preset,
+.cr.cr-rules-link .cr5-customize-body > .qq-image, .cr.cr-rules-link .cr5-customize-body > #qq-ideas { display: none !important; }
+.cr .cr-guided .qxc-progress, .cr .qxc-screen { scroll-margin-top: calc(var(--qa-hdr-h, 64px) + 12px); }
+
+/* launchfix 2026-11-27: Team buy / Contributor round: checkbox and its words on one line, no browser fieldset frame. */
+.cr fieldset.qtb { border: 0; margin: 10px 0 0; padding: 0; min-width: 0; }
+.cr fieldset.qtb > legend { display: block; float: left; width: 100%; padding: 0; margin: 0; }
+.cr fieldset.qtb > legend > label { display: inline-flex; align-items: center; gap: 10px; width: auto; min-height: 32px; font-size: 14px; color: var(--qa-tx-2); cursor: pointer; }
+.cr fieldset.qtb > legend input[type="checkbox"] { flex: none; width: 18px; height: 18px; margin: 0; }
+.cr fieldset.qtb > .qtb-body { clear: both; padding-top: 6px; }
+.cr fieldset.qtb::after { content: ""; display: block; clear: both; }

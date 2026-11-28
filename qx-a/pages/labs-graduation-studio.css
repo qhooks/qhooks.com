@@ -1,2 +1,5 @@
 @import url("./labs-workspace.css");
 /* QGraduation Studio uses the common instrument layout. */
+/* launchfix 2026-11-27: the field a Continue/Preview check names is outlined; the message sits under the button. */
+.labs-page [id^="ql-"][aria-invalid="true"] { border-color: #e8a89a !important; box-shadow: 0 0 0 1px #e8a89a; }
+.labs-page .ql-inline-error { margin: 8px 0 0; color: #e8a89a; font-size: 14px; line-height: 1.4; }

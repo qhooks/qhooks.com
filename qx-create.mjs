@@ -10,7 +10,9 @@ import {appendArbRecaptureLine,createCostView,walletStepLabel,showRequiredQuantu
 import {readCreateNativeUSD} from './qx-create-prices.mjs';
 import {visibleChains,chainById} from './chains.mjs';
 import {launchChains as guidedChains} from './chain-catalog.mjs';
-import {quickFactory} from './qx-quick-launch-core.mjs';
+import {quickFactory,START_TIERS} from './qx-quick-launch-core.mjs';
+import {launchIdentityDraft} from './qx-create-draft.mjs';
+import {prepareTokenBanner} from './qx-token-banner.mjs';
 import {getWalletHub} from './wallet-hub-fresh.mjs';
 import {EMBEDDED_RDNS} from './embedded-wallet-provider.mjs';
 import {withLaunchSession} from './qx-instant-bridge.mjs';
@@ -60,7 +62,17 @@ function restoreDraft(){let hadDraft=false;try{const text=localStorage.getItem(D
  if(!chains.some(c=>c.id===config.chainId)&&!record)config.chainId=chains[0].id;
  // Launch-rules hand-off (Claude, 2026-11-27): the main app's Launch screen links here with ?rules=<style>&name=&ticker=
  // so a chosen hook style (taxes, buybacks, burns) opens in the guided flow instead of the quick Fair kit.
- {const rules=query.get('rules');if(!record&&rules&&CREATE_STYLES.some(p=>p.id===rules)){config.style=rules;Object.assign(config,presetRules(rules));const pf=sanitizePrefill({name:query.has('name')?query.get('name'):undefined,ticker:query.has('ticker')?query.get('ticker'):undefined});if(pf.name)config.name=pf.name;if(pf.ticker)config.symbol=pf.ticker;const o=document.getElementById('cr5-customize');if(o){o.open=true;setTimeout(()=>{const t=document.getElementById('qc-name');(t?.closest('section,form,fieldset')||t||o).scrollIntoView({block:'start'});},300);}}}
+ {const rules=query.get('rules');if(!record&&rules&&CREATE_STYLES.some(p=>p.id===rules)){config.style=rules;Object.assign(config,presetRules(rules));const pf=sanitizePrefill({name:query.has('name')?query.get('name'):undefined,ticker:query.has('ticker')?query.get('ticker'):undefined});if(pf.name)config.name=pf.name;if(pf.ticker)config.symbol=pf.ticker;const o=document.getElementById('cr5-customize');collapseQuickForRules();if(o){o.open=true;let landed=-1;const land=()=>{if(landed>=0&&Math.abs(scrollY-landed)>4)return;const t=document.querySelector('.cr-guided .qxc-progress')||document.getElementById('qc-screen-1')||o;scrollTo({top:Math.max(0,t.getBoundingClientRect().top+scrollY-stickyOffset()),behavior:'auto'});landed=scrollY;};setTimeout(land,300);setTimeout(land,1200);}}}
+}
+// launchfix 2026-11-27: a ?rules= link opens the guided form on that style. The Quick card above has no taxes, so fold it
+// (and its kit picker) behind one labelled row instead of showing a second, different style on the same page.
+function collapseQuickForRules(){
+ const main=document.getElementById('main'),quick=document.getElementById('qq-quick');if(!main||!quick||document.getElementById('cr-rules-quick'))return;
+ main.classList.add('cr-rules-link');
+ const btn=el('button',{type:'button',class:'qa-btn qa-btn--quiet','aria-expanded':'false','aria-controls':'qq-quick'},'Show');
+ const bar=el('div',{id:'cr-rules-quick',class:'cr-rules-quick'},el('span',{},el('strong',{},'Quick launch (no tax)'),el('small',{},'One transaction, plain token. Your link opened the full setup below.')),btn);
+ btn.addEventListener('click',()=>{const on=main.classList.toggle('cr-rules-link');btn.textContent=on?'Show':'Hide';btn.setAttribute('aria-expanded',String(!on));});
+ quick.before(bar);
 }
 function saveDraft(){try{localStorage.setItem(DRAFT,JSON.stringify({version:1,screen,config,profileScope,liquidityState}));}catch{note('Browser storage is full or blocked. Free space before launching.',true);}}
 async function saveRecord(){saveLaunchRecord(localStorage,record);localStorage.setItem(ACTIVE,record.id);if(localStorage.getItem(ACTIVE)!==record.id)throw Error('Could not remember the active launch.');}
@@ -78,11 +90,12 @@ function tokenValid(){if(!config.name.trim()||config.name.trim().length>64)throw
 function rulesValid(){validateConfig(config,hub.snapshot().current?.owner||'0x'+'1'.repeat(40));}
 // A step change always starts at the top of the new step (under the sticky header). Focusing a heading alone
 // does not scroll reliably on iPhone browsers, so scroll explicitly and focus without scrolling.
+function stickyOffset(){let bottom=0;for(const h of document.querySelectorAll('.qa-hdr,.site-header,.qa-ribbon')){const cs=getComputedStyle(h);if(/sticky|fixed/.test(cs.position)&&cs.display!=='none')bottom=Math.max(bottom,h.getBoundingClientRect().bottom);}return Math.max(bottom,0)+12;}
 function showStepTop(){
  const title=$('title-'+screen),step=$('screen-'+screen)||title;if(!step)return;
- const header=document.querySelector('.site-header'),offset=(header&&getComputedStyle(header).position.match(/sticky|fixed/)?header.getBoundingClientRect().bottom:0)+12;
- const top=Math.max(0,step.getBoundingClientRect().top+scrollY-offset);
- scrollTo({top,behavior:'auto'});title?.focus({preventScroll:true});
+ // launchfix 2026-11-27: the shell header is .qa-hdr (64px, sticky); land on the step tabs so they and the step title sit below it.
+ const tabs=document.querySelector('.cr-guided .qxc-progress'),target=tabs&&tabs.offsetParent?tabs:step;
+ scrollTo({top:Math.max(0,target.getBoundingClientRect().top+scrollY-stickyOffset()),behavior:'auto'});title?.focus({preventScroll:true});
 }
 function go(next,{focus=true}={}){if(busy)return;try{if(next>screen){if(next>1&&!record&&liquidityStatus().blocked)throw Error(liquidityStatus().message);if(next>1)tokenValid();if(next>2)rulesValid();}screen=next;saveDraft();note('');render();if(focus)showStepTop();if(next===3)void refreshCost();}catch(e){note(e.message,true);}}
 function renderPool(){try{const bps=poolBps(config.allocations),pool=human(bps,2)+'%';$('pool-share').textContent='Pool '+pool;$('pool-share').style.color='';$('default-supply').textContent=pool+' in the pool · '+(config.allocations.length?'Custom allocations':'No team reserve');$('allocation-label').textContent=config.allocations.length?'Custom supply allocations · '+human(10000n-bps,2)+'% reserved':'Optional supply allocations · none';}catch(e){$('pool-share').textContent=e.message;$('pool-share').style.color='#e8a89a';$('default-supply').textContent='Review supply allocations';}}
@@ -170,7 +183,7 @@ function render(){startControl?.refresh();if(solCreate?.active){solCreate.render
  renderSavedLaunch();$('execution-hold').hidden=CREATE_EXECUTION_ENABLED&&(!!record||GUIDED_NEW_LAUNCHES);if(!record&&!GUIDED_NEW_LAUNCHES){const hold=$('execution-hold');hold.querySelector('h2').textContent=START_PRICING_HOLD;hold.querySelector('p').textContent='You can still set up and review your token here.';}$('key-panel').hidden=!CREATE_EXECUTION_ENABLED||record?.status==='done';$('launch').hidden=record?.status==='done';$('launch').textContent=record?'Resume launch':'Launch';
  let valid=true;try{validateConfig(config,c?.owner||'0x'+'1'.repeat(40));}catch{valid=false;}
  // Artwork must be ready before review; saved launches can add missing artwork without changing their on-chain steps.
- const needImage=!config.image,needBanner=!config.banner;if(needImage||needBanner)valid=false;$('need-image').hidden=!needImage;$('need-banner').hidden=!needBanner;
+ const needImage=!config.image,needBanner=!config.banner;if(needImage||needBanner)valid=false;$('need-image').hidden=!needImage;$('need-banner').hidden=!needBanner||needImage;$('need-banner').textContent=config.image?'Making a banner from your image…':'Add a banner for your token.';void ensureAutoBanner();
  $('launch').disabled=!CREATE_EXECUTION_ENABLED||!record&&!GUIDED_NEW_LAUNCHES||busy||!c||!record&&guidedOff()||!signer?.backupVerified||signer.locked||!quantumReady||!cost||!valid||!!record&&record.owner!==c?.owner||!record&&liquidity.blocked;
  $('launch').title=!record&&liquidity.blocked?liquidity.message:'';
  quantumControl?.render();
@@ -268,7 +281,7 @@ quantumControl=mountAccountQuantum($('key-panel'),{hub,getExpectedKey:()=>record
 // Older drafts could turn this required setting off. Keep their other work.
 if(!record&&!config.quantum){config.quantum=true;saveDraft();}
 bindFundWallet($('fund-wallet'),{hub,chainId:()=>config.chainId,note});
-$('profile-slot').append(mountTokenProfileEditor({id:'qc-profile',imageRequired:true,bannerRequired:true,chain:()=>config.chainId,name:()=>config.name||'Your token',symbol:()=>config.symbol||'TICKER',scope:()=>profileScope}));
+$('profile-slot').append(mountTokenProfileEditor({id:'qc-profile',imageRequired:true,bannerRequired:false,autoBanner:true,chain:()=>config.chainId,name:()=>config.name||'Your token',symbol:()=>config.symbol||'TICKER',scope:()=>profileScope}));
 onTokenProfileDraft(({chain,scope=''})=>{if((!record||!config.image||!config.banner)&&chain===String(config.chainId)&&scope===profileScope){const value=editableTokenProfileDraft(chain,profileScope);Object.assign(config,{description:value.description,image:value.image,banner:value.banner,...value.links});if(record){record.config=structuredClone(config);record.metadata=profileFromConfig(config);void saveRecord();}changed();}});
 for(const c of chains)$('chainId').append(el('option',{value:c.id},c.name));if(record&&!chains.some(c=>c.id===config.chainId))$('chainId').append(el('option',{value:config.chainId},chainById(config.chainId).name));
 for(const p of CREATE_STYLES){const b=el('button',{type:'button','data-style':p.id,'aria-pressed':'false'},p.name);b.addEventListener('click',()=>{config.style=p.id;Object.assign(config,presetRules(p.id));for(const k of ['stakers','referrals','antiSnipe'])$(k).value=config[k];changed();});$('styles').append(b);}
@@ -317,3 +330,45 @@ mountTrendDraftApply({target:document.querySelector('main'),getState:()=>({busy,
  setTokenProfileDraft(config.chainId,{description:value.description,image,banner,links:editableTokenProfileDraft(config.chainId,profileScope).links},profileScope);
  fill();changed();checkTickerSoon();note('Idea applied. Review the art and launch settings before continuing.');
 }});
+
+// launchfix 2026-11-27: the banner is optional here, as in Quick launch. With an image and no banner, one is made
+// from the image (blurred, 3:1) and saved to the token profile; a banner the person picks always wins.
+let autoBannerFor='',autoBannerRun=0;
+async function ensureAutoBanner(){
+ if(record||!config.image||config.banner||autoBannerFor===config.image)return;
+ const img=config.image,chain=String(config.chainId),scope=profileScope,run=++autoBannerRun;autoBannerFor=img;
+ try{const [head,encoded]=img.split(','),bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0)),blob=new Blob([bytes],{type:head.slice(5).split(';')[0]});
+  const data=await prepareTokenBanner(blob,{blur:true});
+  if(run!==autoBannerRun||config.image!==img||config.banner||String(config.chainId)!==chain||profileScope!==scope)return;
+  const current=editableTokenProfileDraft(chain,scope)||{};setTokenProfileDraft(chain,{description:current.description||'',image:current.image||img,banner:data,links:current.links||{}},scope);
+ }catch{}finally{if(run===autoBannerRun)autoBannerFor=config.banner?'':img;}
+}
+// launchfix 2026-11-27: what was typed in Quick launch (image, name, ticker, chain, start tier) carries into this
+// guided form when "Customize launch" opens. Only fields the person has not set here are filled.
+const carried={};
+const untouchedField=k=>!String(config[k]??'').trim()||config[k]===carried[k];
+function carryQuickIntoGuided(){
+ if(record||busy||screen!==1)return;
+ let draft=null;try{draft=launchIdentityDraft().get();}catch{}draft=draft||{};
+ const qName=(document.getElementById('qq-name')?.value||draft.name||'').trim();
+ const qSym=(document.getElementById('qq-symbol')?.value||draft.symbol||'').trim().toUpperCase();
+ const qChain=String(draft.chain||'');
+ let did=false;
+ const fresh=untouchedField('name')&&untouchedField('symbol');
+ if(fresh&&(qName||qSym||draft.image)&&qChain&&qChain!==String(config.chainId)&&chains.some(c=>c.id===qChain)){
+  $('chainId').value=qChain;$('chainId').dispatchEvent(new Event('change'));did=true;}
+ if(qName&&untouchedField('name')&&config.name!==qName){config.name=qName;carried.name=qName;did=true;}
+ if(/^[A-Z0-9]{1,10}$/.test(qSym)&&untouchedField('symbol')&&config.symbol!==qSym){config.symbol=qSym;carried.symbol=qSym;did=true;}
+ const chain=String(config.chainId),profile=editableTokenProfileDraft(chain,profileScope)||{};
+ if(draft.image&&!profile.image){
+  const links=profile.links||{};
+  setTokenProfileDraft(chain,{description:profile.description||draft.description||'',image:draft.image,banner:profile.banner||draft.bannerData||'',links:{x:links.x||draft.x||'',telegram:links.telegram||draft.telegram||'',website:links.website||draft.website||'',discord:links.discord||draft.discord||''}},profileScope);did=true;}
+ const opts=[...document.querySelectorAll('#qq-startcap .qq-start-opt')],picked=opts.findIndex(b=>b.getAttribute('aria-pressed')==='true'),tier=START_TIERS[picked]?.[0];
+ if(tier&&tier!=='custom'&&(config.startTier==='standard'||config.startTier===carried.startTier)&&config.startTier!==tier){Object.assign(config,{startTier:tier,startSteps:'0',startUsd:''});carried.startTier=tier;did=true;}
+ if(did){fill();changed();checkTickerSoon();startControl?.refresh();}
+}
+let carryTimer=0;const carrySoon=()=>{clearTimeout(carryTimer);carryTimer=setTimeout(()=>{if(document.getElementById('cr5-customize')?.open)carryQuickIntoGuided();},60);};
+document.getElementById('cr5-customize')?.addEventListener('toggle',e=>{if(e.target.open)carryQuickIntoGuided();});
+// While both are on screen, later Quick edits (name, ticker, chain, image, start) keep flowing into untouched guided fields.
+document.addEventListener('qhooks:create-draft',carrySoon);
+document.addEventListener('click',e=>{if((e.composedPath?.()||[]).some(n=>n&&(n.id==='qq-startcap'||n.id==='cr-chains')))carrySoon();});

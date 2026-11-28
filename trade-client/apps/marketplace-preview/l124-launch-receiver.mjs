@@ -2,13 +2,13 @@
 import {handoffIdFromLocation,readLaunchHandoff,assertUnchangedHandoff} from './l124-draft-handoff.mjs';
 import {renderRecipeSummary} from './l124-recipe-form.mjs';
 export function labApplyBlock(s){
- if(!s||!s.connected)return 'Connect your wallet on the selected chain to use this recipe.';
+ if(!s||!s.connected)return 'Use Lab recipe needs a wallet connected on the selected chain, so it is off for now. The recipe’s name, symbol and liquidity are already filled in below.';
  if(s.busy||s.held)return 'Finish the current operation before applying a recipe.';
  if(s.workspace||s.existingProgress)return 'This wallet already has launch progress. Keep that launch unchanged.';
  if(s.key)return 'A quantum key is already loaded. Keep this launch unchanged.';
  return '';
 }
-export function bindLabLaunchReceiver({document:d,target,snapshot,apply,clock=Date.now}){
+export function bindLabLaunchReceiver({document:d,target,snapshot,apply,prefill,clock=Date.now}){
  const panel=d.getElementById('qhl-panel');if(!panel)return Object.freeze({render(){},dispose(){}});
  const button=d.getElementById('qhl-apply'),status=d.getElementById('qhl-status'),summary=d.getElementById('qhl-summary');
  if(!button||!status||!summary)throw new TypeError('Lab receipt controls missing');
@@ -17,7 +17,9 @@ export function bindLabLaunchReceiver({document:d,target,snapshot,apply,clock=Da
  function current(){
   const id=handoffIdFromLocation(target.location);if(!id){if(loaded)throw new TypeError('The Lab draft reference changed. Reopen it from the Lab.');return null;}
   const s=snapshot();
-  if(!loaded){loaded=readLaunchHandoff({storage:target.sessionStorage,id,chainId:s.chainId,now:clock()});renderRecipeSummary(d,summary,loaded.recipe);}
+  if(!loaded){loaded=readLaunchHandoff({storage:target.sessionStorage,id,chainId:s.chainId,now:clock()});renderRecipeSummary(d,summary,loaded.recipe);
+   // launchfix 2026-11-27: show the handed recipe in the form straight away (public fields only, no wallet needed).
+   if(typeof prefill==='function'){try{prefill(loaded.recipe);}catch{}}}
   if(id!==loaded.id)throw new TypeError('The Lab draft reference changed. Reopen it from the Lab.');
   const recipe=assertUnchangedHandoff({storage:target.sessionStorage,loaded,chainId:s.chainId,now:clock()});
   return {s,recipe};
@@ -26,7 +28,7 @@ export function bindLabLaunchReceiver({document:d,target,snapshot,apply,clock=Da
   if(dead)return;button.disabled=true;
   try{const value=current();panel.hidden=!value;if(!value)return;
    if(applied){message('Lab recipe applied. Review your settings, then create and verify your key backup.');return;}
-   const block=labApplyBlock(value.s);button.disabled=!!block;message(block||'Review this recipe. Applying it replaces only the unsaved settings below.');
+   const block=labApplyBlock(value.s);button.disabled=!!block;if(block)button.title=block;else button.removeAttribute('title');button.setAttribute('aria-describedby','qhl-status');message(block||'Review this recipe. Applying it replaces only the unsaved settings below.');
   }catch{panel.hidden=false;message('This Lab recipe cannot be used here. Reopen it from the Lab on its original chain. Existing launch progress is unchanged.',true);}
  }
  function onApply(){
