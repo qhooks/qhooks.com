@@ -167,6 +167,14 @@
   cache-control: public, max-age=31536000, immutable
   content-security-policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://coin-images.coingecko.com https://assets.coingecko.com https://assets.geckoterminal.com https://cdn.dexscreener.com data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
 
+/new/app.9ebee3696e.js
+  cache-control: public, max-age=31536000, immutable
+  content-security-policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://coin-images.coingecko.com https://assets.coingecko.com https://assets.geckoterminal.com https://cdn.dexscreener.com data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
+
+/new/app.63b100733c.js
+  cache-control: public, max-age=31536000, immutable
+  content-security-policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://coin-images.coingecko.com https://assets.coingecko.com https://assets.geckoterminal.com https://cdn.dexscreener.com data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
+
 /new/app.2c52c2ac2d.js
   cache-control: public, max-age=31536000, immutable
   content-security-policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://coin-images.coingecko.com https://assets.coingecko.com https://assets.geckoterminal.com https://cdn.dexscreener.com data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
