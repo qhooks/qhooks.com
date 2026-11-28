@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "582de020-9e9f-4c8b-8547-0795c9197d9d",
+  "releaseId": "b2f20d31-d53c-46d0-9983-9289056e9c75",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -53,8 +53,8 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "3a6d92d7b9d325e950c597f40a47f1c3fb52e46759c0d553dff17f0d0273d703",
-      "bytes": 21164
+      "sha256": "d0e6d9a7dd7781328fab1107ca9bdbdb0b653610fd05ecc2cec730376bea71e3",
+      "bytes": 21570
     },
     "_redirects": {
       "sha256": "b0064a6e748cb4421e4ff024a6219ff6600077feec61978bcd07fb0bd7a87010",
@@ -88865,7 +88865,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "15f3a1ea175616db644b27ba70aaf12fbff42faeaed3bef66e29b1dd3147da9c",
+      "sha256": "8498b0b07e7b8d317b5c76844f8154f5f1b9a08153b72a2411064ee97a6a768c",
       "bytes": 2607
     },
     "hook-marketplace.html": {
@@ -90053,8 +90053,8 @@
       "bytes": 2894
     },
     "llms.txt": {
-      "sha256": "cf358c3fc011e08c413f3de5b16b9ba17a5ec95749eccb1e8963b31772bb255e",
-      "bytes": 1202
+      "sha256": "0fdb235983338dc8d3bc28056e890e4b6cfa857b714ddde475d3946888f33598",
+      "bytes": 1384
     },
     "local-cost-consent.mjs": {
       "sha256": "4ea90aa2ac5aaf0d81e2ec26f4a4031d4d220ebc1284a35587a747a962f9cb58",
@@ -90235,6 +90235,10 @@
     "mirror.html": {
       "sha256": "0238ea9322d763191730c14a66a5ab70f11744487e93c0e8fe948fb4b92109c4",
       "bytes": 5712
+    },
+    "new/app.0cb426ad3d.js": {
+      "sha256": "46d6225da3a6379ee13bfd58b57136753005456d184f4cb608396e2b68c40e98",
+      "bytes": 683004
     },
     "new/app.1618e7b530.css": {
       "sha256": "1618e7b5304ad76f59f440f8fe7e62676adb43b6bb24f830e0fc5b6ab910cdf3",
@@ -90481,7 +90485,7 @@
       "bytes": 7977
     },
     "new/index.html": {
-      "sha256": "0c654bb97561b07d1a2518296176a06db3785d793d060e3f2cd2d630292a9096",
+      "sha256": "aa3ebbe86fb59331eccfd70301b0f2de42626e0169060204394ed7bea4d1af3a",
       "bytes": 1302
     },
     "new/js/orbio-chip.js": {
@@ -100729,8 +100733,8 @@
       "bytes": 1519
     },
     "skill.md": {
-      "sha256": "b641c10ca6affdd1bd1758205ed17001670ca6de650e783df42d5191357eca58",
-      "bytes": 61872
+      "sha256": "185650b4518290feccb353c4b2b47003f616c517402b667156d2ae391c6c3bab",
+      "bytes": 66487
     },
     "sol-launch-setup.html": {
       "sha256": "fef20e8143353a57f391a89a1f34337897b2ab7326a694ee0834da8f1effce6e",
@@ -101269,5 +101273,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "32735bca7980a6f773aca7e0c8999cbc5d9f52f5a884f0b7bdcfbdac7d8e68f7"
+  "contentDigest": "0d0f8e636293c32863d179bb176f2dbb0efcea1aa606714ee5f252ff21f8cc94"
 }

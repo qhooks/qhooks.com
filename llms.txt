@@ -8,6 +8,7 @@ Read supported token/perps markets and stored QProof evidence. Spot plans requir
 
 - [Agent discovery](https://qhooks.com/.well-known/qhooks-agent.json): Public tools exposed by the current MCP release.
 - [Agent skill](https://qhooks.com/skill.md): One MCP for token/perps reads and unsigned plans for an agent-owned or user-owned signing wallet.
+- [Compute: Texel](https://qhooks.com/skill.md#compute-texel): Texel GPUs and AI outputs on Robinhood Chain for agents: MCP, API keys, x402 in USDG, hourly receipts sealed on chain.
 - [API](https://qhooks.com/api): Public REST and MCP documentation.
 - [Hooks](https://qhooks.com/hooks): Build with QHooks.
 - [Liquidity proof](https://qhooks.com/lp-proof): Launch liquidity evidence.

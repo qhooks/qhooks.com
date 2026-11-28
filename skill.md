@@ -1,7 +1,7 @@
 ---
 name: qhooks
-version: 9.9.0
-updated: 2026-11-27
+version: 9.9.1
+updated: 2026-11-28
 description: Launch, trade & QProof token safety on Robinhood Chain + more; perps, OTC escrow and agreements.
 ---
 
@@ -143,6 +143,43 @@ Fund-inference loop, for agents that launched on QHooks:
 - Prepare again if more than a few minutes pass between the release receipt and the swap.
 
 `apiKey` is forwarded once to Orbio's key endpoint to read the balance and is never stored or logged by QHooks. Orbio's own terms and fees apply to CREDIT; `credit.creditedToApi` is what reaches the inference balance at the quoted price. Only EOA and EIP-7702 wallets can sign an Orbio wallet key.
+
+## Compute: Texel
+
+Texel (https://texel.run) is a GPU and compute marketplace on Robinhood Chain (4663). A QHooks agent can use it to make images, video, voice and 3D assets, and to rent GPUs billed per second. Texel is a separate service: QHooks does not hold Texel keys, credits or payments, and Texel's own terms apply.
+
+What an agent can do:
+
+- Outputs (image, video, voice, 3D): with an API key and credits, or per output with x402 in USDG and no key.
+- GPU rentals and Texel Serverless: with an API key and credits only, billed per second. Rates: https://texel.run/api/v1/gpus and https://texel.run/api/v1/models.
+- Receipts: every output and rental gets a receipt, sealed hourly on Robinhood Chain.
+
+Pricing: 1 credit pays $1 of listed prices; during Texel's launch a credit costs 0.70 USDG. One 1024x1024 `flux-schnell` image through x402 was 0.002936 USDG (402 answer read 2026-11-28).
+
+### Texel MCP and API key
+
+- MCP: `https://texel.run/mcp` (Streamable HTTP), header `Authorization: Bearer txk_...`. Tools: `get_balance`, `list_models`, `make_output`, `get_output`, `list_outputs`, `list_gpus`, `rent_gpu`, `list_instances`, `get_instance`, `end_instance`, `list_ssh_keys`, `add_ssh_key`, `remove_ssh_key`, `list_receipts`. Setup: https://texel.run/docs#mcp.
+- Agent skill: https://texel.run/skill.md, or `npx skills add texellabs/skills`.
+- Key: any wallet signs in on Robinhood Chain at https://texel.run/api (a signature only, no gas) and makes `txk_` keys. Each key has its own daily cap of 0.01 to 10,000 credits; past its cap a key gets HTTP 429 until 00:00 UTC. REST base: `https://texel.run/api/v1`. Keep the key secret; never send it to QHooks.
+
+### Outputs with x402 (no key)
+
+1. `POST https://texel.run/api/v1/outputs` with a JSON body (`model`, `prompt`, image `width`/`height`) and no `Authorization` header. Texel answers 402 with header `PAYMENT-REQUIRED`: base64 JSON, `x402Version:2`, one `accepts[]` entry with `scheme:"exact"`, `network:"eip155:4663"`, `asset` USDG `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168`, `amount` in USDG base units (6 decimals), `payTo`, `maxTimeoutSeconds:120` and `extra` `{name:"Global Dollar", version:"1"}`.
+2. Sign EIP-3009 `TransferWithAuthorization` with the paying wallet: domain `{name, version}` from `extra`, `chainId:4663`, `verifyingContract` = the USDG address; message `from` (the wallet), `to` = `payTo`, `value` = `amount`, `validAfter:0`, `validBefore` = now + at most 120 s, a random 32-byte `nonce`.
+3. Send the same request again with header `PAYMENT-SIGNATURE`: base64 JSON `{x402Version:2, resource, accepted, payload:{authorization, signature}}`, with `accepted` = the 402 entry unchanged. A fast output comes back in that answer; a slower one answers 202 with its `id`, and `PAYMENT-RESPONSE` names the settlement transaction.
+4. Read `GET https://texel.run/api/v1/outputs/{id}` until `status` is `ready` (the id works as the key to it); the file is at `/outputs/{id}/file`.
+
+A payment pays once and is good for 120 seconds. Base USDC is not accepted; x402 pays for outputs only (no rentals). Clients: `@x402/fetch` with `@x402/evm`. Check `amount` and `payTo` before signing.
+
+### Verify a Texel receipt
+
+1. Take the receipt's `hour` (Unix seconds of the hour start) and read the hour's leaves at `https://texel.run/receipts/hours/{UTC hour}.json`, named like `2026-11-27T20.json` (`seal` plus `receipts[]`).
+2. Rebuild the root with `@openzeppelin/merkle-tree` `StandardMerkleTree.of(values, types)`, types `["uint8","uint64","string","string","uint32","uint32","uint32","uint32","uint64","bool","bytes32"]`, each value `[1, hour, kind, item, width, height, seconds, characters, creditsMicros, free, code]`.
+3. `eth_call` `seals(uint64 hour) returns (bytes32 root, uint32 count, uint64 sealedAt)` on TexelReceipts `0x48c545Fdd2Ea5b286B319F03575683019C2f1EF5` (Robinhood Chain). The receipt is verified when the rebuilt root and the leaf count both match the chain and the receipt is one of the hour's leaves. Details: https://texel.run/docs#receipts.
+
+With a key of the paying wallet, `GET https://texel.run/api/v1/receipts` (or the MCP tool `list_receipts`) returns that wallet's own receipts with their proofs; a proof checks one receipt against the sealed root without the hour file. A receipt carries a wallet code, not the wallet address, so an agent that paid only with x402 finds its receipts this way once it makes a key for the same wallet; until then its record is the settlement transaction named in `PAYMENT-RESPONSE` and the output id.
+
+$TEXEL token on Robinhood Chain: `0x0ddcab9ae04bda0c87ecc1640636fa11e8e613e8`.
 
 ## Results and errors
 
