@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "e547cf9e-b0a7-48d2-9e99-4d60a184e311",
+  "releaseId": "9fd8c039-0b13-41b8-8c5a-68795dc20fe3",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -53,8 +53,8 @@
       "bytes": 1530
     },
     "_headers": {
-      "sha256": "0170b727191019c45d7d8a1f6d88d1df94265def485dc61ed1e575e58e2824f1",
-      "bytes": 17916
+      "sha256": "5f87e711dfaa347d3aee0c26d835acae3d72f43fea21bfd37d96a04bd32c447a",
+      "bytes": 18728
     },
     "_redirects": {
       "sha256": "b0064a6e748cb4421e4ff024a6219ff6600077feec61978bcd07fb0bd7a87010",
@@ -87969,7 +87969,7 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "fc94f64ea3cb695b1fe1359505dab0f59d499a22982cbcefb099e305d801b61d",
+      "sha256": "7b71fa7e3e6417774f04a9031a62397f749d4f8d2fda5f3b7b24d9be5a50f451",
       "bytes": 2607
     },
     "hook-marketplace.html": {
@@ -89348,6 +89348,10 @@
       "sha256": "bf1f39cd368c34689261306a6742c68f2dffa4b43ded4ec6f4cc7f4669151ca8",
       "bytes": 574543
     },
+    "new/app.205c6880b7.js": {
+      "sha256": "77c78b7684c08034cd3cbd6f14ceb91df505106c2589164fa48e74f3cf1ac448",
+      "bytes": 624713
+    },
     "new/app.25f2cceabf.js": {
       "sha256": "75d62ffef8c8f81b274084ac71b5ca227b3269bfdbeb61baea25e13023a19442",
       "bytes": 599760
@@ -89415,6 +89419,10 @@
     "new/app.6ac58826c9.js": {
       "sha256": "44078b939f2e0fb679d0c9ebcc28dba4e19a83df1113e3fe6ab74f47dc35336e",
       "bytes": 576582
+    },
+    "new/app.737311e284.js": {
+      "sha256": "dde092bd248cd5e0058c2f158195ba92b2d79b44bf2539658418b3936d00277a",
+      "bytes": 624713
     },
     "new/app.7ee36d129d.css": {
       "sha256": "7ee36d129d96d29f899de815eb43894ee3527483004fddbb026d7cdd7165afc7",
@@ -89553,7 +89561,7 @@
       "bytes": 7977
     },
     "new/index.html": {
-      "sha256": "9c54c32ad8ef76fdaab7862988a385c7050d67ebe336de62ae4b40e8a777c47a",
+      "sha256": "77fca5aec6f7a126418e9147e069acf615820b9ae580f6bddcc600044ee0e03c",
       "bytes": 1302
     },
     "new/js/orbio-chip.js": {
@@ -100337,5 +100345,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "74423db105ff5a52ca6866562902ab22973ac120add9e4efc056760ff45d96cb"
+  "contentDigest": "b0f854418f1d8715c77bf17c1ea85283cba3c29ce5e1aeaa121a6f48faf08926"
 }
