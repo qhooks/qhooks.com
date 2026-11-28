@@ -2,10 +2,20 @@
 import {assetPriceFields,isQhooksPriceAsset,QHOOKS_PRICE_IDENTITY,priceState,PRICE_REFRESH_MS} from './qx-price-state.mjs';
 import {allocatePortfolioBasis} from './qx-holding-basis.mjs';
 import {chainById} from './chains.mjs';
-export const PORTFOLIO_PRICE_MAX_MS=7*86400000;
+// PORTFOLIOPRICE (2026-11-28, Randall: "We HAVE to have accurate portfolios and prices"). A portfolio valuation is
+// current only inside PORTFOLIO_LIVE_MS (the shared 5-minute refresh window). Until now a retained last-known price
+// was valued for 7 days, so QUIV (3 h) and WAFERMAP (44 h) sat in the total about 27% too high. Past the window a
+// holding keeps its last-known fields for reference, but priceUsd/valueUsd are null, pricesRefreshing is true and
+// priceStatus is 'refreshing': it is out of every total until a current price arrives. Configured $1 references
+// (registry stables) are identities, not market observations, and stay valued.
+export const PORTFOLIO_LIVE_MS=PRICE_REFRESH_MS;
+export const PORTFOLIO_PRICE_MAX_MS=PORTFOLIO_LIVE_MS;
+const EVIDENCE_MS=7*86400000; // how long a last-known price is kept for reference (never valued past PORTFOLIO_LIVE_MS)
 const known=n=>typeof n==='number'&&Number.isFinite(n),positive=n=>known(n)&&n>0;
 const units=a=>known(a?.units)?a.units:typeof a?.balance==='string'&&/^\d+$/.test(a.balance)&&Number.isInteger(a.decimals)&&a.decimals>=0&&a.decimals<=36?Number(a.balance)/10**a.decimals:null;
 const clock=(at,now)=>Number.isSafeInteger(at)&&at>0&&at<=now&&now-at<=PORTFOLIO_PRICE_MAX_MS;
+const evidence=(at,now)=>Number.isSafeInteger(at)&&at>0&&at<=now&&now-at<=EVIDENCE_MS;
+export const portfolioConfiguredReference=a=>a?.valuationAssumption==='configured_1_usd_reference'&&(a.priceUsd===1||a.priceUsd==null&&a.lastKnownPriceUsd===1);
 export const portfolioAssetKey=(chainId,asset,{native=false}={})=>String(chainId)+':'+(native?'native':String(chainId)==='solana'?String(asset||''):String(asset||'').toLowerCase());
 // Portfolio-only identity quarantine requested for RH USDG look-alikes. A symbol is not a stablecoin identity.
 export function portfolioPriceQuarantined(asset,{chainId,token=asset?.address}={}){
@@ -28,13 +38,22 @@ export function portfolioPriceFields(asset,{chainId,token=asset?.address,at=null
   valueUsd:units(asset)===0?0:null,change24:null,changeAt:null,priceStatus:'unpriced',pricesRefreshing:false,
   spam:true,spamReason:'Unrecognized stablecoin contract',unpricedReason:'Not an official USDG contract',
   ...(out.cost?{cost:{...out.cost,pnlUsd:null,pnlQuote:null,unrealizedQuote:null,quoteUsd:null}}:{})};
+ // A configured $1 reference is an identity (USDG/USDC registry rows), so it has no observation age.
+ if(portfolioConfiguredReference(asset)&&!isQhooksPriceAsset(chainId,token)){
+  const u=units(asset);return {...out,priceUsd:1,priceAt:now,pricesRefreshing:false,priceStatus:null,valueUsd:u===0?0:known(u)?u:null};
+ }
  // Explicit last-good evidence and old known evidence both keep their own clock.
  // A failed response's at / balanceAt / cache write can never date that evidence.
  const candidates=[{price:asset?.priceUsd,at:sourceAt,source:asset?.priceSource,pool:asset?.pricePoolId},
   {price:asset?.lastKnownPriceUsd,at:asset?.lastKnownPriceAt,source:asset?.lastKnownPriceSource,pool:asset?.lastKnownPricePoolId}]
-  .filter(v=>positive(v.price)&&clock(v.at,now)&&(!isQhooksPriceAsset(chainId,token)||v.source==='qhooks-main-pool'&&v.pool===QHOOKS_PRICE_IDENTITY.poolId)).sort((a,b)=>b.at-a.at);
- const retained=candidates[0];
- if(!clock(sourceAt,now)&&!retained){out.priceUsd=null;out.priceAt=null;out.valueUsd=units(asset)===0?0:null;out.pricesRefreshing=true;}
+  .filter(v=>positive(v.price)&&evidence(v.at,now)&&(!isQhooksPriceAsset(chainId,token)||v.source==='qhooks-main-pool'&&v.pool===QHOOKS_PRICE_IDENTITY.poolId)).sort((a,b)=>b.at-a.at);
+ const newest=candidates[0],retained=newest&&clock(newest.at,now)?newest:null;
+ if(!retained){
+  // Nothing inside the live window: Refreshing, out of the total. The newest evidence stays for reference only.
+  Object.assign(out,{priceUsd:null,priceAt:null,priceSource:null,pricePoolId:null,valueUsd:units(asset)===0?0:null,pricesRefreshing:true,change24:null,changeAt:null});
+  if(newest)Object.assign(out,{priceStatus:'refreshing',unpricedReason:'Refreshing',lastKnownPriceUsd:newest.price,lastKnownPriceAt:newest.at,lastKnownPriceSource:newest.source,lastKnownPricePoolId:newest.pool});
+ }
+ else if(out.priceStatus==='refreshing'){out.priceStatus=null;if(out.unpricedReason==='Refreshing')out.unpricedReason=null;}
  if(retained&&(!positive(out.priceUsd)||!clock(out.priceAt,now)||retained.at>out.priceAt)){
   Object.assign(out,{priceUsd:retained.price,priceAt:retained.at,priceSource:retained.source,pricePoolId:retained.pool,
    valueUsd:units(asset)===0?0:known(units(asset))?units(asset)*retained.price:null,

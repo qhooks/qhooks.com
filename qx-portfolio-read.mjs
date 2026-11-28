@@ -71,6 +71,28 @@ export function reconcilePortfolio(report,previous,now=known(report?.at)?report.
  next.partial=!!report.partial||inventoryPending||next.chains.some(c=>{const s=chainReadState(c);return s.balances||s.positions||s.prices;});
  allocatePortfolioValuation(next,{now});next.totals=portfolioTotals(next.chains);return next;
 }
+// PORTFOLIOPRICE (2026-11-28): the last pass over every portfolio answer, server and device alike. Each holding goes
+// through portfolioPriceFields (current only inside PORTFOLIO_LIVE_MS), its value follows its price, and the totals
+// are recounted from the rows, so a Refreshing holding is out of totals.valueUsd / byChain / change24Usd. Pure.
+export function applyPortfolioLiveGate(report,{now=Date.now()}={}){
+ if(!report||!Array.isArray(report.chains))return report;
+ const amount=a=>known(a?.units)?a.units:typeof a?.balance==='string'&&/^\d+$/.test(a.balance)&&Number.isInteger(a.decimals)?Number(a.balance)/10**a.decimals:null;
+ const gate=(a,chainId)=>{
+  if(!a||typeof a!=='object'||a.noMarket)return a;
+  const next=portfolioPriceFields(a,{chainId,token:a.address,now}),u=amount(next);
+  if(known(next.priceUsd)&&next.priceUsd>0)next.valueUsd=u===0?0:known(u)?u*next.priceUsd:null;
+  return next;
+ };
+ for(const c of report.chains){
+  c.native=gate(c.native,c.chainId);c.tokens=(c.tokens||[]).map(t=>gate(t,c.chainId));
+  c.pricesRefreshing=!!c.native?.pricesRefreshing||c.tokens.some(t=>t.pricesRefreshing);
+ }
+ const waiting=a=>a&&!a.noMarket&&(amount(a)||0)>0&&!(known(a.priceUsd)&&a.priceUsd>0)&&a.priceStatus==='refreshing';
+ if(report.chains.some(c=>[c.native,...c.tokens.filter(t=>!t.spam)].some(waiting)))report.partial=true;
+ allocatePortfolioValuation(report,{now});
+ report.totals={...(report.totals||{}),...portfolioTotals(report.chains)};
+ return report;
+}
 // Local cost/price completion is a patch, never a new balance enumeration. A
 // captured callback cannot remove assets, undo a zero balance, or renew its age.
 function derivedReport(report,previous){

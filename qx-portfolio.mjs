@@ -113,7 +113,7 @@ export function unpricedHoldingDetails(rows,{now=Date.now()}={}) {
   const price=portfolioPriceFields(row,{chainId,now});
   if(known(price.priceUsd)&&price.priceUsd>0&&known(price.priceAt)&&price.priceAt>0&&price.priceAt<=now&&now-price.priceAt<=PORTFOLIO_PRICE_MAX_MS)continue;
   const explicit=String(price.unpricedReason||row.unpricedReason||'').trim();
-  const reason=explicit||(!known(row.priceAt)||row.priceAt<=0?'No usable price observation':row.priceAt>now?'Price observation is in the future':now-row.priceAt>PORTFOLIO_PRICE_MAX_MS?'Price observation has expired':'Price unavailable');
+  const reason=explicit||(!known(row.priceAt)||row.priceAt<=0?'No usable price observation':row.priceAt>now?'Price observation is in the future':now-row.priceAt>PORTFOLIO_PRICE_MAX_MS?'Refreshing':'Price unavailable');
   result.push({key,chainId,address,native:row.native===true,name:String(price.displayName||row.displayName||row.symbol||row.name||'Unnamed token').trim()||'Unnamed token',chainName:names[chainId]||row.chainName||chainId,reason,priceAt:row.priceAt??null,
    flags:[...(T.isTestRow(row)?['Test token · subject to Hide tests']:[]),...(price.spam?[String(price.spamReason||'Flagged as spam')]:[])]});
  }
