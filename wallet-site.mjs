@@ -19,7 +19,8 @@ export function bindSiteWallet({document:d=document,target=window,hub=getWalletH
  }
  function render(s){
   if(dead)return;const c=s.current;
-  trigger.textContent=s.busy?'Connecting…':c?c.owner.slice(0,6)+'…'+c.owner.slice(-4):'Connect';
+  // walletpersist: a remembered wallet that has not announced or answered yet reads "Connecting…", not "Connect".
+  trigger.textContent=s.busy||s.restoring&&!c?'Connecting…':c?c.owner.slice(0,6)+'…'+c.owner.slice(-4):'Connect';
   trigger.setAttribute('aria-label',c?'Wallet '+c.owner+' on '+label(c.chainId):'Connect');
   trigger.disabled=false;$('account').hidden=!c;$('choices').hidden=!!c;
   $('address').textContent=c?.owner||'';$('chain').textContent=c?label(c.chainId):'';

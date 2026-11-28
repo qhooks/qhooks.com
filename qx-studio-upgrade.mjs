@@ -53,6 +53,10 @@ if(root){
  }
  onTokenProfileDraft(paintDots);root.addEventListener('input',paintDots);root.addEventListener('change',paintDots);new MutationObserver(paintDots).observe($('ql-key-status'),{childList:true,subtree:true});paintDots();
  $('qs-key-early').addEventListener('click',()=>$('qj-step-2').click());
+ // walletpersist (WATT, 2026-11-27): the confirmation holds for this tab, so after a reload Restore backup works without
+ // ticking it again (a new tab still asks once).
+ {const ACK='qhooks:studio-key-understood',box=$('qs-key-understand');try{if(box&&sessionStorage.getItem(ACK)==='1')box.checked=true;}catch{}
+  box?.addEventListener('change',()=>{try{if(box.checked)sessionStorage.setItem(ACK,'1');else sessionStorage.removeItem(ACK);}catch{}});}
  for(const id of ['ql-generate','ql-restore-key'])$(id)?.addEventListener('click',e=>{if($('qs-key-understand').checked)return;e.preventDefault();e.stopImmediatePropagation();$('ql-key-feedback').textContent='Read the checklist and confirm what this key controls first.';$('qs-key-understand').focus();},true);
  // One bounded directory read on first visible Rules visit. No poll, scan, new API or per-block fan-out.
  let usage=null,loading=false,controller=null;

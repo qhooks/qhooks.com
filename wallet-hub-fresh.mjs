@@ -3,6 +3,8 @@ import {chainById} from './chains.mjs';
 import {discoverWallets} from './wallet-discovery.mjs';
 import {readWalletPreference,walletPreferenceText} from './wallet-preference.mjs';
 export const WALLET_PREFERENCE_KEY='qhooks:wallet-connection:v1';
+// The main app (new/app.*.js, wallet-connect.js) reads and writes this same key, so both halves of the site share one choice.
+const ANNOUNCE_GRACE_MS=600,RESTORE_WINDOW_MS=1500;
 const hubs=new WeakMap();
 
 // The accepted session's connect guards are reused, but this facade CANNOT request
@@ -31,8 +33,20 @@ export function createWalletHub(target,{discover=discoverWallets,settle=()=>new 
  }
  const watchers=new Set(),walletWatchers=new Set();let open=()=>{};
  const stored=()=>{try{return readWalletPreference(target.localStorage.getItem(WALLET_PREFERENCE_KEY));}catch{return null;}};
- const snapshot=()=>Object.freeze({current,busy,remembered,wallets:Object.freeze([...entries])});
+ // walletpersist (2026-11-27). Desktop Phantom puts window.ethereum on the page at once but announces itself (EIP-6963)
+ // only after DOMContentLoaded. The restore used to start on the flag-named window.ethereum entry, the announcement
+ // replaced that entry mid-restore ("Wallet changed during connection") and the failed restore FORGOT the saved wallet,
+ // so every later page (and the main app) showed it disconnected. Now: a flag-named entry waits briefly for the wallet's
+ // own announcement; a failed restore keeps the choice and retries (only another account, or Disconnect, forgets);
+ // a wallet that unlocks later rejoins on its accountsChanged; the header says "Connecting…" while a restore is due.
+ const now=()=>{try{return target.performance?.now?.()??Date.now();}catch{return Date.now();}};
+ let graceUntil=now()+ANNOUNCE_GRACE_MS,retries=0,waking=null,restoreTimer=null;
+ try{const doc=target.document;if(doc?.readyState==='loading'){graceUntil=Infinity;doc.addEventListener('DOMContentLoaded',()=>{graceUntil=now()+ANNOUNCE_GRACE_MS;target.clearTimeout(restoreTimer);restoreTimer=target.setTimeout(publish,ANNOUNCE_GRACE_MS+RESTORE_WINDOW_MS);},{once:true});}}catch{/* No document: start the grace now. */}
+ const graceLeft=()=>graceUntil===Infinity?ANNOUNCE_GRACE_MS:Math.max(0,graceUntil-now());
+ const restoring=()=>!dead&&!current&&!busy&&allowRestore&&(graceUntil===Infinity||now()<graceUntil+RESTORE_WINDOW_MS)&&!!stored();
+ const snapshot=()=>Object.freeze({current,busy,remembered,restoring:restoring(),wallets:Object.freeze([...entries])});
  const publish=()=>{for(const fn of [...watchers])try{fn(snapshot());}catch{/* One view must not break invalidation. */}};
+ if(graceUntil!==Infinity)restoreTimer=target.setTimeout(publish,ANNOUNCE_GRACE_MS+RESTORE_WINDOW_MS); // "Connecting…" ends with the restore window
  function forget(){remembered=false;try{target.localStorage.removeItem(WALLET_PREFERENCE_KEY);if(target.localStorage.getItem(WALLET_PREFERENCE_KEY)!==null)target.localStorage.setItem(WALLET_PREFERENCE_KEY,'');return stored()===null;}catch{return false;}}
  function reset({forgetSelection=false}={}){epoch++;current=null;automatic=false;requestedSwitch=null;const old=session;session=null;busy=false;const forgotten=forgetSelection?forget():true;old?.dispose();publish();return forgotten;}
  function save(entry,c){
@@ -56,31 +70,54 @@ export function createWalletHub(target,{discover=discoverWallets,settle=()=>new 
    const c=await next.connect();
    if(dead||revision!==epoch||session!==next||!entries.includes(entry))throw Error('Wallet changed during connection');
    if(granted&&c.owner!==granted)throw Error('Authorized account changed. Reconnect your wallet.');
-   if(expected&&(c.owner!==expected.owner||entries.filter(e=>e.rdns===expected.rdns).length!==1))throw Error('Saved wallet no longer matches');
+   if(expected&&c.owner!==expected.owner)throw Object.assign(Error('Saved wallet no longer matches'),{mismatch:true});
+   if(expected&&entries.filter(e=>e.rdns===expected.rdns).length!==1)throw Error('Saved wallet no longer matches');
    await next.refresh(c);
    if(dead||revision!==epoch||session!==next)throw Error('Wallet changed during connection');
    current=Object.freeze({entry,owner:c.owner,chainId:c.chainId});automatic=!!expected;save(entry,c);busy=false;publish();return current;
-  }catch(error){if(revision===epoch){reset();if(expected)forget();}next?.dispose();throw error;}
+  }catch(error){if(revision===epoch){reset();if(expected&&error?.mismatch)forget();}next?.dispose();throw error;}
  }
  // Network changes, a wallet's own events and phone browsers resuming a tab used to forget the remembered wallet, so the
  // next page (each bottom tab is its own page) showed the trader disconnected (trader report 2026-11-24, Phantom on a
  // phone). Now the live session still ends at once (fail-closed), the remembered choice stays, and a read-only restore
- // (eth_accounts, never a popup) rejoins when the wallet still shares the same account. If it does not, the restore fails
- // and forgets the choice as before. An explicit Disconnect still forgets at once.
- function rejoin(){reset();attempted=null;target.clearTimeout(timer);timer=target.setTimeout(()=>{void restore();},300);}
+ // (eth_accounts, never a popup) rejoins when the wallet still shares the same account. If it shares another account the
+ // restore fails and forgets the choice; if it shares none (locked, not ready) the choice stays (walletpersist, above).
+ // An explicit Disconnect still forgets at once.
+ function rejoin(){reset();attempted=null;retries=0;target.clearTimeout(timer);timer=target.setTimeout(()=>{void restore();},300);}
  async function restore(){
   if(dead||busy||current||!allowRestore)return;const preference=stored();if(!preference)return;
-  const matches=entries.filter(e=>e.rdns===preference.rdns);if(matches.length!==1)return;
-  const identity=JSON.stringify(preference);if(attempted===identity)return;attempted=identity;
-  try{await establish(matches[0],preference);}catch{/* Remain disconnected; only an explicit click may request access. */}
+  const matches=entries.filter(e=>e.rdns===preference.rdns);if(matches.length!==1)return;const entry=matches[0];
+  // A flag-named window.ethereum entry: give the wallet's own EIP-6963 announcement a moment to arrive first.
+  if(entry.inferred&&graceLeft()>0){target.clearTimeout(timer);timer=target.setTimeout(()=>{void restore();},graceLeft()+20);return;}
+  const identity=JSON.stringify(preference)+'|'+entry.uuid;if(attempted===identity)return;attempted=identity;
+  try{await establish(entry,preference);retries=0;unwake();}
+  catch(error){
+   // Remain disconnected; only an explicit click may request access. Keep the choice unless another account answered.
+   if(error?.mismatch||dead||current||!allowRestore||!stored())return;
+   wake(entry);
+   // A wallet event mid-handshake (state sync on load) fails the first try: retry almost at once, then once more later.
+   if(retries<2){retries++;target.clearTimeout(timer);timer=target.setTimeout(()=>{if(attempted===identity)attempted=null;void restore();},retries===1?150:900);}
+   else publish();
+  }
  }
+ // A locked wallet shares its account again when it unlocks: rejoin then (read-only), without waiting for the next page.
+ function wake(entry){
+  if(waking?.entry===entry)return;unwake();
+  const fn=accounts=>{if(Array.isArray(accounts)&&accounts.length&&!current&&!busy&&!dead&&allowRestore){unwake();attempted=null;retries=0;void restore();}};
+  try{entry.provider.on('accountsChanged',fn);waking={entry,fn};}catch{/* The wallet may not emit events. */}
+ }
+ function unwake(){if(!waking)return;try{waking.entry.provider.removeListener('accountsChanged',waking.fn);}catch{/* Already gone. */}waking=null;}
  const discovery=discover(target,found=>{
   entries=[...found];
   if(automatic&&current&&entries.filter(e=>e.rdns===current.entry.rdns).length!==1)reset({forgetSelection:true});
+  // The wallet's own announcement replaced the flag-named entry this connection runs on: rejoin on the announced one.
+  else if(current&&!busy&&!entries.includes(current.entry)&&current.entry.rdns&&entries.filter(e=>e.rdns===current.entry.rdns).length===1)rejoin();
   for(const fn of [...walletWatchers])fn(Object.freeze([...entries]));publish();
   target.clearTimeout(timer);timer=target.setTimeout(()=>{void restore();},200);
  });
- function storageChanged(event){if(event.key!==WALLET_PREFERENCE_KEY&&event.key!==null)return;const p=stored();if(busy||current&&(!p||p.owner!==current.owner||p.chainId!==current.chainId||p.rdns!==current.entry.rdns))reset();}
+ // Another tab changed the remembered wallet (the main app writes this key too since walletpersist): end this session at
+ // once as before, then restore the new choice read-only (nothing to restore after a Disconnect there).
+ function storageChanged(event){if(event.key!==WALLET_PREFERENCE_KEY&&event.key!==null)return;const p=stored();if(busy||current&&(!p||p.owner!==current.owner||p.chainId!==current.chainId||p.rdns!==current.entry.rdns))rejoin();else if(!current&&p)void restore();}
  target.addEventListener('storage',storageChanged);
  function resumeView(){if(busy||!current||!session)return;const selected=session,revision=epoch;void selected.refresh(selected.current).then(()=>{if(revision===epoch)publish();}).catch(()=>{if(session===selected)rejoin();});}
  target.addEventListener('focus',resumeView);target.addEventListener('pageshow',resumeView);
@@ -125,7 +162,7 @@ export function createWalletHub(target,{discover=discoverWallets,settle=()=>new 
   subscribe(fn){watchers.add(fn);fn(snapshot());return()=>watchers.delete(fn);},
   subscribeWallets(fn){walletWatchers.add(fn);fn(Object.freeze([...entries]));return()=>walletWatchers.delete(fn);},
   setOpen(fn){open=fn;},open(){open();},
-  dispose(){if(dead)return;dead=true;reset();discovery.stop();target.clearTimeout(timer);target.removeEventListener('storage',storageChanged);target.removeEventListener('focus',resumeView);target.removeEventListener('pageshow',resumeView);watchers.clear();walletWatchers.clear();}
+  dispose(){if(dead)return;dead=true;reset();unwake();discovery.stop();target.clearTimeout(timer);target.clearTimeout(restoreTimer);target.removeEventListener('storage',storageChanged);target.removeEventListener('focus',resumeView);target.removeEventListener('pageshow',resumeView);watchers.clear();walletWatchers.clear();}
  });
 }
 export function getWalletHub(target){if(!hubs.has(target))hubs.set(target,createWalletHub(target));return hubs.get(target);}
@@ -149,7 +186,12 @@ export function bindWalletWorkspace({target,connectButton,disconnectButton,provi
   }).catch(error=>{opening=false;note(error?.message||'Reconnect your wallet.',true);});
  }
  function render(){if(dead)return;const s=hub.snapshot();connectButton.disabled=busy()||s.busy||hasSession();disconnectButton.disabled=busy()||(!hasSession()&&!s.current);pump();}
- function update(s){if(dead)return;if(lastCurrent&&lastCurrent!==s.current&&hasSession())onDisconnect();lastCurrent=s.current;render();}
+ // walletpersist (WATT, 2026-11-27): every new hub connection (page-load restore, a rejoin after a wallet event, a reconnect
+ // from the header) gets one automatic join. The attempt key (provider + owner + chain) used to stay set after the first
+ // join, so once a wallet event ended the workspace session the rejoined wallet never joined again: the header showed it
+ // connected while the key backup controls (create, restore, passphrase, file) stayed disabled until the page's own
+ // Connect wallet button was used.
+ function update(s){if(dead)return;if(lastCurrent&&lastCurrent!==s.current&&hasSession())onDisconnect();if(s.current&&s.current!==lastCurrent)attempt=null;lastCurrent=s.current;render();}
  async function connect(){
   if(dead||busy())return;const s=hub.snapshot();if(s.busy)return;
   const entry=s.wallets.find(e=>e.uuid===providerSelect.value);
