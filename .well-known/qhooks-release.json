@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "9da95c13-59ec-4e73-bd33-da904bedd49c",
+  "releaseId": "73401a06-0a03-48d6-a759-73542dc767bb",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -86745,8 +86745,8 @@
       "bytes": 1807
     },
     "earn-setup.html": {
-      "sha256": "b3e4c44068d802192a34c2c9dc7e6bb71645cc026bb9dd76a80ad86c5f4010c4",
-      "bytes": 15756
+      "sha256": "847b7175560109acd2eaef64c97959d1472910a65dc928cb35cf0427cc816faf",
+      "bytes": 15802
     },
     "elysium.html": {
       "sha256": "3a12dedf956d1ad954a3178fc48b91b6aa6ba8546bdac36e6f979b7ea612f9e4",
@@ -96357,12 +96357,12 @@
       "bytes": 139
     },
     "qx-a/pages/setup-earn-setup.css": {
-      "sha256": "7121b989637865e483863a14f3a7e4226c19c0c09e40e008b8e30796e842e33c",
-      "bytes": 277
+      "sha256": "09125bb2710e799172575158fa2a5d9a675d36649871d36b4d82e7b30de49afc",
+      "bytes": 690
     },
     "qx-a/pages/setup-earn-setup.mjs": {
-      "sha256": "a0e8ef46eca6f99922ed983b342379ff6f0fcd43716bcfbb255126494752ed4e",
-      "bytes": 88278
+      "sha256": "758e18d67a3789ff46e30a84b79e890adc06ffb30e4029c279c27bb6940aceb8",
+      "bytes": 565767
     },
     "qx-a/pages/setup-flywheel2-setup.css": {
       "sha256": "f0403c35177fcec6bf59428ac04a38aa783a5ed04a5eadba79ddb2dfa223b314",
@@ -100345,5 +100345,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "3bde0c7807555ae9d9a62db3c7a60ded48ec8aca3be7c3d91857d884494b63a0"
+  "contentDigest": "55a4d388f3ea0a1b57ed7ee1edf1d2abf1b28ad36df22fd729c3cea9f9a5d3c3"
 }
