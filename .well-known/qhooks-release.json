@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "releaseId": "0cd9cf84-a1ff-463b-94bd-b75291d18213",
+  "releaseId": "521bfeeb-761b-4c13-a7f6-3fd52cbe6e24",
   "scope": "full-static-public-assets",
   "algorithm": "sha256",
   "excludedDirectories": [
@@ -5547,6 +5547,10 @@
     "b/creator/qx-creator.RYZO3QGO.mjs": {
       "sha256": "46521c210607abae7a93c314e94b252ac5ce667f9f5e29363e1c6c8025881cf7",
       "bytes": 8938
+    },
+    "b/creator/qx-creator.UCSP5INP.mjs": {
+      "sha256": "36c0184bd817f01f9a4251e2ca7597a86c6e3c3f00dde7656cd107b5ac3494f3",
+      "bytes": 16789
     },
     "b/creator/qx-creator.WLQMSRLJ.mjs": {
       "sha256": "240cd652229ce09dfa1cf146bda705a2a189d18a62a5f179717ae1e75395135e",
@@ -83585,7 +83589,7 @@
       "bytes": 5795
     },
     "creator.html": {
-      "sha256": "7358a8d6927247e55350ba09047498bd06862a5630d5357980b2e1eeea2f7997",
+      "sha256": "79ef9d8495d6f50930200b8b00d2c42717ccfde9f03edaa206bb35dcb4dc6174",
       "bytes": 14371
     },
     "crypto-product-ui.css": {
@@ -84893,8 +84897,8 @@
       "bytes": 772
     },
     "home.html": {
-      "sha256": "737216ae33b87dd07abbf1b368214ed6815fcefddb85ee78ddd6efd7b7ac1d0f",
-      "bytes": 2543
+      "sha256": "9f3a9fe4a5030b7fbd9a2165215b366f7cc277cc7d8c8e19e15613d9bce5cc54",
+      "bytes": 2607
     },
     "hook-marketplace.html": {
       "sha256": "9ecd79c615eaa287c32957186de71aa954307e75812ca5d81a87600e89f30e7d",
@@ -86469,8 +86473,8 @@
       "bytes": 7977
     },
     "new/index.html": {
-      "sha256": "f0744b5d8b5c35665783899827094ef4bb59cea6c2cbf0ab100cf209a1bd91b0",
-      "bytes": 1238
+      "sha256": "dbaab39a200ad6a1690a44b43882472cce5bc76d5155198f48589b83112a0440",
+      "bytes": 1302
     },
     "new/js/orbio-chip.js": {
       "sha256": "79b02c58d680823b9ea0a9dcbdfdbeb8cae94198b308c448758a4229378a44c8",
@@ -86507,6 +86511,10 @@
     "new/js/perps-tape.js": {
       "sha256": "696e8859b0876643c6f8a7cc7cb41a0cbadfc0fc36409f86969f68d63cbbf890",
       "bytes": 1278
+    },
+    "new/js/simple-collect.mjs": {
+      "sha256": "5e813ce31451e337d5fa2e080057366aec3dfbb8543da27cad93c88e2e5deeb7",
+      "bytes": 3292
     },
     "new/js/token-chart.js": {
       "sha256": "47ec5697ae9bc63498bcebea549d5232ed5f26f50f4e277a37484564b6bc50ca",
@@ -94237,8 +94245,8 @@
       "bytes": 6111
     },
     "qx-creator.mjs": {
-      "sha256": "62a2e105cf63cdffb4c4d347d1070667b94aa75a320f59f2329f13868e1625fd",
-      "bytes": 9114
+      "sha256": "efe5e0fb0bd80298647921cc181a3a2bed1f4929ac3ca588e3c269791390f137",
+      "bytes": 10860
     },
     "qx-curve-core.mjs": {
       "sha256": "13c930f5af895451a2fdde2784b16ef61c4b624d77b776cc1be83e00f64006a5",
@@ -95744,6 +95752,10 @@
       "sha256": "0187f86d3bd53b5ae2b394a968ef6d2b9b3c3ab0a232156b3905fe66f23a1228",
       "bytes": 885
     },
+    "qx-simple-collect.mjs": {
+      "sha256": "c168e3b46cc6b1b695d06c97b08221d138be5c7173a8d4a7a54e1948396630cc",
+      "bytes": 11781
+    },
     "qx-site-v2.css": {
       "sha256": "0a9c40fcbe8d469e21b2102dad6b39ce0fdf2a71d2efd2bf2c8f2e17ed35aad7",
       "bytes": 3531
@@ -97245,5 +97257,5 @@
       "bytes": 5230
     }
   },
-  "contentDigest": "73050a2053c693906744d3219da8a529d930e99534f161e3338966ede0bf6adb"
+  "contentDigest": "e235e31d4d803e531ee134877188f882a6368521fc7433245f881fce51c34d1b"
 }

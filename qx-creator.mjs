@@ -7,6 +7,7 @@ import { ethCall, words, toAddress, formatUnits, erc20, send, connectedAddress, 
 import { BLOCK_FIELDS } from '/full-launch/packages/multichain-launch/launch-blocks.mjs';
 import '/qx-account-wallet.mjs';
 import {mountGetListed} from './qx-get-listed.mjs';
+import {findLaunch, mountCollect, supported as quickChain} from './qx-simple-collect.mjs';
 
 const $ = id => document.getElementById(id);
 const BLK = { config: '0x79502c55', release: '0x86d1a69f', creatorQuote: '0xe55e1ce9', creatorToken: '0x483a5f14' };
@@ -19,6 +20,21 @@ function amount(n, d, min = 4) {
   return formatUnits(n, d, d);
 }
 let state = null, seq = 0;
+// Quick-launch pool fees (2026-11-28): one collect(key) panel, shown to the creator or payout wallet, listed or not.
+let collectRedraw = null;
+onWalletChange(() => collectRedraw?.());
+async function collectPanel(chainId, token, mine, onFound) {
+  let box = $('qc-collect');
+  if (!box) { box = h('section', { id: 'qc-collect', class: 'qcd-panel qsc', hidden: true }); $('qc-stats').insertAdjacentElement('afterend', box); }
+  box.hidden = true; box.replaceChildren(); collectRedraw = null;
+  if (!quickChain(chainId)) return null;
+  const body = await fetch('/api/terminal/x/token/' + chainId + '/' + token, { cache: 'no-store' }).then(x => x.ok ? x.json() : null).catch(() => null);
+  const launch = await findLaunch(chainId, token, { pools: body?.pools?.length ? body.pools : [] }).catch(() => null);
+  if (mine !== seq || !launch) return null;
+  onFound?.(launch, body);
+  mountCollect(box, launch, { address: connectedAddress, send: (tx, on) => send(chainId, tx, on), onChange: cb => { collectRedraw = cb; } });
+  return launch;
+}
 
 async function pick() {
   const me = connectedAddress(), box = $('qc-pick');
@@ -37,7 +53,16 @@ async function open(chainId, controller) {
   $('qc-title').textContent = 'Loading…'; $('qc-stats').replaceChildren(); $('qc-tables').replaceChildren(); $('qc-pay').replaceChildren(); $('qc-listing').replaceChildren();
   const r = await fetch(`/api/markets/${chainId}/${controller}`, { cache: 'no-store' });
   if (mine !== seq) return;
-  if (!r.ok) { $('qc-title').textContent = 'This launch is not listed'; $('qc-sub').textContent = 'List it from its Trade page, then open its dashboard again.'; return; }
+  if (!r.ok) {
+    $('qc-title').textContent = 'This launch is not listed'; $('qc-sub').textContent = 'List it from its Trade page, then open its dashboard again.';
+    // A quick launch still has its pool fees on chain: show the collect panel whether or not the index has it yet.
+    await collectPanel(chainId, controller, mine, (L, body) => {
+      $('qc-title').replaceChildren((body?.name || 'Quick launch') + ' ', body?.symbol ? h('span', { class: 'qc-sym' }, body.symbol) : '');
+      $('qc-sub').replaceChildren(h('span', { class: 'qa-chain' }, CHAIN_NAME[chainId] || chainId), ' Quick launch · created by ', h('code', {}, short(L.creator)));
+      $('qc-trade').href = '/#/token/' + chainId + '/' + L.token;
+    });
+    return;
+  }
   const pool = (await r.json()).pool;
   if(mine!==seq)return;
   window.__qhooksPool = pool;
@@ -47,6 +72,7 @@ async function open(chainId, controller) {
   void (async()=>{let profile=null;try{const r=await fetch('/api/token-profiles/'+chainId+'/'+controller);if(r.ok)profile=(await r.json()).profile;}catch{}if(mine!==seq)return;
     const c=pool.constructor||{},token=pool.token|| (c.currency0===c.quote?c.currency1:c.currency0)||controller;
     const panel=mountGetListed({chainId,token,pool:pool.poolId,profile:profile||{}});$('qc-listing').replaceChildren(...(panel?[panel]:[]));})();
+  void collectPanel(chainId, controller, mine);
   await Promise.all([market(mine), payouts(mine)]);
 }
 
